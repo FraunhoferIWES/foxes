@@ -13,7 +13,7 @@ The software `foxes` is a modular wind farm simulation and wake modelling toolbo
 
 The fast performance of `foxes` is owed to vectorization and parallelization,
 and it is intended to be used for large wind farms and large timeseries inflow data.
-The parallelization on local or remote clusters is supported, based on 
+The parallelization on local or remote clusters is supported, based on
 [mpi4py](https://mpi4py.readthedocs.io/en/stable/) or
 [dask.distributed](https://distributed.dask.org/en/stable/).
 The wind farm
@@ -33,30 +33,30 @@ Anaconda reference: [https://anaconda.org/conda-forge/foxes](https://anaconda.or
 ## Citation
 
 Please cite the JOSS paper `"FOXES: Farm Optimization and eXtended yield
-Evaluation Software"` 
+Evaluation Software"`
 
  [![DOI](https://joss.theoj.org/papers/10.21105/joss.05464/status.svg)](https://doi.org/10.21105/joss.05464)
 
  Bibtex:
  ```
 @article{
-    Schmidt2023, 
-    author = {Jonas Schmidt and Lukas Vollmer and Martin Dörenkämper and Bernhard Stoevesandt}, 
-    title = {FOXES: Farm Optimization and eXtended yield Evaluation Software}, 
-    doi = {10.21105/joss.05464}, 
-    url = {https://doi.org/10.21105/joss.05464}, 
-    year = {2023}, 
-    publisher = {The Open Journal}, 
-    volume = {8}, 
-    number = {86}, 
-    pages = {5464}, 
-    journal = {Journal of Open Source Software} 
+    Schmidt2023,
+    author = {Jonas Schmidt and Lukas Vollmer and Martin Dörenkämper and Bernhard Stoevesandt},
+    title = {FOXES: Farm Optimization and eXtended yield Evaluation Software},
+    doi = {10.21105/joss.05464},
+    url = {https://doi.org/10.21105/joss.05464},
+    year = {2023},
+    publisher = {The Open Journal},
+    volume = {8},
+    number = {86},
+    pages = {5464},
+    journal = {Journal of Open Source Software}
 }
  ```
 
 ## Requirements
 
-The supported Python versions are `Python 3.9`...`3.14`.
+The supported Python versions are `Python 3.9`...`3.13`.
 
 ## Installation
 
@@ -116,5 +116,5 @@ pytest tests
 
 ## Acknowledgements
 
-The development of _foxes_ and its predecessors _flapFOAM_ and _flappy_ (internal - non public) has been supported through multiple publicly funded research projects. We acknowledge in particular the funding by the Federal Ministry of Economic Affairs and Climate Action (BMWK) through the projects _Smart Wind Farms_ (grant no. 0325851B), _GW-Wakes_ (0325397B) and _X-Wakes_ (03EE3008A), as well as the funding by the Federal Ministry of Education and Research (BMBF) in the framework of the project _H2Digital_ (03SF0635). We furthermore acknowledge funding by the Horizon Europe project FLOW (Atmospheric Flow, Loads and pOwer 
+The development of _foxes_ and its predecessors _flapFOAM_ and _flappy_ (internal - non public) has been supported through multiple publicly funded research projects. We acknowledge in particular the funding by the Federal Ministry of Economic Affairs and Climate Action (BMWK) through the projects _Smart Wind Farms_ (grant no. 0325851B), _GW-Wakes_ (0325397B) and _X-Wakes_ (03EE3008A), as well as the funding by the Federal Ministry of Education and Research (BMBF) in the framework of the project _H2Digital_ (03SF0635). We furthermore acknowledge funding by the Horizon Europe project FLOW (Atmospheric Flow, Loads and pOwer
 for Wind energy - grant id 101084205).

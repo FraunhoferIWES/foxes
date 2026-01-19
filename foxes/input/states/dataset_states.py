@@ -4,7 +4,7 @@ import xarray as xr
 from copy import copy, deepcopy
 from scipy.interpolate import interpn
 
-from foxes.core import States, get_engine
+from foxes.core import States, map_with_engine
 from foxes.utils import import_module
 from foxes.data import STATES, StaticData
 from foxes.utils.wind_dir import uv2wd, wd2uv
@@ -23,6 +23,7 @@ def _read_nc_file(
     minimal,
     drop_vars=None,
     check_input_nans=True,
+    preprocess=None,
 ):
     """Helper function for nc file reading"""
     with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as data:
@@ -31,15 +32,18 @@ def _read_nc_file(
                 raise KeyError(
                     f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
                 )
-
+        if preprocess is not None:
+            data = preprocess(data)
         if minimal:
             data = data[coords[0]].to_numpy()
         else:
             data = data[vars]
             data.attrs = {}
             if isel is not None and len(isel):
+                isel = {c: s for c, s in isel.items() if c in data.sizes}
                 data = data.isel(**isel)
             if sel is not None and len(sel):
+                sel = {c: s for c, s in sel.items() if c in data.sizes}
                 data = data.sel(**sel)
             assert min(data.sizes.values()) > 0, (
                 f"States: No data in file {fpath}, isel={isel}, sel={sel}, resulting sizes={data.sizes}"
@@ -58,7 +62,6 @@ def _read_nc_file(
                         raise ValueError(
                             f"States: NaN data found in input data for variable '{v}' with dims {d.dims} in file {fpath} at index {i}"
                         )
-
     return data
 
 
@@ -99,6 +102,10 @@ class DatasetStates(States):
         Whether to check the time coordinates for consistency
     check_input_nans: bool
         Whether to check input data for NaNs
+    preprocess_nc: callable, optional
+        A function to preprocess the netcdf Dataset before use
+    interp_pars: dict
+        Additional parameters the interpolation
 
     :group: input.states
 
@@ -117,6 +124,8 @@ class DatasetStates(States):
         weight_factor=None,
         check_times=True,
         check_input_nans=True,
+        preprocess_nc=None,
+        interp_pars={},
         **kwargs,
     ):
         """
@@ -154,6 +163,10 @@ class DatasetStates(States):
             Whether to check the time coordinates for consistency
         check_input_nans: bool
             Whether to check input data for NaNs, otherwise NaNs are removed
+        preprocess_nc: callable, optional
+            A function to preprocess the netcdf Dataset before use
+        interp_pars: dict, optional
+            Additional parameters the interpolation
         kwargs: dict, optional
             Additional arguments for the base class
 
@@ -170,6 +183,8 @@ class DatasetStates(States):
         self.weight_factor = weight_factor
         self.check_times = check_times
         self.check_input_nans = check_input_nans
+        self.preprocess_nc = preprocess_nc
+        self.interp_pars = interp_pars
 
         self._N = None
         self._inds = None
@@ -314,6 +329,10 @@ class DatasetStates(States):
         }
         return coords, data, weights
 
+    def _find_xy_bounds(self, algo, bounds_extra_space):
+        """Helper function to determine x/y bounds with extra space."""
+        return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
+
     def preproc_first(
         self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
     ):
@@ -360,20 +379,24 @@ class DatasetStates(States):
                 raise ValueError(
                     f"States '{self.name}': Height bounds {height_bounds} m are outside of data height range {np.min(self._heights)} - {np.max(self._heights)} m"
                 )
-            i0 = 0
-            while (
-                i0 < len(self._heights) - 1
-                and self._heights[i0 + 1] <= height_bounds[0]
-            ):
-                i0 += 1
-            i1 = len(self._heights) - 1
-            while i1 > 0 and self._heights[i1 - 1] >= height_bounds[1]:
-                i1 -= 1
-            if self.sel is None:
-                self.sel = {}
             ch = cmap[FV.H]
-            self.sel.update({ch: slice(self._heights[i0], self._heights[i1] + 1)})
-            self._heights = data[ch].sel({ch: self.sel[ch]}).to_numpy()
+            if self.isel is None or ch not in self.isel:
+                i0 = 0
+                while (
+                    i0 < len(self._heights) - 1
+                    and self._heights[i0 + 1] <= height_bounds[0]
+                ):
+                    i0 += 1
+                i1 = len(self._heights) - 1
+                while i1 > 0 and self._heights[i1 - 1] >= height_bounds[1]:
+                    i1 -= 1
+                if i0 == i1:
+                    i0 = max(0, i0 - 1)
+                    i1 = min(len(self._heights) - 1, i1 + 1)
+                if self.isel is None:
+                    self.isel = {}
+                self.isel.update({ch: slice(i0, i1 + 1)})
+            self._heights = data[ch].isel({ch: self.isel[ch]}).to_numpy()
             if verbosity > 0:
                 print(
                     f"States '{self.name}': Selected {ch} = {self._heights} ({len(self._heights)} heights)"
@@ -387,31 +410,29 @@ class DatasetStates(States):
             assert FV.Y in cmap, (
                 f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {cmap}"
             )
-
-            # if bounds and self.x_coord is not None and self.x_coord not in self.sel:
-            xy_min, xy_max = algo.farm.get_xy_bounds(
-                extra_space=bounds_extra_space, algo=algo
-            )
+            xy_min, xy_max = self._find_xy_bounds(algo, bounds_extra_space)
             if verbosity > 0:
                 print(
                     f"States '{self.name}': Restricting xy to bounds {xy_min} - {xy_max}"
                 )
-            if self.sel is None:
-                self.sel = {}
             for v, i in zip((FV.X, FV.Y), (0, 1)):
-                x0, x1 = xy_min[i], xy_max[i]
-                x = data[cmap[v]].to_numpy()
-                i0 = 0
-                while i0 < len(x) - 1 and x[i0 + 1] <= x0:
-                    i0 += 1
-                i1 = len(x) - 1
-                while i1 > 0 and x[i1 - 1] >= x1:
-                    i1 -= 1
-                if self.sel is None:
-                    self.sel = {}
-                self.sel.update({cmap[v]: slice(x[i0], x[i1] + 1)})
+                if self.isel is None or cmap[v] not in self.isel:
+                    x0, x1 = xy_min[i], xy_max[i]
+                    x = data[cmap[v]].to_numpy()
+                    i0 = 0
+                    while i0 < len(x) - 1 and x[i0 + 1] <= x0:
+                        i0 += 1
+                    i1 = len(x) - 1
+                    while i1 > 0 and x[i1 - 1] >= x1:
+                        i1 -= 1
+                    if i0 == i1:
+                        i0 = max(0, i0 - 1)
+                        i1 = min(len(x) - 1, i1 + 1)
+                    if self.isel is None:
+                        self.isel = {}
+                    self.isel.update({cmap[v]: slice(i0, i1 + 1)})
                 if verbosity > 0:
-                    hv = data[cmap[v]].sel({cmap[v]: self.sel[cmap[v]]}).to_numpy()
+                    hv = data[cmap[v]].isel({cmap[v]: self.isel[cmap[v]]}).to_numpy()
                     print(
                         f"States '{self.name}': Selected {cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
                     )
@@ -461,6 +482,8 @@ class DatasetStates(States):
                 if len(self.drop_vars) > 0 and verbosity > 0:
                     print(f"States '{self.name}': Keeping variables  {vars}")
                     print(f"States '{self.name}': Dropping variables {self.drop_vars}")
+                if self.preprocess_nc is not None:
+                    data_first = self.preprocess_nc(data_first)
                 self.preproc_first(
                     algo,
                     data=data_first,
@@ -487,7 +510,7 @@ class DatasetStates(States):
                         f"States '{self.name}': Reading states from '{self.data_source}'"
                     )
 
-            self.__data_source = get_engine().map(
+            self.__data_source = map_with_engine(
                 _read_nc_file,
                 files,
                 coords=coords,
@@ -498,6 +521,7 @@ class DatasetStates(States):
                 minimal=self.load_mode == "fly",
                 drop_vars=self.drop_vars,
                 check_input_nans=self.check_input_nans,
+                preprocess=self.preprocess_nc,
             )
 
             if self.load_mode in ["preload", "lazy"]:
@@ -872,6 +896,7 @@ class DatasetStates(States):
                                 minimal=False,
                                 drop_vars=self.drop_vars,
                                 check_input_nans=self.check_input_nans,
+                                preprocess=self.preprocess_nc,
                             )
                         )
 
@@ -935,7 +960,7 @@ class DatasetStates(States):
         gvars = tuple(icrds)
         try:
             ipars = dict(bounds_error=True, fill_value=None)
-            ipars.update(self.interpn_pars)
+            ipars.update(self.interp_pars)
             d = interpn(gvars, d, pts, **ipars)
         except ValueError as e:
             print(f"\nStates '{self.name}': Interpolation error")
@@ -951,11 +976,23 @@ class DatasetStates(States):
                 [float(np.max(p)) for p in pts.T],
             )
             print(
-                "\nMaybe you want to try the option 'bounds_error=False' in 'interpn_pars'? This will extrapolate the data.\n"
+                "INSIDE     :",
+                [
+                    float(np.min(p)) >= float(np.min(gvars[i]))
+                    and float(np.max(p)) <= float(np.max(gvars[i]))
+                    for i, p in enumerate(pts.T)
+                ],
+            )
+            print(
+                "\nMaybe you want to try the option 'bounds_error=False' in 'interp_pars'? This will extrapolate the data.\n"
             )
             raise e
 
         return d
+
+    def _update_dims(self, dims, coords, vrs, d):
+        """Helper function for dimension adjustment, if needed"""
+        return dims, coords
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -1004,8 +1041,8 @@ class DatasetStates(States):
             nonlocal _points_data
 
             if _points_data is None:
-                pmin = np.min(points, axis=0)
-                pmax = np.max(points, axis=0)
+                pmin = np.min(points, axis=(0, 1))
+                pmax = np.max(points, axis=(0, 1))
                 _points_data = {}
                 _points_data["pmin"] = pmin
                 _points_data["pmax"] = pmax
@@ -1040,16 +1077,29 @@ class DatasetStates(States):
         # interpolate data to points:
         out = {}
         for dims, (vrs, d) in data.items():
+            # update dims, if necessary:
+            dims, hcoords = self._update_dims(dims, coords, vrs, d)
+
             # replace (WD, WS) by (U, V):
+            iwd = None
             if FV.WD in vrs or FV.WS in vrs:
                 assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
                     f"States '{self.name}': Missing '{FV.WD}' or '{FV.WS}' in data variables {vrs} for dimensions {dims}"
+                )
+                assert FV.U not in vrs and FV.U not in vrs, (
+                    f"States '{self.name}': Cannot have '{FV.WD}', '{FV.WS}' and  '{FV.U}', '{FV.V}' in data variables {vrs} for dimensions {dims}"
                 )
                 iwd = vrs.index(FV.WD)
                 iws = vrs.index(FV.WS)
                 ws = d[..., iws] if FV.WS in vrs else self.fixed_vars[FV.WS]
                 d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
                 del ws
+            elif FV.U in vrs or FV.V in vrs:
+                assert FV.U in vrs and FV.V in vrs, (
+                    f"States '{self.name}': Missing '{FV.U}' or '{FV.V}' in variables {vrs} for dims {dims}"
+                )
+                iwd = vrs.index(FV.U)
+                iws = vrs.index(FV.V)
 
             # move state dimension to second last position:
             if dims[0] == FC.STATE:
@@ -1080,7 +1130,7 @@ class DatasetStates(States):
                         points_data = _analyze_points(has_p, has_h)
                         pts.append(points_data["up"][:, 0])
                         pts.append(points_data["up"][:, 1])
-                        if coords[FC.POINT].shape[1] == 3:
+                        if hcoords[FC.POINT].shape[1] == 3:
                             pts.append(points_data["up"][:, 2])
                     elif c == FC.STATE:
                         idims.remove(FC.STATE)
@@ -1091,7 +1141,7 @@ class DatasetStates(States):
                 pts = np.stack(pts, axis=-1)
 
                 # interpolate:
-                icrds = [coords[c] for c in idims]
+                icrds = [hcoords[c] for c in idims]
                 d = self.interpolate_data(idims, icrds, d, pts, vrs, times)
 
                 # move state dimension back to front:
@@ -1106,14 +1156,14 @@ class DatasetStates(States):
                     shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
                     d = d[:, points_data["up2p"], :].reshape(shp)
                     if FC.STATE in dims:
-                        d = d[coords[FC.STATE], coords[FC.STATE], ...]
+                        d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
                     else:
                         d = d[0, ...]
                 elif has_h and points_data["heights_vary"]:
                     shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
                     d = d[:, points_data["uh2h"], :].reshape(shp)
                     if FC.STATE in dims:
-                        d = d[coords[FC.STATE], coords[FC.STATE], ...]
+                        d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
                     else:
                         d = d[0, ...]
                 del points_data, pts, icrds
@@ -1125,9 +1175,14 @@ class DatasetStates(States):
                     d = d[:, None, :]
                 else:
                     d = d[None, None, :]
+            del hcoords
 
             # translate (U, V) into (WD, WS):
-            if FV.WD in vrs:
+            if iwd is not None:
+                if FV.WD not in vrs:
+                    vrs = vrs.copy()
+                    vrs[iwd] = FV.WD
+                    vrs[iws] = FV.WS
                 uv = d[..., [iwd, iws]]
                 d[..., iwd] = uv2wd(uv)
                 d[..., iws] = np.linalg.norm(uv, axis=-1)
@@ -1161,4 +1216,47 @@ class DatasetStates(States):
             )
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
-        return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}
+        # reshape results:
+        results = {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}
+        del out
+
+        # convert TKE to TI if needed:
+        if FV.TI in self.ovars and FV.TI not in results:
+            assert FV.WS in results, (
+                f"States '{self.name}': Cannot calculate {FV.TI} without {FV.WS}"
+            )
+            assert FV.TKE in results or FV.TKE in self.ovars, (
+                f"States '{self.name}': Cannot calculate {FV.TI} without {FV.TKE}"
+            )
+            if FV.TKE not in self.ovars:
+                tke = np.maximum(results.pop(FV.TKE), 0)
+            else:
+                tke = np.maximum(results[FV.TKE], 0)
+            ws = results[FV.WS]
+            assert not np.any(ws <= 0.0), (
+                f"States '{self.name}': Cannot calculate {FV.TI}, found zeros in {FV.WS}"
+            )
+            results[FV.TI] = np.sqrt(1.5 * tke) / ws
+
+        # compute air density if needed:
+        if FV.RHO in self.ovars and FV.RHO not in results:
+            assert FV.p in results, (
+                f"States '{self.name}': Cannot calculate {FV.RHO} without {FV.p}"
+            )
+            assert FV.T in results, (
+                f"States '{self.name}': Cannot calculate {FV.RHO} without {FV.T}"
+            )
+            if FV.p not in self.ovars:
+                p = results.pop(FV.p)
+            else:
+                p = results[FV.p]
+            if FV.T not in self.ovars:
+                T = results.pop(FV.T)
+            else:
+                T = results[FV.T]
+            assert not np.any(T <= 0.0), (
+                f"States '{self.name}': Cannot calculate {FV.RHO}, found zeros or negative values in {FV.T}"
+            )
+            results[FV.RHO] = p / (FC.Rd * T)
+
+        return results

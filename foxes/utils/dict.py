@@ -1,6 +1,8 @@
 from yaml import safe_load
 from pathlib import Path
 
+from .exec_python import eval_dict_values
+
 
 class Dict(dict):
     """
@@ -140,6 +142,25 @@ class Dict(dict):
         other = dict(*args, **kwargs)
         for k, v in other.items():
             self[k] = v
+
+    def eval(self, globals=None, locals=None):
+        """
+        Tries to evaluate all string values, recursively.
+
+        Parameters
+        ----------
+        globals: dict, optional
+            The global namespace
+        locals: dict, optional
+            The local namespace
+
+        Returns
+        -------
+        self: Dict
+            The dictionary with evaluated values
+
+        """
+        return Dict(eval_dict_values(self, globals, locals), _name=self.name)
 
     @classmethod
     def from_yaml(self, yml_file, verbosity=1):

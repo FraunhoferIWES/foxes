@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.config import config
-from foxes.utils import get_utm_zone, from_lonlat
+from foxes.utils import get_utm_zone, from_lonlat, to_lonlat
 
 
 class WindFarm:
@@ -274,7 +274,7 @@ class WindFarm:
             mapping[wf_name].append(i)
         return mapping
 
-    def get_xy_bounds(self, extra_space=None, algo=None):
+    def get_xy_bounds(self, extra_space=None, algo=None, lonlat=False, sample_dx=10.0):
         """
         Returns min max points of the wind farm ground points
 
@@ -285,6 +285,10 @@ class WindFarm:
             or str for units of D, e.g. '2.5D'
         algo: foxes.core.Algorithm, optional
             The algorithm
+        lonlat: bool
+            Whether to return the points in lon, lat coordinates
+        sample_dx: float
+            The sampling distance in m for boundary conversion to lonlat
 
         Returns
         -------
@@ -295,11 +299,9 @@ class WindFarm:
 
         """
         if self.boundary is not None:
-            xy = None
-            p_min, p_max = self.boundary.p_min(), self.boundary.p_max()
+            xy = np.stack((self.boundary.p_min(), self.boundary.p_max()), axis=0)
         else:
             xy = self.xy_array
-            p_min, p_max = np.min(xy, axis=0), np.max(xy, axis=0)
 
         if extra_space is not None:
             if isinstance(extra_space, str):
@@ -311,15 +313,33 @@ class WindFarm:
                 )
                 extra_space = float(extra_space[:-1])
                 rds = self.get_rotor_diameters(algo)
-                if xy is None:
+                if self.boundary is not None:
                     extra_space *= np.max(rds)
                 else:
-                    p_min = np.min(xy - extra_space * rds[:, None], axis=0)
-                    p_max = np.max(xy + extra_space * rds[:, None], axis=0)
-                    return p_min, p_max
+                    extra_space *= rds[:, None]
 
-            p_min -= extra_space
-            p_max += extra_space
+            xy = np.concatenate((xy - extra_space, xy + extra_space), axis=0)
+
+        p_min = np.min(xy, axis=0)
+        p_max = np.max(xy, axis=0)
+
+        if lonlat:
+            x0, y0 = p_min
+            x1, y1 = p_max
+            nx = int(np.ceil((x1 - x0) / sample_dx)) + 1
+            ny = int(np.ceil((y1 - y0) / sample_dx)) + 1
+            xy = np.concatenate(
+                (
+                    np.linspace([x0, y0], [x0, y1], ny),
+                    np.linspace([x0, y1], [x1, y1], nx),
+                    np.linspace([x1, y1], [x1, y0], ny),
+                    np.linspace([x1, y0], [x0, y0], nx),
+                ),
+                axis=0,
+            )
+            xy = to_lonlat(xy)
+            p_min = np.min(xy, axis=0)
+            p_max = np.max(xy, axis=0)
 
         return p_min, p_max
 

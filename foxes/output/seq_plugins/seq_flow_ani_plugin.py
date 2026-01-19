@@ -12,14 +12,17 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
     ----------
     orientation: str
         The orientation, either "yx", "xz" or "yz"
-    pars: dict
-        Additional parameters for plotting
+    title_fun: callable
+        A function that takes the current iteration and state index
+        and returns a title string.
+    data_pars: dict
+        Additional parameters for plot data calculation
 
     :group: output.seq_plugins
 
     """
 
-    def __init__(self, orientation, **pars):
+    def __init__(self, orientation, title_fun=None, **data_pars):
         """
         Constructor.
 
@@ -27,18 +30,18 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         ----------
         orientation: str
             The orientation, either "yx", "xz" or "yz"
-        pars: dict, optional
-            Additional parameters for plotting
+        title_fun: callable, optional
+            A function that takes the current iteration and state index
+            and returns a title string.
+        data_pars: dict, optional
+            Additional parameters for plot data calculation
+
 
         """
         super().__init__()
         self.orientation = orientation
-        self.pars = pars
-
-        if "title" in self.pars and callable(self.pars["title"]):
-            self._tfun = self.pars.pop("title")
-        else:
-            self._tfun = None
+        self.data_pars = data_pars
+        self._tfun = title_fun
 
     def initialize(self, algo):
         """
@@ -52,6 +55,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         """
         super().initialize(algo)
         self._data = []
+        self._titles = []
 
     def update(self, algo, fres, pres=None):
         """
@@ -72,38 +76,36 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         o = FlowPlots2D(algo, fres)
 
         if self._tfun is not None:
-            self.pars["title"] = self._tfun(algo.states.counter, algo.states.index()[0])
+            self._titles.append(self._tfun(algo.states.counter, algo.states.index()[0]))
 
         if self.orientation == "xy":
-            d = next(o.gen_states_fig_xy(**self.pars, precalc=True))
+            d = o.get_states_data_xy(**self.data_pars, data_format="numpy")
         elif self.orientation == "xz":
-            d = next(o.gen_states_fig_xz(**self.pars, precalc=True))
+            d = o.get_states_data_xz(**self.data_pars, data_format="numpy")
         elif self.orientation == "yz":
-            d = next(o.gen_states_fig_yz(**self.pars, precalc=True))
+            d = o.get_states_data_yz(**self.data_pars, data_format="numpy")
         else:
             raise KeyError(
                 f"Unkown orientation '{self.orientation}', choises: xy, xz, yz"
             )
 
         # minimize stored data:
-        od = [d[0], d[1], None]
-        if len(self._data) == 0:
-            od[2] = d[2]
-        of = (
-            fres
-            if ("rotor_color" in self.pars and self.pars["rotor_color"] is not None)
-            else None
-        )
+        d = list(d)
+        if len(self._data) > 0:
+            d[0] = None
+            d[-1] = None
 
-        self._data.append((of, od))
+        self._data.append((o, d))
 
-    def gen_images(self, ax):
+    def gen_images(self, ax, **plot_pars):
         """
 
         Parameters
         ----------
         ax: matplotlib.Axis
             The plotting axis
+        plot_pars: dict, optional
+            Additional parameters for plotting
 
         Yields
         ------
@@ -111,30 +113,43 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
             The (figure, artists) tuple
 
         """
+        add_bar = (
+            plot_pars.get("vmin", None) is None or plot_pars.get("vmax", None) is None
+        )
+
         fig = ax.get_figure()
+        parameters = None
         gdata = None
         while len(self._data):
-            fres, d = self._data.pop(0)
+            o, d = self._data.pop(0)
 
-            if d[2] is not None:
-                gdata = d[2]
+            if "title" in plot_pars:
+                assert self._tfun is None, (
+                    "Cannot have a title function together with the 'title' parameter"
+                )
+                plot_pars = plot_pars.copy()
+                title = plot_pars.pop("title")
+            elif self._tfun is not None:
+                title = self._titles.pop(0)
+            else:
+                title = None
 
-            o = FlowPlots2D(self.algo, fres)
+            if d[-1] is not None:
+                parameters = d[0]
+                gdata = d[-1]
+            else:
+                d[0] = parameters
+                d[-1] = gdata
 
             yield next(
                 o.gen_states_fig_xy(
-                    **self.pars,
+                    d,
                     ax=ax,
                     fig=fig,
+                    title=title,
+                    add_bar=add_bar,
                     ret_im=True,
-                    precalc=(d[0], d[1], gdata),
+                    animated=True,
+                    **plot_pars,
                 )
             )
-
-            del o, fres, d
-
-            if (
-                self.pars.get("vmin", None) is not None
-                and self.pars.get("vmax", None) is not None
-            ):
-                self.pars["add_bar"] = False

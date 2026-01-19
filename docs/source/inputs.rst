@@ -1,11 +1,11 @@
 Inputs
 ======
 
-Every *foxes* case needs at least the following two inputs from the user in order 
-to be able to run: :ref:`Wind farm layouts` and :ref:`Ambient inflow states`. 
+Every *foxes* case needs at least the following two inputs from the user in order
+to be able to run: :ref:`Wind farm layouts` and :ref:`Ambient inflow states`.
 
-Additionally, the applied models might need additional data, for example the power 
-and thrust curves of the selected turbine types. See the :ref:`Models` Section for 
+Additionally, the applied models might need additional data, for example the power
+and thrust curves of the selected turbine types. See the :ref:`Models` Section for
 additional information on how to provide such inputs.
 
 Wind farm layouts
@@ -48,7 +48,7 @@ A typical example might look like this, see :ref:`Examples` for more examples:
 
 It is also possible to manually add a single turbine to the wind farm. For doing so,
 plug an object of the :ref:`Turbine<foxes.core.Turbine>` class into the
-:ref:`add_turbine<foxes.core.WindFarm.add_turbine>` function of the 
+:ref:`add_turbine<foxes.core.WindFarm.add_turbine>` function of the
 :ref:`WindFarm<foxes.core.WindFarm>` class.
 
 Any of the above functions for adding turbines requires a parameter *turbine_models*,
@@ -58,12 +58,12 @@ as appearing in the :ref:`ModelBook object<The model book>`.
 Ambient inflow states
 ---------------------
 
-The atmospheric inflow data are reffered to as *ambient states* or simply as *states* 
+The atmospheric inflow data are reffered to as *ambient states* or simply as *states*
 in *foxes* terminology. They are understood as a list of conditions, which are used
-for computing all required background data at any arbitrary evaluation point. 
+for computing all required background data at any arbitrary evaluation point.
 
 Either those states come with associated statistical weights (for example in the case of
-a wind rose), or they do not specify it, in which case they are interpreted as equal weight 
+a wind rose), or they do not specify it, in which case they are interpreted as equal weight
 conditions (for example in the case of timeseries data).
 
 The full list of currently implemented ambient states can be found in the

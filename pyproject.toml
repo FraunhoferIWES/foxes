@@ -8,7 +8,7 @@ requires = [
 
 [project]
 name = "foxes"
-version = "1.6.2"
+version = "1.7.0"
 authors = [
   {name = "Jonas Schulte"},
 ]
@@ -29,22 +29,21 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Development Status :: 4 - Beta",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.14"
 dependencies = [
     "matplotlib>=3.8",
     "numpy>=1.26",
     "pandas>=2.0",
     "scipy>=1.12",
     "xarray>=2023",
-    "netcdf4>=1.0",
-    #"h5netcdf>=1.0", 
+    "netcdf4>=1.5",
+    #"h5netcdf>=1.0",
     "pyyaml>=4.0",
-    "tqdm>=2.0",
+    "tqdm>=4.31.1",
     "utm>=0.5",
 ]
 
@@ -62,7 +61,7 @@ doc = [
     "setuptools>=61.0",
     "sphinx>=5.0",
     "sphinx-immaterial>=0.10",
-    "nbsphinx>=0.5",
+    "myst-nb>=0.1",
     "ipykernel>=5.0",
     "ipywidgets>=5.0",
     "m2r2>=0.2",
@@ -71,11 +70,15 @@ doc = [
     "distributed>=2022.0",
 ]
 test = [
-    "flake8>=0.1",
     "pytest>=7.0",
+    "nbmake>1.0",
+    "dask>=2022.0",
+    "distributed>=2022.0",
 ]
-utils = [
+dev = [
+    "pre-commit>=0.1",
     "objsize>=0.5",
+    "jupyter>=1.0",
 ]
 
 [project.urls]

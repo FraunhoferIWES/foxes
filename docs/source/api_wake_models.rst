@@ -1,7 +1,7 @@
 foxes.models.wake_models
 ------------------------
 
-    .. table:: 
+    .. table::
         :widths: auto
 
         =========================================  ============================================================
@@ -14,7 +14,7 @@ foxes.models.wake_models
 
 Abstract base classes for wake models are available directly
 under the *foxes.models.wake_models* package. They introduce a wake model
-classification that is relevant for the different partial 
+classification that is relevant for the different partial
 wakes models.
 
     .. python-apigen-group:: models.wake_models
@@ -36,4 +36,3 @@ foxes.models.wake_models.induction
 Concrete induction models for blockage modelling.
 
     .. python-apigen-group:: models.wake_models.induction
-        

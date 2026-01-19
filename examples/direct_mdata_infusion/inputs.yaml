@@ -15,9 +15,9 @@ states:
     Weibull_k: weibull_k
   fixed_vars:
     RHO: 1.225
-  
+
 wind_farm:
-  layouts:  
+  layouts:
     - function: add_from_arrays
       x: [263655. , 263891.1, 264022.2, 264058.9, 264095.6, 264022.2,
        264022.2, 263936.5]
@@ -31,16 +31,16 @@ algorithm:
   rotor_model: direct_mdata
   wake_models: [Bastankhah2014_linear_k004]
 
-outputs:                          
+outputs:
   - output_type: FarmLayoutOutput
-    functions:                    
-      - function: get_figure        
+    functions:
+      - function: get_figure
         color_by: mean_P
         title: Mean power
         figsize: [3, 6]
         s: 100
         annotate: 0
-  - output_type: plt              
-    functions:                   
-      - function: show            
-      - function: close           
+  - output_type: plt
+    functions:
+      - function: show
+      - function: close

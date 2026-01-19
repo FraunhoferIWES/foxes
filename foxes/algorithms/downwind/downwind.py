@@ -1,7 +1,7 @@
 import numpy as np
 from xarray import Dataset
 
-from foxes.core import Algorithm, FarmDataModelList, get_engine
+from foxes.core import Algorithm, FarmDataModelList
 from foxes.core import PointDataModel, PointDataModelList, FarmController
 from foxes.config import config
 import foxes.models as fm
@@ -623,8 +623,8 @@ class Downwind(Algorithm):
 
         """
         out_vars = self.farm_vars if outputs is None else outputs
-        farm_results = get_engine().run_calculation(
-            self, mlist, model_data, out_vars=out_vars, **kwargs
+        farm_results = super()._launch_parallel_farm_calc(
+            mlist, model_data, out_vars=out_vars, **kwargs
         )
 
         if normalize:
@@ -803,8 +803,8 @@ class Downwind(Algorithm):
 
         """
         return (
-            get_engine()
-            .run_calculation(self, mlist, *data, out_vars=outputs, **kwargs)
+            super()
+            ._launch_parallel_points_calc(mlist, *data, out_vars=outputs, **kwargs)
             .sel({FC.TPOINT: 0})
             .rename({FC.TARGET: FC.POINT})
         )

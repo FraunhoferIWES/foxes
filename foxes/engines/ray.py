@@ -27,7 +27,7 @@ class RayEngine(PoolEngine):
         """Creates the pool"""
         self.print(f"Initializing pool of {self.n_workers} ray workers")
         load_ray()
-        ray.init(num_cpus=self.n_workers)
+        ray.init(num_cpus=self.n_workers, **self.pool_args)
 
     def submit(self, f, *args, **kwargs):
         """

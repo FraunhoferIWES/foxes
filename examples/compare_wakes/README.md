@@ -11,5 +11,5 @@ python3 run.py -h
 ## Run command
 For 30 states and 5 turbines, run
 ```
-python3 run.py 
+python3 run.py
 ```

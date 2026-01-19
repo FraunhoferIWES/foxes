@@ -172,6 +172,11 @@ KAPPA = 0.41
 :group: foxes.constants
 """
 
+Rd = 287.052874
+""" The specific gas constant for dry air
+:group: foxes.constants
+"""
+
 
 W = "W"
 """ The unit watt

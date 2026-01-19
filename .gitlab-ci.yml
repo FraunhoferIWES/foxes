@@ -1,39 +1,58 @@
-# This file is a template, and might need editing before it works on your project.
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Python.gitlab-ci.yml
+stages:
+  - pre-commit
+  - test
+variables:
+  UV_VERSION: "0.9.24"
+  PYTHON_VERSION: "3.13"
+  BASE_LAYER: bookworm-slim
+  UV_LINK_MODE: copy
+  UV_SYSTEM_PYTHON: 1
+  UV_CACHE_DIR: ${CI_PROJECT_DIR}/.cache/uv
+  PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
 
-# Official language image. Look for the different tagged releases at:
-# https://hub.docker.com/r/library/python/tags/
-image: python:3.14
-
-# Change pip's cache directory to be inside the project directory since we can
-# only cache local items.
-#variables:
-#  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-
-# Pip's cache doesn't store the python packages
-# https://pip.pypa.io/en/stable/topics/caching/
-#
-# If you want to also cache the installed packages, you have to install
-# them in a virtualenv and cache it as well.
-#cache:
-#  paths:
-#    - .cache/pip
-#    - venv/
-
-before_script:
-#  - python --version
-#  - pip install virtualenv
-#  - virtualenv venv
-#  - source venv/bin/activate
-  - pip install --upgrade pip
-  
-test:
-  image: python:3.14
+# ===== PRE-COMMIT =====
+pre-commit:
+  image: python:$PYTHON_VERSION
+  stage: pre-commit
+  only:
+    refs:
+      - main
+      - dev
   script:
-    - pip install .[test] --upgrade
-    - pwd
-    - flake8 foxes --count --select=E9,F63,F7,F82 --show-source --statistics
-    - pytest tests
+    - pip install --upgrade pip
+    - pip install pre-commit --break-system-packages
+    - pre-commit run --all-files
+  cache:
+    key: pre-commit-cache
+    paths:
+      - ${PRE_COMMIT_HOME}
+
+# ===== TEST =====
+test:
+  image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
+  stage: test
+  cache:
+    - key:
+        files:
+          - pyproject.toml
+      paths:
+        - $UV_CACHE_DIR
+  script:
+    - uv sync --extra test --dev
+    - uv run pytest tests
+    - uv cache prune --ci
+
+# ===== NOTEBOOKS =====
+notebooks:
+  image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
+  stage: test
+  cache:
+    - key:
+        files:
+          - pyproject.toml
+      paths:
+        - $UV_CACHE_DIR
+  script:
+    - uv sync --extra test --dev
+    - uv run pytest --nbmake notebooks
+    - uv cache prune --ci

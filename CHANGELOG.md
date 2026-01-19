@@ -146,7 +146,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Output:
   - Improved: `FarmResultsEval` can now handle NaN data in Einstein sums
-  - Improved: `ResultsWriter` can now also write turbine names 
+  - Improved: `ResultsWriter` can now also write turbine names
 - Turbine models:
   - New: `TableFactors`, multiplies variables with data from a two dimensional table
   - New: `YAW2YAWM`, calculates yaw deltas from absolute yaw and wind direction
@@ -193,7 +193,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Notebooks:
   - New: `overview.ipynb`, summarizes the setup steps
 - Bug fixes:
-  - Fix for bug in `TurbOPark` wake model: Brackets in Eq. (4) were wrong 
+  - Fix for bug in `TurbOPark` wake model: Brackets in Eq. (4) were wrong
   - Fix for bug with long streamlines
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.0](https://github.com/FraunhoferIWES/foxes/commits/v0.3.0)
@@ -207,7 +207,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Turbine models:
   - New: `Calculator`, simple variable calculation via user function
 - Opt:
-  - Now two abstract problems in core: `FarmOptProblem` and `FarmVarsProblem`, the latter invokes the `SetFarmVars` turbine model 
+  - Now two abstract problems in core: `FarmOptProblem` and `FarmVarsProblem`, the latter invokes the `SetFarmVars` turbine model
   - New opt problem: `RegularLayoutOptProblem`, searches for a regular grid layout
   - New opt problem: `GeomRegGrids`, finds regular grid layout by purely geometrical means (no wind farm calculation)
   - New opt problem: `GeomLayout`, turbine positioning based on xy variables, also purely geometrical
@@ -217,7 +217,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New in `foxes.opt`: Example `geom_reggrids`, purely geometrical regular layout optimization
 - Utils:
   - New functions for shape file handling: `read_shp`, `shp2csv`, `read_shp_polygons`
-  
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.1](https://github.com/FraunhoferIWES/foxes/commits/v0.3.1)
 
 ## v0.3.2-alpha
@@ -225,14 +225,14 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Bug fixes:
   - Fix for bug in `FarmResultsEval` that affected time range calculations under Windows
   - Bug fixes for `FarmResultsEval` with time series data
-    
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.2](https://github.com/FraunhoferIWES/foxes/commits/v0.3.2)
 
 ## v0.3.3-alpha
 
 - Utils:
   - Now `geopandas_helpers` can handle interior areas
-    
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.3](https://github.com/FraunhoferIWES/foxes/commits/v0.3.3)
 
 ## v0.3.4-alpha
@@ -480,13 +480,13 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New data classes: `MData`, `FData`, `TData`, all derived from the foxes `Data` class. These specialize model, farm and target data, respectively, during model calculations.
 - Algorithms:
   - All algorithm constructors now take `farm, states, wake_models` as the first three arguments. If no model book is given, the default `ModelBook()` will be used.
-  - Partial wakes are now chosen either 
+  - Partial wakes are now chosen either
     - by a dictionary, which maps wake model names to model choices (or default choices, if not found),
-    - or by a list, where the mapping to the wake models is in order of appearance, 
+    - or by a list, where the mapping to the wake models is in order of appearance,
     - or by a string, in which case all models are either mapped to the given model, or, if that fails with `TypeError`, to their defaults,
     - or by `None`, which means all models are mapped to the default choice.
 - Partial wakes:
-  - New `PartialSegregated` abstract model, from which the `PartialGrid` model is derived. Segregated models now average background results and wake deltas separatly, and then add the results. Notice that with the choice of `RotorPoints` partial wakes, the mathematically correct average over a discretized rotor is calculated. This is more accurate, but it may be slower than some models (e.g. for `PartialAxiWake` models) or not applicable for some rotor choices (e.g. the `LevelRotor`, where a wake average makes no sense). 
+  - New `PartialSegregated` abstract model, from which the `PartialGrid` model is derived. Segregated models now average background results and wake deltas separatly, and then add the results. Notice that with the choice of `RotorPoints` partial wakes, the mathematically correct average over a discretized rotor is calculated. This is more accurate, but it may be slower than some models (e.g. for `PartialAxiWake` models) or not applicable for some rotor choices (e.g. the `LevelRotor`, where a wake average makes no sense).
 - Outputs:
   - New output `RotorPointPlot`, creating rotor point plots.
 - Notebooks:
@@ -507,14 +507,14 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New utility `FDict`, a dictionary that supports factories
 - Bug fixes:
   - Bug fixed with `TurbOParkIX`, that prevented it from running
-  
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.1](https://github.com/FraunhoferIWES/foxes/commits/v0.7.1)
 
 ## v0.7.2
 
 - Bug fixes:
-  - Fix for bug with `Factory` that confused templates `A_B<..>` type with `B<..>` type templates 
-  
+  - Fix for bug with `Factory` that confused templates `A_B<..>` type with `B<..>` type templates
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.2](https://github.com/FraunhoferIWES/foxes/commits/v0.7.2)
 
 ## v0.7.3
@@ -539,7 +539,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Bug fixes:
   - Fox for bug with wake mirrors and partial wakes
 
-  
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.3](https://github.com/FraunhoferIWES/foxes/commits/v0.7.3)
 
 ## v0.7.4
@@ -548,7 +548,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Adding output options to `windio`
 - Output:
   - New output `StateTurbineTable`, exporting state-turbine data to NetCDF
-  
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.4](https://github.com/FraunhoferIWES/foxes/commits/v0.7.4)
 
 ## v0.8
@@ -619,7 +619,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New states `OnePointFlowStates`, `OnePointFlowTimeseries`, `OnePointFlowMultiHeightTimeseries`, `OnePointFlowMultiHeightNCTimeseries`: Generating horizontally inhomogeneous inflow from horizontally homogeneous input data
   - New farm layout option: `add_ring`, adding a ring of turbines
 - Models:
-  - Wake frame `Timelines` now also accept spatially uniform multi-height states 
+  - Wake frame `Timelines` now also accept spatially uniform multi-height states
   - New wake frame `DynamicWakes`: Dynamic wakes for any kind of timeseries states, compatible with chunking
   - New turbine type `FromLookupTable`, computes power and thrust coefficient from a lookup table
 - Outputs:
@@ -645,14 +645,14 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bug fixes:
   - Bug fixed in `WSProduct`, causing zero wind speed at regions not touched by wakes
   - Bugs fixes in `FarmLayoutOutput`, concerning the writing of the layout csv file
-  
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1)
 
 ## v1.1.1
 
 - Dependencies:
   - Removing optional dependencies `io`. The installation advice will be printed when trying to use the `foxes.input.windio` sub package. The reason is that for now this depends on a personal [fork by kilojoules](https://github.com/kilojoules/windIO), and the inclusion of such dependencies is not supported by PyPi.
-  
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1.1)
 
 ## v1.2
@@ -671,7 +671,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New example `yaml_input`, demonstrating the command line application `foxes_yaml` and the new yaml parameter file
 - Bug fixes:
   - Fix for `TurbOParkIX` wake model: Now `k` is truly `k`, such that only `ambka` or `ka` choices from `WakeK` correspond to multiplication with `AMB_TI` or `TI`, respectively.
-  
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.2)
 
 ## v1.2.1
@@ -825,8 +825,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Reworking the `Iterative` algorithm, such that it now computes only non-converged states in each iteration. In general, this leads to a substantial speed-up.
   - Introducing new boolean parameter `clear_mem` to `algo.calc_farm()`, clearing memory after initiating the calculation. This is intended to be used when there is only one single call of that function, or any of the used models.
 - Engines:
-  - Now all engines have `submit` and `await_result` functions (which are trivial for serial engines), also usable by the user from the `engine` object, e.g. for parallel plotting during post-processing. 
-  - Adding support for parallel results writing via `write_nc` parameter, optionally without ever creating the full dataset in memory. Independent of writing, the futures of individual chunks are now computed directly when needed, no longer in advance. 
+  - Now all engines have `submit` and `await_result` functions (which are trivial for serial engines), also usable by the user from the `engine` object, e.g. for parallel plotting during post-processing.
+  - Adding support for parallel results writing via `write_nc` parameter, optionally without ever creating the full dataset in memory. Independent of writing, the futures of individual chunks are now computed directly when needed, no longer in advance.
   - Engines have a new boolean parameter `progress_bar`, and if set to False, they print the progress to terminal instead. This is recommended for runs on clusters.
   - Dropping `XArrayEngine`, since no longer compatible
 - Inputs:
@@ -863,3 +863,22 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Reworked engine implementations, in particular pool engines. This concerns progress display and a smoother balance between submissions and post-processing chunk results.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6.2](https://github.com/FraunhoferIWES/foxes/commits/v1.6.2)
+
+## v1.7.0
+
+- Python version:
+  - Removing support for Python 3.14, will be re-added at a later stage
+- Engines:
+  - All engines are now required to be used though a _with_ block. If `algo.calc_farm()` or `algo.calc_points()` are called outside such a block, the _DefaultEngine_ will be created temporarily and the _with_ block will be added in the background.
+- Models:
+  - Improving the `Streamlines2D` wake frame, now substantially faster and lighter on memory
+- Input:
+  - Aligning the `windio` input with [WIFA](https://github.com/EUFLOW/WIFA) conventions for `turbine_results.nc` output writing, now (turbine, time)
+- Output:
+  - Image generating outputs like `FlowPlots2D` now separate plot data computation from figure generation. This reasoning is that `matplotlib.pyplot` is not thread-safe, and now all data can first be computed in parallel before using it for graphics after exiting the engine context.
+- Utils:
+  - New function `eval_dict_values`, which recursively parses string dictionary values like e.g. `np.arange(100)` to data, applied in `Dict.eval()`
+- Bug fixes:
+  - Fixed a bug with the `Sequential` algorithm in combination with `OnePointFlowStates`
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.0](https://github.com/FraunhoferIWES/foxes/commits/v1.7.0)

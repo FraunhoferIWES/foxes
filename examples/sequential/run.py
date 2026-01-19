@@ -152,81 +152,88 @@ if __name__ == "__main__":
         plt.show()
         plt.close(ax.get_figure(figsize=(8, 8)))
 
-    with foxes.Engine.new(
+    engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-    ):
-        algo = foxes.algorithms.Sequential(
-            farm,
-            states,
-            rotor_model=args.rotor,
-            wake_models=args.wakes,
-            wake_frame=args.frame,
-            wake_deflection=args.deflection,
-            partial_wakes=args.pwakes,
-            mbook=mbook,
-            verbosity=0,
+    )
+
+    algo = foxes.algorithms.Sequential(
+        farm,
+        states,
+        rotor_model=args.rotor,
+        wake_models=args.wakes,
+        wake_frame=args.frame,
+        wake_deflection=args.deflection,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
+        verbosity=0,
+    )
+
+    # in case of animation, add a plugin that creates the images:
+    if args.animation:
+        anigen = foxes.output.SeqFlowAnimationPlugin(
+            orientation="xy",
+            var=args.variable,
+            resolution=10,
+            xmin=-1000,
+            ymin=-1000,
+            xmax=4000,
+            ymax=3000,
+            vmin=0,
+            vmax=args.max_variable,
         )
+        algo.plugins.append(anigen)
 
-        # in case of animation, add a plugin that creates the images:
-        if args.animation:
-            anigen = foxes.output.SeqFlowAnimationPlugin(
-                orientation="xy",
-                var=args.variable,
-                resolution=10,
-                levels=None,
-                quiver_pars=dict(scale=0.01),
-                quiver_n=307,
-                xmin=-1000,
-                ymin=-1000,
-                xmax=4000,
-                ymax=3000,
-                vmin=0,
-                vmax=args.max_variable,
-                title=None,
-                animated=True,
-                rotor_color="red",
-            )
-            algo.plugins.append(anigen)
+        if args.debug:
+            anigen_debug = foxes.output.SeqWakeDebugPlugin()
+            algo.plugins.append(anigen_debug)
 
-            if args.debug:
-                anigen_debug = foxes.output.SeqWakeDebugPlugin()
-                algo.plugins.append(anigen_debug)
-
-        # run all states sequentially:
+    # run all states sequentially:
+    with engine:
         for r in algo:
             print(algo.index)
 
-    print("\nFarm results:\n")
-    print(algo.farm_results)
+print("\nFarm results:\n")
+print(algo.farm_results)
 
-    if args.animation:
-        print("\nCalculating animation")
+if args.animation:
+    print("\nCalculating animation")
 
-        fig, ax = plt.subplots()
-        anim = foxes.output.Animator(fig)
-        anim.add_generator(anigen.gen_images(ax))
-        if args.debug:
-            anim.add_generator(anigen_debug.gen_images(ax))
-        ani = anim.animate(interval=600)
-
-        lo = foxes.output.FarmLayoutOutput(farm)
-        lo.get_figure(
-            fig=fig,
-            ax=ax,
-            title="",
-            annotate=1,
-            anno_delx=-120,
-            anno_dely=-60,
-            alpha=0,
-            s=10,
+    fig, ax = plt.subplots()
+    anim = foxes.output.Animator(fig)
+    anim.add_generator(
+        anigen.gen_images(
+            ax,
+            levels=None,
+            quiver_pars=dict(scale=0.016, alpha=0.5),
+            quiver_n=157,
+            title=None,
+            rotor_color="red",
         )
+    )
 
-        fpath = Path(args.ani_file)
-        print("Writing file", fpath)
-        if fpath.suffix == ".gif":
-            ani.save(filename=fpath, writer="pillow", fps=args.fps)
-        else:
-            ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)
+    if args.debug:
+        anim.add_generator(anigen_debug.gen_images(ax))
+
+    ani = anim.animate(interval=600)
+
+    lo = foxes.output.FarmLayoutOutput(farm)
+    lo.get_figure(
+        fig=fig,
+        ax=ax,
+        title="",
+        annotate=1,
+        anno_delx=-120,
+        anno_dely=-60,
+        alpha=0,
+        s=10,
+    )
+
+    fpath = Path(args.ani_file)
+    print("Writing file", fpath)
+    if fpath.suffix == ".gif":
+        ani.save(filename=fpath, writer="pillow", fps=args.fps)
+    else:
+        ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)

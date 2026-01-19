@@ -84,7 +84,7 @@ def _run(
     """Helper function for running in a single process"""
     algo.reset_chunk_store(chunk_store.copy())
     results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store() if iterative else {}
+    chunk_store = algo.reset_chunk_store()
     cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
     _write_ani(algo, chunk_key, write_chunk_ani, *data)
     results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
@@ -126,12 +126,14 @@ class PoolEngine(Engine):
     ----------
     share_cstore: bool
         Share chunk store between chunks
+    pool_args: dict
+        Arguments for the pool constructor
 
     :group: engines
 
     """
 
-    def __init__(self, *args, share_cstore=False, **kwargs):
+    def __init__(self, *args, share_cstore=False, pool_args={}, **kwargs):
         """
         Constructor.
 
@@ -141,12 +143,15 @@ class PoolEngine(Engine):
             Arguments for the base class
         share_cstore: bool
             Share chunk store between chunks
+        pool_args: dict
+            Arguments for the pool constructor
         kwargs: dict, optional
             Additional arguments for the base class
 
         """
         super().__init__(*args, **kwargs)
         self.share_cstore = share_cstore
+        self.pool_args = pool_args
 
     @abstractmethod
     def _create_pool(self):
@@ -387,10 +392,11 @@ class PoolEngine(Engine):
 
                     i0_targets = i1_targets
 
-                    while len(futures) > self.n_workers * 2:
-                        k = next(iter(futures))
-                        results[k] = self.await_result(futures.pop(k))
-                        results_mgr.update(results, futures)
+                    if self.n_workers >= 10:
+                        while len(futures) > self.n_workers * 2:
+                            k = next(iter(futures))
+                            results[k] = self.await_result(futures.pop(k))
+                            results_mgr.update(results, futures)
 
                 i0_states = i1_states
 

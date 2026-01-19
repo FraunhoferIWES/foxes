@@ -2,7 +2,7 @@
 
 ## Requirements
 
-The supported Python versions are `Python 3.9`...`3.14`.
+The supported Python versions are `Python 3.9`...`3.13`.
 
 ## TLDR; Quick installation guide
 
@@ -18,7 +18,7 @@ Alternatively, install via conda:
 conda install foxes -c conda-forge
 ```
 
-More details, including guidelines for developers and 
+More details, including guidelines for developers and
 quicker conda installations, can be found below.
 
 ## Installation via pip
@@ -59,7 +59,7 @@ This commands installs the version that correspond to the `main` branch at [gith
 pip install git+https://github.com/FraunhoferIWES/foxes@dev
 ```
 
-If you are planning to run wind farm optimizations, please install the 
+If you are planning to run wind farm optimizations, please install the
 [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package:
 
 ```console
@@ -83,7 +83,7 @@ pip install -e .
 ```
 The last line makes sure that all your code changes are included whenever importing `foxes`. Concerning the `git clone` line, we actually recommend that you fork `foxes` on GitHub and then replace that command by cloning your fork instead.
 
-If you are planning to run wind farm optimizations, please also install the 
+If you are planning to run wind farm optimizations, please also install the
 [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package as described above.
 
 ### Optional dependencies
@@ -163,7 +163,7 @@ The `foxes` package is available on the channel [conda-forge](https://anaconda.o
 conda install foxes -c conda-forge --solver=libmamba
 ```
 
-If you are planning to run wind farm optimizations, please install the 
+If you are planning to run wind farm optimizations, please install the
 [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package instead:
 
 ```console
@@ -186,10 +186,10 @@ cd foxes
 conda develop .
 ```
 
-The last line makes sure that all your code changes are included whenever importing `foxes`. 
+The last line makes sure that all your code changes are included whenever importing `foxes`.
 Concerning the `git clone` line, we actually recommend that you fork `foxes` on GitHub and then replace that command by cloning your fork instead.
 
-If you are planning to run wind farm optimizations, please install the 
+If you are planning to run wind farm optimizations, please install the
 [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package in addition:
 
 ```console

@@ -1,20 +1,26 @@
+engine:
+  engine_type: process
+  n_procs: null
+  chunk_size_states: 300
+  chunk_size_points: 1000
+
 states:
   states_type: Timeseries
   data_source: timeseries_8000.csv.gz
   output_vars: [WS, WD, TI, RHO]
   var2col:
     WS: ws
-    WD: wd 
+    WD: wd
     TI: ti
   fixed_vars:
     RHO: 1.225
-  
+
 model_book:
   turbine_types:
     - name: my_turbine
       ttype_type: PCtFile
       data_source: NREL-5MW-D126-H90.csv
-  
+
 wind_farm:
   layouts:
     - function: add_from_file
@@ -26,12 +32,34 @@ algorithm:
   wake_models: [Bastankhah2014_linear_k004]
 
 outputs:
+  - output_type: FlowPlots2D
+    functions:
+      - function: get_mean_data_xy
+        var: WS
+        resolution: 150
+        with_engine: True               # compute image data in parallel, using the FOXES engine
+        result_labels: $flow_plot_data  # store the resulting image data under $flow_plot_data
   - output_type: plt
     functions:
-      - function: figure
+      - function: subplots              # create a new figure and axes objects
+        figsize: [6, 6]
+        result_labels: [$fig, $ax]      # store the resulting Figure and Axes objects under $fig and $ax
+  - output_type: FlowPlots2D
+    functions:
+      - function: get_mean_fig_xy       # create the mean flow figure
+        mean_data_xy: $flow_plot_data   # pass the stored image data to the function
+        fig: $fig                       # pass the stored Figure object to the function
+        ax: $ax                         # pass the stored Axes object to the function
+  - output_type: plt
+    functions:
+      - function: show            # show the created figure
+      - function: close           # close the figure to free memory
+  - output_type: plt
+    functions:
+      - function: figure      # create a new figure object
         figsize: [10, 5]
         result_labels: $fig   # store the result of the function under $fig
-  - object: $fig              # now run functions of the object behind $fig  
+  - object: $fig              # now run functions of the object behind $fig
     functions:
       - function: add_subplot
         args: [1, 2, 1]

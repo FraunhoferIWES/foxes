@@ -17,7 +17,7 @@ states:
     RHO: 1.225
 
 wind_farm:
-  layouts:  
+  layouts:
     - function: add_grid
       xy_base: [-500, -500]
       step_vectors: [[800, 0], [0, 800]]
@@ -41,4 +41,3 @@ outputs:
     functions:
       - function: show
       - function: close
-

@@ -261,9 +261,9 @@ class OnePointFlowStates(States):
                 self.timelines_data = data.pop("data")
 
     def calc_states_indices(self, algo, mdata, points, hi, ref_xy):
+        # prepare:
         n_states, n_points = points.shape[:2]
         dxy = self.timelines_data["dxy"].to_numpy()[hi]
-
         i0 = mdata.states_i0(counter=True)
         trace_p = points[:, :, :2] - ref_xy[:, :, :2]
         trace_si = np.zeros((n_states, n_points), dtype=config.dtype_int)

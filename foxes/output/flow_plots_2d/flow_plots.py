@@ -17,9 +17,189 @@ class FlowPlots2D(SliceData):
 
     """
 
-    def get_mean_fig_xy(
+    def get_mean_data_xy(
         self,
         var,
+        vmin=None,
+        vmax=None,
+        data_format="numpy",
+        **kwargs,
+    ):
+        """
+        Generates 2D farm flow figure in a horizontal xy-plane.
+
+        Parameters
+        ----------
+        var: str
+            The variable name
+        x_direction: float, optional
+            The direction of the x axis, 0 = north
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
+        data_format: str
+            The output data format: numpy, pandas, xarray
+        kwargs: dict, optional
+            Additional parameters for SliceData.get_mean_data_xy
+
+        Returns
+        -------
+        parameters: dict
+            The parameters used
+        data: dict or pandas.DataFrame or xarray.Dataset
+            The gridded data
+        grid_data: tuple, optional
+            The grid data (x_pos, y_pos, z_pos, g_pts)
+
+        """
+        variables = list(set([var] + [FV.WD, FV.WS]))
+
+        data, gdata = super().get_mean_data_xy(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format=data_format,
+            ret_grid=True,
+            ret_states=False,
+            **kwargs,
+        )
+
+        parameters = dict(
+            var=var,
+            variables=variables,
+            vmin=vmin,
+            vmax=vmax,
+            data_format=data_format,
+        )
+
+        return parameters, data, gdata
+
+    def get_mean_data_yz(
+        self,
+        var,
+        x_direction=270,
+        vmin=None,
+        vmax=None,
+        data_format="numpy",
+        **kwargs,
+    ):
+        """
+        Generates 2D farm flow figure in a horizontal yz-plane.
+
+        Parameters
+        ----------
+        var: str
+            The variable name
+        x_direction: float, optional
+            The direction of the x axis, 0 = north
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
+        data_format: str
+            The output data format: numpy, pandas, xarray
+        kwargs: dict, optional
+            Additional parameters for SliceData.get_mean_data_yz
+
+        Returns
+        -------
+        parameters: dict
+            The parameters used
+        data: dict or pandas.DataFrame or xarray.Dataset
+            The gridded data
+        grid_data: tuple, optional
+            The grid data (x_pos, y_pos, z_pos, g_pts)
+
+        """
+        variables = list(set([var] + [FV.WD, FV.WS]))
+
+        data, gdata = super().get_mean_data_yz(
+            variables=variables,
+            x_direction=x_direction,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format=data_format,
+            ret_grid=True,
+            ret_states=False,
+            **kwargs,
+        )
+
+        parameters = dict(
+            var=var,
+            x_direction=x_direction,
+            variables=variables,
+            vmin=vmin,
+            vmax=vmax,
+            data_format=data_format,
+        )
+
+        return parameters, data, gdata
+
+    def get_mean_data_xz(
+        self,
+        var,
+        x_direction=270,
+        vmin=None,
+        vmax=None,
+        data_format="numpy",
+        **kwargs,
+    ):
+        """
+        Generates 2D farm flow figure in a horizontal xz-plane.
+
+        Parameters
+        ----------
+        var: str
+            The variable name
+        x_direction: float, optional
+            The direction of the x axis, 0 = north
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
+        data_format: str
+            The output data format: numpy, pandas, xarray
+        kwargs: dict, optional
+            Additional parameters for SliceData.get_mean_data_xz
+
+        Returns
+        -------
+        parameters: dict
+            The parameters used
+        data: dict or pandas.DataFrame or xarray.Dataset
+            The gridded data
+        grid_data: tuple, optional
+            The grid data (x_pos, y_pos, z_pos, g_pts)
+
+        """
+        variables = list(set([var] + [FV.WD, FV.WS]))
+
+        data, gdata = super().get_mean_data_xz(
+            variables=variables,
+            x_direction=x_direction,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format=data_format,
+            ret_grid=True,
+            ret_states=False,
+            **kwargs,
+        )
+
+        parameters = dict(
+            var=var,
+            x_direction=x_direction,
+            variables=variables,
+            vmin=vmin,
+            vmax=vmax,
+            data_format=data_format,
+        )
+
+        return parameters, data, gdata
+
+    def get_mean_fig_xy(
+        self,
+        mean_data_xy,
         xlabel="x [m]",
         ylabel="y [m]",
         levels=None,
@@ -30,23 +210,21 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
-        vmin=None,
-        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
         ret_im=False,
         ret_data=False,
         animated=False,
-        **kwargs,
     ):
         """
         Generates 2D farm flow figure in a horizontal xy-plane.
 
         Parameters
         ----------
-        var: str
-            The variable name
+        mean_data_xy: tuple
+            The pre-calculated data from get_mean_data_xy,
+            (parameters, data, grid_data)
         xlabel: str, optional
             The x axis label
         ylabel: str, optional
@@ -67,10 +245,6 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
-        vmin: float, optional
-            The minimal variable value
-        vmax: float, optional
-            The maximal variable value
         quiver_n: int, optional
             Place a vector at each `n`th point
         quiver_pars: dict, optional
@@ -83,8 +257,6 @@ class FlowPlots2D(SliceData):
             Flag for returning image data
         animated: bool
             Switch for usage for an animation
-        kwargs: dict, optional
-            Additional parameters for SliceData.get_mean_data_xy
 
         Returns
         -------
@@ -99,23 +271,22 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
-        if self.nofig:
-            return None
-
-        variables = list(set([var] + [FV.WD, FV.WS]))
+        # read data:
+        parameters, data, gdata = mean_data_xy
+        var = parameters["var"]
+        variables = parameters["variables"]
+        vmin = parameters["vmin"]
+        vmax = parameters["vmax"]
+        data_format = parameters["data_format"]
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
-
-        data, gdata = self.get_mean_data_xy(
-            variables=variables,
-            vmin={var: vmin} if vmin is not None else {},
-            vmax={var: vmax} if vmax is not None else {},
-            data_format="numpy",
-            ret_grid=True,
-            **kwargs,
-        )
         x_pos, y_pos, z_pos, __ = gdata
+
+        if data_format != "numpy":
+            raise NotImplementedError(
+                f"Only numpy data_format is supported here, got {data_format}"
+            )
 
         if title is None:
             title = f"States mean, z =  {int(np.round(z_pos))} m"
@@ -168,8 +339,7 @@ class FlowPlots2D(SliceData):
 
     def get_mean_fig_xz(
         self,
-        var,
-        x_direction=270,
+        mean_data_xz,
         xlabel="x [m]",
         zlabel="z [m]",
         levels=None,
@@ -180,25 +350,21 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
-        vmin=None,
-        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
         ret_im=False,
         ret_data=False,
         animated=False,
-        **kwargs,
     ):
         """
         Generates 2D farm flow figure in a horizontal xz-plane.
 
         Parameters
         ----------
-        var: str
-            The variable name
-        x_direction: float, optional
-            The direction of the x axis, 0 = north
+        mean_data_xz: tuple
+            The pre-calculated data from get_mean_data_xz,
+            (parameters, data, grid_data)
         xlabel: str, optional
             The x axis label
         zlabel: str, optional
@@ -219,10 +385,6 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
-        vmin: float, optional
-            The minimal variable value
-        vmax: float, optional
-            The maximal variable value
         quiver_n: int, optional
             Place a vector at each `n`th point
         quiver_pars: dict, optional
@@ -235,8 +397,6 @@ class FlowPlots2D(SliceData):
             Flag for returning image data
         animated: bool
             Switch for usage for an animation
-        kwargs: dict, optional
-            Additional parameters for SliceData.get_mean_data_xz
 
         Returns
         -------
@@ -254,21 +414,23 @@ class FlowPlots2D(SliceData):
         if self.nofig:
             return None
 
-        variables = list(set([var] + [FV.WD, FV.WS]))
+        # read data:
+        parameters, data, gdata = mean_data_xz
+        var = parameters["var"]
+        variables = parameters["variables"]
+        vmin = parameters["vmin"]
+        vmax = parameters["vmax"]
+        x_direction = parameters["x_direction"]
+        data_format = parameters["data_format"]
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
-
-        data, gdata = self.get_mean_data_xz(
-            variables=variables,
-            vmin={var: vmin} if vmin is not None else {},
-            vmax={var: vmax} if vmax is not None else {},
-            x_direction=x_direction,
-            data_format="numpy",
-            ret_grid=True,
-            **kwargs,
-        )
         x_pos, y_pos, z_pos, __ = gdata
+
+        if data_format != "numpy":
+            raise NotImplementedError(
+                f"Only numpy data_format is supported here, got {data_format}"
+            )
 
         if title is None:
             title = f"States mean, x direction {x_direction}°, y =  {int(np.round(y_pos))} m"
@@ -321,8 +483,7 @@ class FlowPlots2D(SliceData):
 
     def get_mean_fig_yz(
         self,
-        var,
-        x_direction=270,
+        mean_data_yz,
         ylabel="x [m]",
         zlabel="z [m]",
         levels=None,
@@ -333,23 +494,21 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
-        vmin=None,
-        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
         ret_im=False,
         ret_data=False,
         animated=False,
-        **kwargs,
     ):
         """
         Generates 2D farm flow figure in a horizontal yz-plane.
 
         Parameters
         ----------
-        var: str
-            The variable name
+        mean_data_yz: tuple
+            The pre-calculated data from get_mean_data_yz,
+            (parameters, data, grid_data)
         x_direction: float, optional
             The direction of the x axis, 0 = north
         ylabel: str, optional
@@ -372,10 +531,6 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
-        vmin: float, optional
-            The minimal variable value
-        vmax: float, optional
-            The maximal variable value
         quiver_n: int, optional
             Place a vector at each `n`th point
         quiver_pars: dict, optional
@@ -388,8 +543,6 @@ class FlowPlots2D(SliceData):
             Flag for returning image data
         animated: bool
             Switch for usage for an animation
-        kwargs: dict, optional
-            Additional parameters for SliceData.get_mean_data_yz
 
         Returns
         -------
@@ -407,21 +560,23 @@ class FlowPlots2D(SliceData):
         if self.nofig:
             return None
 
-        variables = list(set([var] + [FV.WD, FV.WS]))
+        # read data:
+        parameters, data, gdata = mean_data_yz
+        var = parameters["var"]
+        variables = parameters["variables"]
+        vmin = parameters["vmin"]
+        vmax = parameters["vmax"]
+        x_direction = parameters["x_direction"]
+        data_format = parameters["data_format"]
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
-
-        data, gdata = self.get_mean_data_yz(
-            variables=variables,
-            vmin={var: vmin} if vmin is not None else {},
-            vmax={var: vmax} if vmax is not None else {},
-            x_direction=x_direction,
-            data_format="numpy",
-            ret_grid=True,
-            **kwargs,
-        )
         x_pos, y_pos, z_pos, __ = gdata
+
+        if data_format != "numpy":
+            raise NotImplementedError(
+                f"Only numpy data_format is supported here, got {data_format}"
+            )
 
         if title is None:
             title = f"States mean, x direction {x_direction}°, x =  {int(np.round(x_pos))} m"
@@ -473,9 +628,193 @@ class FlowPlots2D(SliceData):
 
         return out
 
-    def gen_states_fig_xy(
+    def get_states_data_xy(
         self,
         var,
+        vmin=None,
+        vmax=None,
+        data_format="numpy",
+        **kwargs,
+    ):
+        """
+        Generates 2D farm flow figure in a horizontal xy-plane.
+
+        Parameters
+        ----------
+        var: str
+            The variable name
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
+        data_format: str
+            The output data format: numpy, pandas, xarray
+        kwargs: dict, optional
+            Additional parameters for SliceData.get_states_data_xy
+
+        Returns
+        -------
+        parameters: dict
+            The parameters used
+        data: dict or pandas.DataFrame or xarray.Dataset
+            The gridded data
+        states: numpy.ndarray, optional
+            The states indices
+        grid_data: tuple, optional
+            The grid data (x_pos, y_pos, z_pos, g_pts)
+
+        """
+        variables = list(set([var] + [FV.WD, FV.WS]))
+
+        data, states, gdata = super().get_states_data_xy(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format=data_format,
+            ret_states=True,
+            ret_grid=True,
+            **kwargs,
+        )
+
+        pars = dict(
+            var=var,
+            variables=variables,
+            vmin=vmin,
+            vmax=vmax,
+            data_format=data_format,
+        )
+
+        return pars, data, states, gdata
+
+    def get_states_data_xz(
+        self,
+        var,
+        x_direction=270.0,
+        vmin=None,
+        vmax=None,
+        data_format="numpy",
+        **kwargs,
+    ):
+        """
+        Generates 2D farm flow figure in a horizontal xz-plane.
+
+        Parameters
+        ----------
+        var: str
+            The variable name
+        x_direction: float, optional
+            The direction of the x axis, 0 = north
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
+        data_format: str
+            The output data format: numpy, pandas, xarray
+        kwargs: dict, optional
+            Additional parameters for SliceData.get_states_data_xz
+
+        Returns
+        -------
+        parameters: dict
+            The parameters used
+        data: dict or pandas.DataFrame or xarray.Dataset
+            The gridded data
+        states: numpy.ndarray, optional
+            The states indices
+        grid_data: tuple, optional
+            The grid data (x_pos, y_pos, z_pos, g_pts)
+
+        """
+        variables = list(set([var] + [FV.WD, FV.WS]))
+
+        data, states, gdata = super().get_states_data_xz(
+            variables=variables,
+            x_direction=x_direction,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format=data_format,
+            ret_states=True,
+            ret_grid=True,
+            **kwargs,
+        )
+
+        pars = dict(
+            var=var,
+            x_direction=x_direction,
+            variables=variables,
+            vmin=vmin,
+            vmax=vmax,
+            data_format=data_format,
+        )
+
+        return pars, data, states, gdata
+
+    def get_states_data_yz(
+        self,
+        var,
+        x_direction=270.0,
+        vmin=None,
+        vmax=None,
+        data_format="numpy",
+        **kwargs,
+    ):
+        """
+        Generates 2D farm flow figure in a horizontal yz-plane.
+
+        Parameters
+        ----------
+        var: str
+            The variable name
+        x_direction: float, optional
+            The direction of the x axis, 0 = north
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
+        data_format: str
+            The output data format: numpy, pandas, xarray
+        kwargs: dict, optional
+            Additional parameters for SliceData.get_states_data_yz
+
+        Returns
+        -------
+        parameters: dict
+            The parameters used
+        data: dict or pandas.DataFrame or xarray.Dataset
+            The gridded data
+        states: numpy.ndarray, optional
+            The states indices
+        grid_data: tuple, optional
+            The grid data (x_pos, y_pos, z_pos, g_pts)
+
+        """
+        variables = list(set([var] + [FV.WD, FV.WS]))
+
+        data, states, gdata = super().get_states_data_yz(
+            variables=variables,
+            x_direction=x_direction,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format=data_format,
+            ret_states=True,
+            ret_grid=True,
+            **kwargs,
+        )
+
+        pars = dict(
+            var=var,
+            x_direction=x_direction,
+            variables=variables,
+            vmin=vmin,
+            vmax=vmax,
+            data_format=data_format,
+        )
+
+        return pars, data, states, gdata
+
+    def gen_states_fig_xy(
+        self,
+        states_data_xy,
         xlabel="x [m]",
         ylabel="y [m]",
         levels=None,
@@ -486,8 +825,6 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
-        vmin=None,
-        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
@@ -502,8 +839,9 @@ class FlowPlots2D(SliceData):
 
         Parameters
         ----------
-        var: str
-            The variable name
+        states_data_xy: tuple
+            The pre-calculated data from get_states_data_xy,
+            (parameters, data, states, grid_data)
         xlabel: str, optional
             The x axis label
         ylabel: str, optional
@@ -524,10 +862,6 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
-        vmin: float, optional
-            The minimal variable value
-        vmax: float, optional
-            The maximal variable value
         quiver_n: int, optional
             Place a vector at each `n`th point
         quiver_pars: dict, optional
@@ -540,13 +874,6 @@ class FlowPlots2D(SliceData):
             Switch for usage for an animation
         rotor_color: str, optional
             Indicate the rotor orientation by a colored line
-        precalc: bool or tuple
-            Flag for pre-calculation run, adding an additional
-            generator call before the actual plot generations,
-            yields data, states, gdata. The same tuple can be given
-            for avoiding its calculation and picking up from there.
-        kwargs: dict, optional
-            Additional parameters for SliceData.get_states_data_xy
 
         Yields
         ------
@@ -562,27 +889,22 @@ class FlowPlots2D(SliceData):
         if self.nofig:
             yield None
 
-        variables = list(set([var] + [FV.WD, FV.WS]))
+        # read data:
+        parameters, data, states, gdata = states_data_xy
+        var = parameters["var"]
+        variables = parameters["variables"]
+        vmin = parameters["vmin"]
+        vmax = parameters["vmax"]
+        data_format = parameters["data_format"]
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
-
-        if isinstance(precalc, (tuple, list)):
-            data, states, gdata = precalc
-        else:
-            data, states, gdata = self.get_states_data_xy(
-                variables=variables,
-                vmin={var: vmin} if vmin is not None else {},
-                vmax={var: vmax} if vmax is not None else {},
-                data_format="numpy",
-                ret_states=True,
-                ret_grid=True,
-                **kwargs,
-            )
-            if precalc:
-                yield data, states, gdata
-
         x_pos, y_pos, z_pos, __ = gdata
+
+        if data_format != "numpy":
+            raise NotImplementedError(
+                f"Only numpy data_format is supported here, got {data_format}"
+            )
 
         # define wind vector arrows:
         qpars = dict(angles="xy", scale_units="xy", scale=0.05)
@@ -663,8 +985,7 @@ class FlowPlots2D(SliceData):
 
     def gen_states_fig_xz(
         self,
-        var,
-        x_direction=270.0,
+        states_data_xz,
         xlabel="x [m]",
         zlabel="z [m]",
         levels=None,
@@ -675,15 +996,12 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
-        vmin=None,
-        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
         ret_im=False,
         animated=False,
         rotor_color=None,
-        precalc=False,
         **kwargs,
     ):
         """
@@ -691,10 +1009,9 @@ class FlowPlots2D(SliceData):
 
         Parameters
         ----------
-        var: str
-            The variable name
-        x_direction: float, optional
-            The direction of the x axis, 0 = north
+        states_data_xz: tuple
+            The pre-calculated data from get_states_data_xz,
+            (parameters, data, states, grid_data)
         xlabel: str, optional
             The x axis label
         zlabel: str, optional
@@ -715,10 +1032,6 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
-        vmin: float, optional
-            The minimal variable value
-        vmax: float, optional
-            The maximal variable value
         quiver_n: int, optional
             Place a vector at ech `n`th point
         quiver_pars: dict, optional
@@ -731,11 +1044,6 @@ class FlowPlots2D(SliceData):
             Switch for usage for an animation
         rotor_color: str, optional
             Indicate the rotor orientation by a colored line
-        precalc: bool or tuple
-            Flag for pre-calculation run, adding an additional
-            generator call before the actual plot generations,
-            yields data, states, gdata. The same tuple can be given
-            for avoiding its calculation and picking up from there.
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_xz
 
@@ -753,28 +1061,23 @@ class FlowPlots2D(SliceData):
         if self.nofig:
             yield None
 
-        variables = list(set([var] + [FV.WD, FV.WS]))
+        # read data:
+        parameters, data, states, gdata = states_data_xz
+        var = parameters["var"]
+        variables = parameters["variables"]
+        vmin = parameters["vmin"]
+        vmax = parameters["vmax"]
+        x_direction = parameters["x_direction"]
+        data_format = parameters["data_format"]
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
-
-        if isinstance(precalc, (tuple, list)):
-            data, states, gdata = precalc
-        else:
-            data, states, gdata = self.get_states_data_xz(
-                variables=variables,
-                vmin={var: vmin} if vmin is not None else {},
-                vmax={var: vmax} if vmax is not None else {},
-                data_format="numpy",
-                ret_states=True,
-                ret_grid=True,
-                x_direction=x_direction,
-                **kwargs,
-            )
-            if precalc:
-                yield data, states, gdata
-
         x_pos, y_pos, z_pos, __ = gdata
+
+        if data_format != "numpy":
+            raise NotImplementedError(
+                f"Only numpy data_format is supported here, got {data_format}"
+            )
 
         # define wind vector arrows:
         qpars = dict(angles="xy", scale_units="xy", scale=0.05)
@@ -852,8 +1155,7 @@ class FlowPlots2D(SliceData):
 
     def gen_states_fig_yz(
         self,
-        var,
-        x_direction=270.0,
+        states_data_yz,
         ylabel="y [m]",
         zlabel="z [m]",
         levels=None,
@@ -864,15 +1166,12 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
-        vmin=None,
-        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
         ret_im=False,
         animated=False,
         rotor_color=None,
-        precalc=False,
         **kwargs,
     ):
         """
@@ -880,10 +1179,9 @@ class FlowPlots2D(SliceData):
 
         Parameters
         ----------
-        var: str
-            The variable name
-        x_direction: float, optional
-            The direction of the x axis, 0 = north
+        states_data_yz: tuple
+            The pre-calculated data from get_states_data_yz,
+            (parameters, data, states, grid_data)
         ylabel: str, optional
             The y axis label
         zlabel: str, optional
@@ -904,10 +1202,6 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
-        vmin: float, optional
-            The minimal variable value
-        vmax: float, optional
-            The maximal variable value
         quiver_n: int, optional
             Place a vector at ech `n`th point
         quiver_pars: dict, optional
@@ -920,11 +1214,6 @@ class FlowPlots2D(SliceData):
             Switch for usage for an animation
         rotor_color: str, optional
             Indicate the rotor orientation by a colored line
-        precalc: bool or tuple
-            Flag for pre-calculation run, adding an additional
-            generator call before the actual plot generations,
-            yields data, states, gdata. The same tuple can be given
-            for avoiding its calculation and picking up from there.
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_yz
 
@@ -942,28 +1231,23 @@ class FlowPlots2D(SliceData):
         if self.nofig:
             yield None
 
-        variables = list(set([var] + [FV.WD, FV.WS]))
+        # read data:
+        parameters, data, states, gdata = states_data_yz
+        var = parameters["var"]
+        variables = parameters["variables"]
+        vmin = parameters["vmin"]
+        vmax = parameters["vmax"]
+        x_direction = parameters["x_direction"]
+        data_format = parameters["data_format"]
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
-
-        if isinstance(precalc, (tuple, list)):
-            data, states, gdata = precalc
-        else:
-            data, states, gdata = self.get_states_data_yz(
-                variables=variables,
-                vmin={var: vmin} if vmin is not None else {},
-                vmax={var: vmax} if vmax is not None else {},
-                data_format="numpy",
-                ret_states=True,
-                ret_grid=True,
-                x_direction=x_direction,
-                **kwargs,
-            )
-            if precalc:
-                yield data, states, gdata
-
         x_pos, y_pos, z_pos, __ = gdata
+
+        if data_format != "numpy":
+            raise NotImplementedError(
+                f"Only numpy data_format is supported here, got {data_format}"
+            )
 
         # define wind vector arrows:
         qpars = dict(angles="xy", scale_units="xy", scale=0.05)

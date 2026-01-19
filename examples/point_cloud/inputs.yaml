@@ -6,14 +6,14 @@ states:
   point_coord: point
   x_ncvar: x
   y_ncvar: y
-  time_format: 
+  time_format:
   var2ncvar:
     WS: ws
     WD: wd
     TI: ti
     RHO: rho
   load_mode: preload
-  
+
 wind_farm:
   layouts:    # list functions from foxes.input.farm_layout below
     - function: add_grid
@@ -39,4 +39,3 @@ outputs:
     functions:
       - function: show
       - function: close
-

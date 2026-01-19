@@ -26,7 +26,7 @@ class WRGStates(States):
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-    interpn_pars: dict
+    interp_pars: dict
         Additional parameters for scipy.interpolate.interpn
 
     :group: input.states
@@ -39,7 +39,7 @@ class WRGStates(States):
         ws_bins,
         fixed_vars={},
         bounds_extra_space="1D",
-        **interpn_pars,
+        **interp_pars,
     ):
         """
         Constructor
@@ -57,7 +57,7 @@ class WRGStates(States):
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        interpn_pars: dict, optional
+        interp_pars: dict, optional
             Additional parameters for scipy.interpolate.interpn
 
         """
@@ -66,7 +66,7 @@ class WRGStates(States):
         self.ws_bins = np.asarray(ws_bins)
         self.fixed_vars = fixed_vars
         self.bounds_extra_space = bounds_extra_space
-        self.interpn_pars = interpn_pars
+        self.interp_pars = interp_pars
 
     def load_data(self, algo, verbosity=0):
         """
@@ -259,7 +259,7 @@ class WRGStates(States):
         gvars = (self._x, self._y, self._wds)
         try:
             ipars = dict(bounds_error=True, fill_value=None)
-            ipars.update(self.interpn_pars)
+            ipars.update(self.interp_pars)
             data = interpn(gvars, self._data, pts, **ipars).reshape(
                 n_states, n_targets, n_tpoints, 3
             )

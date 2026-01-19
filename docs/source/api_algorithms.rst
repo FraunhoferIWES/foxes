@@ -2,7 +2,7 @@ foxes.algorithms
 ================
 Algorithms manage the calculation of farm and point results.
 
-    .. table:: 
+    .. table::
         :widths: auto
 
         =========================== ====================================================
@@ -12,4 +12,3 @@ Algorithms manage the calculation of farm and point results.
         :ref:`Iterative algorithm`  Iterates until convergence has been reached.
         :ref:`Sequential algorithm` Computes states as an iterator, not unsing chunks.
         =========================== ====================================================
-

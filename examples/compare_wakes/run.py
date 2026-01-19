@@ -100,7 +100,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-e", "--engine", help="The engine", default="ProcessEngine")
     parser.add_argument(
-        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
+        "-n", "--n_cpus", help="The number of cpus", default=4, type=int
     )
     parser.add_argument(
         "-c",
@@ -165,76 +165,80 @@ if __name__ == "__main__":
     while nrows * ncols < nd:
         nrows += 1
 
-    figsize = (ncols * args.figsize_scale, nrows * args.figsize_scale)
-    fig, axs = plt.subplots(nrows, ncols, figsize=figsize, sharex=True, sharey=True)
-    with foxes.Engine.new(
+    engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-    ):
+    )
+
+    # x line:
+    xlist = np.arange(-1, args.dists_D[-1] + args.step, args.step) * D
+    nx = len(xlist)
+    line_points = np.zeros((nx, 3))
+    line_points[:, 2] = args.height if args.height is not None else H
+    line_points[:, 0] = xlist
+
+    with engine:
+        wake_results = []
+        line_results = []
         for wake in args.wakes:
             wakes = [wake] + args.ewakes
-            print("Calculating:", wakes)
+            print(f"Calculating: {wakes} \n")
 
             results = calc(mbook, farm, states, wakes, points, args).reshape(nd, ny)
+            wake_results.append((wake, results))
 
-            for di, d in enumerate(args.dists_D):
-                if nrows == 1 or ncols == 1:
-                    ax = axs[di]
-                else:
-                    xi = int(di / ncols)
-                    yi = di % ncols
-                    ax = axs[xi, yi]
+            results = calc(mbook, farm, states, wakes, line_points, args)
+            line_results.append((wake, results))
 
-                if args.deficit:
-                    dfz = (args.ws - results[di]) / args.ws
-                    ax.plot(ylist / D, dfz, label=wake)
-                    ax.set_ylabel("WS deficit")
-                else:
-                    ax.plot(ylist / D, results[di], label=wake)
-                    ax.set_ylabel(args.var)
+    figsize = (ncols * args.figsize_scale, nrows * args.figsize_scale)
+    fig, axs = plt.subplots(nrows, ncols, figsize=figsize, sharex=True, sharey=True)
 
-                ax.set_title(f"x = {d} D")
-                ax.set_xlabel("y/D")
-                ax.grid()
-
-        ax.legend(loc="best")
-        if not args.nofig:
-            plt.show()
-        plt.close(fig)
-
-        # x line:
-
-        print("\nCalculating x line\n")
-
-        xlist = np.arange(-1, args.dists_D[-1] + args.step, args.step) * D
-        nx = len(xlist)
-        points = np.zeros((nx, 3))
-        points[:, 2] = args.height if args.height is not None else H
-        points[:, 0] = xlist
-
-        figsize = (args.plot_cols * args.figsize_scale, args.figsize_scale)
-        fig, ax = plt.subplots(figsize=figsize)
-
-        for wake in args.wakes:
-            wakes = [wake] + args.ewakes
-            print("Calculating:", wakes)
-
-            results = calc(mbook, farm, states, wakes, points, args)
+    for wake, results in wake_results:
+        for di, d in enumerate(args.dists_D):
+            if nrows == 1 or ncols == 1:
+                ax = axs[di]
+            else:
+                xi = int(di / ncols)
+                yi = di % ncols
+                ax = axs[xi, yi]
 
             if args.deficit:
-                dfz = (args.ws - results[0]) / args.ws
-                ax.plot(xlist / D, dfz, label=wake)
+                dfz = (args.ws - results[di]) / args.ws
+                ax.plot(ylist / D, dfz, label=wake)
                 ax.set_ylabel("WS deficit")
             else:
-                ax.plot(xlist / D, results[0], label=wake)
+                ax.plot(ylist / D, results[di], label=wake)
                 ax.set_ylabel(args.var)
 
-            ax.set_title("y = 0")
-            ax.set_xlabel("x/D")
-            ax.legend(loc="best")
+            ax.set_title(f"x = {d} D")
+            ax.set_xlabel("y/D")
             ax.grid()
 
+    ax.legend(loc="best")
     if not args.nofig:
         plt.show()
+    plt.close(fig)
+
+    # x line:
+
+    figsize = (args.plot_cols * args.figsize_scale, args.figsize_scale)
+    fig, ax = plt.subplots(figsize=figsize)
+
+    for wake, results in line_results:
+        if args.deficit:
+            dfz = (args.ws - results[0]) / args.ws
+            ax.plot(xlist / D, dfz, label=wake)
+            ax.set_ylabel("WS deficit")
+        else:
+            ax.plot(xlist / D, results[0], label=wake)
+            ax.set_ylabel(args.var)
+
+        ax.set_title("y = 0")
+        ax.set_xlabel("x/D")
+        ax.legend(loc="best")
+        ax.grid()
+
+if not args.nofig:
+    plt.show()

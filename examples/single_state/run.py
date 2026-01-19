@@ -56,17 +56,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
-    parser.add_argument("-e", "--engine", help="The engine", default=None)
-    parser.add_argument(
-        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
-    )
-    parser.add_argument(
-        "-C",
-        "--chunksize_points",
-        help="The chunk size for points",
-        default=None,
-        type=int,
-    )
     parser.add_argument(
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
     )
@@ -115,9 +104,6 @@ if __name__ == "__main__":
         partial_wakes=args.pwakes,
         ground_models=args.grounds,
         mbook=mbook,
-        engine=args.engine,
-        n_procs=args.n_cpus,
-        chunk_size_points=args.chunksize_points,
         verbosity=1,
     )
 
@@ -180,21 +166,18 @@ if __name__ == "__main__":
     if not args.nofig:
         # horizontal flow plot
         o = foxes.output.FlowPlots2D(algo, farm_results)
-        g = o.gen_states_fig_xy(
-            args.var, resolution=10, rotor_color="red", figsize=(10, 3)
-        )
+        d = o.get_states_data_xy(args.var, resolution=10)
+        g = o.gen_states_fig_xy(d, rotor_color="red", figsize=(10, 3))
         fig = next(g)
         plt.show()
-        plt.close(fig)
 
         # vertical flow plot
         o = foxes.output.FlowPlots2D(algo, farm_results)
-        g = o.gen_states_fig_xz(
+        d = o.get_states_data_xz(
             args.var,
-            resolution=10,
             x_direction=np.mod(args.wd, 360.0),
-            rotor_color="red",
-            figsize=(10, 3),
+            resolution=20,
         )
+        g = o.gen_states_fig_xz(d, rotor_color="red", figsize=(10, 3))
         fig = next(g)
         plt.show()

@@ -42,23 +42,16 @@ class TurbineTypeCurves(Output):
         super().__init__(**kwargs)
         self.mbook = mbook
 
-    def plot_curves(
+    def calc_plot_data(
         self,
         turbine_type,
         variables,
         P_max=None,
-        titles=None,
-        x_label=None,
-        y_labels=None,
         ws_min=0.0,
         ws_max=30.0,
         ws_step=0.1,
         ti=0.05,
         rho=1.225,
-        axs=None,
-        figsize=None,
-        pmax_args={},
-        **kwargs,
     ):
         """
         Plot the power or ct curve.
@@ -72,12 +65,6 @@ class TurbineTypeCurves(Output):
             For example FV.P or FV.CT
         P_max: float, optional
             The power mask value, if of interest
-        titles: list of str, optional
-            The plot titles, one for each variable
-        x_label: str, optional
-            The x axis label
-        y_labels: list of str, optional
-            The y axis lables, one for each variable
         ws_min: float
             The minimal wind speed
         ws_max: float
@@ -88,6 +75,97 @@ class TurbineTypeCurves(Output):
             The TI value
         rho: float
             The air density value
+
+        Returns
+        -------
+        parameters: dict
+            The plot data parameters
+        farm_results: xarray.Dataset
+            The farm results for the calculated states
+
+        """
+        ws = np.arange(ws_min, ws_max + ws_step, ws_step, dtype=config.dtype_double)
+        n_states = len(ws)
+        sdata = pd.DataFrame(index=range(n_states))
+        sdata.index.name = FC.STATE
+        sdata[FV.WS] = ws
+        vars = [variables] if isinstance(variables, str) else variables
+
+        models = [turbine_type]
+
+        states = StatesTable(
+            sdata,
+            output_vars={FV.WS, FV.WD, FV.TI, FV.RHO},
+            fixed_vars={FV.WD: 270.0, FV.TI: ti, FV.RHO: rho},
+        )
+
+        farm = WindFarm()
+        farm.add_turbine(
+            Turbine(xy=[0.0, 0.0], turbine_models=models),
+            verbosity=0,
+        )
+
+        algo = Downwind(farm, states, wake_models=[], mbook=self.mbook, verbosity=0)
+
+        results0 = algo.calc_farm()
+
+        results1 = None
+        if P_max is not None:
+            sname = f"_{type(self).__name__}_set_Pmax"
+            self.mbook.turbine_models[sname] = SetFarmVars()
+            self.mbook.turbine_models[sname].add_var(FV.MAX_P, P_max)
+            models += [sname, "PMask"]
+
+            farm = WindFarm()
+            farm.add_turbine(
+                Turbine(xy=[0.0, 0.0], turbine_models=models),
+                verbosity=0,
+            )
+
+            algo = Downwind(farm, states, wake_models=[], mbook=self.mbook, verbosity=0)
+
+            results1 = algo.calc_farm()
+
+            del self.mbook.turbine_models[sname]
+
+        parameters = dict(
+            turbine_type=turbine_type,
+            vars=vars,
+            P_max=P_max,
+            ws_min=ws_min,
+            ws_max=ws_max,
+            ws=ws,
+            ti=ti,
+            rho=rho,
+        )
+
+        return parameters, results0, results1
+
+    def plot_curves(
+        self,
+        plot_data,
+        titles=None,
+        x_label=None,
+        y_labels=None,
+        axs=None,
+        figsize=None,
+        pmax_args={},
+        **kwargs,
+    ):
+        """
+        Plot the power or ct curve.
+
+        Parameters
+        ----------
+        plot_data: tuple
+            The plot data as returned
+            by calc_plot_data(), (parameters, farm_results)
+        titles: list of str, optional
+            The plot titles, one for each variable
+        x_label: str, optional
+            The x axis label
+        y_labels: list of str, optional
+            The y axis lables, one for each variable
         axs: list of pyplot.Axis, optional
             The axis, one for each variable
         figsize: tuple
@@ -108,7 +186,12 @@ class TurbineTypeCurves(Output):
         if self.nofig:
             return None
 
-        vars = [variables] if isinstance(variables, str) else variables
+        parameters, results0, results1 = plot_data
+        turbine_type = parameters["turbine_type"]
+        vars = parameters["vars"]
+        ws = parameters["ws"]
+        P_max = parameters["P_max"]
+
         if isinstance(titles, str):
             titles = [titles]
         elif titles is None:
@@ -120,48 +203,6 @@ class TurbineTypeCurves(Output):
         if not isinstance(axs, (list, tuple, np.ndarray)):
             axs = [axs]
 
-        ws = np.arange(ws_min, ws_max + ws_step, ws_step, dtype=config.dtype_double)
-        n_states = len(ws)
-        sdata = pd.DataFrame(index=range(n_states))
-        sdata.index.name = FC.STATE
-        sdata[FV.WS] = ws
-
-        models = [turbine_type]
-
-        states = StatesTable(
-            sdata,
-            output_vars={FV.WS, FV.WD, FV.TI, FV.RHO},
-            fixed_vars={FV.WD: 270.0, FV.TI: ti, FV.RHO: rho},
-        )
-
-        farm = WindFarm()
-        farm.add_turbine(
-            Turbine(xy=[0.0, 0.0], turbine_models=models),
-            verbosity=0,
-        )
-
-        algo = Downwind(farm, states, wake_models=[], mbook=self.mbook, verbosity=0)
-
-        results = algo.calc_farm()
-
-        if P_max is not None:
-            sname = f"_{type(self).__name__}_set_Pmax"
-            self.mbook.turbine_models[sname] = SetFarmVars()
-            self.mbook.turbine_models[sname].add_var(FV.MAX_P, P_max)
-            models += [sname, "PMask"]
-
-            farm = WindFarm()
-            farm.add_turbine(
-                Turbine(xy=[0.0, 0.0], turbine_models=models),
-                verbosity=0,
-            )
-
-            algo = Downwind(farm, states, wake_models=[], mbook=self.mbook, verbosity=0)
-
-            results1 = algo.calc_farm()
-
-            del self.mbook.turbine_models[sname]
-
         for i, v in enumerate(vars):
             ax = axs[i]
             if ax is None:
@@ -169,7 +210,7 @@ class TurbineTypeCurves(Output):
 
             pargs = {"linewidth": 2.5}
             pargs.update(kwargs)
-            ax.plot(ws, results[v][:, 0], label="default", **pargs)
+            ax.plot(ws, results0[v][:, 0], label="default", **pargs)
             if P_max is not None:
                 pargs = {"linewidth": 1.8}
                 pargs.update(pmax_args)
