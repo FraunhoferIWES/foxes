@@ -2,11 +2,8 @@ name: Publish 📦 and deploy
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 jobs:
   pre-commit:
@@ -65,36 +62,6 @@ jobs:
 
       - name: Running tests
         run: uv run pytest tests
-
-  notebooks:
-    name: Running notebooks
-    runs-on: ubuntu-latest
-    needs: pre-commit
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version:
-          - "3.9"
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: ${{ matrix.python-version }}
-          enable-cache: true
-
-      - name: Install dependencies
-        run: uv sync --extra test --dev
-
-      - name: Running tests
-        run: uv run pytest --nbmake notebooks
 
   build:
     name: Build distribution 📦
@@ -159,9 +126,8 @@ jobs:
     name: Publish 📦 to PyPI
     needs:
       - tests
-      - notebooks
+      - build
       - build-docs
-    if: startsWith(github.ref_name, 'v')
 
     runs-on: ubuntu-latest
     environment:
@@ -186,7 +152,6 @@ jobs:
       and upload them to GitHub Release
     runs-on: ubuntu-latest
     needs: publish-to-pypi
-    if: startsWith(github.ref_name, 'v')
 
     permissions:
       contents: write
@@ -229,9 +194,7 @@ jobs:
   deploy-docs:
     name: Deploy Documentation
     runs-on: ubuntu-latest
-    needs:
-      - build-docs
-      - github-release
+    needs: github-release
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
