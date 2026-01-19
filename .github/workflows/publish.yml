@@ -96,58 +96,9 @@ jobs:
           name: python-package-distributions
           path: dist/
 
-  build-docs:
-    name: Build Documentation
-    runs-on: ubuntu-latest
-    needs: pre-commit
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.12"
-          enable-cache: true
-
-      - name: Install dependencies
-        run: uv sync --extra doc --dev
-
-      - name: Build documentation
-        run: |
-          cd docs
-          uv run make html
-
-      - name: Upload artifacts
-        uses: actions/upload-pages-artifact@v3
-        with:
-          name: github-pages
-          path: docs/build/
-
-      - name: Minimize uv cache
-        run: uv cache prune --ci
-
-  deploy-docs:
-    name: Deploy Documentation
-    runs-on: ubuntu-latest
-    needs:
-      - build-docs
-      - tests
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
   publish-to-pypi:
     name: Publish 📦 to PyPI
-    needs:
-      - build
-      - deploy-docs
+    needs: build
 
     runs-on: ubuntu-latest
     environment:
