@@ -1,10 +1,11 @@
-name: Run tests
+name: Run tests and notebooks
 
 on:
   push:
+    branches:
+      - "!main"
   pull_request:
     branches:
-      - main
       - dev
   schedule:
     - cron: '0 3 * * *' # run at 3 AM UTC

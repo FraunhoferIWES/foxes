@@ -1,15 +1,17 @@
-name: Publish 📦 and deploy docs
+name: Publish 📦 and deploy
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   pre-commit:
     name: Run pre-commit checks
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout repository
@@ -97,7 +99,7 @@ jobs:
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
-    needs: pre-commit
+    if: startsWith(github.ref_name, 'v')
 
     steps:
       - name: Checkout repository
@@ -128,6 +130,7 @@ jobs:
     name: Build Documentation
     runs-on: ubuntu-latest
     needs: pre-commit
+    if: startsWith(github.ref_name, 'v')
 
     steps:
       - name: Checkout repository
@@ -153,38 +156,12 @@ jobs:
           name: github-pages
           path: docs/build/
 
-  publish-to-testpypi:
-    name: Publish 📦 to TestPyPI 📦
-    needs: build
-
-    runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/foxes
-
-    permissions:
-      id-token: write
-
-    steps:
-      - name: Download all the dists
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
-      - name: Publish distribution 📦 to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
-
   publish-to-pypi:
     name: Publish 📦 to PyPI
     needs:
       - tests
       - notebooks
       - build-docs
-      - publish-to-testpypi
 
     runs-on: ubuntu-latest
     environment:
@@ -202,21 +179,6 @@ jobs:
 
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-
-  deploy-docs:
-    name: Deploy Documentation
-    runs-on: ubuntu-latest
-    needs:
-      - build-docs
-      - publish-to-pypi
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
 
   github-release:
     name: >-
@@ -262,3 +224,18 @@ jobs:
           gh release upload
           '${{ github.ref_name }}' dist/**
           --repo '${{ github.repository }}'
+
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs:
+      - build-docs
+      - github-release
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
