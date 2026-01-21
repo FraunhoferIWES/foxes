@@ -66,6 +66,39 @@ jobs:
       - name: Minimize uv cache
         run: uv cache prune --ci
 
+  notebooks:
+    name: Running notebooks
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version:
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --extra test --dev
+
+      - name: Running tests
+        run: uv run pytest --nbmake notebooks
+
+      - name: Minimize uv cache
+        run: uv cache prune --ci
+
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
@@ -98,7 +131,11 @@ jobs:
 
   publish-to-pypi:
     name: Publish 📦 to PyPI
-    needs: build
+    needs:
+      - pre-commit
+      - tests
+      - notebooks
+      - build
 
     runs-on: ubuntu-latest
     environment:
