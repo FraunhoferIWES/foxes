@@ -884,3 +884,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed a bug with the `Sequential` algorithm in combination with `OnePointFlowStates`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.0](https://github.com/FraunhoferIWES/foxes/commits/v1.7.0)
+
+## v1.7.1
+
+- Bug fixes
+  - Fixes for bugs with foxes-opt
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.1](https://github.com/FraunhoferIWES/foxes/commits/v1.7.1)
