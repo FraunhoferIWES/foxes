@@ -889,3 +889,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixes for bugs with foxes-opt
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.1](https://github.com/FraunhoferIWES/foxes/commits/v1.7.1)
+
+## v1.7.2
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.2](https://github.com/FraunhoferIWES/foxes/commits/v1.7.2)
