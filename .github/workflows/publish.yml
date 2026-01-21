@@ -1,13 +1,9 @@
-name: Run tests and notebooks
+name: Publish Python Package
 
 on:
   push:
-  pull_request:
-    branches:
-      - main
-      - dev
-  schedule:
-    - cron: '0 3 * * *' # run at 3 AM UTC
+    tags:
+      - 'v*'
 
 jobs:
   pre-commit:
@@ -40,6 +36,7 @@ jobs:
   tests:
     name: Running tests
     runs-on: ubuntu-latest
+    needs: pre-commit
     strategy:
       fail-fast: false
       matrix:
@@ -69,42 +66,10 @@ jobs:
       - name: Minimize uv cache
         run: uv cache prune --ci
 
-  notebooks:
-    name: Running notebooks
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version:
-          - "3.9"
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: ${{ matrix.python-version }}
-          enable-cache: true
-
-      - name: Install dependencies
-        run: uv sync --extra test --dev
-
-      - name: Running tests
-        run: uv run pytest --nbmake notebooks
-
-      - name: Minimize uv cache
-        run: uv cache prune --ci
-
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/dev')
+    needs: pre-commit
 
     steps:
       - name: Checkout repository
@@ -131,15 +96,14 @@ jobs:
           name: python-package-distributions
           path: dist/
 
-  publish-to-testpypi:
-    name: Publish 📦 to TestPyPI
-    runs-on: ubuntu-latest
-    needs:
-    - build
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/foxes
+  publish-to-pypi:
+    name: Publish 📦 to PyPI
+    needs: build
 
+    runs-on: ubuntu-latest
+    environment:
+      name: deployment
+      url: https://pypi.org/p/foxes
     permissions:
       id-token: write
 
@@ -150,8 +114,50 @@ jobs:
           name: python-package-distributions
           path: dist/
 
-      - name: Publish distribution 📦 to TestPyPI
+      - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: >-
+      Sign the Python 🐍 distribution 📦 with Sigstore
+      and upload them to GitHub Release
+    runs-on: ubuntu-latest
+    needs: publish-to-pypi
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
         with:
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
+          name: python-package-distributions
+          path: dist/
+
+      - name: Sign the dists with Sigstore
+        uses: sigstore/gh-action-sigstore-python@v3.0.0
+        with:
+          inputs: >-
+            ./dist/*.tar.gz
+            ./dist/*.whl
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create
+          '${{ github.ref_name }}'
+          --repo '${{ github.repository }}'
+          --notes ""
+
+      - name: Upload artifact signatures to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        # Upload to GitHub Release using the `gh` CLI.
+        # `dist/` contains the built packages, and the
+        # sigstore-produced signatures and certificates.
+        run: >-
+          gh release upload
+          '${{ github.ref_name }}' dist/**
+          --repo '${{ github.repository }}'

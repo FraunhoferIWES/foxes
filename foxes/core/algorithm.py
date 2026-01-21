@@ -476,7 +476,7 @@ class Algorithm(Model):
         error=True,
     ):
         """
-        Get data to the chunk store
+        Get data from the chunk store
 
         Parameters
         ----------
@@ -543,20 +543,31 @@ class Algorithm(Model):
                     __, j0, j1 = np.intersect1d(
                         d["states_index"], mdata[FC.STATE], return_indices=True
                     )
-                    if isinstance(d[name], dict):
+                    if len(j0) == 0 or len(j1) == 0:
+                        assert len(j0) == 0 and len(j1) == 0
+                    elif isinstance(d[name], dict):
                         if data is None:
-                            data = {
-                                k: np.full((mdata.n_states,) + v.shape[1:], np.nan)
-                                for k, v in d[name].items()
-                            }
+                            data = {}
+                        else:
+                            assert isinstance(data, dict)
                         for k in d[name]:
+                            if k not in data:
+                                data[k] = np.full(
+                                    (mdata.n_states,) + d[name][k].shape[1:], np.nan
+                                )
                             data[k][j1] = d[name][k][j0]
                     else:
                         if data is None:
                             data = np.full(
                                 (mdata.n_states,) + d[name].shape[1:], np.nan
                             )
+                        assert isinstance(data, np.ndarray)
                         data[j1] = d[name][j0]
+
+            if data is None and error:
+                raise KeyError(
+                    f"{self.name}: Data '{name}' not found in chunk store for key {key}"
+                )
 
         if ret_inds:
             inds = (

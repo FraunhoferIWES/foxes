@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.10'
 
       - name: Install pre-commit
         run: pip install pre-commit
@@ -33,7 +33,7 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files
 
-  build-docs:
+  build:
     name: Build Documentation
     runs-on: ubuntu-latest
     needs: pre-commit
@@ -45,11 +45,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.12"
-          enable-cache: true
+          python-version: "3.10"
+          enable-cache: false
 
       - name: Install dependencies
-        run: uv sync --extra doc --dev
+        run: uv sync --extra doc --dev --upgrade
 
       - name: Build documentation
         run: |
@@ -60,15 +60,18 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           name: github-pages
-          path: docs/build/
+          path: docs/build/html
 
-  deploy-docs:
+  deploy:
     name: Deploy Documentation
     runs-on: ubuntu-latest
-    needs: build-docs
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
 
     steps:
       - name: Deploy to GitHub Pages

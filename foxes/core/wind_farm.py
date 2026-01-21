@@ -161,6 +161,28 @@ class WindFarm:
             else:
                 print(f"WindFarm '{self.name}': locked with {self.n_turbines} turbines")
 
+    def reset_turbines(self, algo, turbines=None):
+        """
+        Reset the wind farm turbines.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+        turbines: list of foxes.core.Turbine, optional
+            The new list of turbines. If None, the turbine list is cleared.
+
+        """
+        assert not algo.initialized, (
+            f"WindFarm '{self.name}': cannot reset turbines, algorithm '{algo.name}' is already initialized"
+        )
+        self.__locked = False
+        if turbines is None:
+            self.__turbines = []
+        else:
+            self.__turbines = turbines
+        algo.update_n_turbines()
+
     def add_turbine(self, turbine, verbosity=1):
         """
         Add a wind turbine to the list.
