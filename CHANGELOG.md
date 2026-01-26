@@ -892,5 +892,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.7.2
 
+- Applications:
+  - New command line application `foxes_create_mean_dataset`, takes mean over the time dimension of NetCDF data, translating to wind components first
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.2](https://github.com/FraunhoferIWES/foxes/commits/v1.7.2)
