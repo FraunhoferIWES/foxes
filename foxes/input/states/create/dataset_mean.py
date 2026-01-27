@@ -62,7 +62,7 @@ def _read_nc(
     dvrs[FV.WS] = (dms, ws)
 
     for v, c in var2ncvar.items():
-        if v not in (FV.U, FV.V, FV.WS):
+        if v not in (FV.U, FV.V, FV.WS) and c in data:
             d = data[c].values
             dms = data[c].dims
             if coord in dms:
