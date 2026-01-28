@@ -43,10 +43,13 @@ def _read_nc(
                 assert dms == data[var2ncvar[FV.V]].dims, (
                     f"Dimensions of {c} and {var2ncvar[FV.V]} do not match, got {dms} and {data[var2ncvar[FV.V]].dims}, respectively."
                 )
-                uv = np.stack([
-                    data[c].values,
-                    data[var2ncvar[FV.V]].values,
-                ], axis=-1)
+                uv = np.stack(
+                    [
+                        data[c].values,
+                        data[var2ncvar[FV.V]].values,
+                    ],
+                    axis=-1,
+                )
                 if coord in dms:
                     di = dms.index(coord)
                     n_times[FV.U] = np.sum(~np.isnan(uv[..., 0]), axis=di)
@@ -192,9 +195,7 @@ def create_dataset_mean(
             if c not in crds:
                 crds[c] = d
             elif not np.all(crds[c] == d):
-                raise ValueError(
-                    f"Coordinate {c} does not match between files."
-                )
+                raise ValueError(f"Coordinate {c} does not match between files.")
         for v, (dms, d) in hdvrs.items():
             if v not in dvrs or coord not in dvrs[v][0]:
                 dvrs[v] = [dms, d]
