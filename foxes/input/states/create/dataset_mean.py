@@ -18,65 +18,94 @@ def _read_nc(
 ):
     """Help function to read netCDF files with xarray."""
 
+    # read nc file:
     data = open_dataset(fpath, engine=config.nc_engine, **kwargs)
     if preprocess is not None:
         data = preprocess(data)
 
-    cU, cV = var2ncvar[FV.U], var2ncvar[FV.V]
-    cWS, cWD = var2ncvar[FV.WS], var2ncvar[FV.WD]
-    if cU in data or cV in data:
-        assert cU in data and cV in data, (
-            f"Both {cU} and {cV} must be in data if one is."
-        )
-        assert data[cU].dims == data[cV].dims, (
-            f"Dimensions of {cU} and {cV} do not match, got {data[cU].dims} and {data[cV].dims}, respectively."
-        )
-        uv = np.stack([data[cU].values, data[cV].values], axis=-1)
-        ws = np.linalg.norm(uv, axis=-1)
-        dms = data[cU].dims
-    elif cWS in data or cWD in data:
-        assert cWS in data and cWD in data, (
-            f"Both {cWS} and {cWD} must be in data if one is."
-        )
-        assert data[cWS].dims == data[cWD].dims, (
-            f"Dimensions of {cWS} and {cWD} do not match, got {data[cWS].dims} and {data[cWD].dims}, respectively."
-        )
-        ws = data[cWS].values
-        uv = wd2uv(data[cWD].values, ws)
-        dms = data[cWS].dims
-    else:
-        raise ValueError(f"None of {cU}, {cV}, {cWS}, {cWD} found in data.")
-
-    assert coord in data.sizes, (
-        f"Coordinate {coord} not found in data dimensions {data.sizes}"
-    )
-    n = data.sizes[coord]
-    if coord in dms:
-        di = dms.index(coord)
-        uv = np.sum(uv, axis=di)
-        ws = np.sum(ws, axis=di)
-
     dvrs = {}
-    dvrs[FV.U] = (dms, uv[..., 0])
-    dvrs[FV.V] = (dms, uv[..., 1])
-    dvrs[FV.WS] = (dms, ws)
-
+    n_times = {}
     for v, c in var2ncvar.items():
-        if v not in (FV.U, FV.V, FV.WS) and c in data:
+        if c not in data:
+            continue
+        elif v == FV.U or v == FV.V:
+            assert var2ncvar[FV.U] in data and var2ncvar[FV.V] in data, (
+                f"Both {c} and {var2ncvar[FV.V]} must be in data."
+            )
+            if v == FV.U:
+                assert var2ncvar[FV.WS] not in data, (
+                    f"{var2ncvar[FV.WS]} must not be in data when {c} and {var2ncvar[FV.V]} are."
+                )
+                assert var2ncvar[FV.WD] not in data, (
+                    f"{var2ncvar[FV.WD]} must not be in data when {c} and {var2ncvar[FV.V]} are."
+                )
+                dms = data[c].dims
+                assert dms == data[var2ncvar[FV.V]].dims, (
+                    f"Dimensions of {c} and {var2ncvar[FV.V]} do not match, got {dms} and {data[var2ncvar[FV.V]].dims}, respectively."
+                )
+                uv = np.stack([
+                    data[c].values,
+                    data[var2ncvar[FV.V]].values,
+                ], axis=-1)
+                if coord in dms:
+                    di = dms.index(coord)
+                    n_times[FV.U] = np.sum(~np.isnan(uv[..., 0]), axis=di)
+                    n_times[FV.V] = np.sum(~np.isnan(uv[..., 1]), axis=di)
+                    n_times[FV.WS] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
+                    dvrs[FV.U] = (dms, np.nansum(uv[..., 0], axis=di))
+                    dvrs[FV.V] = (dms, np.nansum(uv[..., 1], axis=di))
+                    dvrs[FV.WS] = (dms, np.nansum(np.linalg.norm(uv, axis=-1), axis=di))
+                else:
+                    n_times[FV.U] = None
+                    n_times[FV.V] = None
+                    n_times[FV.WS] = None
+                    dvrs[FV.U] = (dms, uv[..., 0])
+                    dvrs[FV.V] = (dms, uv[..., 1])
+                    dvrs[FV.WS] = (dms, np.linalg.norm(uv, axis=-1))
+        elif v == FV.WS or v == FV.WD:
+            assert var2ncvar[FV.WD] in data and var2ncvar[FV.WS] in data, (
+                f"Both {c} and {var2ncvar[FV.WD]} must be in data."
+            )
+            if v == FV.WS:
+                dms = data[c].dims
+                assert dms == data[var2ncvar[FV.WD]].dims, (
+                    f"Dimensions of {c} and {var2ncvar[FV.WD]} do not match, got {dms} and {data[var2ncvar[FV.WD]].dims}, respectively."
+                )
+                ws = data[c].values
+                uv = wd2uv(data[var2ncvar[FV.WD]].values, ws)
+                if coord in dms:
+                    di = dms.index(coord)
+                    n_times[FV.WS] = np.sum(~np.isnan(ws), axis=di)
+                    n_times[FV.U] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
+                    n_times[FV.V] = n_times[FV.WS]
+                    dvrs[FV.WS] = (dms, np.nansum(ws, axis=di))
+                    dvrs[FV.U] = (dms, np.nansum(uv[..., 0], axis=di))
+                    dvrs[FV.V] = (dms, np.nansum(uv[..., 1], axis=di))
+                else:
+                    n_times[FV.WS] = None
+                    n_times[FV.U] = None
+                    n_times[FV.V] = None
+                    dvrs[FV.WS] = (dms, ws)
+                    dvrs[FV.U] = (dms, uv[..., 0])
+                    dvrs[FV.V] = (dms, uv[..., 1])
+        else:
             d = data[c].values
             dms = data[c].dims
             if coord in dms:
                 di = dms.index(coord)
-                d = np.sum(d, axis=di)
-            dvrs[v] = (dms, d)
+                n_times[v] = np.sum(~np.isnan(d), axis=di)
+                dvrs[v] = (dms, np.nansum(d, axis=di))
+            else:
+                n_times[v] = None
+                dvrs[v] = (dms, d)
 
     crds = {}
     for dms, __ in dvrs.values():
         for d in dms:
-            if d not in crds and d in data.coords:
+            if d != coord and d not in crds and d in data.coords:
                 crds[d] = data[d].values
 
-    return crds, dvrs, n
+    return crds, dvrs, n_times
 
 
 def create_dataset_mean(
@@ -137,8 +166,8 @@ def create_dataset_mean(
     # read files in parallel and compute mean:
     crds = {}
     dvrs = {}
-    n = 0
-    for hcrds, hdvrs, hn in map_with_engine(
+    n_times = {}
+    for hcrds, hdvrs, hn_times in map_with_engine(
         _read_nc,
         files,
         coord=coord,
@@ -146,10 +175,26 @@ def create_dataset_mean(
         preprocess=preprocess,
         **kwargs,
     ):
-        n += hn
+        for v, t in hn_times.items():
+            if v not in n_times:
+                n_times[v] = t
+            elif t is not None:
+                assert n_times[v] is not None, (
+                    f"Inconsistent n_times for variable {v}, got None and {t}"
+                )
+                assert t.shape == n_times[v].shape, (
+                    f"Inconsistent n_times shape for variable {v}, got {n_times[v].shape} and {t.shape}"
+                )
+                n_times[v] += t
+            else:
+                n_times[v] = None
         for c, d in hcrds.items():
-            if c not in crds and c != coord:
+            if c not in crds:
                 crds[c] = d
+            elif not np.all(crds[c] == d):
+                raise ValueError(
+                    f"Coordinate {c} does not match between files."
+                )
         for v, (dms, d) in hdvrs.items():
             if v not in dvrs or coord not in dvrs[v][0]:
                 dvrs[v] = [dms, d]
@@ -162,7 +207,7 @@ def create_dataset_mean(
     for v in dvrs:
         if coord in dvrs[v][0]:
             dvrs[v][0] = tuple(d for d in dvrs[v][0] if d != coord)
-            dvrs[v][1] /= n
+            dvrs[v][1] /= n_times[v]
 
     data = Dataset(
         coords=crds,
