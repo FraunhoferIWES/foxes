@@ -24,7 +24,7 @@ def _read_nc(
         data = preprocess(data)
 
     dvrs = {}
-    n_times = {}
+    counts = {}
     for v, c in var2ncvar.items():
         if c not in data:
             continue
@@ -52,16 +52,13 @@ def _read_nc(
                 )
                 if coord in dms:
                     di = dms.index(coord)
-                    n_times[FV.U] = np.sum(~np.isnan(uv[..., 0]), axis=di)
-                    n_times[FV.V] = np.sum(~np.isnan(uv[..., 1]), axis=di)
-                    n_times[FV.WS] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
+                    counts[FV.U] = np.sum(~np.isnan(uv[..., 0]), axis=di)
+                    counts[FV.V] = np.sum(~np.isnan(uv[..., 1]), axis=di)
+                    counts[FV.WS] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
                     dvrs[FV.U] = (dms, np.nansum(uv[..., 0], axis=di))
                     dvrs[FV.V] = (dms, np.nansum(uv[..., 1], axis=di))
                     dvrs[FV.WS] = (dms, np.nansum(np.linalg.norm(uv, axis=-1), axis=di))
                 else:
-                    n_times[FV.U] = None
-                    n_times[FV.V] = None
-                    n_times[FV.WS] = None
                     dvrs[FV.U] = (dms, uv[..., 0])
                     dvrs[FV.V] = (dms, uv[..., 1])
                     dvrs[FV.WS] = (dms, np.linalg.norm(uv, axis=-1))
@@ -78,16 +75,13 @@ def _read_nc(
                 uv = wd2uv(data[var2ncvar[FV.WD]].values, ws)
                 if coord in dms:
                     di = dms.index(coord)
-                    n_times[FV.WS] = np.sum(~np.isnan(ws), axis=di)
-                    n_times[FV.U] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
-                    n_times[FV.V] = n_times[FV.WS]
+                    counts[FV.WS] = np.sum(~np.isnan(ws), axis=di)
+                    counts[FV.U] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
+                    counts[FV.V] = counts[FV.U]
                     dvrs[FV.WS] = (dms, np.nansum(ws, axis=di))
                     dvrs[FV.U] = (dms, np.nansum(uv[..., 0], axis=di))
                     dvrs[FV.V] = (dms, np.nansum(uv[..., 1], axis=di))
                 else:
-                    n_times[FV.WS] = None
-                    n_times[FV.U] = None
-                    n_times[FV.V] = None
                     dvrs[FV.WS] = (dms, ws)
                     dvrs[FV.U] = (dms, uv[..., 0])
                     dvrs[FV.V] = (dms, uv[..., 1])
@@ -96,10 +90,9 @@ def _read_nc(
             dms = data[c].dims
             if coord in dms:
                 di = dms.index(coord)
-                n_times[v] = np.sum(~np.isnan(d), axis=di)
+                counts[v] = np.sum(~np.isnan(d), axis=di)
                 dvrs[v] = (dms, np.nansum(d, axis=di))
             else:
-                n_times[v] = None
                 dvrs[v] = (dms, d)
 
     crds = {}
@@ -108,7 +101,7 @@ def _read_nc(
             if d != coord and d not in crds and d in data.coords:
                 crds[d] = data[d].values
 
-    return crds, dvrs, n_times
+    return crds, dvrs, counts
 
 
 def create_dataset_mean(
@@ -169,8 +162,8 @@ def create_dataset_mean(
     # read files in parallel and compute mean:
     crds = {}
     dvrs = {}
-    n_times = {}
-    for hcrds, hdvrs, hn_times in map_with_engine(
+    counts = {}
+    for hcrds, hdvrs, hcounts in map_with_engine(
         _read_nc,
         files,
         coord=coord,
@@ -178,19 +171,19 @@ def create_dataset_mean(
         preprocess=preprocess,
         **kwargs,
     ):
-        for v, t in hn_times.items():
-            if v not in n_times:
-                n_times[v] = t
+        for v, t in hcounts.items():
+            if v not in counts:
+                counts[v] = t.copy() if t is not None else None
             elif t is not None:
-                assert n_times[v] is not None, (
-                    f"Inconsistent n_times for variable {v}, got None and {t}"
+                assert counts[v] is not None, (
+                    f"Inconsistent counts for variable {v}, got None and {t}"
                 )
-                assert t.shape == n_times[v].shape, (
-                    f"Inconsistent n_times shape for variable {v}, got {n_times[v].shape} and {t.shape}"
+                assert t.shape == counts[v].shape, (
+                    f"Inconsistent counts shape for variable {v}, got {counts[v].shape} and {t.shape}"
                 )
-                n_times[v] += t
-            else:
-                n_times[v] = None
+                counts[v] += t
+            elif counts[v] is not None:
+                raise ValueError(f"Inconsistent counts for variable {v}, got {counts[v]} and None")
         for c, d in hcrds.items():
             if c not in crds:
                 crds[c] = d
@@ -205,10 +198,14 @@ def create_dataset_mean(
                 )
             else:
                 dvrs[v][1] += d
+    
+    cnts = {}
     for v in dvrs:
         if coord in dvrs[v][0]:
             dvrs[v][0] = tuple(d for d in dvrs[v][0] if d != coord)
-            dvrs[v][1] /= n_times[v]
+            dvrs[v][1] /= counts[v]
+            cnts[f"counts_{v}"] = (dvrs[v][0], counts[v])
+    dvrs.update(cnts)
 
     data = Dataset(
         coords=crds,
