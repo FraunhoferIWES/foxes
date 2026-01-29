@@ -183,7 +183,9 @@ def create_dataset_mean(
                 )
                 counts[v] += t
             elif counts[v] is not None:
-                raise ValueError(f"Inconsistent counts for variable {v}, got {counts[v]} and None")
+                raise ValueError(
+                    f"Inconsistent counts for variable {v}, got {counts[v]} and None"
+                )
         for c, d in hcrds.items():
             if c not in crds:
                 crds[c] = d
@@ -198,7 +200,7 @@ def create_dataset_mean(
                 )
             else:
                 dvrs[v][1] += d
-    
+
     cnts = {}
     for v in dvrs:
         if coord in dvrs[v][0]:
