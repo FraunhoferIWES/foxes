@@ -161,6 +161,28 @@ class WindFarm:
             else:
                 print(f"WindFarm '{self.name}': locked with {self.n_turbines} turbines")
 
+    def reset_turbines(self, algo, turbines=None):
+        """
+        Reset the wind farm turbines.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+        turbines: list of foxes.core.Turbine, optional
+            The new list of turbines. If None, the turbine list is cleared.
+
+        """
+        assert not algo.initialized, (
+            f"WindFarm '{self.name}': cannot reset turbines, algorithm '{algo.name}' is already initialized"
+        )
+        self.__locked = False
+        if turbines is None:
+            self.__turbines = []
+        else:
+            self.__turbines = turbines
+        algo.update_n_turbines()
+
     def add_turbine(self, turbine, verbosity=1):
         """
         Add a wind turbine to the list.
@@ -299,9 +321,7 @@ class WindFarm:
 
         """
         if self.boundary is not None:
-            xy = np.stack(
-                (self.boundary.p_min(), self.boundary.p_max()), axis=0
-            )
+            xy = np.stack((self.boundary.p_min(), self.boundary.p_max()), axis=0)
         else:
             xy = self.xy_array
 
@@ -320,9 +340,7 @@ class WindFarm:
                 else:
                     extra_space *= rds[:, None]
 
-            xy = np.concatenate(
-                (xy - extra_space, xy + extra_space), axis=0
-            )
+            xy = np.concatenate((xy - extra_space, xy + extra_space), axis=0)
 
         p_min = np.min(xy, axis=0)
         p_max = np.max(xy, axis=0)
@@ -338,7 +356,8 @@ class WindFarm:
                     np.linspace([x0, y1], [x1, y1], nx),
                     np.linspace([x1, y1], [x1, y0], ny),
                     np.linspace([x1, y0], [x0, y0], nx),
-                ), axis=0,
+                ),
+                axis=0,
             )
             xy = to_lonlat(xy)
             p_min = np.min(xy, axis=0)

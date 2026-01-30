@@ -7,6 +7,7 @@ variables:
   BASE_LAYER: bookworm-slim
   UV_LINK_MODE: copy
   UV_SYSTEM_PYTHON: 1
+  UV_CACHE_DIR: ${CI_PROJECT_DIR}/.cache/uv
   PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
 
 # ===== PRE-COMMIT =====
@@ -30,8 +31,6 @@ pre-commit:
 test:
   image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
   stage: test
-  variables:
-    UV_CACHE_DIR: .uv-cache
   cache:
     - key:
         files:
@@ -47,8 +46,6 @@ test:
 notebooks:
   image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
   stage: test
-  variables:
-    UV_CACHE_DIR: .uv-cache
   cache:
     - key:
         files:

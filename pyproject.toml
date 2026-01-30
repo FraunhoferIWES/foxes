@@ -8,7 +8,7 @@ requires = [
 
 [project]
 name = "foxes"
-version = "1.7.0"
+version = "1.7.2"
 authors = [
   {name = "Jonas Schulte"},
 ]
@@ -40,10 +40,10 @@ dependencies = [
     "pandas>=2.0",
     "scipy>=1.12",
     "xarray>=2023",
-    "netcdf4>=1.0",
+    "netcdf4>=1.5",
     #"h5netcdf>=1.0",
     "pyyaml>=4.0",
-    "tqdm>=2.0",
+    "tqdm>=4.31.1",
     "utm>=0.5",
 ]
 
@@ -83,7 +83,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/FraunhoferIWES/foxes"
-Documentation = "https://fraunhoferiwes.github.io/foxes.docs/index.html"
+Documentation = "https://fraunhoferiwes.github.io/foxes"
 Repository = "https://github.com/FraunhoferIWES/foxes.git"
 "Bug Tracker" = "https://github.com/FraunhoferIWES/foxes/issues"
 Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/CHANGELOG.md"
@@ -94,3 +94,4 @@ exclude = ["notebooks", "examples", "tests", "docs"]
 [project.scripts]
 foxes_yaml = "foxes.input.yaml.yaml:foxes_yaml"
 foxes_windio = "foxes.input.yaml.windio.windio:foxes_windio"
+foxes_create_mean_dataset = "foxes.input.states.create.dataset_mean:main"
