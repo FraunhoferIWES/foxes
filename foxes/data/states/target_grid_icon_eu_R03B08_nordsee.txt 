@@ -1,0 +1,13 @@
+# Climate Data Operator (CDO) grid description file
+# Input: ICON-EU-EPS
+# Area: EU
+# Grid: regular latitude longitude/geographical grid
+# Resolution: 0.065 x 0.065 degrees (approx. 6.5km)
+
+gridtype = lonlat
+xsize    = 105
+ysize    = 50
+xfirst   = 2.15
+xinc     = 0.065
+yfirst   = 52.75
+yinc     = 0.065

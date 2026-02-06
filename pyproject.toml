@@ -95,3 +95,4 @@ exclude = ["notebooks", "examples", "tests", "docs"]
 foxes_yaml = "foxes.input.yaml.yaml:foxes_yaml"
 foxes_windio = "foxes.input.yaml.windio.windio:foxes_windio"
 foxes_create_mean_dataset = "foxes.input.states.create.dataset_mean:main"
+iconDream2foxes = "foxes.input.states.create.icon_dream:main"

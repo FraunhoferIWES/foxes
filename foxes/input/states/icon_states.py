@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import griddata
 from pandas import read_csv
 
 from foxes.utils import get_utm_zone, to_lonlat, from_lonlat
@@ -46,7 +45,7 @@ class ICONStates(DatasetStates):
         - "from_grid": get UTM zone from the centre of the (lon, lat) grid
         - "XA": use given number X, letter A
         - (lon, lat): use given lon, lat values
-        - None: do not set UTM zone, assume it is already set, 
+        - None: do not set UTM zone, assume it is already set,
         typically during the wind farm creation.
 
     :group: input.states
@@ -123,7 +122,7 @@ class ICONStates(DatasetStates):
             - "from_grid": get UTM zone from the centre of the (lon, lat) grid
             - "XA": use given number X, letter A
             - (lon, lat): use given lon, lat values
-            - None: do not set UTM zone, assume it is already set, 
+            - None: do not set UTM zone, assume it is already set,
             typically during the wind farm creation.
         kwargs: dict, optional
             Additional parameters for the base class
@@ -241,8 +240,10 @@ class ICONStates(DatasetStates):
         elif self.__utm_zone == "from_grid":
             lonlat = np.stack(
                 [
-                    0.5 * (data[cmap[FV.X]].values.min() + data[cmap[FV.X]].values.max()),
-                    0.5 * (data[cmap[FV.Y]].values.min() + data[cmap[FV.Y]].values.max()),
+                    0.5
+                    * (data[cmap[FV.X]].values.min() + data[cmap[FV.X]].values.max()),
+                    0.5
+                    * (data[cmap[FV.Y]].values.min() + data[cmap[FV.Y]].values.max()),
                 ]
             )
             zone = get_utm_zone(lonlat[None, :])
@@ -261,7 +262,7 @@ class ICONStates(DatasetStates):
             raise ValueError(
                 f"States '{self.name}': config.utm_zone = {config.utm_zone} differs from determined zone {zone}"
             )
-        
+
         super().preproc_first(
             algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity
         )
@@ -274,7 +275,9 @@ class ICONStates(DatasetStates):
 
             fpath = get_output_path(self.icon_point_plot)
             if verbosity > 0:
-                print(f"States '{self.name}': Writing ICON grid point plot to '{fpath}'")
+                print(
+                    f"States '{self.name}': Writing ICON grid point plot to '{fpath}'"
+                )
             fig, ax = plt.subplots(figsize=(8, 8))
             xx, yy = np.meshgrid(
                 data[cmap[FV.X]].values.flatten(),
@@ -326,7 +329,7 @@ class ICONStates(DatasetStates):
         # read mapping from height levels to heights from static csv files:
         hdata = {}
         for A in ("A1", "A2"):
-            fpath =  algo.dbook.get_file_path(
+            fpath = algo.dbook.get_file_path(
                 MODEL_DATA, f"icon_heights_{A}.csv", check_raw=False
             )
             algo.print(f"States '{self.name}': Loading '{fpath.stem}'")
@@ -391,7 +394,6 @@ class ICONStates(DatasetStates):
             assert len(idims) > ix + 1 and idims[ix + 1] == FV.Y, (
                 f"States {self.name}: Expecting subsequent ({FV.X}, {FV.Y}) in idims, got {idims}"
             )
-            pts[:, ix:ix + 2] = to_lonlat(pts[:, ix:ix + 2])
+            pts[:, ix : ix + 2] = to_lonlat(pts[:, ix : ix + 2])
 
         return super().interpolate_data(idims, icrds, d, pts, vrs, times)
-    
