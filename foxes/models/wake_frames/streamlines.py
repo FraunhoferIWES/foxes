@@ -318,7 +318,9 @@ class Streamlines2D(WakeFrame):
                 sely = np.isnan(cy) | (np.abs(y) < np.abs(cy))
                 if np.any(sely):
                     w = (w[0][sely], w[1][sely], w[2][sely], w[3][sely])
-                    coos[w[0], w[1], w[2], 0] = x[selx][sely] + self.step * np.arange(steps_0, steps_1)[w[3]]
+                    coos[w[0], w[1], w[2], 0] = (
+                        x[selx][sely] + self.step * np.arange(steps_0, steps_1)[w[3]]
+                    )
                     coos[w[0], w[1], w[2], 1] = y[sely]
                 del w, y, cy, sely
             del pdel, x, selx, nx

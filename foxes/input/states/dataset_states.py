@@ -328,12 +328,10 @@ class DatasetStates(States):
             for i, (dims, d) in enumerate(data.items())
         }
         return coords, data, weights
-    
+
     def _find_xy_bounds(self, algo, bounds_extra_space):
         """Helper function to determine x/y bounds with extra space."""
-        return algo.farm.get_xy_bounds(
-            extra_space=bounds_extra_space, algo=algo
-        )
+        return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
 
     def _find_xy_bounds(self, algo, bounds_extra_space):
         """Helper function to determine x/y bounds with extra space."""
@@ -979,7 +977,7 @@ class DatasetStates(States):
             print(
                 "EVAL BOUNDS:",
                 [float(np.min(p)) for p in pts.T],
-                [float(np.max(p)) for p in pts.T], 
+                [float(np.max(p)) for p in pts.T],
             )
             print(
                 "INSIDE     :",
@@ -995,7 +993,7 @@ class DatasetStates(States):
             raise e
 
         return d
-    
+
     def _update_dims(self, dims, coords, vrs, d):
         """Helper function for dimension adjustment, if needed"""
         return dims, coords

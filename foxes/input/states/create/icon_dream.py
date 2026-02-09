@@ -4,11 +4,12 @@ from xarray import Dataset
 from pathlib import Path
 from tqdm.autonotebook import tqdm
 
-from foxes.core import has_engine, get_engine, Engine
+from foxes.core import get_engine, Engine
 from foxes.config import config
 from foxes.utils import write_nc, import_module
 from foxes.data import StaticData, STATES
 import foxes.variables as FV
+
 
 def _get_file_var_str(var, for_fname=False):
     """Get the variable string for the filename based on the variable code."""
@@ -24,12 +25,14 @@ def _get_file_var_str(var, for_fname=False):
         var_str = f"_{var_str}"
     return var_str
 
+
 def _get_fname(year, month, var=None, region=None, suffix="nc"):
     """Construct the filename for a given year, month, and variable."""
     ym_str = f"{year}{month:02d}"
     var_str = _get_file_var_str(var, for_fname=True)
     region_str = f"_{region}" if region is not None else ""
     return f"ICON-DREAM-EU_{ym_str}{region_str}{var_str}_hourly.{suffix}"
+
 
 def _download(url, out_path):
     """Download a file from a URL with resume capability."""
@@ -70,6 +73,7 @@ def _download(url, out_path):
 
     return 1  # Indicate success
 
+
 def _download_icon_dream(ymv, base_url, out_dir):
     """Download a file from ICON-DREAM-EU for a given year, month, and variable."""
     year, month, var = ymv
@@ -80,6 +84,7 @@ def _download_icon_dream(ymv, base_url, out_dir):
     var_dir.mkdir(parents=True, exist_ok=True)
     out_path = var_dir / fname
     return _download(url, out_path)
+
 
 def _prepare_grid(path_grid_select, path_icon_grid, path_weights_out, url_icon_grid):
     """Download and prepare grid files for remapping."""
@@ -98,6 +103,7 @@ def _prepare_grid(path_grid_select, path_icon_grid, path_weights_out, url_icon_g
         path_grid_select, input=f"{path_icon_grid}", output=str(path_weights_out)
     )
     return 1  # Indicate success
+
 
 def _process(
     region,
@@ -132,7 +138,7 @@ def _process(
 
         # select levels:
         lvls = levels if var != "TKE" else levels + [levels[-1] + 1]
-        lvls = ",".join(str(l) for l in lvls)
+        lvls = ",".join(str(lv) for lv in lvls)
         temp = cdo.sellevel(lvls, input=str(grb_path), returnXArray=vname)
 
         # remap:
@@ -145,6 +151,7 @@ def _process(
     data = Dataset(data)
     write_nc(data, nc_path, nc_engine=config.nc_engine, verbosity=0)
     return 1  # Indicate success
+
 
 def iconDream2foxes(
     out_dir,
@@ -246,11 +253,12 @@ def iconDream2foxes(
     # download files in parallel:
     futures += [
         engine.submit(
-            _download_icon_dream, 
-            ymv_i, 
-            base_url, 
+            _download_icon_dream,
+            ymv_i,
+            base_url,
             grb_dir,
-        ) for ymv_i in ymv
+        )
+        for ymv_i in ymv
     ]
     results = np.array(
         [
@@ -290,7 +298,9 @@ def iconDream2foxes(
     results = np.array(
         [
             engine.await_result(f)
-            for f in tqdm(futures, desc=f"Processing {len(ymv)} GRB files for {len(ym)} months")
+            for f in tqdm(
+                futures, desc=f"Processing {len(ymv)} GRB files for {len(ym)} months"
+            )
         ]
     )
     failed = np.sum(results == -1)
@@ -299,6 +309,7 @@ def iconDream2foxes(
         f"{failed} failed, "
         f"{np.sum(results == 0)} already present."
     )
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -357,6 +368,7 @@ def main():
             max_year=args.max_year,
             max_month=args.max_month,
         )
+
 
 if __name__ == "__main__":
     main()
