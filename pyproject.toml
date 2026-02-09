@@ -51,6 +51,10 @@ dependencies = [
 opt = [
     "foxes-opt>=0.6"
 ]
+icon_dream = [
+    "cdo>=0.1",
+    "requests>0.1",
+]
 dask = [
     "dask>=2022.0",
     "distributed>=2022.0",

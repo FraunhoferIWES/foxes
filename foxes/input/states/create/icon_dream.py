@@ -2,40 +2,62 @@ import argparse
 import numpy as np
 from xarray import Dataset
 from pathlib import Path
-import requests
 from tqdm.autonotebook import tqdm
-from cdo import Cdo
 
-from foxes.core import get_engine, Engine
+from foxes.core import has_engine, get_engine, Engine
 from foxes.config import config
-from foxes.utils import write_nc
+from foxes.utils import write_nc, import_module
 from foxes.data import StaticData, STATES
+import foxes.variables as FV
 
+def _get_file_var_str(var, for_fname=False):
+    """Get the variable string for the filename based on the variable code."""
+    var_str = {
+        FV.U: "U",
+        FV.V: "V",
+        FV.TKE: "TKE",
+        FV.p: "P",
+        FV.T: "T",
+        None: "",
+    }[var]
+    if for_fname and var is not None:
+        var_str = f"_{var_str}"
+    return var_str
 
 def _get_fname(year, month, var=None, region=None, suffix="nc"):
     """Construct the filename for a given year, month, and variable."""
     ym_str = f"{year}{month:02d}"
-    var_str = f"_{var}" if var is not None else ""
+    var_str = _get_file_var_str(var, for_fname=True)
     region_str = f"_{region}" if region is not None else ""
     return f"ICON-DREAM-EU_{ym_str}{region_str}{var_str}_hourly.{suffix}"
 
-
 def _download(url, out_path):
     """Download a file from a URL with resume capability."""
+    requests = import_module(
+        "requests",
+        pip_hint="pip install requests",
+        conda_hint="conda install -c conda-forge requests",
+    )
+
     # Resume download if file exists
     resume_header = {}
     mode = "wb"
     downloaded = 0
+    name = Path(url).name
     if out_path.exists():
         downloaded = out_path.stat().st_size
         resume_header = {"Range": f"bytes={downloaded}-"}
         mode = "ab"
+        msg = f"{name}: Resuming download from byte {downloaded}"
+    else:
+        msg = f"{name}: Starting download"
 
     try:
         with requests.get(url, stream=True, headers=resume_header, timeout=60) as r:
             if r.status_code == 416:
                 return 0  # Already fully downloaded
             else:
+                print(msg)
                 r.raise_for_status()
                 total = int(r.headers.get("content-length", 0))
                 total += downloaded
@@ -48,17 +70,16 @@ def _download(url, out_path):
 
     return 1  # Indicate success
 
-
 def _download_icon_dream(ymv, base_url, out_dir):
     """Download a file from ICON-DREAM-EU for a given year, month, and variable."""
     year, month, var = ymv
     fname = _get_fname(year, month, var, region=None, suffix="grb")
-    url = f"{base_url}/{fname}"
-    var_dir = out_dir / var
+    var_str = _get_file_var_str(var)
+    url = f"{base_url}/{var_str}/{fname}"
+    var_dir = out_dir / var_str
     var_dir.mkdir(parents=True, exist_ok=True)
     out_path = var_dir / fname
     return _download(url, out_path)
-
 
 def _prepare_grid(path_grid_select, path_icon_grid, path_weights_out, url_icon_grid):
     """Download and prepare grid files for remapping."""
@@ -66,12 +87,17 @@ def _prepare_grid(path_grid_select, path_icon_grid, path_weights_out, url_icon_g
         return 0  # Already present
     if _download(url_icon_grid, path_icon_grid) < 0:
         return -1  # Indicate failure
+
+    Cdo = import_module(
+        "cdo",
+        pip_hint="pip install cdo",
+        conda_hint="conda install -c conda-forge cdo",
+    ).Cdo
     cdo = Cdo()
     cdo.gencon(
         path_grid_select, input=f"{path_icon_grid}", output=str(path_weights_out)
     )
     return 1  # Indicate success
-
 
 def _process(
     region,
@@ -79,7 +105,7 @@ def _process(
     month,
     grb_dir,
     nc_dir,
-    variables,
+    var2ncvar,
     levels,
     path_grid_select,
     path_grid_weights,
@@ -90,29 +116,35 @@ def _process(
     if nc_path.exists():
         return 0  # Indicate already processed
 
+    Cdo = import_module(
+        "cdo",
+        pip_hint="pip install cdo",
+        conda_hint="conda install -c conda-forge cdo",
+    ).Cdo
     cdo = Cdo()
     data = {}
-    for var in variables:
+    for var, vname in var2ncvar.items():
         grb_fname = _get_fname(year, month, var, region=None, suffix="grb")
-        grb_path = grb_dir / var / grb_fname
+        grb_path = grb_dir / _get_file_var_str(var) / grb_fname
 
         if not grb_path.exists():
             return -1  # Indicate failure
 
         # select levels:
-        temp = cdo.sellevel(levels[var], input=str(grb_path), returnXArray=var)
+        lvls = levels if var != "TKE" else levels + [levels[-1] + 1]
+        lvls = ",".join(str(l) for l in lvls)
+        temp = cdo.sellevel(lvls, input=str(grb_path), returnXArray=vname)
 
         # remap:
-        data[var] = cdo.remap(
-            str(path_grid_select), path_grid_weights, input=temp, returnXArray=var
+        data[vname] = cdo.remap(
+            str(path_grid_select), path_grid_weights, input=temp, returnXArray=vname
         )
-
-        del temp
+        if var == "TKE":
+            data[vname] = data[vname].rename({"height": "height_2"})
 
     data = Dataset(data)
-    write_nc(data, nc_path, nc_engine=config.nc_engine)
+    write_nc(data, nc_path, nc_engine=config.nc_engine, verbosity=0)
     return 1  # Indicate success
-
 
 def iconDream2foxes(
     out_dir,
@@ -121,7 +153,6 @@ def iconDream2foxes(
     min_month,
     max_year,
     max_month,
-    variables=("U", "V", "TKE", "P", "T"),
     base_url="https://opendata.dwd.de/climate_environment/REA/ICON-DREAM-EU/hourly",
     url_icon_grid="http://icon-downloads.mpimet.mpg.de/grids/public/edzw/icon_grid_0027_R03B08_N02.nc",
     levels=None,
@@ -144,22 +175,30 @@ def iconDream2foxes(
         Maximal year (inclusive).
     max_month : int
         Maximal month (inclusive).
-    variables : tuple of str
-        Variables to download (default: ("U", "V", "TKE", "P", "T")).
     base_url : str
         Base URL of the FTP server.
     url_icon_grid : str
         URL to download the ICON grid file if not present.
-    levels : dict or None
-        Dictionary specifying levels for each variable. If None, default levels are used.
+    levels : list of int, optional
+        The ICON height levels, e.g. [69,70,71,72,73,74].
 
     """
     engine = get_engine()
     out_dir = Path(out_dir)
     grb_dir = out_dir / "grb"
-    nc_dir = out_dir / "nc" / region
+    nc0_dir = out_dir / "nc"
+    nc_dir = nc0_dir / region
     grb_dir.mkdir(parents=True, exist_ok=True)
     nc_dir.mkdir(parents=True, exist_ok=True)
+    levels = list(range(69, 75)) if levels is None else levels
+
+    var2ncvar = {
+        FV.U: "u",
+        FV.V: "v",
+        FV.TKE: "tke",
+        FV.p: "pres",
+        FV.T: "t",
+    }
 
     static_data = StaticData()
     if region == "northsea":
@@ -172,18 +211,8 @@ def iconDream2foxes(
         )
     else:
         raise ValueError(f"Unknown region: {region}, choose 'northsea' or 'baltic'.")
-    path_grid_weights = nc_dir / f"icon_weights_{region}.nc"
-    path_icon_grid = out_dir / "nc" / "icon_grid_0027_R03B08_N02.nc"
-
-    lvls = {
-        "U": "69,70,71,72,73,74",
-        "V": "69,70,71,72,73,74",
-        "TKE": "69,70,71,72,73,74,75",
-        "P": "69,70,71,72,73,74",
-        "T": "69,70,71,72,73,74",
-    }
-    if levels is not None:
-        lvls.update(levels)
+    path_grid_weights = nc0_dir / f"icon_weights_{region}.nc"
+    path_icon_grid = nc0_dir / "icon_grid_0027_R03B08_N02.nc"
 
     def _ymv(vrs=None):
         """Helper to iterate over year/month/var"""
@@ -201,7 +230,7 @@ def iconDream2foxes(
                 m += 1
 
     ym = list(_ymv(vrs=None))
-    ymv = list(_ymv(vrs=variables))
+    ymv = list(_ymv(vrs=var2ncvar.keys()))
 
     # download grid file and prepare grid conversion:
     futures = [
@@ -216,7 +245,12 @@ def iconDream2foxes(
 
     # download files in parallel:
     futures += [
-        engine.submit(_download_icon_dream, ymv_i, base_url, grb_dir) for ymv_i in ymv
+        engine.submit(
+            _download_icon_dream, 
+            ymv_i, 
+            base_url, 
+            grb_dir,
+        ) for ymv_i in ymv
     ]
     results = np.array(
         [
@@ -246,8 +280,8 @@ def iconDream2foxes(
             month,
             grb_dir,
             nc_dir,
-            variables,
-            lvls,
+            var2ncvar,
+            levels,
             path_grid_select,
             path_grid_weights,
         )
@@ -256,7 +290,7 @@ def iconDream2foxes(
     results = np.array(
         [
             engine.await_result(f)
-            for f in tqdm(futures, desc="Processing ICON-DREAM files")
+            for f in tqdm(futures, desc=f"Processing {len(ymv)} GRB files for {len(ym)} months")
         ]
     )
     failed = np.sum(results == -1)
@@ -265,7 +299,6 @@ def iconDream2foxes(
         f"{failed} failed, "
         f"{np.sum(results == 0)} already present."
     )
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -286,13 +319,13 @@ def main():
         type=int,
     )
     parser.add_argument(
-        "max_year",
-        help="Maximal year (inclusive)",
+        "min_month",
+        help="Minimal month (inclusive)",
         type=int,
     )
     parser.add_argument(
-        "min_month",
-        help="Minimal month (inclusive)",
+        "max_year",
+        help="Maximal year (inclusive)",
         type=int,
     )
     parser.add_argument(
@@ -304,7 +337,7 @@ def main():
         "-e",
         "--engine",
         help="The engine",
-        default=None,
+        default="process",
     )
     parser.add_argument(
         "-n",
@@ -315,7 +348,7 @@ def main():
     )
     args = parser.parse_args()
 
-    def _run():
+    with Engine.new(args.engine, n_procs=args.n_cpus):
         return iconDream2foxes(
             out_dir=args.out_dir,
             region=args.region,
@@ -324,13 +357,6 @@ def main():
             max_year=args.max_year,
             max_month=args.max_month,
         )
-
-    if args.engine is not None:
-        with Engine.new(args.engine, n_procs=args.n_cpus):
-            _run()
-    else:
-        _run()
-
 
 if __name__ == "__main__":
     main()
