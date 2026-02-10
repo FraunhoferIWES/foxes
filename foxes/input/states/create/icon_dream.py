@@ -142,11 +142,11 @@ def _process(
         temp = cdo.sellevel(lvls, input=str(grb_path), returnXArray=vname)
 
         # remap:
-        data[vname] = cdo.remap(
+        data[var] = cdo.remap(
             str(path_grid_select), path_grid_weights, input=temp, returnXArray=vname
         )
         if var == "TKE":
-            data[vname] = data[vname].rename({"height": "height_2"})
+            data[var] = data[var].rename({"height": "height_2"})
 
     data = Dataset(data)
     write_nc(data, nc_path, nc_engine=config.nc_engine, verbosity=0)
