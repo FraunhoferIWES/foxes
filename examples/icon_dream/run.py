@@ -11,13 +11,13 @@ if __name__ == "__main__":
     )
     (
         parser.add_argument(
-            "eww_csv",
-            help="Path to the EuroWindWakes farm csv file",
+            "eww_db",
+            help="Path to the EuroWindWakes farm database csv file",
         ),
     )
     parser.add_argument(
-        "eww_turbines",
-        help="Path to the EuroWindWakes turbines data folder",
+        "eww_pc",
+        help="Path to the EuroWindWakes power_curves folder",
     )
     parser.add_argument(
         "--farms",
@@ -62,8 +62,8 @@ if __name__ == "__main__":
     )
     foxes.input.farm_layout.add_from_eww(
         farm,
-        args.eww_csv,
-        csv_dir=args.eww_turbines,
+        args.eww_db,
+        csv_dir=args.eww_pc,
         filter=[("wind_farm", args.farms)],
         mbook=mbook,
         verbosity=1,
