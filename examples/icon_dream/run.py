@@ -1,22 +1,20 @@
 import time
 import argparse
-from pandas import Timestamp
-from pathlib import Path
 import foxes
-import foxes.variables as FV
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "files_nc",
         help="The input files pattern in the nc folder from iconDream2foxes",
     )
-    parser.add_argument(
-        "eww_csv",
-        help="Path to the EuroWindWakes farm csv file",
-    ),
+    (
+        parser.add_argument(
+            "eww_csv",
+            help="Path to the EuroWindWakes farm csv file",
+        ),
+    )
     parser.add_argument(
         "eww_turbines",
         help="Path to the EuroWindWakes turbines data folder",
@@ -28,16 +26,16 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument(
-        "-e", 
-        "--engine", 
-        help="The engine", 
+        "-e",
+        "--engine",
+        help="The engine",
         default=None,
     )
     parser.add_argument(
-        "-n", 
-        "--n_cpus", 
+        "-n",
+        "--n_cpus",
         help="The number of cpus",
-        default=None, 
+        default=None,
         type=int,
     )
     parser.add_argument(
