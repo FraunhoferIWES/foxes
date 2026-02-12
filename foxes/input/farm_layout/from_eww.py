@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from os import remove
+from zipfile import ZipFile
 
 from foxes.core import Turbine, get_engine, Engine
 from foxes.config import get_input_path
 from foxes.models.turbine_types import PCtFile
-from foxes.utils import download_file, import_module
+from foxes.utils import download_file
 
 
 def add_from_eww(
@@ -261,12 +262,6 @@ def download_eww(
     if need_pc:
         if verbosity > 0:
             print(f"Unpacking power curves to {fpath_pc}")
-
-        ZipFile = import_module(
-            "zipfile",
-            pip_hint="pip install zipfile36",
-            conda_hint="conda install -c conda-forge zipfile36",
-        ).ZipFile
 
         with ZipFile(fpath_pcz, "r") as zip_ref:
             zip_ref.extractall(fpath_pc.parent)
