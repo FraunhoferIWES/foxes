@@ -153,7 +153,7 @@ def iconDream2foxes(
 
     """
     engine = get_engine()
-    out_dir = Path(out_dir)
+    out_dir = Path(out_dir).expanduser()
     grb_dir = out_dir / "grb"
     nc0_dir = out_dir / "nc"
     nc_dir = nc0_dir / region
