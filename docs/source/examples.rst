@@ -22,3 +22,4 @@ folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github reposito
         notebooks/blockage_comparison
         notebooks/operating_flag
         notebooks/partial_wakes
+        notebooks/icon_dream.ipynb

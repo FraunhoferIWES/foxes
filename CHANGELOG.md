@@ -903,5 +903,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   usage with `foxes.input.farm_layout.add_from_eww`
 - Examples:
   - New example `icon_dream` that demonstrates the usage of `ICONStates` and `add_from_eww`
+- Notebooks:
+  - New notebook `icon_dream.ipynb`, demonstrating the usage of `ICONStates` and `add_from_eww`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.2](https://github.com/FraunhoferIWES/foxes/commits/v1.7.2)
