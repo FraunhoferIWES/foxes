@@ -6,7 +6,7 @@ from tqdm.autonotebook import tqdm
 
 from foxes.core import get_engine, Engine
 from foxes.config import config
-from foxes.utils import write_nc, import_module
+from foxes.utils import write_nc, import_module, download_file
 from foxes.data import StaticData, STATES
 import foxes.variables as FV
 
@@ -34,46 +34,6 @@ def _get_fname(year, month, var=None, region=None, suffix="nc"):
     return f"ICON-DREAM-EU_{ym_str}{region_str}{var_str}_hourly.{suffix}"
 
 
-def _download(url, out_path):
-    """Download a file from a URL with resume capability."""
-    requests = import_module(
-        "requests",
-        pip_hint="pip install requests",
-        conda_hint="conda install -c conda-forge requests",
-    )
-
-    # Resume download if file exists
-    resume_header = {}
-    mode = "wb"
-    downloaded = 0
-    name = Path(url).name
-    if out_path.exists():
-        downloaded = out_path.stat().st_size
-        resume_header = {"Range": f"bytes={downloaded}-"}
-        mode = "ab"
-        msg = f"{name}: Resuming download from byte {downloaded}"
-    else:
-        msg = f"{name}: Starting download"
-
-    try:
-        with requests.get(url, stream=True, headers=resume_header, timeout=60) as r:
-            if r.status_code == 416:
-                return 0  # Already fully downloaded
-            else:
-                print(msg)
-                r.raise_for_status()
-                total = int(r.headers.get("content-length", 0))
-                total += downloaded
-                with open(out_path, mode) as f:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-    except Exception:
-        return -1  # Indicate failure
-
-    return 1  # Indicate success
-
-
 def _download_icon_dream(ymv, base_url, out_dir):
     """Download a file from ICON-DREAM-EU for a given year, month, and variable."""
     year, month, var = ymv
@@ -83,14 +43,14 @@ def _download_icon_dream(ymv, base_url, out_dir):
     var_dir = out_dir / var_str
     var_dir.mkdir(parents=True, exist_ok=True)
     out_path = var_dir / fname
-    return _download(url, out_path)
+    return download_file(url, out_path)
 
 
 def _prepare_grid(path_grid_select, path_icon_grid, path_weights_out, url_icon_grid):
     """Download and prepare grid files for remapping."""
     if path_weights_out.is_file():
         return 0  # Already present
-    if _download(url_icon_grid, path_icon_grid) < 0:
+    if download_file(url_icon_grid, path_icon_grid) < 0:
         return -1  # Indicate failure
 
     Cdo = import_module(
@@ -188,6 +148,8 @@ def iconDream2foxes(
         URL to download the ICON grid file if not present.
     levels : list of int, optional
         The ICON height levels, e.g. [69,70,71,72,73,74].
+
+    :group: input.states.create
 
     """
     engine = get_engine()

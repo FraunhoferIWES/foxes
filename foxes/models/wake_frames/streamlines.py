@@ -14,6 +14,14 @@ class Streamlines2D(WakeFrame):
     """
     Streamline following wakes
 
+    Notes
+    -----
+    Reference:
+    "An investigation of spatial wind direction variability
+    and its consideration in engineering models"
+    Anna von Brandis et. al, 2023
+    https://wes.copernicus.org/articles/8/589/2023/
+
     Attributes
     ----------
     step: float

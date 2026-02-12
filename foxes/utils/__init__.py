@@ -47,6 +47,7 @@ from .random_xy import random_xy_square as random_xy_square
 from .dev_utils import print_mem as print_mem
 from .wrg_utils import ReaderWRG as ReaderWRG
 from .weibull import weibull_weights as weibull_weights
+from .download import download_file as download_file
 
 from . import two_circles as two_circles
 from . import abl as abl

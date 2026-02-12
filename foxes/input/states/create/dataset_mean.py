@@ -141,6 +141,8 @@ def create_dataset_mean(
     data: xarray.Dataset
         The created mean state data
 
+    :group: input.states.create
+
     """
     # extend names by defaults:
     v2nc = {v: v for v in {FV.WS, FV.WD, FV.U, FV.V, FV.TI, FV.RHO}}

@@ -2,6 +2,11 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionadded:: 1.7.2
+    New `ICONStates` class for handling output from DWD's ICON model.
+    Also a pre-processing command line tool `iconDream2foxes` was added that downloads
+    hourly data from the online ICON-DREAM dataset and prepares it for use with *foxes*.
+
 .. versionchanged:: 1.7.0
     The `engine` parameter in the `Algorithm` constructor has been removed. If no engine context
     is specified the default engine is used in the background. For other choices computations
