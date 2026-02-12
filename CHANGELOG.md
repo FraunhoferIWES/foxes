@@ -899,7 +899,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Applications:
   - New command line application `foxes_create_mean_dataset`, takes mean over the time dimension of NetCDF data, translating to wind components first
   - New command line application `iconDream2foxes`, downloading hourly DWD-ICON-DREAM data and converting it into NetCDF files that are suitable for running with foxes as `ICONStates`.
+  - New command line application `eww2foxes`, downloading EuroWindWakes data for the
+  usage with `foxes.input.farm_layout.add_from_eww`
 - Examples:
-  - New example `icon_dream` that demonstrates the usage of `ICONStates`
+  - New example `icon_dream` that demonstrates the usage of `ICONStates` and `add_from_eww`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.2](https://github.com/FraunhoferIWES/foxes/commits/v1.7.2)

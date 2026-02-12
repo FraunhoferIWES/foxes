@@ -1,9 +1,14 @@
+import argparse
 import numpy as np
 import pandas as pd
+from pathlib import Path
+from os import remove
+from zipfile import ZipFile
 
-from foxes.core import Turbine
+from foxes.core import Turbine, get_engine, Engine
 from foxes.config import get_input_path
 from foxes.models.turbine_types import PCtFile
+from foxes.utils import download_file
 
 
 def add_from_eww(
@@ -176,3 +181,147 @@ def add_from_eww(
         j += 1
 
     farm.lock(verbosity=verbosity)
+
+
+def download_eww(
+    out_folder,
+    url_database,
+    url_power_curves,
+    verbosity=1,
+):
+    """
+    Download EuroWindWakes data files in parallel
+
+    Parameters
+    ----------
+    out_folder: str
+        The output folder for the downloaded files
+    url_database: str
+        The URL of the EuroWindWakes database csv file
+    url_power_curves: str
+        The URL of the EuroWindWakes power curve zip file
+    verbosity: int
+        The verbosity level, 0 = silent
+
+    Returns
+    -------
+    fpath_db: Path
+        The path to the downloaded database csv file
+    fpath_pc: Path
+        The path to the unpacked power curves folder
+
+    """
+    engine = get_engine()
+
+    if url_database is None:
+        url_database = (
+            "https://zenodo.org/records/17311571/files/20251218_eww_opendatabase.csv"
+        )
+    if url_power_curves is None:
+        url_power_curves = "https://zenodo.org/records/17311571/files/power_curves.zip"
+
+    odir = Path(out_folder)
+    odir.mkdir(parents=True, exist_ok=True)
+    fpath_db = odir / "eww_opendatabase.csv"
+    fpath_pcz = odir / "power_curves.zip"
+    fpath_pc = odir / "power_curves"
+
+    futures = []
+    if not fpath_db.exists():
+        if verbosity > 0:
+            print(f"Downloading EuroWindWakes database to {fpath_db}")
+        futures.append(
+            engine.submit(
+                download_file,
+                url_database,
+                fpath_db,
+                verbosity=verbosity,
+            )
+        )
+
+    need_pc = len(list(fpath_pc.glob("*.csv"))) == 0
+    if need_pc:
+        if verbosity > 0:
+            print(f"Downloading EuroWindWakes power curves to {fpath_pcz}")
+        futures.append(
+            engine.submit(
+                download_file,
+                url_power_curves,
+                fpath_pcz,
+                verbosity=verbosity,
+            )
+        )
+
+    results = [engine.await_result(f) for f in futures]
+    if any(r == -1 for r in results):
+        print("Some downloads failed. Please retry.")
+        return None, None
+    elif verbosity > 0:
+        print(f"All files downloaded to {odir}.")
+
+    if need_pc:
+        if verbosity > 0:
+            print(f"Unpacking power curves to {fpath_pc}")
+
+        with ZipFile(fpath_pcz, "r") as zip_ref:
+            zip_ref.extractall(fpath_pc.parent)
+
+        if verbosity > 1:
+            print(f"Removing zip file {fpath_pcz}")
+        remove(fpath_pcz)
+
+    return fpath_db, fpath_pc
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "out_dir",
+        help="Output directory to save downloaded files",
+        type=str,
+    )
+    parser.add_argument(
+        "--url_db",
+        help="URL of the EuroWindWakes database csv file",
+        default=None,
+        type=str,
+    )
+    parser.add_argument(
+        "--url_pc",
+        help="URL of the EuroWindWakes power curve zip file",
+        default=None,
+        type=str,
+    )
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        help="The verbosity level, 0 = silent",
+        default=1,
+        type=int,
+    )
+    parser.add_argument(
+        "-e",
+        "--engine",
+        help="The engine",
+        default="process",
+    )
+    parser.add_argument(
+        "-n",
+        "--n_cpus",
+        help="The number of cpus",
+        default=None,
+        type=int,
+    )
+    args = parser.parse_args()
+
+    with Engine.new(args.engine, n_procs=args.n_cpus):
+        return download_eww(
+            out_folder=args.out_dir,
+            url_database=args.url_db,
+            url_power_curves=args.url_pc,
+            verbosity=args.verbosity,
+        )
+
+
+if __name__ == "__main__":
+    main()

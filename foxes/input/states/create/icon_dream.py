@@ -125,29 +125,29 @@ def iconDream2foxes(
     levels=None,
 ):
     """
-    Download ICON-DREAM-EU hourly files for specified variables and time range,
-    and convert them into foxes compatible NetCDF files.
+     Download ICON-DREAM-EU hourly files for specified variables and time range,
+     and convert them into foxes compatible NetCDF files.
 
-    Parameters
-    ----------
-    out_dir : str or Path
-        Directory to save downloaded files.
-    region : str
-        Region for which to download data ("northsea" or "baltic").
-    min_year : int
-        Minimal year (inclusive).
-    min_month : int
-        Minimal month (inclusive).
-    max_year : int
-        Maximal year (inclusive).
-    max_month : int
-        Maximal month (inclusive).
-    base_url : str
-        Base URL of the FTP server.
-    url_icon_grid : str
-        URL to download the ICON grid file if not present.
-    levels : list of int, optional
-        The ICON height levels, e.g. [69,70,71,72,73,74].
+     Parameters
+     ----------
+     out_dir: str or Path
+         Directory to save downloaded files.
+     region: str
+         Region for which to download data ("northsea" or "baltic").
+     min_year: int
+         Minimal year (inclusive).
+     min_month: int
+         Minimal month (inclusive).
+     max_year: int
+         Maximal year (inclusive).
+     max_month: int
+         Maximal month (inclusive).
+     base_url: str
+         Base URL of the FTP server.
+     url_icon_grid: str
+         URL to download the ICON grid file if not present.
+     levels: list of int, optional
+         The ICON height levels, e.g. [69,70,71,72,73,74].
 
     :group: input.states.create
 
