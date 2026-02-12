@@ -220,7 +220,7 @@ def download_eww(
     if url_power_curves is None:
         url_power_curves = "https://zenodo.org/records/17311571/files/power_curves.zip"
 
-    odir = Path(out_folder)
+    odir = Path(out_folder).expanduser()
     odir.mkdir(parents=True, exist_ok=True)
     fpath_db = odir / "eww_opendatabase.csv"
     fpath_pcz = odir / "power_curves.zip"
