@@ -1056,7 +1056,11 @@ class DatasetStates(States):
                 pmax = _points_data["pmax"]
 
             if has_p and "points_vary" not in _points_data:
-                if FC.POINT in hcoords and len(hcoords[FC.POINT].shape) == 3:
+                if (
+                    hcoords is not None
+                    and FC.POINT in hcoords
+                    and len(hcoords[FC.POINT].shape) == 3
+                ):
                     _points_data["up"] = points
                     _points_data["points_vary"] = False
                 elif np.max(pmax - pmin) > 1e-4:
