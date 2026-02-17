@@ -61,10 +61,10 @@ def download_file(url, out_path, verbosity=1):
                         if chunk:
                             f.write(chunk)
     except Exception as e:
-        if verbosity > 1:
-            print(f"{name}: Download failed")
-        elif verbosity > 2:
+        if verbosity > 2:
             print(f"{name}: Download failed with exception {e}")
+        elif verbosity > 1:
+            print(f"{name}: Download failed")
         return -1  # Indicate failure
 
     if verbosity > 1:

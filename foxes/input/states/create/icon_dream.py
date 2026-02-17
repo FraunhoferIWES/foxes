@@ -34,7 +34,7 @@ def _get_fname(year, month, var=None, region=None, suffix="nc"):
     return f"ICON-DREAM-EU_{ym_str}{region_str}{var_str}_hourly.{suffix}"
 
 
-def _download_icon_dream(ymv, base_url, out_dir):
+def _download_icon_dream(ymv, base_url, out_dir, verbosity=1):
     """Download a file from ICON-DREAM-EU for a given year, month, and variable."""
     year, month, var = ymv
     fname = _get_fname(year, month, var, region=None, suffix="grb")
@@ -43,14 +43,14 @@ def _download_icon_dream(ymv, base_url, out_dir):
     var_dir = out_dir / var_str
     var_dir.mkdir(parents=True, exist_ok=True)
     out_path = var_dir / fname
-    return download_file(url, out_path)
+    return download_file(url, out_path, verbosity=verbosity)
 
 
-def _prepare_grid(path_grid_select, path_icon_grid, path_weights_out, url_icon_grid):
+def _prepare_grid(path_grid_select, path_icon_grid, path_weights_out, url_icon_grid, verbosity=1):
     """Download and prepare grid files for remapping."""
     if path_weights_out.is_file():
         return 0  # Already present
-    if download_file(url_icon_grid, path_icon_grid) < 0:
+    if download_file(url_icon_grid, path_icon_grid, verbosity=verbosity) < 0:
         return -1  # Indicate failure
 
     Cdo = import_module(
@@ -123,31 +123,34 @@ def iconDream2foxes(
     base_url="https://opendata.dwd.de/climate_environment/REA/ICON-DREAM-EU/hourly",
     url_icon_grid="http://icon-downloads.mpimet.mpg.de/grids/public/edzw/icon_grid_0027_R03B08_N02.nc",
     levels=None,
+    verbosity=1,
 ):
     """
-     Download ICON-DREAM-EU hourly files for specified variables and time range,
-     and convert them into foxes compatible NetCDF files.
+    Download ICON-DREAM-EU hourly files for specified variables and time range,
+    and convert them into foxes compatible NetCDF files.
 
-     Parameters
-     ----------
-     out_dir: str or Path
-         Directory to save downloaded files.
-     region: str
-         Region for which to download data ("northsea" or "baltic").
-     min_year: int
-         Minimal year (inclusive).
-     min_month: int
-         Minimal month (inclusive).
-     max_year: int
-         Maximal year (inclusive).
-     max_month: int
-         Maximal month (inclusive).
-     base_url: str
-         Base URL of the FTP server.
-     url_icon_grid: str
-         URL to download the ICON grid file if not present.
-     levels: list of int, optional
-         The ICON height levels, e.g. [69,70,71,72,73,74].
+    Parameters
+    ----------
+    out_dir: str or Path
+        Directory to save downloaded files.
+    region: str
+        Region for which to download data ("northsea" or "baltic").
+    min_year: int
+        Minimal year (inclusive).
+    min_month: int
+        Minimal month (inclusive).
+    max_year: int
+        Maximal year (inclusive).
+    max_month: int
+        Maximal month (inclusive).
+    base_url: str
+        Base URL of the FTP server.
+    url_icon_grid: str
+        URL to download the ICON grid file if not present.
+    levels: list of int, optional
+        The ICON height levels, e.g. [69,70,71,72,73,74].
+    verbosity: int
+        The verbosity level, 0 = silent, 1 = progress bars and summary.
 
     :group: input.states.create
 
@@ -209,6 +212,7 @@ def iconDream2foxes(
             path_icon_grid,
             path_grid_weights,
             url_icon_grid,
+            verbosity=verbosity - 1,
         )
     ]
 
@@ -219,27 +223,34 @@ def iconDream2foxes(
             ymv_i,
             base_url,
             grb_dir,
+            verbosity=verbosity - 1,
         )
         for ymv_i in ymv
     ]
-    results = np.array(
-        [
-            engine.await_result(f)
-            for f in tqdm(futures, desc="Downloading ICON-DREAM files")
-        ]
-    )
+    if verbosity > 0:
+        results = np.array(
+            [
+                engine.await_result(f)
+                for f in tqdm(futures, desc="Downloading ICON-DREAM files")
+            ]
+        )
+    else:
+        results = np.array([engine.await_result(f) for f in futures])
+        
     failed = np.sum(results == -1)
-    print(
-        f"Downloaded {np.sum(results == 1)} files, "
-        f"{failed} failed, "
-        f"{np.sum(results == 0)} already present."
-    )
+    if verbosity > 0:
+        print(
+            f"Downloaded {np.sum(results == 1)} files, "
+            f"{failed} failed, "
+            f"{np.sum(results == 0)} already present."
+        )
 
     if failed > 0:
-        print("Some downloads failed. Please retry.")
+        if verbosity > 0:
+            print("Some downloads failed. Please retry.")
         return
-    else:
-        print(f"All grb files present in {grb_dir}.")
+    elif verbosity > 0:
+            print(f"All grb files present in {grb_dir}.")
 
     # process files in parallel:
     futures = [
@@ -254,6 +265,7 @@ def iconDream2foxes(
             levels,
             path_grid_select,
             path_grid_weights,
+            verbosity=verbosity - 1,
         )
         for year, month in ym
     ]
@@ -266,11 +278,12 @@ def iconDream2foxes(
         ]
     )
     failed = np.sum(results == -1)
-    print(
-        f"Processed {np.sum(results == 1)} files, "
-        f"{failed} failed, "
-        f"{np.sum(results == 0)} already present."
-    )
+    if verbosity > 0:
+        print(
+            f"Processed {np.sum(results == 1)} files, "
+            f"{failed} failed, "
+            f"{np.sum(results == 0)} already present."
+        )
 
 
 def main():
@@ -319,6 +332,13 @@ def main():
         default=None,
         type=int,
     )
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        help="The verbosity level, 0 = silent",
+        type=int,
+        default=1,
+    )
     args = parser.parse_args()
 
     with Engine.new(args.engine, n_procs=args.n_cpus):
@@ -329,6 +349,7 @@ def main():
             min_month=args.min_month,
             max_year=args.max_year,
             max_month=args.max_month,
+            verbosity=args.verbosity,
         )
 
 
