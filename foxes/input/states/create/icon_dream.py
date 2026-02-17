@@ -46,7 +46,9 @@ def _download_icon_dream(ymv, base_url, out_dir, verbosity=1):
     return download_file(url, out_path, verbosity=verbosity)
 
 
-def _prepare_grid(path_grid_select, path_icon_grid, path_weights_out, url_icon_grid, verbosity=1):
+def _prepare_grid(
+    path_grid_select, path_icon_grid, path_weights_out, url_icon_grid, verbosity=1
+):
     """Download and prepare grid files for remapping."""
     if path_weights_out.is_file():
         return 0  # Already present
@@ -236,7 +238,7 @@ def iconDream2foxes(
         )
     else:
         results = np.array([engine.await_result(f) for f in futures])
-        
+
     failed = np.sum(results == -1)
     if verbosity > 0:
         print(
@@ -250,7 +252,7 @@ def iconDream2foxes(
             print("Some downloads failed. Please retry.")
         return
     elif verbosity > 0:
-            print(f"All grb files present in {grb_dir}.")
+        print(f"All grb files present in {grb_dir}.")
 
     # process files in parallel:
     futures = [
