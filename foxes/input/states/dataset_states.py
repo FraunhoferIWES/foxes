@@ -185,6 +185,7 @@ class DatasetStates(States):
         self.check_input_nans = check_input_nans
         self.preprocess_nc = preprocess_nc
         self.interp_pars = interp_pars
+        self.variables = [v for v in self.ovars if v not in self.fixed_vars]
 
         self._N = None
         self._inds = None
@@ -994,11 +995,7 @@ class DatasetStates(States):
 
         return d
 
-    def _update_dims(self, dims, coords, vrs, d):
-        """Helper function for dimension adjustment, if needed"""
-        return dims, coords
-
-    def _update_dims(self, dims, coords, vrs, d):
+    def _update_dims(self, dims, coords, vrs, d, fdata):
         """Helper function for dimension adjustment, if needed"""
         return dims, coords
 
@@ -1044,7 +1041,7 @@ class DatasetStates(States):
         # check if points are state dependent
         _points_data = None
 
-        def _analyze_points(has_p, has_h):
+        def _analyze_points(has_p, has_h, hcoords=None):
             """Helper function for points analysis."""
             nonlocal _points_data
 
@@ -1059,7 +1056,10 @@ class DatasetStates(States):
                 pmax = _points_data["pmax"]
 
             if has_p and "points_vary" not in _points_data:
-                if np.max(pmax - pmin) > 1e-4:
+                if FC.POINT in hcoords and len(hcoords[FC.POINT].shape) == 3:
+                    _points_data["up"] = points
+                    _points_data["points_vary"] = False
+                elif np.max(pmax - pmin) > 1e-4:
                     _points_data["up"], _points_data["up2p"] = np.unique(
                         points.reshape(n_states * n_pts, 3), axis=0, return_inverse=True
                     )
@@ -1086,7 +1086,7 @@ class DatasetStates(States):
         out = {}
         for dims, (vrs, d) in data.items():
             # update dims, if necessary:
-            dims, hcoords = self._update_dims(dims, coords, vrs, d)
+            dims, hcoords = self._update_dims(dims, coords, vrs, d, fdata)
 
             # replace (WD, WS) by (U, V):
             iwd = None
@@ -1110,7 +1110,9 @@ class DatasetStates(States):
                 iws = vrs.index(FV.V)
 
             # move state dimension to second last position:
-            if dims[0] == FC.STATE:
+            if dims[0] == FC.STATE and not (
+                FC.POINT in hcoords and len(hcoords[FC.POINT].shape) == 3
+            ):
                 d = np.moveaxis(d, 0, -2)
                 dims = dims[1:-1] + (FC.STATE,) + (dims[-1],)
                 idims = list(dims[:-2])
@@ -1123,7 +1125,7 @@ class DatasetStates(States):
                 # prepare points:
                 pts = []
                 has_p = FV.X in idims or FV.Y in idims or FC.POINT in idims
-                has_h = FV.H in idims
+                has_h = FV.H in idims or FC.POINT in idims
                 for c in idims.copy():
                     if c in [FV.X, FV.Y, FV.H]:
                         points_data = _analyze_points(has_p, has_h)
@@ -1135,11 +1137,11 @@ class DatasetStates(States):
                         else:
                             pts.append(points_data["uh"])
                     elif c == FC.POINT:
-                        points_data = _analyze_points(has_p, has_h)
-                        pts.append(points_data["up"][:, 0])
-                        pts.append(points_data["up"][:, 1])
-                        if hcoords[FC.POINT].shape[1] == 3:
-                            pts.append(points_data["up"][:, 2])
+                        points_data = _analyze_points(has_p, has_h, hcoords)
+                        pts.append(points_data["up"][..., 0])
+                        pts.append(points_data["up"][..., 1])
+                        if hcoords[FC.POINT].shape[-1] == 3:
+                            pts.append(points_data["up"][..., 2])
                     elif c == FC.STATE:
                         idims.remove(FC.STATE)
                     else:
@@ -1153,7 +1155,9 @@ class DatasetStates(States):
                 d = self.interpolate_data(idims, icrds, d, pts, vrs, times)
 
                 # move state dimension back to front:
-                if FC.STATE in dims:
+                if dims[0] == FC.STATE:
+                    pass
+                elif FC.STATE in dims:
                     dims = (FC.STATE,) + dims[:-2] + (dims[-1],)
                     d = np.moveaxis(d, -2, 0)
                 else:

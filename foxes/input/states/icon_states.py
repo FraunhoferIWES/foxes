@@ -346,7 +346,7 @@ class ICONStates(DatasetStates):
             verbosity=verbosity,
         )
 
-    def _update_dims(self, dims, coords, vrs, d):
+    def _update_dims(self, dims, coords, vrs, d, fdata):
         """Helper function for dimension adjustment, if needed"""
         if self.H_TKE in dims:
             assert FV.H not in dims, (

@@ -24,6 +24,12 @@ class IECTIWake(TopHatWakeModel):
     ----------
     wake_k: foxes.core.WakeK
         Handler for the wake growth parameter k
+    c0: float
+        The c0 parameter for the wake decay
+    c1: float
+        The c1 parameter for the wake decay
+    c2: float
+        The c2 parameter for the wake decay
 
     :group: models.wake_models.ti
 
@@ -35,6 +41,9 @@ class IECTIWake(TopHatWakeModel):
         opening_angle=21.6,
         iec_type="2019",
         induction="Betz",
+        c0=None,
+        c1=None,
+        c2=None,
         **wake_k,
     ):
         """
@@ -51,6 +60,14 @@ class IECTIWake(TopHatWakeModel):
             Either '2005' or '2019'/'Frandsen'
         wake_k: dict, optional
             Parameters for the WakeK class
+        induction: str or foxes.core.InductionModel, optional
+            The induction model to use. Default: 'Betz'
+        c0: float, optional
+            The c0 parameter for the wake decay
+        c1: float, optional
+            The c1 parameter for the wake decay
+        c2: float, optional
+            The c2 parameter for the wake decay
 
         """
         super().__init__(
@@ -58,6 +75,9 @@ class IECTIWake(TopHatWakeModel):
         )
         self.iec_type = iec_type
         self.wake_k = None
+        self.c0 = c0
+        self.c1 = c1
+        self.c2 = c2
 
         if opening_angle is None:
             self.wake_k = WakeK(**wake_k)
@@ -249,12 +269,18 @@ class IECTIWake(TopHatWakeModel):
 
         # calculate wind deficit:
         if self.iec_type == "2005":
-            cl_deltas = np.sqrt(0.9) / (1.5 + 0.3 * x / D * np.sqrt(ws))
+            c0 = self.c0 if self.c0 is not None else np.sqrt(0.9)
+            c1 = self.c1 if self.c1 is not None else 1.5
+            c2 = self.c2 if self.c2 is not None else 0.3
+            cl_deltas = c0 / (c1 + c2 * x / D * np.sqrt(ws))
         elif self.iec_type == "2019" or self.iec_type == "Frandsen":
-            cl_deltas = 1.0 / (1.5 + 0.8 * x / D / np.sqrt(ct))
+            c0 = self.c0 if self.c0 is not None else 1.0
+            c1 = self.c1 if self.c1 is not None else 1.5
+            c2 = self.c2 if self.c2 is not None else 0.8
+            cl_deltas = c0 / (c1 + c2 * x / D / np.sqrt(ct))
         else:
             raise TypeError(
-                f"Type of IEC {self.iec_type} not found. Select '2015' or '2019'/'Frandsen'."
+                f"Type of IEC {self.iec_type} not found. Select '2005' or '2019'/'Frandsen'."
             )
 
         return {FV.TI: cl_deltas}

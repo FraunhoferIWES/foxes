@@ -894,6 +894,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Inputs:
   - New states `ICONStates` for heterogeneous flows that are based on data from DWD's ICON software
+  - New states `TurbinePointCloud`, modelling ambient data at turbine locations
 - Utils:
   - New function `download_file` that manages the download of files from an URL, picking up incomplete downloads at restart
 - Applications:

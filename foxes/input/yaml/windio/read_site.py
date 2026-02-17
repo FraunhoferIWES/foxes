@@ -168,6 +168,44 @@ def _get_MultiHeightNCTimeseries(
     return False
 
 
+def _get_TurbinePointCloud(
+    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+):
+    """Try to generate a point cloud with support at turbine locations
+    :group: input.yaml.windio
+    """
+    if FC.TIME in coords and FC.TURBINE in coords:
+        if verbosity > 2:
+            print("        selecting class 'TurbinePointCloud'")
+
+        data = {}
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
+        for v, d in fields.items():
+            if len(dims[v]) == 0:
+                fix[v] = d
+            elif v not in fixval:
+                data[v] = (dims[v], d)
+
+        sdata = Dataset(
+            coords=coords,
+            data_vars=data,
+        )
+
+        states_dict.update(
+            dict(
+                states_type="TurbinePointCloud",
+                data_source=sdata,
+                states_coord=FC.TIME,
+                turbine_coord=FC.TURBINE,
+                output_vars=ovars,
+                var2ncvar={},
+                fixed_vars=fix,
+            )
+        )
+        return True
+    return False
+
+
 def _get_WeibullSectors(
     coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
 ):
@@ -357,6 +395,9 @@ def get_states(coords, fields, dims, verbosity=1):
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
         or _get_Timeseries(
+            coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+        )
+        or _get_TurbinePointCloud(
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
         or _get_MultiHeightNCTimeseries(
