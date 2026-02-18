@@ -22,7 +22,7 @@ as well supports vectorization and parallelization.
 
 `foxes` is build upon many years of experience with wake model code development at IWES, starting with the C++ based in-house code _flapFOAM_ (2011-2019) and the Python based direct predecessor _flappy_ (2019-2022).
 
-Documentation: [https://fraunhoferiwes.github.io/foxes/index.html](https://fraunhoferiwes.github.io/foxes/index.html)
+Documentation: [https://fraunhoferiwes.github.io/foxes](https://fraunhoferiwes.github.io/foxes)
 
 Source code: [https://github.com/FraunhoferIWES/foxes](https://github.com/FraunhoferIWES/foxes)
 

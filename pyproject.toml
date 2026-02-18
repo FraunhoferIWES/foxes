@@ -8,7 +8,7 @@ requires = [
 
 [project]
 name = "foxes"
-version = "1.7.1"
+version = "1.7.2"
 authors = [
   {name = "Jonas Schulte"},
 ]
@@ -51,6 +51,10 @@ dependencies = [
 opt = [
     "foxes-opt>=0.6"
 ]
+icon_dream = [
+    "cdo>=0.1",
+    "requests>0.1",
+]
 dask = [
     "dask>=2022.0",
     "distributed>=2022.0",
@@ -83,7 +87,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/FraunhoferIWES/foxes"
-Documentation = "https://fraunhoferiwes.github.io/foxes/index.html"
+Documentation = "https://fraunhoferiwes.github.io/foxes"
 Repository = "https://github.com/FraunhoferIWES/foxes.git"
 "Bug Tracker" = "https://github.com/FraunhoferIWES/foxes/issues"
 Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/CHANGELOG.md"
@@ -94,3 +98,6 @@ exclude = ["notebooks", "examples", "tests", "docs"]
 [project.scripts]
 foxes_yaml = "foxes.input.yaml.yaml:foxes_yaml"
 foxes_windio = "foxes.input.yaml.windio.windio:foxes_windio"
+foxes_create_mean_dataset = "foxes.input.states.create.dataset_mean:main"
+iconDream2foxes = "foxes.input.states.create.icon_dream:main"
+eww2foxes = "foxes.input.farm_layout.from_eww:main"

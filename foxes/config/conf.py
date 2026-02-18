@@ -219,9 +219,9 @@ def get_path(pth, base):
     if not isinstance(pth, Path):
         pth = Path(pth)
     if pth.is_absolute():
-        return pth
+        return pth.expanduser()
     else:
-        return base / pth
+        return (base / pth).expanduser()
 
 
 def get_input_path(pth):

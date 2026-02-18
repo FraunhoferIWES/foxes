@@ -105,6 +105,8 @@ def _read_turbulence(
         {
             "CrespoHernandez": "CrespoHernandezTIWake",
             "IEC-TI-2019": "IECTIWake",
+            "IEC-TI-2005": "IECTIWake",
+            "STF2005": "IECTIWake",
         },
         _name="twake_def_map",
     )
@@ -127,6 +129,21 @@ def _read_turbulence(
         if wname == "IEC-TI-2019":
             tiwake_dict["opening_angle"] = None
             tiwake_dict["iec_type"] = "2019"
+            tiwake_dict["c0"] = turbulence_model.pop_item("c0", None)
+            tiwake_dict["c1"] = turbulence_model.pop_item("c1", None)
+            tiwake_dict["c2"] = turbulence_model.pop_item("c2", None)
+        elif wname == "IEC-TI-2005":
+            tiwake_dict["opening_angle"] = None
+            tiwake_dict["iec_type"] = "2005"
+            tiwake_dict["c0"] = turbulence_model.pop_item("c0", None)
+            tiwake_dict["c1"] = turbulence_model.pop_item("c1", None)
+            tiwake_dict["c2"] = turbulence_model.pop_item("c2", None)
+        elif wname == "STF2005":
+            tiwake_dict["opening_angle"] = None
+            tiwake_dict["iec_type"] = "2005"
+            tiwake_dict["c0"] = turbulence_model.pop_item("c0", 1.0)
+            tiwake_dict["c1"] = turbulence_model.pop_item("c1", None)
+            tiwake_dict["c2"] = turbulence_model.pop_item("c2", None)
         if "wake_expansion_coefficient" in turbulence_model:
             kcoef = Dict(turbulence_model["wake_expansion_coefficient"], _name="kcoef")
             ka = kcoef["k_a"]
@@ -191,17 +208,20 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
     if verbosity > 2:
         print("    Reading rotor_averaging")
         print("      Contents:", [k for k in rotor_averaging.keys()])
-    grid = rotor_averaging["grid"]
-    nx = rotor_averaging["n_x_grid_points"]
-    ny = rotor_averaging["n_y_grid_points"]
-    if nx != ny:
+    grid = rotor_averaging.get("grid", None)
+    nx = rotor_averaging["n_x_grid_points"] if grid is not None else None
+    ny = rotor_averaging["n_y_grid_points"] if grid is not None else None
+    if grid is not None and nx != ny:
         raise NotImplementedError(
             f"Grid '{grid}': Only nx=ny supported, got nx={nx}, ny={ny}"
         )
-    background_averaging = rotor_averaging["background_averaging"]
-    wake_averaging = rotor_averaging["wake_averaging"]
-    wse_P = rotor_averaging["wind_speed_exponent_for_power"]
-    wse_ct = rotor_averaging["wind_speed_exponent_for_ct"]
+    background_averaging = rotor_averaging.get("background_averaging", "center")
+    if "wake_averaging" in rotor_averaging:
+        wake_averaging = rotor_averaging["wake_averaging"]
+    else:
+        wake_averaging = rotor_averaging
+    wse_P = rotor_averaging.get("wind_speed_exponent_for_power", 1)
+    wse_ct = rotor_averaging.get("wind_speed_exponent_for_ct", 1)
     if verbosity > 2:
         print("        grid                :", grid)
         print("        background_averaging:", background_averaging)
@@ -209,16 +229,19 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
         print("        ws exponent power   :", wse_P)
         print("        ws exponent ct      :", wse_ct)
 
-    if background_averaging in ["center", "centre"]:
+    if background_averaging in ["center", "centre", "Center", "Centre"]:
         algo_dict["rotor_model"] = "centre"
     elif background_averaging in ["none", "None", None]:
         algo_dict["rotor_model"] = None
     elif background_averaging == "grid":
+        assert grid is not None, (
+            "Grid must be specified in 'rotor_averaging' if background_averaging is 'grid'"
+        )
         algo_dict["rotor_model"] = f"grid{nx * ny}"
     else:
         algo_dict["rotor_model"] = background_averaging
 
-    if wake_averaging in ["centre", "center"]:
+    if wake_averaging in ["centre", "center", "Centre", "Center"]:
         algo_dict["partial_wakes"] = "centre"
     elif wake_averaging in ["none", "None", "auto", None]:
         algo_dict["partial_wakes"] = None

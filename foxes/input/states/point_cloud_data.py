@@ -207,6 +207,49 @@ class PointCloudData(DatasetStates):
             verbosity=verbosity,
         )
 
+    def _check_nan(self, ipars, gpts, d, pts, idims, vrs, results):
+        """Checks for NaN results and raises errors."""
+        if np.isnan(ipars.get("fill_value", np.nan)):
+            sel = np.isnan(results)
+            if np.any(sel):
+                i = [j[0] for j in np.where(sel)]
+                p = pts[i[0]]
+                qmin = np.min(gpts, axis=0)
+                qmax = np.max(gpts, axis=0)
+                isin = (p >= qmin) & (p <= qmax)
+                method = "linear"
+                print("\n\nInterpolation error")
+                print("dims:   ", idims[1:] if FC.STATE in idims else idims)
+                print(f"point {i[0]}: ", p)
+                print("qmin:   ", qmin)
+                print("qmax:   ", qmax)
+                print("Inside: ", isin, "\n\n")
+
+                if not np.all(isin):
+                    raise ValueError(
+                        f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
+                    )
+                else:
+                    sel2 = np.isnan(d)
+                    if np.any(sel2):
+                        i = np.where(sel2)
+                        p = gpts[i[0][0]]
+                        v = vrs[i[1][0]]
+                        print(
+                            f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:"
+                        )
+                        for ic, c in enumerate(idims):
+                            print(f"  {c}: {p[ic]}")
+                        for iw, w in enumerate(vrs):
+                            print(f"  {w}: {d[i[0][0], iw]}")
+                        print("\n\n")
+                        raise ValueError(
+                            f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[i[0]]} with {v} = {d[i[0][0], i[1][0]]}."
+                        )
+                    raise ValueError(
+                        f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
+                    )
+
     def interpolate_data(self, idims, icrds, d, pts, vrs, times):
         """
         Interpolates data to points.
@@ -245,49 +288,6 @@ class PointCloudData(DatasetStates):
         )
         ipars.update(self.interp_pars)
 
-        def _check_nan(gpts, d, pts, idims, results):
-            """Checks for NaN results and raises errors."""
-            if np.isnan(ipars.get("fill_value", np.nan)):
-                sel = np.isnan(results)
-                if np.any(sel):
-                    i = [j[0] for j in np.where(sel)]
-                    p = pts[i[0]]
-                    qmin = np.min(gpts, axis=0)
-                    qmax = np.max(gpts, axis=0)
-                    isin = (p >= qmin) & (p <= qmax)
-                    method = "linear"
-                    print("\n\nInterpolation error")
-                    print("dims:   ", idims[1:] if FC.STATE in idims else idims)
-                    print(f"point {i[0]}: ", p)
-                    print("qmin:   ", qmin)
-                    print("qmax:   ", qmax)
-                    print("Inside: ", isin, "\n\n")
-
-                    if not np.all(isin):
-                        raise ValueError(
-                            f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
-                        )
-                    else:
-                        sel2 = np.isnan(d)
-                        if np.any(sel2):
-                            i = np.where(sel2)
-                            p = gpts[i[0][0]]
-                            v = vrs[i[1][0]]
-                            print(
-                                f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:"
-                            )
-                            for ic, c in enumerate(idims):
-                                print(f"  {c}: {p[ic]}")
-                            for iw, w in enumerate(vrs):
-                                print(f"  {w}: {d[i[0][0], iw]}")
-                            print("\n\n")
-                            raise ValueError(
-                                f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[i[0]]} with {v} = {d[i[0][0], i[1][0]]}."
-                            )
-                        raise ValueError(
-                            f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
-                        )
-
         if FC.STATE in idims:
             raise NotImplementedError(
                 f"States '{self.name}': Interpolation with state dimension not implemented."
@@ -306,11 +306,11 @@ class PointCloudData(DatasetStates):
                 gpts = gpts[~sel]
                 d = d[~sel]
 
-        # interpolate:
+        # interpolate
         results = griddata(gpts, d, pts, **ipars)
 
         # check for NaN results:
-        _check_nan(gpts, d, pts, idims, results)
+        self._check_nan(ipars, gpts, d, pts, idims, vrs, results)
 
         return results
 
@@ -561,3 +561,203 @@ class WeibullPointCloud(PointCloudData):
                 data[v] = (dims, d)
 
         return coords, data
+
+
+class TurbinePointCloud(DatasetStates):
+    """
+    Point cloud data at turbine locations, for wake calculations.
+
+    Attributes
+    ----------
+    states_coord: str
+        The coordinate name for the states dimension.
+    turbine_coord: str
+        The coordinate name for the turbine dimension.
+
+    :group: input.states
+
+    """
+
+    def __init__(
+        self,
+        *args,
+        states_coord=FC.STATE,
+        turbine_coord=FC.TURBINE,
+        weight_ncvar=None,
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Positional arguments for the base class
+        states_coord: str
+            The states coordinate name in the data
+        turbine_coord: str
+            The turbine coordinate name in the data
+        weight_ncvar: str, optional
+            The name of the weights variable in the data
+        kwargs: dict, optional
+            Keyword arguments for the base class
+
+        """
+        super().__init__(*args, load_mode="preload", **kwargs)
+
+        self.states_coord = states_coord
+        self.turbine_coord = turbine_coord
+
+        if weight_ncvar is not None:
+            self.var2ncvar[FV.WEIGHT] = weight_ncvar
+            self.variables.append(FV.WEIGHT)
+        elif FV.WEIGHT in self.var2ncvar:
+            raise KeyError(
+                f"States '{self.name}': Cannot have '{FV.WEIGHT}' in var2ncvar, use weight_ncvar instead"
+            )
+
+        if FV.WS not in self.ovars:
+            raise ValueError(
+                f"States '{self.name}': Expecting output variable '{FV.WS}', got {self.ovars}"
+            )
+        if FV.WD not in self.ovars:
+            raise ValueError(
+                f"States '{self.name}': Expecting output variable '{FV.WD}', got {self.ovars}"
+            )
+        for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT]:
+            if v in self.ovars:
+                raise ValueError(
+                    f"States '{self.name}': Cannot have '{v}' as output variable"
+                )
+
+        self._cmap = {
+            FC.STATE: self.states_coord,
+            FC.TURBINE: self.turbine_coord,
+        }
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        return super().load_data(
+            algo,
+            cmap=self._cmap,
+            variables=self.variables,
+            bounds_extra_space=None,
+            verbosity=verbosity,
+        )
+
+    def _update_dims(self, dims, coords, vrs, d, fdata):
+        """Helper function for dimension adjustment, if needed"""
+        coords[FC.TURBINE] = fdata[FV.TXYH]
+        return dims, coords
+
+    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+        """
+        Interpolates data to points.
+
+        This function should be implemented in derived classes.
+
+        Parameters
+        ----------
+        idims: list of str
+            The input dimensions, e.g. [x, y, height]
+        icrds: list of numpy.ndarray
+            The input coordinates, each with shape (n_i,)
+            where n_i is the number of grid points in dimension i
+        d: numpy.ndarray
+            The data array, with shape (n1, n2, ..., nv)
+            where ni represents the dimension sizes and
+            nv is the number of variables
+        pts: numpy.ndarray
+            The points to interpolate to, with shape (n_pts, n_idims)
+        vrs: list of str
+            The variable names, length nv
+        times: numpy.ndarray
+            The time coordinates of the states, with shape (n_states,)
+        Returns
+        -------
+        d_interp: numpy.ndarray
+            The interpolated data array with shape (n_pts, nv)
+
+        """
+
+        # special case of time-only data:
+        if len(idims) == 0:
+            assert pts is None, (
+                f"States '{self.name}': Expecting no points for time-only data, got {pts}"
+            )
+            return d[:, None, ...]
+        else:
+            assert len(idims) == 1 and idims[0] == FC.TURBINE, (
+                f"States '{self.name}': Only turbine point cloud interpolation supported, got dimensions {idims}"
+            )
+
+        # special case of evaluation at turbine locations:
+        if np.all(icrds[0] == pts):
+            return d
+
+        # prepare interpolation parameters:
+        ipars = dict(
+            method="linear",
+            rescale=True,
+            fill_value=np.nan,
+        )
+        ipars.update(self.interp_pars)
+
+        # prepare grid points:
+        n_states, n_turbines = icrds[0].shape[:2]
+        gpts = np.concatenate(
+            [np.zeros((n_states, n_turbines, 1)), icrds[0]],
+            axis=-1,
+        )
+        gpts[..., 0] = np.arange(n_states)[:, None]
+
+        # prepare evaluation points:
+        epts = np.concatenate(
+            [np.zeros((n_states, n_turbines, 1)), pts],
+            axis=-1,
+        )
+        epts[..., 0] = np.arange(n_states)[:, None]
+
+        # check redundant dimensions:
+        rmvd = []
+        for i in range(1, gpts.shape[-1]):
+            if np.abs(np.min(gpts[..., i]) - np.max(gpts[..., i])) < 1e-12:
+                rmvd.append(i)
+        if len(rmvd) > 0:
+            gpts = np.delete(gpts, rmvd, axis=-1)
+            epts = np.delete(epts, rmvd, axis=-1)
+
+        # interpolate:
+        gpts = gpts.reshape(n_states * n_turbines, gpts.shape[-1])
+        epts = epts.reshape(n_states * n_turbines, epts.shape[-1])
+        d = d.reshape(n_states * n_turbines, d.shape[-1])
+        results = griddata(gpts, d, epts, **ipars)
+
+        # check for NaN results:
+        PointCloudData._check_nan(self, ipars, gpts, d, epts, idims, vrs, results)
+
+        # reshape results to (n_states, n_turbines, n_vars):
+        results = results.reshape(n_states, n_turbines, results.shape[-1])
+
+        return results

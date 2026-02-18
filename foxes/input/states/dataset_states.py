@@ -185,6 +185,7 @@ class DatasetStates(States):
         self.check_input_nans = check_input_nans
         self.preprocess_nc = preprocess_nc
         self.interp_pars = interp_pars
+        self.variables = [v for v in self.ovars if v not in self.fixed_vars]
 
         self._N = None
         self._inds = None
@@ -328,6 +329,10 @@ class DatasetStates(States):
             for i, (dims, d) in enumerate(data.items())
         }
         return coords, data, weights
+
+    def _find_xy_bounds(self, algo, bounds_extra_space):
+        """Helper function to determine x/y bounds with extra space."""
+        return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
 
     def _find_xy_bounds(self, algo, bounds_extra_space):
         """Helper function to determine x/y bounds with extra space."""
@@ -667,7 +672,7 @@ class DatasetStates(States):
             if w is not None:
                 idata["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
 
-            vmap = {FC.STATE: FC.STATE}
+            vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
             self._data_state_keys = []
             self._data_nostate = {}
             for dims, d in data.items():
@@ -802,7 +807,7 @@ class DatasetStates(States):
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self._inds
 
-    def get_calc_data(self, mdata, cmap, variables):
+    def get_calc_data(self, mdata, fdata, cmap, variables):
         """
         Gathers data for calculations.
 
@@ -813,6 +818,8 @@ class DatasetStates(States):
         ----------
         mdata: foxes.core.MData
             The mdata object
+        fdata: foxes.core.FData
+            The fdata object
         cmap: dict
             A mapping from foxes variable names to Dataset dimension names
         variables: list of str
@@ -850,7 +857,10 @@ class DatasetStates(States):
                 dims = mdata.dims[DATA]
                 vrs = mdata[dims[-1]].tolist()
                 dms = tuple(
-                    [self.unvar(c) if c != FC.STATE else FC.STATE for c in dims[:-1]]
+                    [
+                        self.unvar(c) if c not in [FC.STATE, FC.TURBINE] else c
+                        for c in dims[:-1]
+                    ]
                     + [dims[-1]]
                 )
                 data[dms] = (vrs, mdata[DATA].copy())
@@ -862,6 +872,10 @@ class DatasetStates(States):
             ds = self.data_source.isel({states_coord: s}).load()
             coords, data, weights = self._get_data(ds, cmap, variables, verbosity=0)
             data = {dims: (d[1], d[2]) for dims, d in data.items()}
+            for dims, (vrs, __) in data.items():
+                assert FC.TURBINE not in dims, (
+                    f"States '{self.name}': Turbine dimension not allowed for load_mode 'lazy', but got {dims} for variables {vrs}"
+                )
             del ds
 
         # case fly
@@ -921,10 +935,39 @@ class DatasetStates(States):
             coords, data, weights = self._get_data(data, cmap, variables, verbosity=0)
             data = {dims: (d[1], d[2]) for dims, d in data.items()}
 
+            for dims, (vrs, __) in data.items():
+                assert FC.TURBINE not in dims, (
+                    f"States '{self.name}': Turbine dimension not allowed for load_mode 'fly', but got {dims} for variables {vrs}"
+                )
+
         else:
             raise KeyError(
                 f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly"
             )
+
+        # adjust turbine order for purely turbine dependent data:
+        mvd = []
+        for dims in data.keys():
+            if FC.STATE not in dims and FC.TURBINE in dims:
+                assert dims[0] == FC.TURBINE, (
+                    f"States '{self.name}': Turbine dimension must be the first dimension if state independent, but got {dims}"
+                )
+                mvd.append(dims)
+        if len(mvd) > 0:
+            ssel = fdata[FV.ORDER_SSEL].astype(config.dtype_int)
+            order = fdata[FV.ORDER].astype(config.dtype_int)
+            for dims0 in mvd:
+                vrs, d0 = data.pop(dims0)
+                dims = (FC.STATE,) + dims0
+                d = np.zeros((n_states,) + d0.shape, dtype=d0.dtype)
+                d[:] = d0[None, ...]
+                d = d[ssel, order, ...]
+                del d0
+
+                if dims in data:
+                    vrs = data[dims][0] + vrs
+                    d = np.concatenate((data[dims][1], d), axis=-1)
+                data[dims] = (vrs, d)
 
         return coords, data, weights
 
@@ -990,7 +1033,7 @@ class DatasetStates(States):
 
         return d
 
-    def _update_dims(self, dims, coords, vrs, d):
+    def _update_dims(self, dims, coords, vrs, d, fdata):
         """Helper function for dimension adjustment, if needed"""
         return dims, coords
 
@@ -1030,13 +1073,15 @@ class DatasetStates(States):
         times = mdata[FC.STATE]
 
         # get data for calculation
-        coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
+        coords, data, weights = self.get_calc_data(
+            mdata, fdata, self._cmap, self.variables
+        )
         coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
 
         # check if points are state dependent
         _points_data = None
 
-        def _analyze_points(has_p, has_h):
+        def _analyze_points(has_p, has_h, hcoords=None):
             """Helper function for points analysis."""
             nonlocal _points_data
 
@@ -1051,7 +1096,14 @@ class DatasetStates(States):
                 pmax = _points_data["pmax"]
 
             if has_p and "points_vary" not in _points_data:
-                if np.max(pmax - pmin) > 1e-4:
+                if (
+                    hcoords is not None
+                    and FC.TURBINE in hcoords
+                    and len(hcoords[FC.TURBINE].shape) == 3
+                ):
+                    _points_data["up"] = points
+                    _points_data["points_vary"] = False
+                elif np.max(pmax - pmin) > 1e-4:
                     _points_data["up"], _points_data["up2p"] = np.unique(
                         points.reshape(n_states * n_pts, 3), axis=0, return_inverse=True
                     )
@@ -1078,7 +1130,7 @@ class DatasetStates(States):
         out = {}
         for dims, (vrs, d) in data.items():
             # update dims, if necessary:
-            dims, hcoords = self._update_dims(dims, coords, vrs, d)
+            dims, hcoords = self._update_dims(dims, coords, vrs, d, fdata)
 
             # replace (WD, WS) by (U, V):
             iwd = None
@@ -1102,7 +1154,9 @@ class DatasetStates(States):
                 iws = vrs.index(FV.V)
 
             # move state dimension to second last position:
-            if dims[0] == FC.STATE:
+            if dims[0] == FC.STATE and not (
+                FC.TURBINE in hcoords and len(hcoords[FC.TURBINE].shape) == 3
+            ):
                 d = np.moveaxis(d, 0, -2)
                 dims = dims[1:-1] + (FC.STATE,) + (dims[-1],)
                 idims = list(dims[:-2])
@@ -1114,8 +1168,13 @@ class DatasetStates(States):
             if len(idims) > 0:
                 # prepare points:
                 pts = []
-                has_p = FV.X in idims or FV.Y in idims or FC.POINT in idims
-                has_h = FV.H in idims
+                has_p = (
+                    FV.X in idims
+                    or FV.Y in idims
+                    or FC.POINT in idims
+                    or FC.TURBINE in idims
+                )
+                has_h = FV.H in idims or FC.TURBINE in idims
                 for c in idims.copy():
                     if c in [FV.X, FV.Y, FV.H]:
                         points_data = _analyze_points(has_p, has_h)
@@ -1128,24 +1187,30 @@ class DatasetStates(States):
                             pts.append(points_data["uh"])
                     elif c == FC.POINT:
                         points_data = _analyze_points(has_p, has_h)
-                        pts.append(points_data["up"][:, 0])
-                        pts.append(points_data["up"][:, 1])
-                        if hcoords[FC.POINT].shape[1] == 3:
-                            pts.append(points_data["up"][:, 2])
+                        pts.append(points_data["up"][..., 0])
+                        pts.append(points_data["up"][..., 1])
+                    elif c == FC.TURBINE:
+                        points_data = _analyze_points(has_p, has_h, hcoords)
+                        pts.append(points_data["up"][..., 0])
+                        pts.append(points_data["up"][..., 1])
+                        if hcoords[FC.TURBINE].shape[-1] == 3:
+                            pts.append(points_data["up"][..., 2])
                     elif c == FC.STATE:
                         idims.remove(FC.STATE)
                     else:
                         raise NotImplementedError(
                             f"States '{self.name}': Unsupported dimension '{c}' in {dims} for interpolation of variables {vrs}"
                         )
-                pts = np.stack(pts, axis=-1)
+                pts = np.stack(pts, axis=-1) if len(pts) > 0 else None
 
                 # interpolate:
                 icrds = [hcoords[c] for c in idims]
                 d = self.interpolate_data(idims, icrds, d, pts, vrs, times)
 
                 # move state dimension back to front:
-                if FC.STATE in dims:
+                if dims[0] == FC.STATE:
+                    pass
+                elif FC.STATE in dims:
                     dims = (FC.STATE,) + dims[:-2] + (dims[-1],)
                     d = np.moveaxis(d, -2, 0)
                 else:
@@ -1166,7 +1231,7 @@ class DatasetStates(States):
                         d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
                     else:
                         d = d[0, ...]
-                del points_data, pts, icrds
+                del pts, icrds
 
             # case no interpolation needed:
             else:

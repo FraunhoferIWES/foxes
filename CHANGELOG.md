@@ -891,3 +891,23 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixes for bugs with foxes-opt
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.1](https://github.com/FraunhoferIWES/foxes/commits/v1.7.1)
+
+## v1.7.2
+
+- Inputs:
+  - New states `ICONStates` for heterogeneous flows that are based on data from DWD's ICON software
+  - New states `TurbinePointCloud`, modelling ambient data at turbine locations
+- Utils:
+  - New function `download_file` that manages the download of files from an URL, picking up incomplete downloads at restart
+- Applications:
+  - New command line application `foxes_create_mean_dataset`, takes mean over the time dimension of NetCDF data, translating to wind components first
+  - New command line application `iconDream2foxes`, downloading hourly DWD-ICON-DREAM data and converting it into NetCDF files that are suitable for running with foxes as `ICONStates`.
+  - New command line application `eww2foxes`, downloading EuroWindWakes data for the
+  usage with `foxes.input.farm_layout.add_from_eww`
+- Examples:
+  - New example `icon_dream` that demonstrates the usage of `ICONStates` and `add_from_eww`
+- Notebooks:
+  - New notebook `icon_dream.ipynb`, demonstrating the usage of `ICONStates` and `add_from_eww`
+  - New notebook `turbine_data.ipynb`, demonstrating how to simulate (state, turbine)-type ambient inflow data using `TurbinePointCloud` states
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.2](https://github.com/FraunhoferIWES/foxes/commits/v1.7.2)

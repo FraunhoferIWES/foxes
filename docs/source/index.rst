@@ -2,18 +2,16 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionchanged:: 1.7.0
-    The `engine` parameter in the `Algorithm` constructor has been removed. If no engine context
-    is specified the default engine is used in the background. For other choices computations
-    have to be run within an explicit engine context, i.e. within a `with engine` block
-    (see examples).
+.. versionadded:: 1.7.2
+    New `ICONStates` class for handling output from DWD's ICON model.
+    Also a pre-processing command line tool `iconDream2foxes` was added that downloads
+    hourly data from the online ICON-DREAM dataset and prepares it for use with *foxes*.
+    See :ref:`this example<ICON-DREAM data>`.
 
-.. versionchanged:: 1.7.0
-    Image creating outputs like `FlowPlots2D` now separate plot data computation from figure
-    generation. This improves thread-safety of the plotting functions.
+.. versionadded:: 1.7.2
+    New `TurbinePointCloud` states for ambient flow data at turbine locations, see
+    :ref:`this example<Turbine-based ambient flow data>`.
 
-.. versionchanged:: 1.7.0
-    Support for Python 3.14 dropped, will be re-added at a later stage.
 
 Welcome to FOXES
 ================
