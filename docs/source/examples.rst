@@ -23,3 +23,4 @@ folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github reposito
         notebooks/operating_flag
         notebooks/partial_wakes
         notebooks/icon_dream.ipynb
+        notebooks/turbine_data.ipynb

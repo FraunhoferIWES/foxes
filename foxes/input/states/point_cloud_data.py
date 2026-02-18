@@ -603,7 +603,7 @@ class TurbinePointCloud(DatasetStates):
             Keyword arguments for the base class
 
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, load_mode="preload", **kwargs)
 
         self.states_coord = states_coord
         self.turbine_coord = turbine_coord
@@ -632,7 +632,7 @@ class TurbinePointCloud(DatasetStates):
 
         self._cmap = {
             FC.STATE: self.states_coord,
-            FC.POINT: self.turbine_coord,
+            FC.TURBINE: self.turbine_coord,
         }
 
     def load_data(self, algo, verbosity=0):
@@ -668,7 +668,7 @@ class TurbinePointCloud(DatasetStates):
 
     def _update_dims(self, dims, coords, vrs, d, fdata):
         """Helper function for dimension adjustment, if needed"""
-        coords[FC.POINT] = fdata[FV.TXYH]
+        coords[FC.TURBINE] = fdata[FV.TXYH]
         return dims, coords
 
     def interpolate_data(self, idims, icrds, d, pts, vrs, times):
@@ -701,9 +701,16 @@ class TurbinePointCloud(DatasetStates):
 
         """
 
-        assert len(idims) == 1 and idims[0] == FC.POINT, (
-            f"States '{self.name}': Only point cloud interpolation supported, got dimensions {idims}"
-        )
+        # special case of time-only data:
+        if len(idims) == 0:
+            assert pts is None, (
+                f"States '{self.name}': Expecting no points for time-only data, got {pts}"
+            )
+            return d[:, None, ...]
+        else:
+            assert len(idims) == 1 and idims[0] == FC.TURBINE, (
+                f"States '{self.name}': Only turbine point cloud interpolation supported, got dimensions {idims}"
+            )
 
         # special case of evaluation at turbine locations:
         if np.all(icrds[0] == pts):

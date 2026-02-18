@@ -6,9 +6,11 @@
     New `ICONStates` class for handling output from DWD's ICON model.
     Also a pre-processing command line tool `iconDream2foxes` was added that downloads
     hourly data from the online ICON-DREAM dataset and prepares it for use with *foxes*.
+    See :ref:`this example<ICON-DREAM data>`.
 
 .. versionadded:: 1.7.2
-    New `TurbinePointCloud` states for ambient flow data at turbine locations.
+    New `TurbinePointCloud` states for ambient flow data at turbine locations, see
+    :ref:`this example<Turbine-based ambient flow data>`.
 
 
 Welcome to FOXES
