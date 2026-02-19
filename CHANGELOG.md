@@ -909,3 +909,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New notebook `turbine_data.ipynb`, demonstrating how to simulate (state, turbine)-type ambient inflow data using `TurbinePointCloud` states
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.2](https://github.com/FraunhoferIWES/foxes/commits/v1.7.2)
+
+## v1.7.3
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.3](https://github.com/FraunhoferIWES/foxes/commits/v1.7.3)
