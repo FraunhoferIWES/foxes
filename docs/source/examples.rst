@@ -6,6 +6,7 @@ available in the `notebooks <https://github.com/FraunhoferIWES/foxes/tree/main/n
 folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github repository.
 
     .. toctree::
+        :maxdepth: 1
         notebooks/model_book
         notebooks/single_row
         notebooks/timeseries
