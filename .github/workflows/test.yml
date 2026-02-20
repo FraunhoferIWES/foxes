@@ -2,6 +2,10 @@ name: Run tests and notebooks
 
 on:
   push:
+    branches:
+      - "**"
+    tags:
+      - "!v*" # version tags run publish.yml, including tests
   pull_request:
     branches:
       - main
