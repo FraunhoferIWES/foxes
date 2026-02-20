@@ -77,6 +77,7 @@ def _process(
     levels,
     path_grid_select,
     path_grid_weights,
+    verbosity=1,
 ):
     """Process grb files and convert to NetCDF."""
     nc_fname = _get_fname(year, month, var=None, region=region, suffix="nc")
@@ -94,24 +95,35 @@ def _process(
     for var, vname in var2ncvar.items():
         grb_fname = _get_fname(year, month, var, region=None, suffix="grb")
         grb_path = grb_dir / _get_file_var_str(var) / grb_fname
+        if verbosity > 1:
+            print(f"Processing {grb_fname}")
 
         if not grb_path.exists():
+            if verbosity > 1:
+                print(f"File {grb_path} not found, skipping.")
             return -1  # Indicate failure
 
         # select levels:
+        if verbosity > 2:
+            print(f"{grb_fname}: Selecting levels")
         lvls = levels if var != "TKE" else levels + [levels[-1] + 1]
         lvls = ",".join(str(lv) for lv in lvls)
         temp = cdo.sellevel(lvls, input=str(grb_path), returnXArray=vname)
 
         # remap:
+        if verbosity > 2:
+            print(f"{grb_fname}: Remapping")
         data[var] = cdo.remap(
             str(path_grid_select), path_grid_weights, input=temp, returnXArray=vname
         )
         if var == "TKE":
             data[var] = data[var].rename({"height": "height_2"})
 
+        if verbosity > 2:
+            print(f"{grb_fname}: Processing done.")
+
     data = Dataset(data)
-    write_nc(data, nc_path, nc_engine=config.nc_engine, verbosity=0)
+    write_nc(data, nc_path, nc_engine=config.nc_engine, verbosity=verbosity)
     return 1  # Indicate success
 
 
@@ -125,6 +137,7 @@ def iconDream2foxes(
     base_url="https://opendata.dwd.de/climate_environment/REA/ICON-DREAM-EU/hourly",
     url_icon_grid="http://icon-downloads.mpimet.mpg.de/grids/public/edzw/icon_grid_0027_R03B08_N02.nc",
     levels=None,
+    skip_download=False,
     verbosity=1,
 ):
     """
@@ -151,6 +164,8 @@ def iconDream2foxes(
         URL to download the ICON grid file if not present.
     levels: list of int, optional
         The ICON height levels, e.g. [69,70,71,72,73,74].
+    skip_download: bool
+        If True, skip the download step and assume all files are present.
     verbosity: int
         The verbosity level, 0 = silent, 1 = progress bars and summary.
 
@@ -219,40 +234,41 @@ def iconDream2foxes(
     ]
 
     # download files in parallel:
-    futures += [
-        engine.submit(
-            _download_icon_dream,
-            ymv_i,
-            base_url,
-            grb_dir,
-            verbosity=verbosity - 1,
-        )
-        for ymv_i in ymv
-    ]
-    if verbosity > 0:
-        results = np.array(
-            [
-                engine.await_result(f)
-                for f in tqdm(futures, desc="Downloading ICON-DREAM files")
-            ]
-        )
-    else:
-        results = np.array([engine.await_result(f) for f in futures])
-
-    failed = np.sum(results == -1)
-    if verbosity > 0:
-        print(
-            f"Downloaded {np.sum(results == 1)} files, "
-            f"{failed} failed, "
-            f"{np.sum(results == 0)} already present."
-        )
-
-    if failed > 0:
+    if not skip_download:
+        futures += [
+            engine.submit(
+                _download_icon_dream,
+                ymv_i,
+                base_url,
+                grb_dir,
+                verbosity=verbosity - 1,
+            )
+            for ymv_i in ymv
+        ]
         if verbosity > 0:
-            print("Some downloads failed. Please retry.")
-        return
-    elif verbosity > 0:
-        print(f"All grb files present in {grb_dir}.")
+            results = np.array(
+                [
+                    engine.await_result(f)
+                    for f in tqdm(futures, desc="Downloading ICON-DREAM files")
+                ]
+            )
+        else:
+            results = np.array([engine.await_result(f) for f in futures])
+
+        failed = np.sum(results == -1)
+        if verbosity > 0:
+            print(
+                f"Downloaded {np.sum(results == 1)} files, "
+                f"{failed} failed, "
+                f"{np.sum(results == 0)} already present."
+            )
+
+        if failed > 0:
+            if verbosity > 0:
+                print("Some downloads failed. Please retry.")
+            return
+        elif verbosity > 0:
+            print(f"All grb files present in {grb_dir}.")
 
     # process files in parallel:
     futures = [
@@ -341,6 +357,12 @@ def main():
         type=int,
         default=1,
     )
+    parser.add_argument(
+        "-sd",
+        "--skip_download",
+        help="If given, skip the download step and assume all files are present",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     with Engine.new(args.engine, n_procs=args.n_cpus):
@@ -351,6 +373,7 @@ def main():
             min_month=args.min_month,
             max_year=args.max_year,
             max_month=args.max_month,
+            skip_download=args.skip_download,
             verbosity=args.verbosity,
         )
 
