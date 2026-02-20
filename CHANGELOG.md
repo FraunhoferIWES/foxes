@@ -912,5 +912,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.7.3
 
+- Bug fixes:
+  - Bug fixed in `iconDream2foxes` with verbosity during file processing step
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.3](https://github.com/FraunhoferIWES/foxes/commits/v1.7.3)
