@@ -7,6 +7,7 @@ folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github reposito
 
     .. toctree::
         :titlesonly:
+
         notebooks/model_book
         notebooks/single_row
         notebooks/timeseries
