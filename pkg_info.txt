@@ -164,7 +164,7 @@ fastjsonschema==2.21.2
     # via nbformat
 filelock==3.19.1 ; python_full_version < '3.10'
     # via virtualenv
-filelock==3.20.3 ; python_full_version >= '3.10'
+filelock==3.24.3 ; python_full_version >= '3.10'
     # via virtualenv
 fonttools==4.60.2 ; python_full_version < '3.10'
     # via matplotlib
@@ -534,7 +534,7 @@ pandas==2.3.3 ; python_full_version < '3.11'
     # via
     #   foxes
     #   xarray
-pandas==3.0.0 ; python_full_version >= '3.11'
+pandas==3.0.1 ; python_full_version >= '3.11'
     # via
     #   foxes
     #   xarray
@@ -554,7 +554,7 @@ platformdirs==4.4.0 ; python_full_version < '3.10'
     # via
     #   jupyter-core
     #   virtualenv
-platformdirs==4.5.1 ; python_full_version >= '3.10'
+platformdirs==4.9.2 ; python_full_version >= '3.10'
     # via
     #   jupyter-core
     #   moocore
@@ -840,7 +840,7 @@ urllib3==2.6.3
     #   requests
 utm==0.8.1
     # via foxes
-virtualenv==20.36.1
+virtualenv==20.38.0
     # via pre-commit
 wcwidth==0.6.0
     # via prompt-toolkit
@@ -866,7 +866,7 @@ xarray==2025.6.1 ; python_full_version == '3.10.*'
     # via
     #   foxes
     #   foxes-opt
-xarray==2026.1.0 ; python_full_version >= '3.11'
+xarray==2026.2.0 ; python_full_version >= '3.11'
     # via
     #   foxes
     #   foxes-opt
