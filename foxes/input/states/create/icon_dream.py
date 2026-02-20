@@ -99,7 +99,7 @@ def _process(
             print(f"Processing {grb_fname}")
 
         if not grb_path.exists():
-            if verbosity > 0:
+            if verbosity > 1:
                 print(f"File {grb_path} not found, skipping.")
             return -1  # Indicate failure
 
@@ -118,6 +118,9 @@ def _process(
         )
         if var == "TKE":
             data[var] = data[var].rename({"height": "height_2"})
+
+        if verbosity > 2:
+            print(f"{grb_fname}: Processing done.")
 
     data = Dataset(data)
     write_nc(data, nc_path, nc_engine=config.nc_engine, verbosity=verbosity)
