@@ -95,7 +95,7 @@ def _process(
     for var, vname in var2ncvar.items():
         grb_fname = _get_fname(year, month, var, region=None, suffix="grb")
         grb_path = grb_dir / _get_file_var_str(var) / grb_fname
-        if verbosity > 1:
+        if verbosity > 0:
             print(f"Processing {grb_fname}")
 
         if not grb_path.exists():
@@ -108,18 +108,36 @@ def _process(
             print(f"{grb_fname}: Selecting levels")
         lvls = levels if var != "TKE" else levels + [levels[-1] + 1]
         lvls = ",".join(str(lv) for lv in lvls)
-        temp = cdo.sellevel(lvls, input=str(grb_path), returnXArray=vname)
+        try:
+            temp = cdo.sellevel(lvls, input=str(grb_path), returnXArray=vname)
+        except Exception as e:
+            if verbosity > 3:
+                raise e
+            elif verbosity > 2:
+                print(f"{grb_fname}: Selecting levels failed with exception {e}")
+            elif verbosity > 1:
+                print(f"{grb_fname}: Selecting levels failed, skipping.")
+            return -1  # Indicate failure
 
         # remap:
         if verbosity > 2:
             print(f"{grb_fname}: Remapping")
-        data[var] = cdo.remap(
-            str(path_grid_select), path_grid_weights, input=temp, returnXArray=vname
-        )
+        try:
+            data[var] = cdo.remap(
+                str(path_grid_select), path_grid_weights, input=temp, returnXArray=vname
+            )
+        except Exception as e:
+            if verbosity > 3:
+                raise e
+            elif verbosity > 2:
+                print(f"{grb_fname}: Remapping failed with exception {e}")
+            elif verbosity > 1:
+                print(f"{grb_fname}: Remapping failed, skipping.")
+            return -1  # Indicate failure
         if var == "TKE":
             data[var] = data[var].rename({"height": "height_2"})
 
-        if verbosity > 2:
+        if verbosity > 1:
             print(f"{grb_fname}: Processing done.")
 
     data = Dataset(data)
