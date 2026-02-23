@@ -29,6 +29,7 @@ def to_lonlat(xy):
         xy[:, 1],
         utmz,
         utml,
+        strict=False,
     )
     return np.stack((lon, lat), axis=-1)
 
