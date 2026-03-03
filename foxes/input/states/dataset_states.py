@@ -1340,9 +1340,9 @@ class DatasetStates(States):
                 f"States '{self.name}': Cannot calculate {FV.TI} without {FV.TKE}"
             )
             if FV.TKE not in self.ovars:
-                tke = np.maximum(results.pop(FV.TKE), 0)
+                tke = np.maximum(results.pop(FV.TKE), 1e-10)
             else:
-                tke = np.maximum(results[FV.TKE], 0)
+                tke = np.maximum(results[FV.TKE], 1e-10)
             ws = results[FV.WS]
             assert np.all(ws > 0.0), (
                 f"States '{self.name}': Cannot calculate {FV.TI} from {FV.TKE}, found zeros or negative values in {FV.WS}"
