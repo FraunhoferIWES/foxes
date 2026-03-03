@@ -57,6 +57,13 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
+        "-w",
+        "--wakes",
+        help="The wake models",
+        default=["my_Bastankhah2016", "my_CrespoHernandez"],
+        nargs="+",
+    )
+    parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="seq_dyn_wakes")
@@ -198,8 +205,8 @@ if __name__ == "__main__":
     algo = foxes.algorithms.Sequential(
         farm,
         states=states,
-        rotor_model="centre",
-        wake_models=["my_Bastankhah2016", "my_CrespoHernandez"],
+        rotor_model=args.rotor,
+        wake_models=args.wakes,
         wake_frame=args.frame,
         wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
