@@ -782,7 +782,7 @@ class Engine(ABC):
             """Helper function for writing results to files on the fly"""
             vrb = max(self.verbosity - 1, 0)
             wfutures = []
-            if self.split_size is not None:
+            if self.split_size is not None and self.split_size > 0:
                 splits = min(self.split_size, self.algo.n_states - self.wcount)
                 while (
                     self.algo.n_states - self.wcount > 0
