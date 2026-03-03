@@ -3,6 +3,7 @@ import numpy as np
 
 from foxes.config import config
 import foxes.constants as FC
+import foxes.variables as FV
 
 from .data_calc_model import DataCalcModel
 
@@ -66,7 +67,7 @@ class FarmDataModel(DataCalcModel):
         """
         return (FC.STATE, FC.TURBINE)
 
-    def ensure_output_vars(self, algo, fdata):
+    def ensure_output_vars(self, algo, fdata, defaults=None):
         """
         Ensures that the output variables are present in the farm data.
 
@@ -76,15 +77,24 @@ class FarmDataModel(DataCalcModel):
             The calculation algorithm
         fdata: foxes.core.FData
             The farm data
+        defaults: dict, optional
+            Default values for the output variables, keys: variable str,
+            values: scalar or array-like with shape (n_states, n_turbines)
 
         """
+        defs = {
+            FV.YAWM: 0.0,
+        }
+        if defaults is not None:
+            defs.update(defaults)
+
         for var in self.output_farm_vars(algo):
             if var not in fdata:
                 fdata.add(
                     var,
                     np.full(
                         (fdata.n_states, fdata.n_turbines),
-                        np.nan,
+                        defs.get(var, np.nan),
                         dtype=config.dtype_double,
                     ),
                     (FC.STATE, FC.TURBINE),

@@ -92,6 +92,7 @@ class CentreRotor(RotorModel):
         rpoint_weights,
         downwind_index=None,
         copy_to_ambient=False,
+        set_wd=False,
     ):
         """
         Evaluate rotor point results.
@@ -122,6 +123,8 @@ class CentreRotor(RotorModel):
         copy_to_ambient: bool
             If `True`, the fdata results are copied to ambient
             variables after calculation
+        set_wd: bool
+            If `True`, the wind direction is updated
 
         """
         if len(rpoint_weights) > 1:
@@ -157,7 +160,7 @@ class CentreRotor(RotorModel):
             if v not in fdata:
                 fdata[v] = np.zeros((n_states, n_turbines), dtype=config.dtype_double)
 
-            if v == FV.WD or v == FV.YAW:
+            if (set_wd and v == FV.WD) or v == FV.YAW:
                 if wd is None:
                     wd = uv2wd(uv, axis=-1)
                 self._set_res(fdata, v, wd, downwind_index)
@@ -192,11 +195,14 @@ class CentreRotor(RotorModel):
         del uvp
 
         for v in self.calc_vars:
-            if v not in vdone and (
-                fdata[v].shape[1] > 1 or downwind_index is None or downwind_index == 0
-            ):
-                res = rpoint_results[v][:, :, 0]
-                self._set_res(fdata, v, res, downwind_index)
-                del res
-            if copy_to_ambient and v in FV.var2amb:
-                fdata.add(FV.var2amb[v], fdata[v].copy(), fdata.dims[v])
+            if not (v == FV.WD and not set_wd):
+                if v not in vdone and (
+                    fdata[v].shape[1] > 1
+                    or downwind_index is None
+                    or downwind_index == 0
+                ):
+                    res = rpoint_results[v][:, :, 0]
+                    self._set_res(fdata, v, res, downwind_index)
+                    del res
+                if copy_to_ambient and v in FV.var2amb:
+                    fdata.add(FV.var2amb[v], fdata[v].copy(), fdata.dims[v])

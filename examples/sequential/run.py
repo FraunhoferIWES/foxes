@@ -195,45 +195,45 @@ if __name__ == "__main__":
         for r in algo:
             print(algo.index)
 
-print("\nFarm results:\n")
-print(algo.farm_results)
+    print("\nFarm results:\n")
+    print(algo.farm_results)
 
-if args.animation:
-    print("\nCalculating animation")
+    if args.animation:
+        print("\nCalculating animation")
 
-    fig, ax = plt.subplots()
-    anim = foxes.output.Animator(fig)
-    anim.add_generator(
-        anigen.gen_images(
-            ax,
-            levels=None,
-            quiver_pars=dict(scale=0.016, alpha=0.5),
-            quiver_n=157,
-            title=None,
-            rotor_color="red",
+        fig, ax = plt.subplots()
+        anim = foxes.output.Animator(fig)
+        anim.add_generator(
+            anigen.gen_images(
+                ax,
+                levels=None,
+                quiver_pars=dict(scale=0.016, alpha=0.5),
+                quiver_n=157,
+                title=None,
+                rotor_color="red",
+            )
         )
-    )
 
-    if args.debug:
-        anim.add_generator(anigen_debug.gen_images(ax))
+        if args.debug:
+            anim.add_generator(anigen_debug.gen_images(ax))
 
-    ani = anim.animate(interval=600)
+        ani = anim.animate(interval=600)
 
-    lo = foxes.output.FarmLayoutOutput(farm)
-    lo.get_figure(
-        fig=fig,
-        ax=ax,
-        title="",
-        annotate=1,
-        anno_delx=-120,
-        anno_dely=-60,
-        alpha=0,
-        s=10,
-    )
+        lo = foxes.output.FarmLayoutOutput(farm)
+        lo.get_figure(
+            fig=fig,
+            ax=ax,
+            title="",
+            annotate=1,
+            anno_delx=-120,
+            anno_dely=-60,
+            alpha=0,
+            s=10,
+        )
 
-    fpath = Path(args.ani_file)
-    print("Writing file", fpath)
-    if fpath.suffix == ".gif":
-        ani.save(filename=fpath, writer="pillow", fps=args.fps)
-    else:
-        ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)
+        fpath = Path(args.ani_file)
+        print("Writing file", fpath)
+        if fpath.suffix == ".gif":
+            ani.save(filename=fpath, writer="pillow", fps=args.fps)
+        else:
+            ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)
