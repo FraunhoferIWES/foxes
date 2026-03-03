@@ -87,6 +87,7 @@ class FarmWakesCalculation(FarmDataModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
         rwghts = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
@@ -158,7 +159,7 @@ class FarmWakesCalculation(FarmDataModel):
             del pwake, tdatap, wdeltas
 
         wake_res[FV.WEIGHT] = weights
-        rotor.eval_rpoint_results(algo, mdata, fdata, wake_res, rwghts)
+        rotor.eval_rpoint_results(algo, mdata, fdata, wake_res, rwghts, set_wd=False)
         res = algo.farm_controller.calculate(algo, mdata, fdata, pre_rotor=False)
         if self.urelax is not None:
             res = self.urelax.calculate(algo, mdata, fdata, res)

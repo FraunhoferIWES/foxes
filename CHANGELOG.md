@@ -921,6 +921,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.7.4
 
-
+- Models:
+  - New turbine model `YawController` for sequential runs, simulating basic yaw manoeuvres that follow window averages of ambient wind direction
+- Examples:
+  - New example `sequential_yawcontroller`, demonstrating the new `YawController` model
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.4](https://github.com/FraunhoferIWES/foxes/commits/v1.7.4)
