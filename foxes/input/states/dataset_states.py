@@ -1298,8 +1298,8 @@ class DatasetStates(States):
             else:
                 tke = np.maximum(results[FV.TKE], 0)
             ws = results[FV.WS]
-            assert not np.any(ws <= 0.0), (
-                f"States '{self.name}': Cannot calculate {FV.TI}, found zeros in {FV.WS}"
+            assert np.all(ws > 0.0), (
+                f"States '{self.name}': Cannot calculate {FV.TI} from {FV.TKE}, found zeros or negative values in {FV.WS}"
             )
             results[FV.TI] = np.sqrt(1.5 * tke) / ws
 

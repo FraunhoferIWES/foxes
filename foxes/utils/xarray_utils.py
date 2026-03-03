@@ -77,11 +77,14 @@ def pack_value(unpacked_value, scale_factor, add_offset, dtype, fill_value):
     if fill_value is None:
         return np.floor((unpacked_value - add_offset) / scale_factor).astype(dtype)
     else:
-        return np.where(
-            np.isnan(unpacked_value),
-            fill_value,
-            np.floor((unpacked_value - add_offset) / scale_factor),
-        ).astype(dtype)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", category=RuntimeWarning)
+            packed = np.where(
+                np.isnan(unpacked_value),
+                fill_value,
+                np.floor((unpacked_value - add_offset) / scale_factor),
+            )
+            return packed.astype(dtype)
 
 
 def unpack_value(packed_value, scale_factor, add_offset, fill_value):
