@@ -161,7 +161,13 @@ def _process(
     #    dvrs[v] = (d.dims, d.to_numpy())
     # data = Dataset(coords=crds, data_vars=dvrs)
     data = Dataset(data)
-    write_nc(data, nc_path, nc_engine=config.nc_engine, verbosity=verbosity)
+    write_nc(
+        data, 
+        nc_path, 
+        nc_engine=config.nc_engine, 
+        pack=pack,
+        verbosity=verbosity,
+    )
 
     return 1  # Indicate success
 
