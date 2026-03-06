@@ -118,7 +118,7 @@ def unpack_value(packed_value, scale_factor, add_offset, fill_value):
         ).astype(scale_factor.dtype)
 
 
-def get_encoding(data, complevel=5, pack_data=True):
+def get_encoding(data, complevel=5, pack=True):
     """
     Get the encoding parameters for a numpy array.
 
@@ -128,7 +128,7 @@ def get_encoding(data, complevel=5, pack_data=True):
         The numpy array for which to get the encoding information.
     complevel: int
         The compression level (1-9)
-    pack_data: bool
+    pack: bool
         Whether to pack data using scale_factor and add_offset
 
     Returns
@@ -140,7 +140,7 @@ def get_encoding(data, complevel=5, pack_data=True):
 
     """
     enc = {"zlib": True, "complevel": complevel}
-    if pack_data:
+    if pack:
         if np.issubdtype(data.dtype, np.integer):
             for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32]:
                 if np.all(data == data.astype(t)):
@@ -173,7 +173,7 @@ def write_nc(
     round={},
     complevel=5,
     nc_engine="netcdf4",
-    pack_data=False,
+    pack=False,
     verbosity=1,
     **kwargs,
 ):
@@ -191,7 +191,7 @@ def write_nc(
         The compression level
     nc_engine: str
         The NetCDF engine to use
-    pack_data: bool
+    pack: bool
         Whether to pack data using scale_factor and add_offset
     verbosity: int
         The verbosity level, 0 = silent
@@ -224,7 +224,7 @@ def write_nc(
             else:
                 d = round.get(v, FV.get_default_digits(v))
             crds[v] = _round(x.to_numpy(), v, d)
-            enc[v] = get_encoding(crds[v], complevel=complevel, pack_data=pack_data)
+            enc[v] = get_encoding(crds[v], complevel=complevel, pack=pack)
             # print("WRITENC ENC",v, enc[v])
         dvrs = {}
         for v, x in ds.data_vars.items():
@@ -236,7 +236,7 @@ def write_nc(
                 dvrs[v] = (x.dims, _round(x.to_numpy(), v, d))
             else:
                 dvrs[v] = (x.dims, x.to_numpy())
-            enc[v] = get_encoding(dvrs[v][1], complevel=complevel, pack_data=pack_data)
+            enc[v] = get_encoding(dvrs[v][1], complevel=complevel, pack=pack)
             # print("WRITENC ENC",v, enc[v])
         ds = Dataset(coords=crds, data_vars=dvrs)
 

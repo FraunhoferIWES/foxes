@@ -78,6 +78,7 @@ def _process(
     path_grid_select,
     path_grid_weights,
     check_nans=True,
+    pack=True,
     verbosity=1,
 ):
     """Process grb files and convert to NetCDF."""
@@ -94,8 +95,6 @@ def _process(
     cdo = Cdo()
     data = {}
     for var, vname in var2ncvar.items():
-        if var not in [FV.U, FV.TKE]:
-            continue
         grb_fname = _get_fname(year, month, var, region=None, suffix="grb")
         grb_path = grb_dir / _get_file_var_str(var) / grb_fname
         if verbosity > 0:
@@ -161,7 +160,7 @@ def _process(
     #    crds.update(d.coords)
     #    dvrs[v] = (d.dims, d.to_numpy())
     # data = Dataset(coords=crds, data_vars=dvrs)
-    data = Dataset(data_vars=data)
+    data = Dataset(data)
     write_nc(data, nc_path, nc_engine=config.nc_engine, verbosity=verbosity)
 
     return 1  # Indicate success
@@ -179,6 +178,7 @@ def iconDream2foxes(
     levels=None,
     skip_download=False,
     check_nans=True,
+    pack=True,
     verbosity=1,
 ):
     """
@@ -209,6 +209,8 @@ def iconDream2foxes(
         If True, skip the download step and assume all files are present.
     check_nans: bool
         If True, check for NaNs in the data
+    pack: bool
+        Whether to pack data using scale_factor and add_offset
     verbosity: int
         The verbosity level, 0 = silent, 1 = progress bars and summary.
 
@@ -327,6 +329,7 @@ def iconDream2foxes(
             path_grid_select,
             path_grid_weights,
             check_nans=check_nans,
+            pack=pack,
             verbosity=verbosity - 1,
         )
         for year, month in ym
@@ -413,6 +416,12 @@ def main():
         help="If given, skip the check for NaNs in the data",
         action="store_true",
     )
+    parser.add_argument(
+        "-sp",
+        "--skip_pack",
+        help="If given, skip packing the data using scale_factor and add_offset",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     with Engine.new(args.engine, n_procs=args.n_cpus):
@@ -425,6 +434,7 @@ def main():
             max_month=args.max_month,
             skip_download=args.skip_download,
             check_nans=not args.skip_check_nans,
+            pack=not args.skip_pack,
             verbosity=args.verbosity,
         )
 
