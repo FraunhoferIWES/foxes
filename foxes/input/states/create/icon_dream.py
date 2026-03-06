@@ -162,9 +162,9 @@ def _process(
     # data = Dataset(coords=crds, data_vars=dvrs)
     data = Dataset(data)
     write_nc(
-        data, 
-        nc_path, 
-        nc_engine=config.nc_engine, 
+        data,
+        nc_path,
+        nc_engine=config.nc_engine,
         pack=pack,
         verbosity=verbosity,
     )
