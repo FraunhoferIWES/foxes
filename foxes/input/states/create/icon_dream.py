@@ -69,11 +69,9 @@ def _prepare_grid(
 
 
 def _check_grb(
-    region,
     year,
     month,
     grb_dir,
-    nc_dir,
     var2ncvar,
     verbosity=1,
 ):
@@ -455,11 +453,9 @@ def iconDream2foxes(
         futures = [
             engine.submit(
                 _check_grb,
-                region,
                 year,
                 month,
                 grb_dir,
-                nc_dir,
                 var2ncvar,
                 verbosity=verbosity - 1,
             )
@@ -469,7 +465,9 @@ def iconDream2foxes(
             valid, fname, reason = zip(
                 *[
                     engine.await_result(f)
-                    for f in tqdm(futures, desc="Checking GRB files")
+                    for f in tqdm(
+                        futures, desc=f"Checking GRB files for {len(ym)} months"
+                    )
                 ]
             )
         else:
