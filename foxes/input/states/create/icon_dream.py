@@ -473,20 +473,30 @@ def iconDream2foxes(
                 ]
             )
         else:
-            valid, fname, reason = zip(*[engine.await_result(f) for f in futures])
+            valid, fname, reason, details = zip(
+                *[engine.await_result(f) for f in futures]
+            )
         valid = np.concatenate(valid, dtype=bool)
         fname = np.concatenate(fname)
         reason = np.concatenate(reason)
-
+        details = np.concatenate(details)
         fpath = out_dir / "grb_check_results.csv"
-        df = DataFrame({"file": fname, "valid": valid, "reason": reason})
+
+        df = DataFrame(
+            {
+                "file": fname,
+                "valid": valid.astype(np.int8),
+                "reason": reason,
+                "details": details,
+            }
+        )
         if verbosity > 1:
             print(df)
         if verbosity > 0:
             print(f"Writing GRB check results to {fpath}")
         df.to_csv(fpath, index=False)
 
-        failed = np.sum(~np.array(valid))
+        failed = np.sum(~valid)
         if failed > 0:
             if verbosity > 0:
                 print(
