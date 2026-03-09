@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 from xarray import Dataset
+from pandas import DataFrame
 from pathlib import Path
 from tqdm.autonotebook import tqdm
 
@@ -67,6 +68,126 @@ def _prepare_grid(
     return 1  # Indicate success
 
 
+def _check_grb(
+    region,
+    year,
+    month,
+    grb_dir,
+    nc_dir,
+    var2ncvar,
+    verbosity=1,
+):
+    """Check dimensions of the grb files for a given year and month."""
+    Cdo = import_module(
+        "cdo",
+        pip_hint="pip install cdo",
+        conda_hint="conda install -c conda-forge cdo",
+    ).Cdo
+    cdo = Cdo()
+
+    dms = None
+    valid = []
+    fname = []
+    reason = []
+    details = []
+    for var, vname in var2ncvar.items():
+        grb_fname = _get_fname(year, month, var, region=None, suffix="grb")
+        grb_path = grb_dir / _get_file_var_str(var) / grb_fname
+        if verbosity > 2:
+            print(f"{grb_fname}: Starting check")
+
+        # check file exists:
+        if not grb_path.exists():
+            if verbosity > 3:
+                raise FileNotFoundError(f"File {grb_path} not found.")
+            elif verbosity > 1:
+                print(f"{grb_fname}: Check FAILED, file not found.")
+            valid.append(False)
+            fname.append(grb_fname)
+            reason.append("missing")
+            details.append("File not found")
+            continue
+
+        # check dimensions:
+
+        if verbosity > 2:
+            print(f"{grb_fname}: Reading file")
+        try:
+            data = cdo.selvar(vname, input=str(grb_path), returnXArray=vname)
+        except Exception as e:
+            if verbosity > 3:
+                raise e
+            elif verbosity > 2:
+                print(
+                    f"{grb_fname}: Selecting variable '{vname}' failed with exception {e}"
+                )
+            elif verbosity > 1:
+                print(f"{grb_fname}: Selecting variable '{vname}' failed.")
+            valid.append(False)
+            fname.append(grb_fname)
+            reason.append("cdo")
+            details.append(f"cdo.selvar failed for variable '{vname}'")
+            continue
+
+        hdms = list(data.sizes.keys())
+        try:
+            assert hdms == ["time", "height", "ncells"], (
+                f"{grb_fname}: Unexpected dimensions {hdms}, expected ['time', 'height', 'ncells']."
+            )
+        except Exception as e:
+            if verbosity > 3:
+                raise e
+            elif verbosity > 2:
+                print(f"{grb_fname}: Check FAILED with exception {e}")
+            elif verbosity > 1:
+                print(f"{grb_fname}: Check FAILED.")
+            valid.append(False)
+            fname.append(grb_fname)
+            reason.append("coords")
+            details.append(f"Unexpected dimensions {hdms}")
+            continue
+
+        if dms is None:
+            dms = {c: s for c, s in data.sizes.items()}
+            if var == FV.TKE:
+                dms["height"] += 1
+            if verbosity > 2:
+                print(f"{grb_fname}: Dimensions are {dms}")
+
+        for dim, size in dms.items():
+            try:
+                if var == FV.TKE and dim == "height":
+                    assert data.sizes["height"] == size + 1, (
+                        f"{grb_fname}: Dimension mismatch for TKE, expected height to be {size + 1}, got {data.sizes['height']}."
+                    )
+                else:
+                    assert data.sizes[dim] == size, (
+                        f"{grb_fname}: Dimension mismatch for {dim}, expected {size}, got {data.sizes[dim]}."
+                    )
+            except Exception as e:
+                if verbosity > 3:
+                    raise e
+                elif verbosity > 2:
+                    print(f"{grb_fname}: Check FAILED with exception {e}")
+                elif verbosity > 1:
+                    print(f"{grb_fname}: Check FAILED.")
+                valid.append(False)
+                fname.append(grb_fname)
+                reason.append("shape")
+                details.append(f"Size mismatch for {dim}: {size} vs {data.sizes[dim]}")
+                continue
+
+        if verbosity > 3:
+            print(f"{grb_fname}: Dimensions match {data.sizes}.")
+            print(f"{grb_fname}: Checks OK")
+        valid.append(True)
+        fname.append(grb_fname)
+        reason.append("ok")
+        details.append("")
+
+    return valid, fname, reason, details
+
+
 def _process(
     region,
     year,
@@ -93,6 +214,7 @@ def _process(
         conda_hint="conda install -c conda-forge cdo",
     ).Cdo
     cdo = Cdo()
+
     data = {}
     for var, vname in var2ncvar.items():
         grb_fname = _get_fname(year, month, var, region=None, suffix="grb")
@@ -153,13 +275,17 @@ def _process(
         if verbosity > 1:
             print(f"{grb_fname}: Processing done.")
 
+    """
     # for debugging, complains if array sizes do not match:
-    # crds = {}
-    # dvrs = {}
-    # for v, d in data.items():
-    #    crds.update(d.coords)
-    #    dvrs[v] = (d.dims, d.to_numpy())
-    # data = Dataset(coords=crds, data_vars=dvrs)
+    crds = {}
+    dvrs = {}
+    for v, d in data.items():
+       crds.update(d.coords)
+       dvrs[v] = (d.dims, d.to_numpy())
+       grb_fname = _get_fname(year, month, v, region=None, suffix="grb")
+       print("PROCESSED DATA", grb_fname, d.to_numpy().shape, "NaNs:", np.sum(np.isnan(d.to_numpy())))
+    data = Dataset(coords=crds, data_vars=dvrs)
+    """
     data = Dataset(data)
     write_nc(
         data,
@@ -183,6 +309,7 @@ def iconDream2foxes(
     url_icon_grid="http://icon-downloads.mpimet.mpg.de/grids/public/edzw/icon_grid_0027_R03B08_N02.nc",
     levels=None,
     skip_download=False,
+    check_grb=False,
     check_nans=True,
     pack=True,
     verbosity=1,
@@ -213,6 +340,8 @@ def iconDream2foxes(
         The ICON height levels, e.g. [69,70,71,72,73,74].
     skip_download: bool
         If True, skip the download step and assume all files are present.
+    check_grb: bool
+        If True, check the grb files for expected dimensions before processing
     check_nans: bool
         If True, check for NaNs in the data
     pack: bool
@@ -321,6 +450,52 @@ def iconDream2foxes(
         elif verbosity > 0:
             print(f"All grb files present in {grb_dir}.")
 
+    # check grb files in parallel:
+    if check_grb:
+        futures = [
+            engine.submit(
+                _check_grb,
+                region,
+                year,
+                month,
+                grb_dir,
+                nc_dir,
+                var2ncvar,
+                verbosity=verbosity - 1,
+            )
+            for year, month in ym
+        ]
+        if verbosity > 0:
+            valid, fname, reason = zip(
+                *[
+                    engine.await_result(f)
+                    for f in tqdm(futures, desc="Checking GRB files")
+                ]
+            )
+        else:
+            valid, fname, reason = zip(*[engine.await_result(f) for f in futures])
+        valid = np.concatenate(valid, dtype=bool)
+        fname = np.concatenate(fname)
+        reason = np.concatenate(reason)
+
+        fpath = out_dir / "grb_check_results.csv"
+        df = DataFrame({"file": fname, "valid": valid, "reason": reason})
+        if verbosity > 1:
+            print(df)
+        if verbosity > 0:
+            print(f"Writing GRB check results to {fpath}")
+        df.to_csv(fpath, index=False)
+
+        failed = np.sum(~np.array(valid))
+        if failed > 0:
+            if verbosity > 0:
+                print(
+                    f"Found {failed} GBR files that failed checks. Writing file {fpath}. Please investigate."
+                )
+            return
+        elif verbosity > 0:
+            print("All GRB files passed the check.")
+
     # process files in parallel:
     futures = [
         engine.submit(
@@ -428,6 +603,12 @@ def main():
         help="If given, skip packing the data using scale_factor and add_offset",
         action="store_true",
     )
+    parser.add_argument(
+        "-cg",
+        "--check_grb",
+        help="If given, check the grb files for expected dimensions before processing",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     with Engine.new(args.engine, n_procs=args.n_cpus):
@@ -439,6 +620,7 @@ def main():
             max_year=args.max_year,
             max_month=args.max_month,
             skip_download=args.skip_download,
+            check_grb=args.check_grb,
             check_nans=not args.skip_check_nans,
             pack=not args.skip_pack,
             verbosity=args.verbosity,
