@@ -376,8 +376,14 @@ def iconDream2foxes(
     grb_dir.mkdir(parents=True, exist_ok=True)
     nc_dir.mkdir(parents=True, exist_ok=True)
     levels = list(range(69, 75)) if levels is None else levels
+
     cdo_tmp_dir = Path(cdo_tmp_dir).expanduser()
-    cdo_tmp_dir.mkdir(parents=True, exist_ok=True)
+    if cdo_tmp_dir.exists():
+        raise FileExistsError(
+            f"Temporary directory {cdo_tmp_dir} already exists. Please remove it or choose another one."
+        )
+    else:
+        cdo_tmp_dir.mkdir(parents=True)
 
     var2ncvar = {
         FV.U: "u",
@@ -486,7 +492,7 @@ def iconDream2foxes(
             for year, month in ym
         ]
         if verbosity > 0:
-            valid, fname, reason = zip(
+            valid, fname, reason, details = zip(
                 *[
                     engine.await_result(f)
                     for f in tqdm(
