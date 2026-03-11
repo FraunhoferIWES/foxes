@@ -48,6 +48,7 @@ class RotorPoints(PartialWakesModel):
         variable,
         rotor_res,
         rotor_weights,
+        downwind_index=None,
     ):
         """
         Map ambient rotor point results onto target points.
@@ -66,15 +67,20 @@ class RotorPoints(PartialWakesModel):
             The variable name to map
         rotor_res: numpy.ndarray
             The results at rotor points, shape:
-            (n_states, n_turbines, n_rotor_points)
+            (n_states, n_turbines, n_rotor_points) if downwind_index is None,
+            otherwise shape: (n_states, n_rotor_points)
         rotor_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
+        downwind_index: int, optional
+            The downwind index of the updated turbine,
+            if None, maps for all turbines
 
         Returns
         -------
         res: numpy.ndarray
             The mapped results at target points, shape:
-            (n_states, n_targets, n_tpoints)
+            (n_states, n_targets, n_tpoints) if downwind_index is None,
+            otherwise shape: (n_states, n_tpoints)
 
         """
         return rotor_res

@@ -27,7 +27,7 @@ class ReorderFarmOutput(FarmDataModel):
             The output variables, or None for defaults
 
         """
-        super().__init__(pre_rotor=False)
+        super().__init__()
         self.outputs = outputs
 
     def output_farm_vars(self, algo):

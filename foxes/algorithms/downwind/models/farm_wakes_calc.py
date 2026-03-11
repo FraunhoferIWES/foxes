@@ -59,6 +59,7 @@ class FarmWakesCalculation(FarmDataModel):
         """
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
+        controller = algo.farm_controller
         rwghts = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
         amb_res = algo.get_from_chunk_store(FC.AMB_ROTOR_RES, mdata=mdata)
         weights = algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata)
@@ -66,6 +67,7 @@ class FarmWakesCalculation(FarmDataModel):
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)
         pwake2tdata = {}
+        pwake2wmodels = {}
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             if pwake.name not in pwake2tdata:
@@ -77,6 +79,7 @@ class FarmWakesCalculation(FarmDataModel):
                 pwake2tdata[pwake.name] = pwake.get_initial_tdata(
                     algo, mdata, fdata, amb_res, rwghts, wmodels
                 )
+                pwake2wmodels[pwake.name] = wmodels
 
         def _get_wdata(tdatap, wdeltas, variables, s):
             """Helper function for wake data extraction"""
@@ -86,27 +89,45 @@ class FarmWakesCalculation(FarmDataModel):
 
         def _evaluate(gmodel, tdata, rwghts, wake_res, wdeltas, oi, wmodel, pwake):
             """Helper function for data evaluation at turbines"""
+
             wres = gmodel.finalize_farm_wakes(
                 algo, mdata, fdata, tdata, rwghts, wdeltas, wmodel, oi, pwake
             )
 
-            hres = {
-                v: d[:, oi, None] if d.shape[1] > 1 else d[:, 0, None]
-                for v, d in wake_res.items()
-            }
-            for v, d in wres.items():
-                if v in wake_res:
-                    hres[v] += d[:, None]
-            hres[FV.WEIGHT] = weights
+            if controller.has_pre_rotor_models:
+                nonlocal weights
+                res = controller.calculate(
+                    algo, mdata, fdata, pre_rotor=True, downwind_index=oi
+                )
+                fdata.update(res)
+                rotor.calculate(
+                    algo, mdata, fdata, downwind_index=oi, rpoint_weights=rwghts
+                )
+                weights = algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata)
+                wmdls = pwake2wmodels[pwake.name]
+                pwake.update_tdata(
+                    algo, mdata, fdata, tdata, wake_res, rwghts, wmdls, oi
+                )
 
-            rotor.eval_rpoint_results(
-                algo, mdata, fdata, hres, rwghts, downwind_index=oi
-            )
+            else:
+                hres = {
+                    v: d[:, oi, None] if d.shape[1] > 1 else d[:, 0, None]
+                    for v, d in wake_res.items()
+                }
+                for v, d in wres.items():
+                    if v in wake_res:
+                        hres[v] += d[:, None]
+                hres[FV.WEIGHT] = weights
 
-            res = algo.farm_controller.calculate(
-                algo, mdata, fdata, pre_rotor=False, downwind_index=oi
-            )
-            fdata.update(res)
+                rotor.eval_rpoint_results(
+                    algo, mdata, fdata, hres, rwghts, downwind_index=oi
+                )
+
+            if controller.has_post_rotor_models:
+                res = controller.calculate(
+                    algo, mdata, fdata, pre_rotor=False, downwind_index=oi
+                )
+                fdata.update(res)
 
         wake_res = deepcopy(amb_res)
         n_turbines = mdata.n_turbines

@@ -90,6 +90,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
+        controller = algo.farm_controller
         rwghts = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
         amb_res = algo.get_from_chunk_store(FC.AMB_ROTOR_RES, mdata=mdata)
         weights = algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata)
@@ -97,6 +98,7 @@ class FarmWakesCalculation(FarmDataModel):
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)
         pwake2tdata = {}
+        pwake2wmodels = {}
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             if pwake.name not in pwake2tdata:
@@ -108,6 +110,7 @@ class FarmWakesCalculation(FarmDataModel):
                 pwake2tdata[pwake.name] = pwake.get_initial_tdata(
                     algo, mdata, fdata, amb_res, rwghts, wmodels
                 )
+                pwake2wmodels[pwake.name] = wmodels
 
         def _get_wdata(tdatap, wdeltas, variables, s):
             """Helper function for wake data extraction"""
@@ -156,13 +159,39 @@ class FarmWakesCalculation(FarmDataModel):
                     if v in wake_res:
                         wake_res[v][:, oi] += d
 
+                if controller.has_pre_rotor_models:
+                    res = controller.calculate(
+                        algo, mdata, fdata, pre_rotor=True, downwind_index=oi
+                    )
+                    if self.urelax is not None:
+                        res = self.urelax.calculate(algo, mdata, fdata, res)
+                    fdata.update(res)
+                    rotor.calculate(
+                        algo,
+                        mdata,
+                        fdata,
+                        downwind_index=oi,
+                        rpoint_weights=rwghts,
+                        store=True,
+                    )
+                    weights = algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata)
+                    wmdls = pwake2wmodels[pwake.name]
+                    pwake.update_tdata(
+                        algo, mdata, fdata, tdatap, wake_res, rwghts, wmdls, oi
+                    )
+
             del pwake, tdatap, wdeltas
 
         wake_res[FV.WEIGHT] = weights
-        rotor.eval_rpoint_results(algo, mdata, fdata, wake_res, rwghts, set_wd=False)
-        res = algo.farm_controller.calculate(algo, mdata, fdata, pre_rotor=False)
-        if self.urelax is not None:
-            res = self.urelax.calculate(algo, mdata, fdata, res)
-        fdata.update(res)
+        if not controller.has_pre_rotor_models:
+            rotor.eval_rpoint_results(
+                algo, mdata, fdata, wake_res, rwghts, set_wd=False
+            )
+
+        if controller.has_post_rotor_models:
+            res = algo.farm_controller.calculate(algo, mdata, fdata, pre_rotor=False)
+            if self.urelax is not None:
+                res = self.urelax.calculate(algo, mdata, fdata, res)
+            fdata.update(res)
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

@@ -922,6 +922,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.7.4
 
 - Models:
+  - Removing `pre_rotor` flag. The position before or after the rotor model is now automatically determined based on the overlap of model output variables and the newly introduced input variables of the selected rotor model.
   - New turbine model `YawController` for sequential runs, simulating basic yaw manoeuvres that follow window averages of ambient wind direction
 - Examples:
   - New example `sequential_yawcontroller`, demonstrating the new `YawController` model

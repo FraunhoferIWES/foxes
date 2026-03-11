@@ -111,49 +111,151 @@ class PartialWakesModel(Model):
         tpoints, tweights = self.get_wake_points(algo, mdata, fdata)
         tdata = TData.from_tpoints(tpoints, tweights)
 
+        self.update_tdata(
+            algo,
+            mdata,
+            fdata,
+            tdata,
+            amb_rotor_res,
+            rotor_weights,
+            wmodels,
+            downwind_index=None,
+        )
+
+        return tdata
+
+    def update_tdata(
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        amb_rotor_res,
+        rotor_weights,
+        wmodels,
+        downwind_index=None,
+    ):
+        """
+        Updates tdata on the fly during wake calculations.
+
+        This method can be used to update the target data on the fly
+        during the wake calculations, after new rotor model calculations
+        have been performed.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data for the wake points
+        amb_rotor_res: dict
+            The ambient results at rotor points,
+            key: variable name, value: numpy.ndarray
+            of shape: (n_states, n_turbines, n_rotor_points)
+        rotor_weights: numpy.ndarray, optional
+            The rotor point weights, shape: (n_rotor_points,)
+        wmodels: list of foxes.core.WakeModel
+            The wake models for this partial wake model
+        downwind_index: int
+            The downwind index of the updated turbine
+
+        """
+        # prepare:
+        s = np.s_[:] if downwind_index is None else np.s_[:, downwind_index, ...]
+
         # map wind data:
         if FV.WD in amb_rotor_res or FV.WS in amb_rotor_res:
             assert FV.WD in amb_rotor_res and FV.WS in amb_rotor_res, (
                 "Require both wind direction and speed in ambient rotor results."
             )
-            uv = wd2uv(amb_rotor_res[FV.WD], amb_rotor_res[FV.WS])
+            uv = wd2uv(amb_rotor_res[FV.WD][s], amb_rotor_res[FV.WS][s])
             uv = np.stack(
                 [
                     self.map_rotor_results(
-                        algo, mdata, fdata, tdata, FV.U, uv[..., 0], rotor_weights
+                        algo,
+                        mdata,
+                        fdata,
+                        tdata,
+                        FV.U,
+                        uv[..., 0],
+                        rotor_weights,
+                        downwind_index,
                     ),
                     self.map_rotor_results(
-                        algo, mdata, fdata, tdata, FV.V, uv[..., 1], rotor_weights
+                        algo,
+                        mdata,
+                        fdata,
+                        tdata,
+                        FV.V,
+                        uv[..., 1],
+                        rotor_weights,
+                        downwind_index,
                     ),
                 ],
                 axis=-1,
             )
-            tdata.add(FV.AMB_WD, uv2wd(uv), dims=(FC.STATE, FC.TARGET, FC.TPOINT))
-            tdata.add(
-                FV.AMB_WS,
-                np.linalg.norm(uv, axis=-1),
-                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-            )
+
+            if downwind_index is None:
+                tdata.add(
+                    FV.AMB_WD,
+                    uv2wd(uv),
+                    dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+                )
+                tdata.add(
+                    FV.AMB_WS,
+                    np.linalg.norm(uv, axis=-1),
+                    dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+                )
+            else:
+                tdata[FV.AMB_WD][s] = uv2wd(uv)
+                tdata[FV.AMB_WS][s] = np.linalg.norm(uv, axis=-1)
+
             for wmodel in wmodels:
                 if wmodel.has_uv:
-                    tdata.add(
-                        FV.AMB_UV, uv, dims=(FC.STATE, FC.TARGET, FC.TPOINT, FC.XY)
-                    )
+                    if downwind_index is None:
+                        tdata.add(
+                            FV.AMB_UV,
+                            uv,
+                            dims=(FC.STATE, FC.TARGET, FC.TPOINT, FC.XY),
+                        )
+                    else:
+                        tdata[FV.AMB_UV][s] = uv
                     break
 
         # map rotor point results onto target points:
         for v, d in amb_rotor_res.items():
             if v not in [FV.WS, FV.WD, FV.U, FV.V, FV.UV]:
                 w = FV.var2amb.get(v, v)
-                tdata.add(
-                    w,
-                    self.map_rotor_results(
-                        algo, mdata, fdata, tdata, v, d, rotor_weights
-                    ),
-                    dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-                )
-
-        return tdata
+                if downwind_index is None:
+                    tdata.add(
+                        w,
+                        self.map_rotor_results(
+                            algo,
+                            mdata,
+                            fdata,
+                            tdata,
+                            v,
+                            d[s],
+                            rotor_weights,
+                            downwind_index=downwind_index,
+                        ),
+                        dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+                    )
+                else:
+                    tdata[w][s] = self.map_rotor_results(
+                        algo,
+                        mdata,
+                        fdata,
+                        tdata,
+                        v,
+                        d[s],
+                        rotor_weights,
+                        downwind_index=downwind_index,
+                    )
 
     def map_rotor_results(
         self,
@@ -164,6 +266,7 @@ class PartialWakesModel(Model):
         variable,
         rotor_res,
         rotor_weights,
+        downwind_index=None,
     ):
         """
         Map ambient rotor point results onto target points.
@@ -182,20 +285,30 @@ class PartialWakesModel(Model):
             The variable name to map
         rotor_res: numpy.ndarray
             The results at rotor points, shape:
-            (n_states, n_turbines, n_rotor_points)
+            (n_states, n_turbines, n_rotor_points) if downwind_index is None,
+            otherwise shape: (n_states, n_rotor_points)
         rotor_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
+        downwind_index: int, optional
+            The downwind index of the updated turbine,
+            if None, maps for all turbines
 
         Returns
         -------
         res: numpy.ndarray
             The mapped results at target points, shape:
-            (n_states, n_targets, n_tpoints)
+            (n_states, n_targets, n_tpoints) if downwind_index is None,
+            otherwise shape: (n_states, n_tpoints)
 
         """
-        if len(rotor_res.shape) > 2 and rotor_res.shape[:2] == (
-            tdata.n_states,
-            tdata.n_targets,
+        if (
+            downwind_index is None
+            and len(rotor_res.shape) == 3
+            and rotor_res.shape[:2]
+            == (
+                tdata.n_states,
+                tdata.n_targets,
+            )
         ):
             q = np.zeros(
                 (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
@@ -206,6 +319,25 @@ class PartialWakesModel(Model):
             else:
                 q[:] = np.einsum("str,r->st", rotor_res, rotor_weights)[:, :, None]
             return q
+
+        elif (
+            downwind_index is not None
+            and len(rotor_res.shape) == 2
+            and rotor_res.shape[0] == tdata.n_states
+        ):
+            q = np.zeros(
+                (tdata.n_states, tdata.n_tpoints),
+                dtype=config.dtype_double,
+            )
+            if rotor_res.shape[2] == 1:
+                q[:] = rotor_res[:, downwind_index, :]
+            else:
+                q[:] = np.einsum(
+                    "sr,r->s", rotor_res[:, downwind_index, :], rotor_weights
+                )
+
+            return q
+
         else:
             raise ValueError(
                 f"Partial wakes '{self.name}': Incompatible shape '{rotor_res.shape}' for variable '{variable}' in rotor results."

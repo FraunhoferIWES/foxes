@@ -420,6 +420,7 @@ class Algorithm(Model):
         mdata,
         tdata=None,
         copy=True,
+        subset=None,
     ):
         """
         Add data to the chunk store
@@ -438,6 +439,9 @@ class Algorithm(Model):
             The tdata object
         copy: bool
             Flag for copying incoming data
+        subset: numpy.ndarray or slice, optional
+            data corresponds to this subset of the already
+            stored data, if given.
 
         """
         assert mdata.chunki_states is not None, (
@@ -463,8 +467,22 @@ class Algorithm(Model):
                 _name=f"chunk_store_{key[0]}_{key[1]}",
             )
 
-        self.chunk_store[key][name] = data.copy() if copy else data
-        self.chunk_store[key]["dims"][name] = dims
+        if subset is None:
+            self.chunk_store[key][name] = data.copy() if copy else data
+            self.chunk_store[key]["dims"][name] = dims
+        else:
+            assert name in self.chunk_store[key], (
+                f"{self.name}: Attempt to add subset of data '{name}' to chunk store, but full data not found for key {key}"
+            )
+            assert dims == self.chunk_store[key]["dims"][name], (
+                f"{self.name}: Dims mismatch when adding subset of data '{name}' to chunk store, expecting {self.chunk_store[key]['dims'][name]}, got {dims}"
+            )
+            data0 = self.chunk_store[key][name]
+            if isinstance(data0, dict):
+                for k, d in data.items():
+                    data0[k][subset] = d.copy() if copy else d
+            else:
+                self.chunk_store[key][name][subset] = data.copy() if copy else data
 
     def get_from_chunk_store(
         self,

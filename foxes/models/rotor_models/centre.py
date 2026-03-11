@@ -17,6 +17,18 @@ class CentreRotor(RotorModel):
 
     """
 
+    def input_variables(self):
+        """
+        The input variables which are required by the model.
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        return [FV.TXYH]
+
     def n_rotor_points(self):
         """
         The number of rotor points

@@ -245,32 +245,31 @@ if __name__ == "__main__":
     print("\nFarm results:\n")
     print(algo.farm_results)
 
-    import matplotlib.pyplot as plt
-
-    fres = algo.farm_results
-    plt.plot(fres["state"], fres["WD"].to_numpy()[:, 0], label="WD turbine 0")
-    plt.plot(fres["state"], fres["WD"].to_numpy()[:, 1], label="WD turbine 1")
-    plt.scatter(
-        fres["state"],
-        fres["YAW"].to_numpy()[:, 0],
-        label="YAW turbine 0",
-        marker="x",
-        s=15,
-    )
-    plt.scatter(
-        fres["state"],
-        fres["YAW"].to_numpy()[:, 1],
-        label="YAW turbine 1",
-        marker="x",
-        s=15,
-    )
-    plt.legend()
-    plt.title(
-        f"max_yawm = {args.max_yawm} deg, max_yaw_rate = {args.max_yaw_rate} deg/s"
-    )
-    plt.xlabel("Time step")
-    plt.ylabel("Degrees")
-    plt.show()
+    if not args.nofig:
+        fres = algo.farm_results
+        plt.plot(fres["state"], fres["WD"].to_numpy()[:, 0], label="WD turbine 0")
+        plt.plot(fres["state"], fres["WD"].to_numpy()[:, 1], label="WD turbine 1")
+        plt.scatter(
+            fres["state"],
+            fres["YAW"].to_numpy()[:, 0],
+            label="YAW turbine 0",
+            marker="x",
+            s=15,
+        )
+        plt.scatter(
+            fres["state"],
+            fres["YAW"].to_numpy()[:, 1],
+            label="YAW turbine 1",
+            marker="x",
+            s=15,
+        )
+        plt.legend()
+        plt.title(
+            f"max_yawm = {args.max_yawm} deg, max_yaw_rate = {args.max_yaw_rate} deg/s"
+        )
+        plt.xlabel("Time step")
+        plt.ylabel("Degrees")
+        plt.show()
 
     if args.animation:
         print("\nCalculating animation")

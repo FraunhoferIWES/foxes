@@ -57,6 +57,18 @@ class DirectMDataInfusion(CentreRotor):
         self.mdata_vars = mdata_vars
         self.turbine_coord = turbine_coord
 
+    def input_variables(self):
+        """
+        The input variables which are required by the model.
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        return []
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -149,6 +161,12 @@ class DirectMDataInfusion(CentreRotor):
             rpoints = rpoints[:, downwind_index, None]
         if rpoint_weights is None:
             rpoint_weights = mdata.get_item(FC.TWEIGHTS, self.rotor_point_weights())
+            algo.add_to_chunk_store(
+                FC.ROTOR_WEIGHTS,
+                rpoint_weights,
+                dims=(FC.ROTOR_POINT,),
+                mdata=mdata,
+            )
 
         tdata = TData.from_tpoints(rpoints, rpoint_weights)
         sres = {}
@@ -221,32 +239,38 @@ class DirectMDataInfusion(CentreRotor):
                 raise ValueError(
                     f"Rotor '{self.name}': mdata variable '{w}' not found in any of the mdata variables {mdvs}"
                 )
+        if FV.WEIGHT not in tdata:
+            raise KeyError(f"Rotor '{self.name}': Missing '{FV.WEIGHT}' in tdata")
 
         if store:
+            s = None if downwind_index is None else np.s_[:, downwind_index, ...]
             algo.add_to_chunk_store(
                 FC.ROTOR_POINTS,
-                rpoints,
+                rpoints if downwind_index is None else rpoints[:, 0, ...],
                 dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT, FC.XYH),
                 mdata=mdata,
-            )
-            algo.add_to_chunk_store(
-                FC.ROTOR_WEIGHTS,
-                rpoint_weights,
-                dims=(FC.ROTOR_POINT,),
-                mdata=mdata,
+                subset=s,
             )
             algo.add_to_chunk_store(
                 FC.AMB_ROTOR_RES,
                 sres,
                 dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT),
                 mdata=mdata,
+                subset=s,
             )
-            algo.add_to_chunk_store(
-                FC.WEIGHT_RES,
-                tdata[FV.WEIGHT],
-                dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT),
-                mdata=mdata,
-            )
+            if (
+                downwind_index is None
+                or algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata).shape[1] > 1
+            ):
+                algo.add_to_chunk_store(
+                    FC.WEIGHT_RES,
+                    tdata[FV.WEIGHT]
+                    if downwind_index is None
+                    else tdata[FV.WEIGHT][:, 0, ...],
+                    dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT),
+                    mdata=mdata,
+                    subset=s,
+                )
 
         self.eval_rpoint_results(
             algo,

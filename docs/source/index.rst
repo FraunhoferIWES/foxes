@@ -2,6 +2,11 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionchanged:: 1.7.4
+    Removed the `pre_rotor` flag from turbine models. The position before or after
+    the rotor model is now automatically determined based on the overlap of model output
+    variables and the newly introduced input variables of the selected rotor model.
+
 .. versionadded:: 1.7.2
     New `ICONStates` class for handling output from DWD's ICON model.
     Also a pre-processing command line tool `iconDream2foxes` was added that downloads

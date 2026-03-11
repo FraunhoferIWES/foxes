@@ -13,29 +13,9 @@ class FarmDataModel(DataCalcModel):
     Abstract base class for models that modify
     farm data.
 
-    Attributes
-    ----------
-    pre_rotor: bool
-        Flag for running this model before
-        running the rotor model.
-
     :group: core
 
     """
-
-    def __init__(self, pre_rotor=False):
-        """
-        Constructor.
-
-        Parameters
-        ----------
-        pre_rotor: bool
-            Flag for running this model before
-            running the rotor model.
-
-        """
-        super().__init__()
-        self.pre_rotor = pre_rotor
 
     @abstractmethod
     def output_farm_vars(self, algo):

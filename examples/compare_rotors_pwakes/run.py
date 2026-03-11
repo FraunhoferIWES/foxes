@@ -36,9 +36,7 @@ def calc(args, rotor, sdata, pwake):
 
     ydata = np.full((len(sdata.index), farm.n_turbines), np.nan)
     ydata[:, 1] = sdata["y"].to_numpy()
-    mbook.turbine_models["sety"] = foxes.models.turbine_models.SetFarmVars(
-        pre_rotor=True
-    )
+    mbook.turbine_models["sety"] = foxes.models.turbine_models.SetFarmVars()
     mbook.turbine_models["sety"].add_var(FV.Y, ydata)
 
     algo = foxes.algorithms.Downwind(

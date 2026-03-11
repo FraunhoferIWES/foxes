@@ -34,30 +34,25 @@ def test_set_farm_vars():
     )
 
     with foxes.Engine.new("default", verbosity=0):
-        for pr in [False, True]:
-            print(f"\npre_rotor = {pr}\n")
+        mbook = foxes.ModelBook()
+        mbook.turbine_models["set_x"] = foxes.models.turbine_models.SetFarmVars()
+        mbook.turbine_models["set_x"].add_var("x", x)
 
-            mbook = foxes.ModelBook()
-            mbook.turbine_models["set_x"] = foxes.models.turbine_models.SetFarmVars(
-                pre_rotor=pr
-            )
-            mbook.turbine_models["set_x"].add_var("x", x)
+        algo = foxes.algorithms.Downwind(
+            farm=farm,
+            states=states,
+            wake_models=["Bastankhah2014_linear_lim_k004"],
+            mbook=mbook,
+            verbosity=0,
+        )
 
-            algo = foxes.algorithms.Downwind(
-                farm=farm,
-                states=states,
-                wake_models=["Bastankhah2014_linear_lim_k004"],
-                mbook=mbook,
-                verbosity=0,
-            )
+        farm_results = algo.calc_farm()
 
-            farm_results = algo.calc_farm()
+        fr = farm_results.to_dataframe()
+        print(fr[[FV.WD, "x"]])
 
-            fr = farm_results.to_dataframe()
-            print(fr[[FV.WD, "x"]])
-
-            for i, g in fr.reset_index().groupby(FC.TURBINE):
-                assert np.allclose(g["x"].values, g[FV.WD].values + i / 10)
+        for i, g in fr.reset_index().groupby(FC.TURBINE):
+            assert np.allclose(g["x"].values, g[FV.WD].values + i / 10)
 
 
 if __name__ == "__main__":

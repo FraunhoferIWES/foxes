@@ -12,7 +12,7 @@ class YawController(TurbineModel):
     when wind is from north (WD around 0 degrees).
     """
 
-    def __init__(self, max_yaw_rate=0.3, max_yawm=7.5, avg_time=60, pre_rotor=False):
+    def __init__(self, max_yaw_rate=0.3, max_yawm=7.5, avg_time=60):
         """
         Constructor.
 
@@ -25,7 +25,7 @@ class YawController(TurbineModel):
         avg_time : float, optional
             Averaging time window in seconds for running mean wind direction (default: 60).
         """
-        super().__init__(pre_rotor=pre_rotor)
+        super().__init__()
         self._max_yaw_rate = max_yaw_rate
         self._max_yawm = max_yawm
         self._avg_time = avg_time

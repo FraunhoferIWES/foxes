@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.core import RotorModel
 from foxes.config import config
+import foxes.variables as FV
 
 
 class GridRotor(RotorModel):
@@ -108,6 +109,18 @@ class GridRotor(RotorModel):
             self.__dpoints[:, 1] = x.reshape(N)
             self.__dpoints[:, 2] = y.reshape(N)
             self.__weights = np.ones(N, dtype=config.dtype_double) / N
+
+    def input_variables(self):
+        """
+        The input variables which are required by the model.
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        return [FV.D, FV.TXYH, FV.YAW]
 
     def n_rotor_points(self):
         """
