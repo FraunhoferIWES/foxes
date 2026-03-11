@@ -425,6 +425,7 @@ class Downwind(Algorithm):
         if self.n_turbines != self.farm.n_turbines:
             super().update_n_turbines()
             self.farm_controller.find_turbine_types(self)
+            self.farm_controller.collect_models(self)
 
     def print_deco(self, func_name=None, n_points=None):
         """
