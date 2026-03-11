@@ -13,6 +13,14 @@ from foxes.data import StaticData, STATES
 import foxes.variables as FV
 
 
+def _rm_tmp_dir(cdo_tmp_dir, verbosity=1):
+    """Remove the temporary directory for CDO intermediate files."""
+    if cdo_tmp_dir.exists():
+        if verbosity > 0:
+            print("Removing tmp directory", cdo_tmp_dir)
+        rmtree(cdo_tmp_dir)
+
+
 def _get_file_var_str(var, for_fname=False):
     """Get the variable string for the filename based on the variable code."""
     var_str = {
@@ -68,9 +76,21 @@ def _prepare_grid(
         conda_hint="conda install -c conda-forge cdo",
     ).Cdo
     cdo = Cdo(tempdir=str(cdo_tmp_dir))
-    cdo.gencon(
-        path_grid_select, input=f"{path_icon_grid}", output=str(path_weights_out)
-    )
+
+    try:
+        cdo.gencon(
+            path_grid_select, input=f"{path_icon_grid}", output=str(path_weights_out)
+        )
+    except Exception as e:
+        if verbosity > 3:
+            _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+            raise e
+        elif verbosity > 1:
+            print(f"Generating grid weights failed with exception {e}")
+        elif verbosity > 0:
+            print("Generating grid weights failed.")
+        return -1  # Indicate failure
+
     return 1  # Indicate success
 
 
@@ -104,7 +124,7 @@ def _check_grb(
         # check file exists:
         if not grb_path.exists():
             if verbosity > 3:
-                rmtree(cdo_tmp_dir, ignore_errors=True)
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
                 raise FileNotFoundError(f"File {grb_path} not found.")
             elif verbosity > 1:
                 print(f"{grb_fname}: Check FAILED, file not found.")
@@ -122,7 +142,7 @@ def _check_grb(
             data = cdo.selvar(vname, input=str(grb_path), returnXArray=vname)
         except Exception as e:
             if verbosity > 3:
-                rmtree(cdo_tmp_dir, ignore_errors=True)
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
                 raise e
             elif verbosity > 2:
                 print(
@@ -143,7 +163,7 @@ def _check_grb(
             )
         except Exception as e:
             if verbosity > 3:
-                rmtree(cdo_tmp_dir, ignore_errors=True)
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
                 raise e
             elif verbosity > 2:
                 print(f"{grb_fname}: Check FAILED with exception {e}")
@@ -174,7 +194,7 @@ def _check_grb(
                     )
             except Exception as e:
                 if verbosity > 3:
-                    rmtree(cdo_tmp_dir, ignore_errors=True)
+                    _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
                     raise e
                 elif verbosity > 2:
                     print(f"{grb_fname}: Check FAILED with exception {e}")
@@ -246,7 +266,7 @@ def _process(
             temp = cdo.sellevel(lvls, input=str(grb_path), returnXArray=vname)
         except Exception as e:
             if verbosity > 3:
-                rmtree(cdo_tmp_dir, ignore_errors=True)
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
                 raise e
             elif verbosity > 2:
                 print(f"{grb_fname}: Selecting levels failed with exception {e}")
@@ -263,7 +283,7 @@ def _process(
             )
         except Exception as e:
             if verbosity > 3:
-                rmtree(cdo_tmp_dir, ignore_errors=True)
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
                 raise e
             elif verbosity > 2:
                 print(f"{grb_fname}: Remapping failed with exception {e}")
@@ -275,7 +295,7 @@ def _process(
 
         if check_nans and np.isnan(data[var].to_numpy()).any():
             if verbosity > 3:
-                rmtree(cdo_tmp_dir, ignore_errors=True)
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
                 raise ValueError(
                     f"{grb_fname}: Found NaNs in data for variable '{var}'."
                 )
@@ -383,6 +403,8 @@ def iconDream2foxes(
             f"Temporary directory {cdo_tmp_dir} already exists. Please remove it or choose another one."
         )
     else:
+        if verbosity > 0:
+            print("Creating tmp directory for CDO intermediate files:", cdo_tmp_dir)
         cdo_tmp_dir.mkdir(parents=True)
 
     var2ncvar = {
@@ -403,7 +425,7 @@ def iconDream2foxes(
             STATES, "target_grid_icon_eu_R03B08_ostsee.txt"
         )
     else:
-        rmtree(cdo_tmp_dir, ignore_errors=True)
+        _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
         raise ValueError(f"Unknown region: {region}, choose 'northsea' or 'baltic'.")
     path_grid_weights = nc0_dir / f"icon_weights_{region}.nc"
     path_icon_grid = nc0_dir / "icon_grid_0027_R03B08_N02.nc"
@@ -472,7 +494,7 @@ def iconDream2foxes(
         if failed > 0:
             if verbosity > 0:
                 print("Some downloads failed. Please retry.")
-            rmtree(cdo_tmp_dir, ignore_errors=True)
+            _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
             return
         elif verbosity > 0:
             print(f"All grb files present in {grb_dir}.")
@@ -530,7 +552,7 @@ def iconDream2foxes(
                 print(
                     f"Found {failed} GBR files that failed checks. Writing file {fpath}. Please investigate."
                 )
-            rmtree(cdo_tmp_dir, ignore_errors=True)
+            _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
             return
         elif verbosity > 0:
             print("All GRB files passed the check.")
@@ -571,9 +593,7 @@ def iconDream2foxes(
             f"{np.sum(results == 0)} already present."
         )
 
-    if verbosity > 1:
-        print("Removing tmp directory", cdo_tmp_dir)
-    rmtree(cdo_tmp_dir, ignore_errors=True)
+    _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
 
 
 def main():
@@ -678,7 +698,7 @@ def main():
                 verbosity=args.verbosity,
             )
     except Exception as e:
-        rmtree(args.cdo_tmp_dir, ignore_errors=True)
+        _rm_tmp_dir(args.cdo_tmp_dir, verbosity=args.verbosity)
         raise e
 
 
