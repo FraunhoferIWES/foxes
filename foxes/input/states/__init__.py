@@ -7,6 +7,7 @@ from .scan import ScanStates as ScanStates
 from .wrg_states import WRGStates as WRGStates
 from .weibull_sectors import WeibullSectors as WeibullSectors
 from .dataset_states import DatasetStates as DatasetStates
+from .single_state_field import SingleStateField as SingleStateField
 
 from .states_table import StatesTable as StatesTable
 from .states_table import Timeseries as Timeseries

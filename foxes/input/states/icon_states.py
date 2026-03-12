@@ -207,7 +207,14 @@ class ICONStates(DatasetStates):
         )
 
     def preproc_first(
-        self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
+        self,
+        algo,
+        data,
+        cmap,
+        vars,
+        bounds_extra_space,
+        height_bounds,
+        verbosity=0,
     ):
         """
         Preprocesses the first file.

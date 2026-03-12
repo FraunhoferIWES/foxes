@@ -350,7 +350,14 @@ class DatasetStates(States):
         return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
 
     def preproc_first(
-        self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
+        self,
+        algo,
+        data,
+        cmap,
+        vars,
+        bounds_extra_space,
+        height_bounds,
+        verbosity=0,
     ):
         """
         Preprocesses the first file.
@@ -374,6 +381,9 @@ class DatasetStates(States):
             The verbosity level, 0 = silent
 
         """
+        # check if needed:
+        if bounds_extra_space == np.inf and height_bounds == np.inf:
+            return
 
         # find vertical bounds:
         if FV.H in cmap:

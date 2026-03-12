@@ -5,7 +5,7 @@ from pathlib import Path
 
 from foxes.core import map_with_engine, Engine
 from foxes.config import config
-from foxes.utils import wd2uv, write_nc
+from foxes.utils import uv2wd, wd2uv, write_nc
 import foxes.variables as FV
 
 
@@ -13,6 +13,7 @@ def _read_nc(
     fpath,
     coord,
     var2ncvar,
+    vname_mean_ws,
     preprocess=None,
     **kwargs,
 ):
@@ -25,6 +26,7 @@ def _read_nc(
 
     dvrs = {}
     counts = {}
+    uv = None
     for v, c in var2ncvar.items():
         if c not in data:
             continue
@@ -54,14 +56,19 @@ def _read_nc(
                     di = dms.index(coord)
                     counts[FV.U] = np.sum(~np.isnan(uv[..., 0]), axis=di)
                     counts[FV.V] = np.sum(~np.isnan(uv[..., 1]), axis=di)
-                    counts[FV.WS] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
+                    counts[vname_mean_ws] = np.sum(
+                        ~np.any(np.isnan(uv), axis=-1), axis=di
+                    )
                     dvrs[FV.U] = (dms, np.nansum(uv[..., 0], axis=di))
                     dvrs[FV.V] = (dms, np.nansum(uv[..., 1], axis=di))
-                    dvrs[FV.WS] = (dms, np.nansum(np.linalg.norm(uv, axis=-1), axis=di))
+                    dvrs[vname_mean_ws] = (
+                        dms,
+                        np.nansum(np.linalg.norm(uv, axis=-1), axis=di),
+                    )
                 else:
                     dvrs[FV.U] = (dms, uv[..., 0])
                     dvrs[FV.V] = (dms, uv[..., 1])
-                    dvrs[FV.WS] = (dms, np.linalg.norm(uv, axis=-1))
+                    dvrs[vname_mean_ws] = (dms, np.linalg.norm(uv, axis=-1))
         elif v == FV.WS or v == FV.WD:
             assert var2ncvar[FV.WD] in data and var2ncvar[FV.WS] in data, (
                 f"Both {c} and {var2ncvar[FV.WD]} must be in data."
@@ -75,14 +82,14 @@ def _read_nc(
                 uv = wd2uv(data[var2ncvar[FV.WD]].values, ws)
                 if coord in dms:
                     di = dms.index(coord)
-                    counts[FV.WS] = np.sum(~np.isnan(ws), axis=di)
+                    counts[vname_mean_ws] = np.sum(~np.isnan(ws), axis=di)
                     counts[FV.U] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
                     counts[FV.V] = counts[FV.U]
-                    dvrs[FV.WS] = (dms, np.nansum(ws, axis=di))
+                    dvrs[vname_mean_ws] = (dms, np.nansum(ws, axis=di))
                     dvrs[FV.U] = (dms, np.nansum(uv[..., 0], axis=di))
                     dvrs[FV.V] = (dms, np.nansum(uv[..., 1], axis=di))
                 else:
-                    dvrs[FV.WS] = (dms, ws)
+                    dvrs[vname_mean_ws] = (dms, ws)
                     dvrs[FV.U] = (dms, uv[..., 0])
                     dvrs[FV.V] = (dms, uv[..., 1])
         else:
@@ -108,6 +115,8 @@ def create_dataset_mean(
     data_source,
     coord,
     var2ncvar,
+    vname_mean_ws=f"mean_{FV.WS}",
+    add_uv=False,
     to_file=None,
     preprocess=None,
     verbosity=1,
@@ -124,8 +133,11 @@ def create_dataset_mean(
     coord: str
         Name of the coordinate which should be averaged over
     var2ncvar: dict
-        Mapping from variable names to netCDF variable names. Will
-        be searched for FV.WS, FV.WD, FV.U, FV.V
+        Mapping from variable names to netCDF variable names
+    vname_mean_ws: str
+        The variable name to use for the mean wind speed
+    add_uv: bool
+        Flag for adding U and V to the resulting data
     to_file: str, optional
         If given, write the mean state to this file
     preprocess: callable, optional
@@ -171,6 +183,7 @@ def create_dataset_mean(
         coord=coord,
         var2ncvar=v2nc,
         preprocess=preprocess,
+        vname_mean_ws=vname_mean_ws,
         **kwargs,
     ):
         for v, t in hcounts.items():
@@ -209,6 +222,15 @@ def create_dataset_mean(
             dvrs[v][0] = tuple(d for d in dvrs[v][0] if d != coord)
             dvrs[v][1] /= counts[v]
             cnts[f"counts_{v}"] = (dvrs[v][0], counts[v])
+
+    uv = np.stack([dvrs[FV.U][1], dvrs[FV.V][1]], axis=-1)
+    dvrs[FV.WS] = (dvrs[FV.U][0], np.linalg.norm(uv, axis=-1))
+    dvrs[FV.WD] = (dvrs[FV.U][0], uv2wd(uv))
+    cnts[f"counts_{FV.WS}"] = cnts[f"counts_{FV.U}"]
+    cnts[f"counts_{FV.WD}"] = cnts[f"counts_{FV.U}"]
+
+    if not add_uv:
+        del dvrs[FV.U], dvrs[FV.V], cnts[f"counts_{FV.U}"], cnts[f"counts_{FV.V}"]
     dvrs.update(cnts)
 
     data = Dataset(
@@ -237,12 +259,24 @@ def main():
         default="time",
     )
     parser.add_argument(
+        "-mws",
+        "--mean_ws_name",
+        help="Output variable name for mean wind speed",
+        default=f"mean_{FV.WS}",
+    )
+    parser.add_argument(
         "-v",
         "--var2ncvar",
         help="Variable to netCDF variable name mapping, format: var1:ncvar1,var2:ncvar2,...",
         type=str,
         default="",
         nargs="+",
+    )
+    parser.add_argument(
+        "-uv",
+        "--add_uv",
+        help="Add U and V to the output",
+        action="store_true",
     )
     parser.add_argument(
         "-o",
@@ -275,6 +309,8 @@ def main():
         return create_dataset_mean(
             data_source=args.nc_files,
             coord=args.coord,
+            vname_mean_ws=args.mean_ws_name,
+            add_uv=args.add_uv,
             var2ncvar=v2nc,
             to_file=args.to_file,
             preprocess=None,
