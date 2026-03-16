@@ -150,7 +150,7 @@ class SingleStateField(States):
         """
         return self._data
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo=None, verbosity=1):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -180,13 +180,18 @@ class SingleStateField(States):
             else:
                 fpath = get_input_path(self.data_source)
                 if not fpath.is_file():
-                    if verbosity > 0:
-                        print(
-                            f"States '{self.name}': Reading static data '{fpath.name}' from context '{STATES}'"
+                    if algo is not None:
+                        if verbosity > 0:
+                            print(
+                                f"States '{self.name}': Reading static data '{fpath.name}' from context '{STATES}'"
+                            )
+                        fpath = algo.dbook.get_file_path(
+                            STATES, fpath.name, check_raw=False
                         )
-                    fpath = algo.dbook.get_file_path(
-                        STATES, fpath.name, check_raw=False
-                    )
+                    else:
+                        raise FileNotFoundError(
+                            f"States '{self.name}': File {fpath} not found."
+                        )
                     if verbosity > 0:
                         print(f"Path: {fpath}")
                 elif verbosity:
@@ -221,16 +226,17 @@ class SingleStateField(States):
             self._data = self._data.transpose(*self._cmap.values())
 
             # reduce dimensions:
-            DatasetStates.preproc_first(
-                self,
-                algo,
-                data=self._data,
-                cmap=self._cmap,
-                vars=None,
-                bounds_extra_space=self.bounds_extra_space,
-                height_bounds=self.height_bounds,
-                verbosity=verbosity,
-            )
+            if algo is not None:
+                DatasetStates.preproc_first(
+                    self,
+                    algo,
+                    data=self._data,
+                    cmap=self._cmap,
+                    vars=None,
+                    bounds_extra_space=self.bounds_extra_space,
+                    height_bounds=self.height_bounds,
+                    verbosity=verbosity,
+                )
             if self.isel is not None and len(self.isel):
                 isel = {c: s for c, s in self.isel.items() if c in self._data.sizes}
                 self._data = self._data.isel(**isel)

@@ -318,6 +318,17 @@ waked variable
 """
 
 
+MEAN_WS = "MEAN_WS"
+""" The mean wind speed in m/s
+:group: foxes.variables
+"""
+
+MAIN_WD = "MEAN_WD"
+""" The main wind direction in degrees
+:group: foxes.variables
+"""
+
+
 K = "k"
 """ Wake growth parameter
 :group: foxes.variables
