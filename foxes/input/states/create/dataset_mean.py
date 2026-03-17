@@ -1,6 +1,5 @@
 import argparse
 import numpy as np
-from tqdm.autonotebook import tqdm
 from xarray import open_dataset, Dataset
 from pathlib import Path
 
@@ -201,7 +200,12 @@ def create_dataset_mean(
     :group: input.states.create
 
     """
+    # prepare:
     engine = get_engine()
+    crds = {}
+    dvrs = {}
+    counts = {}
+    wd_histo = None
 
     # extend names by defaults:
     v2nc = {v: v for v in {FV.WS, FV.WD, FV.U, FV.V, FV.TI, FV.RHO}}
@@ -220,11 +224,7 @@ def create_dataset_mean(
         prt = prt.parent
     files = sorted(list(prt.glob(glb)))
 
-    # read and process files in parallel:
-    crds = {}
-    dvrs = {}
-    counts = {}
-    wd_histo = None
+    # submit file reading and processing to workers:
     futures = [
         engine.submit(
             _read_nc,
@@ -239,20 +239,11 @@ def create_dataset_mean(
         )
         for fpath in files
     ]
-    if verbosity > 0:
-        results = [
-            engine.await_result(f)
-            for f in tqdm(futures, desc=f"Reading {len(files)} files")
-        ]
-    else:
-        results = [engine.await_result(f) for f in futures]
 
-    # evaluate results in parallel:
-    if verbosity > 0:
-        pbar = tqdm(total=len(results), desc="Processing results")
-    else:
-        pbar = None
-    for hcrds, hdvrs, hcounts, hwd_histo in results:
+    def _eval_result(hcrds, hdvrs, hcounts, hwd_histo):
+        """Helper function that evaluates single result"""
+        nonlocal wd_histo, crds, dvrs, counts
+
         if hwd_histo is not None:
             if wd_histo is None:
                 wd_histo = hwd_histo.copy()
@@ -289,10 +280,17 @@ def create_dataset_mean(
             else:
                 dvrs[v][1] += d
 
-        if pbar is not None:
-            pbar.update()
-    if pbar is not None:
-        pbar.close()
+    # Await and evaluate results:
+    proc = -1
+    if verbosity > 0:
+        print(f"Reading and processing {len(files)} files...")
+    for i in range(len(files)):
+        _eval_result(*engine.await_result(futures.pop(0)))
+        if verbosity > 0:
+            hproc = int((i + 1) / len(files) * 100)
+            if hproc > proc:
+                proc = hproc
+                print(f"Processed files: {proc}% ({i + 1}/{len(files)})")
 
     cnts = {}
     for v in dvrs:
