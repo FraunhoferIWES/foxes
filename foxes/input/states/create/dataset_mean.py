@@ -56,19 +56,26 @@ def _read_nc(
                     ],
                     axis=-1,
                 )
-                uvsel = ~np.any(np.isnan(uv), axis=-1)
-                uv = uv[uvsel[..., None]]
                 if coord in dms:
                     di = dms.index(coord)
-                    counts[FV.U] = np.sum(uvsel, axis=di)
+                    a = list(range(len(uv.shape)))
+                    a.remove(di)
+                    uvsel = ~np.any(np.isnan(uv), axis=tuple(a))
+                    s = [slice(None)] * len(uv.shape)
+                    s[di] = uvsel
+                    s = tuple(s)
+                    a = tuple([m for ii, m in enumerate(uv.shape[:-1]) if ii != di])
+
+                    counts[FV.U] = np.full(a, np.sum(uvsel), dtype=config.dtype_int)
                     counts[FV.V] = counts[FV.U]
                     counts[vname_mean_ws] = counts[FV.U]
-                    dvrs[FV.U] = (dms, np.sum(uv[..., 0], axis=di))
-                    dvrs[FV.V] = (dms, np.sum(uv[..., 1], axis=di))
                     dvrs[vname_mean_ws] = (
                         dms,
                         np.sum(np.linalg.norm(uv, axis=-1), axis=di),
                     )
+                    uv = np.sum(uv[s], axis=di)
+                    dvrs[FV.U] = (dms, uv[..., 0])
+                    dvrs[FV.V] = (dms, uv[..., 1])
                 else:
                     dvrs[FV.U] = (dms, uv[..., 0])
                     dvrs[FV.V] = (dms, uv[..., 1])
@@ -84,16 +91,23 @@ def _read_nc(
                 )
                 ws = data[c].values
                 uv = wd2uv(data[var2ncvar[FV.WD]].values, ws)
-                uvsel = ~np.any(np.isnan(uv), axis=-1)
-                uv = uv[uvsel[..., None]]
                 if coord in dms:
                     di = dms.index(coord)
+                    a = list(range(len(uv.shape)))
+                    a.remove(di)
+                    uvsel = ~np.any(np.isnan(uv), axis=tuple(a))
+                    s = [slice(None)] * len(uv.shape)
+                    s[di] = uvsel
+                    s = tuple(s)
+                    a = tuple([m for ii, m in enumerate(uv.shape[:-1]) if ii != di])
+
                     counts[vname_mean_ws] = np.sum(~np.isnan(ws), axis=di)
-                    counts[FV.U] = np.sum(uvsel, axis=di)
+                    counts[FV.U] = np.full(a, np.sum(uvsel), dtype=config.dtype_int)
                     counts[FV.V] = counts[FV.U]
                     dvrs[vname_mean_ws] = (dms, np.nansum(ws, axis=di))
-                    dvrs[FV.U] = (dms, np.sum(uv[..., 0], axis=di))
-                    dvrs[FV.V] = (dms, np.sum(uv[..., 1], axis=di))
+                    uv = np.sum(uv[s], axis=di)
+                    dvrs[FV.U] = (dms, uv[..., 0])
+                    dvrs[FV.V] = (dms, uv[..., 1])
                 else:
                     dvrs[vname_mean_ws] = (dms, ws)
                     dvrs[FV.U] = (dms, uv[..., 0])
@@ -116,8 +130,8 @@ def _read_nc(
         wd_histo = np.zeros(wd.shape + (n_bins,), dtype=config.dtype_int)
         np.put_along_axis(
             wd_histo,
-            np.searchsorted(wds, wd)[..., None],
-            counts[FV.U][..., None],
+            np.searchsorted(wds, wd, side="right")[..., None] - 1,
+            counts[FV.U].reshape(wd.shape + (1,)),
             axis=-1,
         )
 
@@ -226,7 +240,7 @@ def create_dataset_mean(
     ):
         if hwd_histo is not None:
             if wd_histo is None:
-                wd_histo = hwd_histo
+                wd_histo = hwd_histo.copy()
             else:
                 wd_histo += hwd_histo
 
