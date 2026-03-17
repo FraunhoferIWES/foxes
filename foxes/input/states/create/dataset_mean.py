@@ -4,7 +4,7 @@ from tqdm.autonotebook import tqdm
 from xarray import open_dataset, Dataset
 from pathlib import Path
 
-from foxes.core import map_with_engine, Engine
+from foxes.core import get_engine, Engine
 from foxes.config import config
 from foxes.utils import uv2wd, wd2uv, write_nc
 import foxes.variables as FV
@@ -201,6 +201,8 @@ def create_dataset_mean(
     :group: input.states.create
 
     """
+    engine = get_engine()
+
     # extend names by defaults:
     v2nc = {v: v for v in {FV.WS, FV.WD, FV.U, FV.V, FV.TI, FV.RHO}}
     v2nc.update(var2ncvar)
@@ -218,26 +220,39 @@ def create_dataset_mean(
         prt = prt.parent
     files = sorted(list(prt.glob(glb)))
 
-    # read files in parallel and compute mean:
-    if verbosity > 0:
-        pbar = tqdm(total=len(files), desc=f"Reading and processing {len(files)} files")
-    else:
-        pbar = None
+    # read and process files in parallel:
     crds = {}
     dvrs = {}
     counts = {}
     wd_histo = None
-    for hcrds, hdvrs, hcounts, hwd_histo in map_with_engine(
-        _read_nc,
-        files,
-        coord=coord,
-        var2ncvar=v2nc,
-        preprocess=preprocess,
-        vname_mean_ws=vname_mean_ws,
-        vname_main_wd=vname_main_wd,
-        wd_histo_minwidth=wd_histo_minwidth,
-        **kwargs,
-    ):
+    futures = [
+        engine.submit(
+            _read_nc,
+            fpath,
+            coord=coord,
+            var2ncvar=v2nc,
+            preprocess=preprocess,
+            vname_mean_ws=vname_mean_ws,
+            vname_main_wd=vname_main_wd,
+            wd_histo_minwidth=wd_histo_minwidth,
+            **kwargs,
+        )
+        for fpath in files
+    ]
+    if verbosity > 0:
+        results = [
+            engine.await_result(f)
+            for f in tqdm(futures, desc=f"Reading {len(files)} files")
+        ]
+    else:
+        results = [engine.await_result(f) for f in futures]
+
+    # evaluate results in parallel:
+    if verbosity > 0:
+        pbar = tqdm(total=len(results), desc="Processing results")
+    else:
+        pbar = None
+    for hcrds, hdvrs, hcounts, hwd_histo in results:
         if hwd_histo is not None:
             if wd_histo is None:
                 wd_histo = hwd_histo.copy()
