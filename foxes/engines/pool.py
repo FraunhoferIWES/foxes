@@ -73,15 +73,17 @@ def _run(
     algo,
     model,
     *data,
-    iterative,
     chunk_store,
     chunk_key,
     out_dims,
     write_nc,
     write_chunk_ani=None,
+    utm_zone=None,
     **cpars,
 ):
     """Helper function for running in a single process"""
+    if utm_zone is not None:  # needed in some cases for mpi engine TODO investigate
+        config.set_utm_zone(*utm_zone)
     algo.reset_chunk_store(chunk_store.copy())
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store()
@@ -375,17 +377,18 @@ class PoolEngine(Engine):
                             **calc_pars,
                         )
                     else:
+                        utm_zone = config.utm_zone if config.utm_zone_set else None
                         futures[(chunki_states, chunki_points)] = self.submit(
                             _run,
                             algo,
                             model,
                             *data,
-                            iterative=iterative,
                             chunk_store=chunk_store,
                             chunk_key=key,
                             out_dims=out_dims,
                             write_nc=write_nc,
                             write_chunk_ani=write_chunk_ani,
+                            utm_zone=utm_zone,
                             **calc_pars,
                         )
                     del data
@@ -400,7 +403,8 @@ class PoolEngine(Engine):
 
                 i0_states = i1_states
 
-            for k in list(futures.keys()):
+            fkeys = list(futures.keys())
+            for k in fkeys:
                 results[k] = self.await_result(futures.pop(k))
                 results_mgr.update(results, futures)
 
