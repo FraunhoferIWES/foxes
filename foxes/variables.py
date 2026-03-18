@@ -323,7 +323,7 @@ MEAN_WS = "MEAN_WS"
 :group: foxes.variables
 """
 
-MAIN_WD = "MEAN_WD"
+MAIN_WD = "MAIN_WD"
 """ The main wind direction in degrees
 :group: foxes.variables
 """

@@ -56,25 +56,27 @@ def _read_nc(
                     axis=-1,
                 )
                 if coord in dms:
-                    di = dms.index(coord)
+                    ax_time = dms.index(coord)
                     a = list(range(len(uv.shape)))
-                    a.remove(di)
+                    a.remove(ax_time)
                     uvsel = ~np.any(np.isnan(uv), axis=tuple(a))
                     s = [slice(None)] * len(uv.shape)
-                    s[di] = uvsel
+                    s[ax_time] = uvsel
                     s = tuple(s)
-                    a = tuple([m for ii, m in enumerate(uv.shape[:-1]) if ii != di])
+                    a = tuple(
+                        [m for ii, m in enumerate(uv.shape[:-1]) if ii != ax_time]
+                    )
+                    uv = uv[s]
 
                     counts[FV.U] = np.full(a, np.sum(uvsel), dtype=config.dtype_int)
                     counts[FV.V] = counts[FV.U]
                     counts[vname_mean_ws] = counts[FV.U]
                     dvrs[vname_mean_ws] = (
                         dms,
-                        np.sum(np.linalg.norm(uv, axis=-1), axis=di),
+                        np.sum(np.linalg.norm(uv, axis=-1), axis=ax_time),
                     )
-                    uv = np.sum(uv[s], axis=di)
-                    dvrs[FV.U] = (dms, uv[..., 0])
-                    dvrs[FV.V] = (dms, uv[..., 1])
+                    dvrs[FV.U] = (dms, np.sum(uv[..., 0], axis=ax_time))
+                    dvrs[FV.V] = (dms, np.sum(uv[..., 1], axis=ax_time))
                 else:
                     dvrs[FV.U] = (dms, uv[..., 0])
                     dvrs[FV.V] = (dms, uv[..., 1])
@@ -91,22 +93,24 @@ def _read_nc(
                 ws = data[c].values
                 uv = wd2uv(data[var2ncvar[FV.WD]].values, ws)
                 if coord in dms:
-                    di = dms.index(coord)
+                    ax_time = dms.index(coord)
                     a = list(range(len(uv.shape)))
-                    a.remove(di)
+                    a.remove(ax_time)
                     uvsel = ~np.any(np.isnan(uv), axis=tuple(a))
                     s = [slice(None)] * len(uv.shape)
-                    s[di] = uvsel
+                    s[ax_time] = uvsel
                     s = tuple(s)
-                    a = tuple([m for ii, m in enumerate(uv.shape[:-1]) if ii != di])
+                    a = tuple(
+                        [m for ii, m in enumerate(uv.shape[:-1]) if ii != ax_time]
+                    )
+                    uv = uv[s]
 
-                    counts[vname_mean_ws] = np.sum(~np.isnan(ws), axis=di)
+                    counts[vname_mean_ws] = np.sum(~np.isnan(ws), axis=ax_time)
                     counts[FV.U] = np.full(a, np.sum(uvsel), dtype=config.dtype_int)
                     counts[FV.V] = counts[FV.U]
-                    dvrs[vname_mean_ws] = (dms, np.nansum(ws, axis=di))
-                    uv = np.sum(uv[s], axis=di)
-                    dvrs[FV.U] = (dms, uv[..., 0])
-                    dvrs[FV.V] = (dms, uv[..., 1])
+                    dvrs[vname_mean_ws] = (dms, np.nansum(ws, axis=ax_time))
+                    dvrs[FV.U] = (dms, np.sum(uv[..., 0], axis=ax_time))
+                    dvrs[FV.V] = (dms, np.sum(uv[..., 1], axis=ax_time))
                 else:
                     dvrs[vname_mean_ws] = (dms, ws)
                     dvrs[FV.U] = (dms, uv[..., 0])
@@ -115,24 +119,41 @@ def _read_nc(
             d = data[c].values
             dms = data[c].dims
             if coord in dms:
-                di = dms.index(coord)
-                counts[v] = np.sum(~np.isnan(d), axis=di)
-                dvrs[v] = (dms, np.nansum(d, axis=di))
+                axt = dms.index(coord)
+                counts[v] = np.sum(~np.isnan(d), axis=axt)
+                dvrs[v] = (dms, np.nansum(d, axis=axt))
             else:
                 dvrs[v] = (dms, d)
 
     # compute wd histogram counts:
     if vname_main_wd is not None:
+        # prepare:
         wd = uv2wd(uv)
+        del uv
         wds = np.linspace(0.0, 360.0, 2 * int(180 / wd_histo_minwidth * 2))
         n_bins = len(wds) - 1
-        wd_histo = np.zeros(wd.shape + (n_bins,), dtype=config.dtype_int)
-        np.put_along_axis(
-            wd_histo,
-            np.searchsorted(wds, wd, side="right")[..., None] - 1,
-            counts[FV.U].reshape(wd.shape + (1,)),
-            axis=-1,
-        )
+        shp = dvrs[FV.U][1].shape + (n_bins,)
+        wd_histo = np.zeros(shp, dtype=config.dtype_int)
+
+        # full vectorization crashes memory,
+        # loop either over bins or over time steps:
+        if n_bins < wd.shape[ax_time]:
+            for i in range(n_bins):
+                sel = (wd >= wds[i]) & (wd < wds[i + 1])
+                if np.any(sel):
+                    wd_histo[..., i] = np.sum(sel, axis=ax_time)
+        else:
+            wd = np.moveaxis(wd, ax_time, 0)
+            for i in range(wd.shape[0]):
+                hwdh = np.zeros_like(wd_histo)
+                np.put_along_axis(
+                    hwdh,
+                    np.searchsorted(wds, wd[i], side="right")[..., None] - 1,
+                    1,
+                    axis=-1,
+                )
+                wd_histo += hwdh
+                del hwdh
 
     crds = {}
     for dms, __ in dvrs.values():
@@ -246,7 +267,7 @@ def create_dataset_mean(
 
         if hwd_histo is not None:
             if wd_histo is None:
-                wd_histo = hwd_histo.copy()
+                wd_histo = hwd_histo.astype(config.dtype_double)
             else:
                 wd_histo += hwd_histo
 
@@ -316,26 +337,27 @@ def create_dataset_mean(
         vname_binw = f"{vname_main_wd}_bin_width"
         i = 0
         width = 0
-        dvrs[vname_main_wd] = np.full_like(dvrs[FV.WD], np.nan)
-        dvrs[vname_binw] = np.zeros_like(dvrs[FV.WD])
-        highest_density = np.zeros_like(dvrs[FV.WD])
+        dms = dvrs[FV.WD][0]
+        dvrs[vname_main_wd] = (dms, np.full_like(dvrs[FV.WD][1], np.nan))
+        dvrs[vname_binw] = (dms, np.zeros_like(dvrs[FV.WD][1]))
+        highest_density = np.zeros_like(dvrs[FV.WD][1])
         while width + wd_histo_minwidth <= wd_histo_maxwidth:
             width += wd_histo_minwidth
             n_bins = 2 * int(180 / width * 2)
-            width = 360 / n_bins
+            width = 2 * 360 / n_bins
 
             i += 1
             maxd = 0.0
             for b in range(n_bins):
-                dens = wd_histo.roll(wd_histo, -b, axis=-1)
+                dens = np.roll(wd_histo, -b, axis=-1)
                 dens = np.sum(dens[..., :i], axis=-1) + np.sum(dens[..., -i:], axis=-1)
                 dens /= width
                 maxd = max(maxd, np.max(dens))
                 sel = dens > highest_density
                 if np.any(sel):
                     highest_density[sel] = dens[sel]
-                    dvrs[vname_main_wd][sel] = b * width
-                    dvrs[vname_binw][sel] = width
+                    dvrs[vname_main_wd][1][sel] = b * width
+                    dvrs[vname_binw][1][sel] = width
                 del dens, sel
             if verbosity > 1:
                 print(
