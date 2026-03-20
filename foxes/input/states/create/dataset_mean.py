@@ -15,7 +15,7 @@ def _read_nc(
     var2ncvar,
     vname_mean_ws,
     vname_main_wd,
-    wd_histo_minwidth=1.0,
+    wd_histo_width,
     preprocess=None,
     **kwargs,
 ):
@@ -29,6 +29,7 @@ def _read_nc(
     dvrs = {}
     counts = {}
     wd_histo = None
+    wd_bin_wd = None
     uv = None
     for v, c in var2ncvar.items():
         if c not in data:
@@ -128,32 +129,21 @@ def _read_nc(
     # compute wd histogram counts:
     if vname_main_wd is not None:
         # prepare:
-        wd = uv2wd(uv)
+        wd = np.moveaxis(uv2wd(uv), ax_time, -1)
         del uv
-        wds = np.linspace(0.0, 360.0, 2 * int(180 / wd_histo_minwidth * 2))
-        n_bins = len(wds) - 1
-        shp = dvrs[FV.U][1].shape + (n_bins,)
-        wd_histo = np.zeros(shp, dtype=config.dtype_int)
 
-        # full vectorization crashes memory,
-        # loop either over bins or over time steps:
-        if n_bins < wd.shape[ax_time]:
-            for i in range(n_bins):
-                sel = (wd >= wds[i]) & (wd < wds[i + 1])
-                if np.any(sel):
-                    wd_histo[..., i] = np.sum(sel, axis=ax_time)
-        else:
-            wd = np.moveaxis(wd, ax_time, 0)
-            for i in range(wd.shape[0]):
-                hwdh = np.zeros_like(wd_histo)
-                np.put_along_axis(
-                    hwdh,
-                    np.searchsorted(wds, wd[i], side="right")[..., None] - 1,
-                    1,
-                    axis=-1,
-                )
-                wd_histo += hwdh
-                del hwdh
+        wds = np.linspace(0.0, 360.0, 2 * int(180 / wd_histo_width * 2) + 1)
+        n_bins = len(wds) - 1
+        shp = wd.shape[:-1] + (n_bins,)
+        wd_histo = np.zeros(shp, dtype=config.dtype_int)
+        wd_bin_wd = np.zeros(shp, dtype=config.dtype_double)
+
+        # full vectorization crashes memory, loop over bins:
+        for i in range(n_bins):
+            sel = (wd >= wds[i]) & (wd < wds[i + 1])
+            if np.any(sel):
+                wd_histo[..., i] = np.sum(sel, axis=-1)
+                wd_bin_wd[..., i] = np.sum(np.where(sel, wd, 0), axis=-1)
 
     crds = {}
     for dms, __ in dvrs.values():
@@ -161,7 +151,7 @@ def _read_nc(
             if d != coord and d not in crds and d in data.coords:
                 crds[d] = data[d].values
 
-    return crds, dvrs, counts, wd_histo
+    return crds, dvrs, counts, wd_histo, wd_bin_wd
 
 
 def create_dataset_mean(
@@ -170,8 +160,7 @@ def create_dataset_mean(
     var2ncvar,
     vname_mean_ws=FV.MEAN_WS,
     vname_main_wd=FV.MAIN_WD,
-    wd_histo_minwidth=1.0,
-    wd_histo_maxwidth=30.0,
+    wd_histo_width=10.0,
     add_uv=False,
     add_counts=False,
     to_file=None,
@@ -195,10 +184,8 @@ def create_dataset_mean(
         The variable name to use for the mean wind speed
     vname_main_wd: str
         The variable name to use for the main wind direction
-    wd_histo_minwidth: float
+    wd_histo_width: float
         The minimal wind direction histogramm bin width
-    wd_histo_maxwidth: float
-        The maximal wind direction histogramm bin width
     add_uv: bool
         Flag for adding U and V to the resulting data
     add_counts: bool
@@ -227,6 +214,7 @@ def create_dataset_mean(
     dvrs = {}
     counts = {}
     wd_histo = None
+    wd_bin_wd = None
 
     # extend names by defaults:
     v2nc = {v: v for v in {FV.WS, FV.WD, FV.U, FV.V, FV.TI, FV.RHO}}
@@ -255,21 +243,23 @@ def create_dataset_mean(
             preprocess=preprocess,
             vname_mean_ws=vname_mean_ws,
             vname_main_wd=vname_main_wd,
-            wd_histo_minwidth=wd_histo_minwidth,
+            wd_histo_width=wd_histo_width,
             **kwargs,
         )
         for fpath in files
     ]
 
-    def _eval_result(hcrds, hdvrs, hcounts, hwd_histo):
+    def _eval_result(hcrds, hdvrs, hcounts, hwd_histo, hwd_bin_wd):
         """Helper function that evaluates single result"""
-        nonlocal wd_histo, crds, dvrs, counts
+        nonlocal wd_histo, wd_bin_wd, crds, dvrs, counts
 
         if hwd_histo is not None:
             if wd_histo is None:
-                wd_histo = hwd_histo.astype(config.dtype_double)
+                wd_histo = hwd_histo.astype(config.dtype_double, copy=True)
+                wd_bin_wd = hwd_bin_wd.copy()
             else:
                 wd_histo += hwd_histo
+                wd_bin_wd += hwd_bin_wd
 
         for v, t in hcounts.items():
             if v not in counts:
@@ -334,36 +324,45 @@ def create_dataset_mean(
     if wd_histo is not None:
         if verbosity > 0:
             print("Computing main wind direction")
-        vname_binw = f"{vname_main_wd}_bin_width"
-        i = 0
-        width = 0
-        dms = dvrs[FV.WD][0]
-        dvrs[vname_main_wd] = (dms, np.full_like(dvrs[FV.WD][1], np.nan))
-        dvrs[vname_binw] = (dms, np.zeros_like(dvrs[FV.WD][1]))
-        highest_density = np.zeros_like(dvrs[FV.WD][1])
-        while width + wd_histo_minwidth <= wd_histo_maxwidth:
-            width += wd_histo_minwidth
-            n_bins = 2 * int(180 / width * 2)
-            width = 2 * 360 / n_bins
 
-            i += 1
-            maxd = 0.0
-            for b in range(n_bins):
-                dens = np.roll(wd_histo, -b, axis=-1)
-                dens = np.sum(dens[..., :i], axis=-1) + np.sum(dens[..., -i:], axis=-1)
-                dens /= width
-                maxd = max(maxd, np.max(dens))
-                sel = dens > highest_density
-                if np.any(sel):
-                    highest_density[sel] = dens[sel]
-                    dvrs[vname_main_wd][1][sel] = b * width
-                    dvrs[vname_binw][1][sel] = width
-                del dens, sel
-            if verbosity > 1:
-                print(
-                    f"  bin width = {width:.2f} degrees: Max density = {maxd:.4e} counts/degree"
-                )
-        del highest_density
+        vname_histo_counts = f"{vname_main_wd}_counts"
+        dms = dvrs[FV.WD][0]
+        n_bins = int(wd_histo.shape[-1] / 2)
+        assert n_bins == wd_histo.shape[-1] / 2, (
+            f"Number of bins must be integer, got {wd_histo.shape[-1] / 2}"
+        )
+        dvrs[vname_main_wd] = (dms, np.full_like(dvrs[FV.WD][1], np.nan))
+        dvrs[vname_histo_counts] = (
+            dms + ("wd_bins",),
+            np.zeros_like(wd_histo[..., :n_bins]),
+        )
+
+        maxhits = np.zeros_like(wd_histo[..., 0])
+        for b in range(n_bins):
+            hits = wd_histo[..., 2 * b] + wd_histo[..., 2 * b - 1]
+            wd = (
+                wd_bin_wd[..., 0] + 360 * wd_histo[..., 0]
+                if b == 0
+                else wd_bin_wd[..., 2 * b]
+            )
+            wd = np.mod((wd + wd_bin_wd[..., 2 * b - 1]) / hits, 360)
+            print(
+                "HERE WD",
+                b,
+                2 * b,
+                2 * b - 1,
+                wd.shape,
+                np.sum(np.isnan(wd)),
+                np.nanmin(wd),
+                np.nanmax(wd),
+            )
+            dvrs[vname_histo_counts][1][..., b] = hits
+            sel = hits > maxhits
+            if np.any(sel):
+                maxhits[sel] = hits[sel]
+                dvrs[vname_main_wd][1][sel] = wd[sel]
+            del hits, sel
+        del maxhits
 
     data = Dataset(
         coords=crds,
@@ -424,17 +423,10 @@ def main():
     )
     parser.add_argument(
         "-wdm",
-        "--wd_histo_minwidth",
-        help="The minimal bin width of the main wind direction histogram",
+        "--wd_histo_width",
+        help="The bin width of the main wind direction histogram",
         type=float,
-        default=1.0,
-    )
-    parser.add_argument(
-        "-wdM",
-        "--wd_histo_maxwidth",
-        help="The maximal bin width of the main wind direction histogram",
-        type=float,
-        default=30.0,
+        default=10.0,
     )
     parser.add_argument(
         "-o",
@@ -469,8 +461,7 @@ def main():
             coord=args.coord,
             vname_mean_ws=args.mean_ws_name,
             vname_main_wd=args.main_wd_name,
-            wd_histo_minwidth=args.wd_histo_minwidth,
-            wd_histo_maxwidth=args.wd_histo_maxwidth,
+            wd_histo_width=args.wd_histo_width,
             add_uv=args.add_uv,
             add_counts=args.add_counts,
             var2ncvar=v2nc,
