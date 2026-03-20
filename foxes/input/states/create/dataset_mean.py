@@ -318,8 +318,6 @@ def create_dataset_mean(
 
     if not add_uv:
         del dvrs[FV.U], dvrs[FV.V], cnts[f"counts_{FV.U}"], cnts[f"counts_{FV.V}"]
-    if add_counts:
-        dvrs.update(cnts)
 
     if wd_histo is not None:
         if verbosity > 0:
@@ -332,10 +330,11 @@ def create_dataset_mean(
             f"Number of bins must be integer, got {wd_histo.shape[-1] / 2}"
         )
         dvrs[vname_main_wd] = (dms, np.full_like(dvrs[FV.WD][1], np.nan))
-        dvrs[vname_histo_counts] = (
-            dms + ("wd_bins",),
-            np.zeros_like(wd_histo[..., :n_bins]),
-        )
+        if add_counts:
+            cnts[vname_histo_counts] = (
+                dms + ("wd_bins",),
+                np.zeros_like(wd_histo[..., :n_bins]),
+            )
 
         maxhits = np.zeros_like(wd_histo[..., 0])
         for b in range(n_bins):
@@ -346,23 +345,17 @@ def create_dataset_mean(
                 else wd_bin_wd[..., 2 * b]
             )
             wd = np.mod((wd + wd_bin_wd[..., 2 * b - 1]) / hits, 360)
-            print(
-                "HERE WD",
-                b,
-                2 * b,
-                2 * b - 1,
-                wd.shape,
-                np.sum(np.isnan(wd)),
-                np.nanmin(wd),
-                np.nanmax(wd),
-            )
-            dvrs[vname_histo_counts][1][..., b] = hits
+            if add_counts:
+                cnts[vname_histo_counts][1][..., b] = hits
             sel = hits > maxhits
             if np.any(sel):
                 maxhits[sel] = hits[sel]
                 dvrs[vname_main_wd][1][sel] = wd[sel]
             del hits, sel
         del maxhits
+
+    if add_counts:
+        dvrs.update(cnts)
 
     data = Dataset(
         coords=crds,
