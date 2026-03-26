@@ -921,6 +921,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.7.4
 
+- Applications:
+  - New command line application `wrf2foxes`, converting data files from WRF-NEWA NetCDF format into a regular UTM based grid that is readable by the `FieldData` states class. The subsequent *foxes* run might then be faster than using the `NEWAStates` class.
 - Inputs:
   - New ambient states `SingleStateField`, for heterogeneous data without state dimension, e.g. the mean field output of `foxes_create_mean_dataset`
 - Models:

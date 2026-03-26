@@ -376,6 +376,18 @@ PA_BETA = "PA_beta"
 :group: foxes.variables
 """
 
+
+LAT = "LAT"
+""" The latitude in degrees
+:group: foxes.variables
+"""
+
+LON = "LON"
+""" The longitude in degrees
+:group: foxes.variables
+"""
+
+
 DEFAULT_DIGITS = 4
 
 ROUND_DIGITS = {
@@ -392,12 +404,12 @@ ROUND_DIGITS = {
     WEIBULL_k: 3,
     YAW: 3,
     YAWM: 3,
+    LAT: 6,
+    LON: 6,
     "lat": 6,
     "lon": 6,
     "latitude": 6,
     "longitude": 6,
-    "LAT": 6,
-    "LON": 6,
 }
 ROUND_DIGITS.update(
     {var2amb[v]: ROUND_DIGITS[v] for v in var2amb.keys() if v in ROUND_DIGITS}

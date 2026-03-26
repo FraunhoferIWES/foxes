@@ -381,6 +381,13 @@ class DatasetStates(States):
             The verbosity level, 0 = silent
 
         """
+        # check for UTM zone:
+        if "utm_number" in data or "utm_letter" in data:
+            assert "utm_number" in data and "utm_letter" in data, (
+                f"States '{self.name}': Require both 'utm_number' and 'utm_letter' in data to set UTM zone, found {list(data.keys())}"
+            )
+            config.set_utm_zone(data["utm_number"].values, data["utm_letter"].values)
+
         # check if needed:
         if bounds_extra_space == np.inf and height_bounds == np.inf:
             return

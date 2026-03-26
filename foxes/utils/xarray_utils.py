@@ -240,7 +240,11 @@ def write_nc(
             # print("WRITENC ENC",v, enc[v])
         ds = Dataset(coords=crds, data_vars=dvrs)
 
-    if verbosity > 0:
+    if verbosity > 1:
+        print(
+            f"Writing file {fpath} using pack={pack}, complevel={complevel}, engine={nc_engine}"
+        )
+    elif verbosity > 0:
         print("Writing file", fpath)
 
     kw = dict(encoding=enc, engine=nc_engine)
