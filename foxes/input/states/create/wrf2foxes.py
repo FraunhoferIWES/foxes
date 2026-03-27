@@ -5,7 +5,7 @@ from pathlib import Path
 from tqdm.autonotebook import tqdm
 from xarray import open_dataset, DataArray, Dataset
 from utm import latlon_to_zone_number, latitude_to_zone_letter, from_latlon, to_latlon
-from scipy.interpolate import LinearNDInterpolator, griddata
+from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
 from foxes.config import config
 from foxes.core import Engine, get_engine
@@ -229,6 +229,7 @@ def _process_file(
     points_isel,
     interp_data,
     chunk_size_states=None,
+    chunk_size_points=None,
     preprocess=None,
     check_nan=True,
     interp_pars=None,
@@ -351,9 +352,53 @@ def _process_file(
     )
 
     # prepare interpolation:
-    ipars = dict(method="linear", rescale=True, fill_value=np.nan)
+    ipars = dict(method="linear", rescale=True)
     if interp_pars is not None:
         ipars.update(interp_pars)
+
+    def _interpolate(pts, arr, qts):
+        has_time = pts.shape[-1] == 3
+        if not check_nan:
+            s = 1 if has_time else 0
+            s = np.any(np.isnan(arr), axis=tuple(range(s, len(arr.shape))))
+            s = np.s_[~s, ...]
+            pts = pts[s]
+            arr = arr[s]
+            del s
+
+        hpars = {k: d for k, d in ipars.items() if k != "method"}
+        if ipars["method"] == "nearest":
+            interp = NearestNDInterpolator(pts, arr, **hpars)
+        elif ipars["method"] == "linear":
+            interp = LinearNDInterpolator(pts, arr, **hpars)
+        else:
+            raise ValueError(
+                f"Unsupported interpolation method {ipars['method']}, supported methods are 'linear' and 'nearest'"
+            )
+
+        if chunk_size_points is None:
+            return interp(qts)
+        else:
+            if has_time:
+                nc, nx, ny = qts.shape[:3]
+                qts = qts.reshape(nc * nx * ny, 3)
+            else:
+                nx, ny = qts.shape[:2]
+                qts = qts.reshape(nx * ny, 2)
+            done_points = 0
+            n_points = qts.shape[0]
+            res = []
+            while done_points < n_points:
+                p_chunk = slice(
+                    done_points, min(done_points + chunk_size_points, n_points)
+                )
+                res.append(interp(qts[p_chunk]))
+                done_points += p_chunk.stop - p_chunk.start
+            res = np.concatenate(res, axis=0)
+            if has_time:
+                return res.reshape(nc, nx, ny, *res.shape[1:])
+            else:
+                return res.reshape(nx, ny, *res.shape[1:])
 
     # interpolate to grid:
     wrf_points, grid_points = interp_data
@@ -377,9 +422,9 @@ def _process_file(
         pts[..., 0] = ctimes[:, None]
         pts = pts.reshape(nc * n_wpts, 3)
 
-        gpts = np.zeros((nc, nx, ny, 3), dtype=grid_points.dtype)
-        gpts[..., 1:] = grid_points[None, ..., :]
-        gpts[..., 0] = ctimes[:, None, None]
+        qts = np.zeros((nc, nx, ny, 3), dtype=grid_points.dtype)
+        qts[..., 1:] = grid_points[None, ..., :]
+        qts[..., 0] = ctimes[:, None, None]
 
         for dms, arr in temp_data.items():
             hvrs = tuple(vrs[dms])
@@ -399,24 +444,10 @@ def _process_file(
             if "points" in dms:
                 if cs in dms:
                     arr = arr[t_chunk].reshape((nc * n_wpts,) + arr.shape[2:])
-                    if not check_nan:
-                        sel = np.any(
-                            np.isnan(arr), axis=tuple(range(1, len(arr.shape)))
-                        )
-                        s = np.s_[~sel, ...]
-                    else:
-                        s = np.s_[:]
-                    res = griddata(pts[s], arr[s], gpts, **ipars)
+                    res = _interpolate(pts, arr, qts)
                     dms = (FC.STATE, FV.X, FV.Y) + tuple([icmap[c] for c in dms[2:]])
                 elif done_times == 0:
-                    if not check_nan:
-                        sel = np.any(
-                            np.isnan(arr), axis=tuple(range(1, len(arr.shape)))
-                        )
-                        s = np.s_[~sel, ...]
-                    else:
-                        s = np.s_[:]
-                    res = griddata(pts[0, :, 1:][s], arr[s], gpts[0, :, :, 1:], **ipars)
+                    res = _interpolate(pts[0, :, 1:], arr, qts[0, :, :, 1:])
                     dms = (FV.X, FV.Y) + tuple([icmap[c] for c in dms[1:]])
                 else:
                     continue
@@ -491,6 +522,7 @@ def wrf2foxes(
     lat_bounds=None,
     height_bounds=(0.0, 400.0),
     chunk_size_states=None,
+    chunk_size_points=None,
     preprocess=None,
     write_points_png=False,
     check_nan=False,
@@ -522,6 +554,8 @@ def wrf2foxes(
         The height bounds (min, max) to subset the data, in meters
     chunk_size_states: int, optional
         The chunk size for time dimension during interpolation
+    chunk_size_points: int, optional
+        The chunk size for target points during interpolation
     preprocess: function, optional
         A function that takes the opened WRF dataset and returns a modified dataset,
     write_points_png: bool, optional
@@ -604,6 +638,7 @@ def wrf2foxes(
             points_isel=points_isel,
             interp_data=interp_data,
             chunk_size_states=chunk_size_states,
+            chunk_size_points=chunk_size_points,
             check_nan=check_nan,
             interp_pars=interp_pars,
             write_pars=write_pars,
@@ -672,6 +707,13 @@ def main():
         default=None,
     )
     parser.add_argument(
+        "-C",
+        "--chunk_size_points",
+        help="The chunk size for target points during interpolation",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
         "-e",
         "--engine",
         help="The engine",
@@ -728,6 +770,7 @@ def main():
             height_bounds=args.height_bounds,
             write_points_png=args.write_points_png,
             chunk_size_states=args.chunk_size_states,
+            chunk_size_points=args.chunk_size_points,
             check_nan=not args.skip_check_nan,
             interp_pars=dict(method=args.interp_method),
             write_pars=dict(pack=not args.skip_packing),
