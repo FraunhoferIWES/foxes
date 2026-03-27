@@ -642,7 +642,7 @@ def wrf2foxes(
             check_nan=check_nan,
             interp_pars=interp_pars,
             write_pars=write_pars,
-            verbosity=verbosity - 3,
+            verbosity=verbosity - 2,
         )
         for fpath in files
     ]
