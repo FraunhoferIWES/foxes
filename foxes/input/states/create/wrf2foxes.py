@@ -392,8 +392,16 @@ def _process_file(
                 p_chunk = slice(
                     done_points, min(done_points + chunk_size_points, n_points)
                 )
+                if verbosity > 3:
+                    print(
+                        f"  {fpath.name}: INTERPOLATING {dms}, {hvrs}, done_points {done_points}/{n_points}, p_chunk {p_chunk}"
+                    )
                 res.append(interp(qts[p_chunk]))
                 done_points += p_chunk.stop - p_chunk.start
+            if verbosity > 3:
+                print(
+                    f"  {fpath.name}: INTERPOLATING {dms}, {hvrs}, done_points {done_points}/{n_points}, DONE"
+                )
             res = np.concatenate(res, axis=0)
             if has_time:
                 return res.reshape(nc, nx, ny, *res.shape[1:])
@@ -430,7 +438,7 @@ def _process_file(
             hvrs = tuple(vrs[dms])
             if verbosity > 2:
                 print(
-                    f"{fpath.name}: INTERPOLATING {dms}, {hvrs}, done_times {done_times}"
+                    f"{fpath.name}: INTERPOLATING {dms}, {hvrs}, done_times {done_times}/{n_times}, t_chunk {t_chunk}"
                 )
 
             if cs in dms and icmap[cs] not in crds:
@@ -467,6 +475,11 @@ def _process_file(
             del res, dms
 
         done_times += nc
+
+    if verbosity > 2:
+        print(
+            f"{fpath.name}: INTERPOLATING {dms}, {hvrs}, done_times {done_times}/{n_times}, DONE"
+        )
     del temp_data
 
     # recombine chunks:
