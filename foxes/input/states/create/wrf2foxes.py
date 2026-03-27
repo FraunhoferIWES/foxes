@@ -5,7 +5,12 @@ from pathlib import Path
 from tqdm.autonotebook import tqdm
 from xarray import open_dataset, DataArray, Dataset
 from utm import latlon_to_zone_number, latitude_to_zone_letter, from_latlon, to_latlon
-from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+from scipy.interpolate import (
+    griddata,
+    LinearNDInterpolator,
+    NearestNDInterpolator,
+    CloughTocher2DInterpolator,
+)
 
 from foxes.config import config
 from foxes.core import Engine, get_engine
@@ -317,28 +322,6 @@ def _process_file(
         f"Did not find both {FV.WS} and {FV.WD} in the data, cannot compute {FV.U} and {FV.V}"
     )
 
-    # reorder dimensions:
-    vrs_list = []
-    for dms in vrs.keys():
-        if cs in dms:
-            assert dms[0] == cs, (
-                f"Expected time dimension {cs} to be the first dimension in {dms} for variables {vrs[dms]}"
-            )
-        if "points" in dms:
-            assert dms[-1] == "points", (
-                f"Expected dimension 'points' to be the last dimension in {dms} for variables {vrs[dms]}"
-            )
-            if cs in dms:
-                data[dms] = np.swapaxes(data[dms], -2, 1)
-                vrs_list.append((cs, "points") + dms[1:-1])
-            else:
-                data[dms] = np.swapaxes(data[dms], -2, 0)
-                vrs_list.append(("points",) + dms[:-1])
-        else:
-            vrs_list.append(dms)
-    vrs = {vrs_list[i]: d for i, d in enumerate(vrs.values())}
-    data = {vrs_list[i]: d for i, d in enumerate(data.values())}
-
     # define output coordinate names:
     icmap = {nc: c for c, nc in cmap.items()}
     ocmap = {v: v for v in cmap.keys()}
@@ -351,42 +334,61 @@ def _process_file(
         }
     )
 
+    # reorder dimensions:
+    vrs_list = []
+    for dms in vrs.keys():
+        if cs in dms:
+            assert dms[0] == cs, (
+                f"Expected dimension {cs} to be the first dimension in {dms} for variables {vrs[dms]}"
+            )
+        if "points" in dms:
+            assert dms[-1] == "points", (
+                f"Expected dimension 'points' to be the last dimension in {dms} for variables {vrs[dms]}"
+            )
+            odms = [c for c in ("points", cs, ch) if c in dms]
+            odms += [c for c in dms if c not in odms]
+            data[dms] = np.moveaxis(
+                data[dms], [dms.index(c) for c in odms], range(len(odms))
+            )
+            vrs_list.append(tuple(odms))
+
+        else:
+            vrs_list.append(dms)
+    vrs = {vrs_list[i]: d for i, d in enumerate(vrs.values())}
+    data = {vrs_list[i]: d for i, d in enumerate(data.values())}
+
     # prepare interpolation:
     ipars = dict(method="linear", rescale=True)
     if interp_pars is not None:
         ipars.update(interp_pars)
 
     def _interpolate(pts, arr, qts):
-        has_time = pts.shape[-1] == 3
         if not check_nan:
-            s = 1 if has_time else 0
-            s = np.any(np.isnan(arr), axis=tuple(range(s, len(arr.shape))))
+            s = np.any(np.isnan(arr), axis=tuple(range(len(arr.shape))))
             s = np.s_[~s, ...]
             pts = pts[s]
             arr = arr[s]
             del s
 
-        hpars = {k: d for k, d in ipars.items() if k != "method"}
-        if ipars["method"] == "nearest":
-            interp = NearestNDInterpolator(pts, arr, **hpars)
-        elif ipars["method"] == "linear":
-            interp = LinearNDInterpolator(pts, arr, **hpars)
-        else:
-            raise ValueError(
-                f"Unsupported interpolation method {ipars['method']}, supported methods are 'linear' and 'nearest'"
-            )
-
         if chunk_size_points is None:
-            return interp(qts)
+            return griddata(pts, arr, qts, **ipars)
         else:
-            if has_time:
-                nc, nx, ny = qts.shape[:3]
-                qts = qts.reshape(nc * nx * ny, 3)
+            hpars = {k: d for k, d in ipars.items() if k != "method"}
+            if ipars["method"] == "nearest":
+                interp = NearestNDInterpolator(pts, arr, **hpars)
+            elif ipars["method"] == "linear":
+                interp = LinearNDInterpolator(pts, arr, **hpars)
+            elif ipars["method"] == "cubic":
+                interp = CloughTocher2DInterpolator(pts, arr, **hpars)
             else:
-                nx, ny = qts.shape[:2]
-                qts = qts.reshape(nx * ny, 2)
+                raise ValueError(
+                    f"Unsupported interpolation method {ipars['method']}, supported methods are 'linear', 'nearest', and 'cubic'"
+                )
+
+            nx, ny = qts.shape[:2]
+            n_points = nx * ny
+            qts = qts.reshape(n_points, 2)
             done_points = 0
-            n_points = qts.shape[0]
             res = []
             while done_points < n_points:
                 p_chunk = slice(
@@ -403,14 +405,10 @@ def _process_file(
                     f"  {fpath.name}: INTERPOLATING {dms}, {hvrs}, done_points {done_points}/{n_points}, DONE"
                 )
             res = np.concatenate(res, axis=0)
-            if has_time:
-                return res.reshape(nc, nx, ny, *res.shape[1:])
-            else:
-                return res.reshape(nx, ny, *res.shape[1:])
+            return res.reshape(nx, ny, *res.shape[1:])
 
     # interpolate to grid:
     wrf_points, grid_points = interp_data
-    n_wpts = wrf_points.shape[0]
     nx, ny = grid_points.shape[:2]
     done_times = 0
     temp_data = data
@@ -424,15 +422,6 @@ def _process_file(
         )
         ctimes = np.arange(n_times)[t_chunk]
         nc = len(ctimes)
-
-        pts = np.zeros((nc, n_wpts, 3), dtype=wrf_points.dtype)
-        pts[..., 1:] = wrf_points[None, :, :]
-        pts[..., 0] = ctimes[:, None]
-        pts = pts.reshape(nc * n_wpts, 3)
-
-        qts = np.zeros((nc, nx, ny, 3), dtype=grid_points.dtype)
-        qts[..., 1:] = grid_points[None, ..., :]
-        qts[..., 0] = ctimes[:, None, None]
 
         for dms, arr in temp_data.items():
             hvrs = tuple(vrs[dms])
@@ -449,20 +438,15 @@ def _process_file(
             if ch in dms and icmap[ch] not in crds:
                 crds[ocmap[FV.H]] = heights
 
+            if cs in dms:
+                arr = arr[:, t_chunk, ...]
             if "points" in dms:
-                if cs in dms:
-                    arr = arr[t_chunk].reshape((nc * n_wpts,) + arr.shape[2:])
-                    res = _interpolate(pts, arr, qts)
-                    dms = (FC.STATE, FV.X, FV.Y) + tuple([icmap[c] for c in dms[2:]])
-                elif done_times == 0:
-                    res = _interpolate(pts[0, :, 1:], arr, qts[0, :, :, 1:])
+                if cs in dms or done_times == 0:
+                    res = _interpolate(wrf_points, arr, grid_points)
                     dms = (FV.X, FV.Y) + tuple([icmap[c] for c in dms[1:]])
                 else:
                     continue
-            elif cs in dms:
-                res = arr[t_chunk]
-                dms = tuple([icmap[c] for c in dms])
-            elif done_times == 0:
+            elif cs in dms or done_times == 0:
                 res = arr
                 dms = tuple([icmap[c] for c in dms])
             else:
@@ -485,7 +469,7 @@ def _process_file(
     # recombine chunks:
     for hvrs in data.keys():
         if len(data[hvrs][1]) > 1:
-            data[hvrs][1] = np.concatenate(data[hvrs][1], axis=0)
+            data[hvrs][1] = np.concatenate(data[hvrs][1], axis=2)
         else:
             data[hvrs][1] = data[hvrs][1][0]
 
