@@ -934,3 +934,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fix for bug with states averaging in `PointCalculator`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.4](https://github.com/FraunhoferIWES/foxes/commits/v1.7.4)
+
+## v1.7.5
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.5](https://github.com/FraunhoferIWES/foxes/commits/v1.7.5)
