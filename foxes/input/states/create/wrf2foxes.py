@@ -400,10 +400,6 @@ def _process_file(
                     )
                 res.append(interp(qts[p_chunk]))
                 done_points += p_chunk.stop - p_chunk.start
-            if verbosity > 3:
-                print(
-                    f"  {fpath.name}: INTERPOLATING {dms}, {hvrs}, done_points {done_points}/{n_points}, DONE"
-                )
             res = np.concatenate(res, axis=0)
             return res.reshape(nx, ny, *res.shape[1:])
 
@@ -459,11 +455,6 @@ def _process_file(
             del res, dms
 
         done_times += nc
-
-    if verbosity > 2:
-        print(
-            f"{fpath.name}: INTERPOLATING {dms}, {hvrs}, done_times {done_times}/{n_times}, DONE"
-        )
     del temp_data
 
     # recombine chunks:
