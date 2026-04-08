@@ -2,6 +2,22 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionchanged:: 1.7.4
+    Removed the `pre_rotor` flag from turbine models. The position before or after
+    the rotor model is now automatically determined based on the overlap of model output
+    variables and the newly introduced input variables of the selected rotor model.
+
+.. versionadded:: 1.7.4
+    New command line application `wrf2foxes`, converting data files from WRF-NEWA
+    NetCDF format into a regular UTM based grid that is readable by the `FieldData`
+    states class. The subsequent *foxes* run might then be faster than using the
+    `NEWAStates` class.
+
+.. versionadded:: 1.7.4
+    New ambient states `SingleStateField`, for heterogeneous data in NetCDF formatw
+    ithout state dimension, e.g. the mean field output of the application
+    `foxes_create_mean_dataset`.
+
 .. versionadded:: 1.7.2
     New `ICONStates` class for handling output from DWD's ICON model.
     Also a pre-processing command line tool `iconDream2foxes` was added that downloads

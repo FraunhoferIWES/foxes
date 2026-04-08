@@ -12,7 +12,11 @@ alive-progress==3.3.0
     # via pymoo
 annotated-types==0.7.0
     # via pydantic
-anyio==4.12.1
+anyio==4.12.1 ; python_full_version < '3.10'
+    # via
+    #   httpx
+    #   jupyter-server
+anyio==4.13.0 ; python_full_version >= '3.10'
     # via
     #   httpx
     #   jupyter-server
@@ -30,9 +34,9 @@ asttokens==3.0.1
     # via stack-data
 async-lru==2.0.5 ; python_full_version < '3.10'
     # via jupyterlab
-async-lru==2.1.0 ; python_full_version >= '3.10'
+async-lru==2.3.0 ; python_full_version >= '3.10'
     # via jupyterlab
-attrs==25.4.0
+attrs==26.1.0
     # via
     #   jsonschema
     #   jupyter-cache
@@ -51,7 +55,7 @@ bleach==6.3.0 ; python_full_version >= '3.10'
     # via nbconvert
 cdo==1.6.1
     # via foxes
-certifi==2026.1.4
+certifi==2026.2.25
     # via
     #   httpcore
     #   httpx
@@ -70,14 +74,14 @@ cftime==1.6.4.post1 ; python_full_version < '3.10'
     # via netcdf4
 cftime==1.6.5 ; python_full_version >= '3.10'
     # via netcdf4
-charset-normalizer==3.4.4
+charset-normalizer==3.4.7
     # via requests
 click==8.1.8 ; python_full_version < '3.10'
     # via
     #   dask
     #   distributed
     #   jupyter-cache
-click==8.3.1 ; python_full_version >= '3.10'
+click==8.3.2 ; python_full_version >= '3.10'
     # via
     #   dask
     #   distributed
@@ -86,7 +90,7 @@ cloudpickle==3.1.2
     # via
     #   dask
     #   distributed
-cma==4.4.2
+cma==4.4.4
     # via pymoo
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
@@ -112,7 +116,7 @@ dask==2024.8.0 ; python_full_version < '3.10'
     #   dask-jobqueue
     #   distributed
     #   foxes
-dask==2026.1.2 ; python_full_version >= '3.10'
+dask==2026.3.0 ; python_full_version >= '3.10'
     # via
     #   dask-jobqueue
     #   distributed
@@ -137,7 +141,7 @@ distributed==2024.8.0 ; python_full_version < '3.10'
     # via
     #   dask-jobqueue
     #   foxes
-distributed==2026.1.2 ; python_full_version >= '3.10'
+distributed==2026.3.0 ; python_full_version >= '3.10'
     # via
     #   dask-jobqueue
     #   foxes
@@ -163,12 +167,16 @@ executing==2.2.1
 fastjsonschema==2.21.2
     # via nbformat
 filelock==3.19.1 ; python_full_version < '3.10'
-    # via virtualenv
-filelock==3.24.3 ; python_full_version >= '3.10'
-    # via virtualenv
+    # via
+    #   python-discovery
+    #   virtualenv
+filelock==3.25.2 ; python_full_version >= '3.10'
+    # via
+    #   python-discovery
+    #   virtualenv
 fonttools==4.60.2 ; python_full_version < '3.10'
     # via matplotlib
-fonttools==4.61.1 ; python_full_version >= '3.10'
+fonttools==4.62.1 ; python_full_version >= '3.10'
     # via matplotlib
 foxes-opt==0.7.0
     # via foxes
@@ -176,13 +184,13 @@ fqdn==1.5.1
     # via jsonschema
 fsspec==2025.10.0 ; python_full_version < '3.10'
     # via dask
-fsspec==2026.2.0 ; python_full_version >= '3.10'
+fsspec==2026.3.0 ; python_full_version >= '3.10'
     # via dask
 graphemeu==0.7.2
     # via alive-progress
-greenlet==3.2.4 ; (python_full_version < '3.10' and platform_machine == 'AMD64') or (python_full_version < '3.10' and platform_machine == 'WIN32') or (python_full_version < '3.10' and platform_machine == 'aarch64') or (python_full_version < '3.10' and platform_machine == 'amd64') or (python_full_version < '3.10' and platform_machine == 'ppc64le') or (python_full_version < '3.10' and platform_machine == 'win32') or (python_full_version < '3.10' and platform_machine == 'x86_64')
+greenlet==3.2.5 ; (python_full_version < '3.10' and platform_machine == 'AMD64') or (python_full_version < '3.10' and platform_machine == 'WIN32') or (python_full_version < '3.10' and platform_machine == 'aarch64') or (python_full_version < '3.10' and platform_machine == 'amd64') or (python_full_version < '3.10' and platform_machine == 'ppc64le') or (python_full_version < '3.10' and platform_machine == 'win32') or (python_full_version < '3.10' and platform_machine == 'x86_64')
     # via sqlalchemy
-greenlet==3.3.1 ; (python_full_version >= '3.10' and platform_machine == 'AMD64') or (python_full_version >= '3.10' and platform_machine == 'WIN32') or (python_full_version >= '3.10' and platform_machine == 'aarch64') or (python_full_version >= '3.10' and platform_machine == 'amd64') or (python_full_version >= '3.10' and platform_machine == 'ppc64le') or (python_full_version >= '3.10' and platform_machine == 'win32') or (python_full_version >= '3.10' and platform_machine == 'x86_64')
+greenlet==3.3.2 ; (python_full_version >= '3.10' and platform_machine == 'AMD64') or (python_full_version >= '3.10' and platform_machine == 'WIN32') or (python_full_version >= '3.10' and platform_machine == 'aarch64') or (python_full_version >= '3.10' and platform_machine == 'amd64') or (python_full_version >= '3.10' and platform_machine == 'ppc64le') or (python_full_version >= '3.10' and platform_machine == 'win32') or (python_full_version >= '3.10' and platform_machine == 'x86_64')
     # via sqlalchemy
 h11==0.16.0
     # via httpcore
@@ -192,7 +200,7 @@ httpx==0.28.1
     # via jupyterlab
 identify==2.6.15 ; python_full_version < '3.10'
     # via pre-commit
-identify==2.6.16 ; python_full_version >= '3.10'
+identify==2.6.18 ; python_full_version >= '3.10'
     # via pre-commit
 idna==3.11
     # via
@@ -200,9 +208,11 @@ idna==3.11
     #   httpx
     #   jsonschema
     #   requests
-imagesize==1.4.1
+imagesize==1.5.0 ; python_full_version < '3.10'
     # via sphinx
-importlib-metadata==8.7.1
+imagesize==2.0.0 ; python_full_version >= '3.10'
+    # via sphinx
+importlib-metadata==8.7.1 ; python_full_version < '3.10'
     # via
     #   dask
     #   jupyter-cache
@@ -212,6 +222,11 @@ importlib-metadata==8.7.1
     #   jupyterlab-server
     #   myst-nb
     #   sphinx
+importlib-metadata==9.0.0 ; python_full_version >= '3.10'
+    # via
+    #   dask
+    #   jupyter-cache
+    #   myst-nb
 importlib-resources==6.5.2 ; python_full_version < '3.10'
     # via matplotlib
 iniconfig==2.1.0 ; python_full_version < '3.10'
@@ -240,13 +255,19 @@ ipython==8.18.1 ; python_full_version < '3.10'
     #   ipywidgets
     #   jupyter-console
     #   myst-nb
-ipython==8.38.0 ; python_full_version == '3.10.*'
+ipython==8.39.0 ; python_full_version == '3.10.*'
     # via
     #   ipykernel
     #   ipywidgets
     #   jupyter-console
     #   myst-nb
-ipython==9.10.0 ; python_full_version >= '3.11'
+ipython==9.10.1 ; python_full_version == '3.11.*'
+    # via
+    #   ipykernel
+    #   ipywidgets
+    #   jupyter-console
+    #   myst-nb
+ipython==9.12.0 ; python_full_version >= '3.12'
     # via
     #   ipykernel
     #   ipywidgets
@@ -273,9 +294,11 @@ jinja2==3.1.6
     #   myst-parser
     #   nbconvert
     #   sphinx
-json5==0.13.0
+json5==0.14.0
     # via jupyterlab-server
-jsonpointer==3.0.0
+jsonpointer==3.0.0 ; python_full_version < '3.10'
+    # via jsonschema
+jsonpointer==3.1.1 ; python_full_version >= '3.10'
     # via jsonschema
 jsonschema==4.25.1 ; python_full_version < '3.10'
     # via
@@ -329,7 +352,7 @@ jupyter-core==5.9.1 ; python_full_version >= '3.10'
     #   nbformat
 jupyter-events==0.12.0
     # via jupyter-server
-jupyter-lsp==2.3.0
+jupyter-lsp==2.3.1
     # via jupyterlab
 jupyter-server==2.17.0
     # via
@@ -340,7 +363,7 @@ jupyter-server==2.17.0
     #   notebook-shim
 jupyter-server-terminals==0.5.4
     # via jupyter-server
-jupyterlab==4.5.4
+jupyterlab==4.5.6
     # via
     #   jupyter
     #   notebook
@@ -354,7 +377,7 @@ jupyterlab-widgets==3.0.16
     # via ipywidgets
 kiwisolver==1.4.7 ; python_full_version < '3.10'
     # via matplotlib
-kiwisolver==1.4.9 ; python_full_version >= '3.10'
+kiwisolver==1.5.0 ; python_full_version >= '3.10'
     # via matplotlib
 lark==1.3.1
     # via rfc3987-syntax
@@ -366,7 +389,7 @@ lxml==6.0.2
     # via
     #   lxml-html-clean
     #   nbconvert
-lxml-html-clean==0.4.3
+lxml-html-clean==0.4.4
     # via foxes
 m2r2==0.3.4
     # via foxes
@@ -411,7 +434,9 @@ moocore==0.2.0 ; python_full_version >= '3.10'
     # via pymoo
 msgpack==1.1.2
     # via distributed
-myst-nb==1.3.0
+myst-nb==1.3.0 ; python_full_version < '3.10'
+    # via foxes
+myst-nb==1.4.0 ; python_full_version >= '3.10'
     # via foxes
 myst-parser==3.0.1 ; python_full_version < '3.10'
     # via myst-nb
@@ -461,7 +486,7 @@ netcdf4==1.7.4 ; (python_full_version >= '3.10' and platform_machine != 'ARM64')
     #   foxes-opt
 nodeenv==1.10.0
     # via pre-commit
-notebook==7.5.3
+notebook==7.5.5
     # via jupyter
 notebook-shim==0.2.4
     # via
@@ -496,7 +521,7 @@ numpy==2.2.6 ; python_full_version == '3.10.*'
     #   pymoo
     #   scipy
     #   xarray
-numpy==2.4.2 ; python_full_version >= '3.11'
+numpy==2.4.4 ; python_full_version >= '3.11'
     # via
     #   autograd
     #   cftime
@@ -534,7 +559,7 @@ pandas==2.3.3 ; python_full_version < '3.11'
     # via
     #   foxes
     #   xarray
-pandas==3.0.1 ; python_full_version >= '3.11'
+pandas==3.0.2 ; python_full_version >= '3.11'
     # via
     #   foxes
     #   xarray
@@ -548,16 +573,18 @@ pexpect==4.9.0 ; (python_full_version < '3.10' and sys_platform == 'emscripten')
     # via ipython
 pillow==11.3.0 ; python_full_version < '3.10'
     # via matplotlib
-pillow==12.1.1 ; python_full_version >= '3.10'
+pillow==12.2.0 ; python_full_version >= '3.10'
     # via matplotlib
 platformdirs==4.4.0 ; python_full_version < '3.10'
     # via
     #   jupyter-core
+    #   python-discovery
     #   virtualenv
-platformdirs==4.9.2 ; python_full_version >= '3.10'
+platformdirs==4.9.4 ; python_full_version >= '3.10'
     # via
     #   jupyter-core
     #   moocore
+    #   python-discovery
     #   virtualenv
 pluggy==1.6.0
     # via pytest
@@ -591,9 +618,9 @@ pydantic==2.12.5
     #   sphinx-immaterial
 pydantic-core==2.41.5
     # via pydantic
-pydantic-extra-types==2.11.0
+pydantic-extra-types==2.11.2
     # via sphinx-immaterial
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   ipython
     #   ipython-pygments-lexers
@@ -622,9 +649,13 @@ python-dateutil==2.9.0.post0
     #   jupyter-client
     #   matplotlib
     #   pandas
-python-json-logger==4.0.0
+python-discovery==1.2.1
+    # via virtualenv
+python-json-logger==4.0.0 ; python_full_version < '3.10'
     # via jupyter-events
-pytz==2025.2 ; python_full_version < '3.11'
+python-json-logger==4.1.0 ; python_full_version >= '3.10'
+    # via jupyter-events
+pytz==2026.1.post1 ; python_full_version < '3.11'
     # via pandas
 pywin32==311 ; python_full_version < '3.10' and platform_python_implementation != 'PyPy' and sys_platform == 'win32'
     # via jupyter-core
@@ -659,7 +690,13 @@ referencing==0.37.0 ; python_full_version >= '3.10'
     #   jsonschema
     #   jsonschema-specifications
     #   jupyter-events
-requests==2.32.5
+requests==2.32.5 ; python_full_version < '3.10'
+    # via
+    #   foxes
+    #   jupyterlab-server
+    #   sphinx
+    #   sphinx-immaterial
+requests==2.33.1 ; python_full_version >= '3.10'
     # via
     #   foxes
     #   jupyterlab-server
@@ -695,14 +732,14 @@ scipy==1.15.3 ; python_full_version == '3.10.*'
     #   foxes
     #   iwopy
     #   pymoo
-scipy==1.17.0 ; python_full_version >= '3.11'
+scipy==1.17.1 ; python_full_version >= '3.11'
     # via
     #   foxes
     #   iwopy
     #   pymoo
 send2trash==2.1.0
     # via jupyter-server
-setuptools==82.0.0
+setuptools==82.0.1
     # via
     #   foxes
     #   jupyterlab
@@ -757,11 +794,13 @@ sphinxcontrib-qthelp==2.0.0
     # via sphinx
 sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
-sqlalchemy==2.0.46
+sqlalchemy==2.0.49
     # via jupyter-cache
 stack-data==0.6.3
     # via ipython
-tabulate==0.9.0
+tabulate==0.9.0 ; python_full_version < '3.10'
+    # via jupyter-cache
+tabulate==0.10.0 ; python_full_version >= '3.10'
     # via jupyter-cache
 tblib==3.2.2
     # via distributed
@@ -773,7 +812,7 @@ tinycss2==1.4.0 ; python_full_version < '3.10'
     # via nbconvert
 tinycss2==1.5.1 ; python_full_version >= '3.10'
     # via nbconvert
-tomli==2.4.0 ; python_full_version < '3.11'
+tomli==2.4.1 ; python_full_version < '3.11'
     # via
     #   jupyterlab
     #   pytest
@@ -783,7 +822,7 @@ toolz==1.1.0
     #   dask
     #   distributed
     #   partd
-tornado==6.5.4
+tornado==6.5.5
     # via
     #   distributed
     #   ipykernel
@@ -828,7 +867,7 @@ typing-extensions==4.15.0
     #   virtualenv
 typing-inspection==0.4.2
     # via pydantic
-tzdata==2025.3
+tzdata==2026.1
     # via
     #   arrow
     #   pandas
@@ -840,7 +879,7 @@ urllib3==2.6.3
     #   requests
 utm==0.8.1
     # via foxes
-virtualenv==20.38.0
+virtualenv==21.2.0
     # via pre-commit
 wcwidth==0.6.0
     # via prompt-toolkit
@@ -856,7 +895,7 @@ websocket-client==1.9.0
     # via jupyter-server
 widgetsnbextension==4.0.15
     # via ipywidgets
-wrapt==2.1.1
+wrapt==2.1.2
     # via deprecated
 xarray==2024.7.0 ; python_full_version < '3.10'
     # via

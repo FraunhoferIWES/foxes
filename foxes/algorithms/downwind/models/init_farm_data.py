@@ -14,12 +14,6 @@ class InitFarmData(FarmDataModel):
 
     """
 
-    def __init__(self):
-        """
-        Constructor.
-        """
-        super().__init__(pre_rotor=True)
-
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

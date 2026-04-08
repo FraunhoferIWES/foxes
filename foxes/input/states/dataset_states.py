@@ -35,19 +35,30 @@ def _read_nc_file(
         if preprocess is not None:
             data = preprocess(data)
         if minimal:
-            data = data[coords[0]].to_numpy()
+            c = coords[0]
+            try:
+                if isel is not None and c in isel:
+                    data = data.isel({c: isel[c]})
+                if sel is not None and c in sel:
+                    data = data.sel({c: sel[c]})
+            except KeyError:
+                return None
+            data = data[c].to_numpy()
         else:
-            data = data[vars]
+            if vars is not None:
+                data = data[vars]
             data.attrs = {}
-            if isel is not None and len(isel):
-                isel = {c: s for c, s in isel.items() if c in data.sizes}
-                data = data.isel(**isel)
-            if sel is not None and len(sel):
-                sel = {c: s for c, s in sel.items() if c in data.sizes}
-                data = data.sel(**sel)
-            assert min(data.sizes.values()) > 0, (
-                f"States: No data in file {fpath}, isel={isel}, sel={sel}, resulting sizes={data.sizes}"
-            )
+            try:
+                if isel is not None and len(isel):
+                    isel = {c: s for c, s in isel.items() if c in data.sizes}
+                    data = data.isel(**isel)
+                if sel is not None and len(sel):
+                    sel = {c: s for c, s in sel.items() if c in data.sizes}
+                    data = data.sel(**sel)
+            except KeyError:
+                return None
+            if min(data.sizes.values()) == 0:
+                return None
             if check_input_nans:
                 for v, d in data.data_vars.items():
                     sel = np.isnan(d.to_numpy())
@@ -339,7 +350,14 @@ class DatasetStates(States):
         return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
 
     def preproc_first(
-        self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
+        self,
+        algo,
+        data,
+        cmap,
+        vars,
+        bounds_extra_space,
+        height_bounds,
+        verbosity=0,
     ):
         """
         Preprocesses the first file.
@@ -363,6 +381,16 @@ class DatasetStates(States):
             The verbosity level, 0 = silent
 
         """
+        # check for UTM zone:
+        if "utm_number" in data or "utm_letter" in data:
+            assert "utm_number" in data and "utm_letter" in data, (
+                f"States '{self.name}': Require both 'utm_number' and 'utm_letter' in data to set UTM zone, found {list(data.keys())}"
+            )
+            config.set_utm_zone(data["utm_number"].values, data["utm_letter"].values)
+
+        # check if needed:
+        if bounds_extra_space == np.inf and height_bounds == np.inf:
+            return
 
         # find vertical bounds:
         if FV.H in cmap:
@@ -477,27 +505,43 @@ class DatasetStates(States):
             vars = [self.var2ncvar.get(v, v) for v in self.variables]
 
             # pre-process first file:
-            fpath = files[0]
-            if verbosity > 0:
-                print(f"States '{self.name}': Preprocessing first file", fpath.name)
-            with xr.open_dataset(fpath, engine=config.nc_engine) as data_first:
-                self.drop_vars = [
-                    v for v in data_first.data_vars if v not in coords + vars
-                ]
-                if len(self.drop_vars) > 0 and verbosity > 0:
-                    print(f"States '{self.name}': Keeping variables  {vars}")
-                    print(f"States '{self.name}': Dropping variables {self.drop_vars}")
-                if self.preprocess_nc is not None:
-                    data_first = self.preprocess_nc(data_first)
-                self.preproc_first(
-                    algo,
-                    data=data_first,
-                    cmap=cmap,
-                    vars=vars,
-                    bounds_extra_space=bounds_extra_space,
-                    height_bounds=height_bounds,
-                    verbosity=verbosity,
+            data_first = None
+            file_i = 0
+            while data_first is None and file_i < len(files):
+                fpath = files[file_i]
+                data_first = _read_nc_file(
+                    fpath,
+                    coords=coords,
+                    vars=None,
+                    nc_engine=config.nc_engine,
+                    isel=self.isel,
+                    sel=self.sel,
+                    minimal=False,
+                    drop_vars=None,
+                    check_input_nans=False,
+                    preprocess=None,
                 )
+                file_i += 1
+            assert data_first is not None, (
+                f"States '{self.name}': No valid data sources found."
+            )
+            if verbosity > 0:
+                print(f"States '{self.name}': Preprocessing file", fpath.name)
+            self.drop_vars = [v for v in data_first.data_vars if v not in coords + vars]
+            if len(self.drop_vars) > 0 and verbosity > 0:
+                print(f"States '{self.name}': Keeping variables  {vars}")
+                print(f"States '{self.name}': Dropping variables {self.drop_vars}")
+            if self.preprocess_nc is not None:
+                data_first = self.preprocess_nc(data_first)
+            self.preproc_first(
+                algo,
+                data=data_first,
+                cmap=cmap,
+                vars=vars,
+                bounds_extra_space=bounds_extra_space,
+                height_bounds=height_bounds,
+                verbosity=verbosity,
+            )
             del data_first
 
             # read files:
@@ -529,10 +573,22 @@ class DatasetStates(States):
                 preprocess=self.preprocess_nc,
             )
 
-            if self.load_mode in ["preload", "lazy"]:
-                self._input_sizes = [
-                    ds.sizes[states_coord] for ds in self.__data_source
+            def _len_ds(ds):
+                """Helper function to get the number of states"""
+                return ds.sizes[states_coord] if isinstance(ds, xr.Dataset) else len(ds)
+
+            files, self.__data_source, self._input_sizes = zip(
+                *[
+                    (f, ds, _len_ds(ds))
+                    for f, ds in zip(files, self.__data_source)
+                    if ds is not None and _len_ds(ds) > 0
                 ]
+            )
+            assert len(self.__data_source) > 0, (
+                f"States '{self.name}': No valid data sources found."
+            )
+
+            if self.load_mode in ["preload", "lazy"]:
                 if self.load_mode == "lazy":
                     try:
                         self.__data_source = [ds.chunk() for ds in self.__data_source]
@@ -880,11 +936,11 @@ class DatasetStates(States):
 
         # case fly
         elif self.load_mode == "fly":
+            data = []
             vars = [self.var2ncvar.get(v, v) for v in variables]
             i0 = mdata.states_i0(counter=True)
             i1 = i0 + n_states
             j0 = 0
-            data = []
             for fpath, n in self._files_maxi.items():
                 if i0 < j0 or i0 == i1:
                     break
@@ -899,26 +955,33 @@ class DatasetStates(States):
                         isel = copy(self.isel) if self.isel is not None else {}
                         isel[states_coord] = slice(a, b)
 
-                        data.append(
-                            _read_nc_file(
-                                fpath,
-                                coords=list(cmap.values()),
-                                vars=vars,
-                                nc_engine=config.nc_engine,
-                                isel=isel,
-                                sel=self.sel,
-                                minimal=False,
-                                drop_vars=self.drop_vars,
-                                check_input_nans=self.check_input_nans,
-                                preprocess=self.preprocess_nc,
-                            )
+                        d = _read_nc_file(
+                            fpath,
+                            coords=list(cmap.values()),
+                            vars=vars,
+                            nc_engine=config.nc_engine,
+                            isel=isel,
+                            sel=self.sel,
+                            minimal=False,
+                            drop_vars=self.drop_vars,
+                            check_input_nans=self.check_input_nans,
+                            preprocess=self.preprocess_nc,
                         )
-
+                        if d is not None:
+                            data.append(d)
+                        else:
+                            raise ValueError(
+                                f"States '{self.name}': Failed to read data for file {fpath}"
+                            )
+                        del d
                         i0 += b - a
                     j0 = j1
 
             assert i0 == i1, (
                 f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
+            )
+            assert len(data) > 0, (
+                f"States '{self.name}': No data read for load_mode '{self.load_mode}'"
             )
             if len(data) == 1:
                 data = data[0]
@@ -1294,12 +1357,12 @@ class DatasetStates(States):
                 f"States '{self.name}': Cannot calculate {FV.TI} without {FV.TKE}"
             )
             if FV.TKE not in self.ovars:
-                tke = np.maximum(results.pop(FV.TKE), 0)
+                tke = np.maximum(results.pop(FV.TKE), 1e-10)
             else:
-                tke = np.maximum(results[FV.TKE], 0)
+                tke = np.maximum(results[FV.TKE], 1e-10)
             ws = results[FV.WS]
-            assert not np.any(ws <= 0.0), (
-                f"States '{self.name}': Cannot calculate {FV.TI}, found zeros in {FV.WS}"
+            assert np.all(ws > 0.0), (
+                f"States '{self.name}': Cannot calculate {FV.TI} from {FV.TKE}, found zeros or negative values in {FV.WS}"
             )
             results[FV.TI] = np.sqrt(1.5 * tke) / ws
 

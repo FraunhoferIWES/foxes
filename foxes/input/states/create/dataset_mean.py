@@ -3,9 +3,9 @@ import numpy as np
 from xarray import open_dataset, Dataset
 from pathlib import Path
 
-from foxes.core import map_with_engine, Engine
+from foxes.core import get_engine, Engine
 from foxes.config import config
-from foxes.utils import wd2uv, write_nc
+from foxes.utils import uv2wd, wd2uv, write_nc
 import foxes.variables as FV
 
 
@@ -13,6 +13,9 @@ def _read_nc(
     fpath,
     coord,
     var2ncvar,
+    vname_mean_ws,
+    vname_main_wd,
+    wd_histo_width,
     preprocess=None,
     **kwargs,
 ):
@@ -25,6 +28,9 @@ def _read_nc(
 
     dvrs = {}
     counts = {}
+    wd_histo = None
+    wd_bin_wd = None
+    uv = None
     for v, c in var2ncvar.items():
         if c not in data:
             continue
@@ -51,17 +57,31 @@ def _read_nc(
                     axis=-1,
                 )
                 if coord in dms:
-                    di = dms.index(coord)
-                    counts[FV.U] = np.sum(~np.isnan(uv[..., 0]), axis=di)
-                    counts[FV.V] = np.sum(~np.isnan(uv[..., 1]), axis=di)
-                    counts[FV.WS] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
-                    dvrs[FV.U] = (dms, np.nansum(uv[..., 0], axis=di))
-                    dvrs[FV.V] = (dms, np.nansum(uv[..., 1], axis=di))
-                    dvrs[FV.WS] = (dms, np.nansum(np.linalg.norm(uv, axis=-1), axis=di))
+                    ax_time = dms.index(coord)
+                    a = list(range(len(uv.shape)))
+                    a.remove(ax_time)
+                    uvsel = ~np.any(np.isnan(uv), axis=tuple(a))
+                    s = [slice(None)] * len(uv.shape)
+                    s[ax_time] = uvsel
+                    s = tuple(s)
+                    a = tuple(
+                        [m for ii, m in enumerate(uv.shape[:-1]) if ii != ax_time]
+                    )
+                    uv = uv[s]
+
+                    counts[FV.U] = np.full(a, np.sum(uvsel), dtype=config.dtype_int)
+                    counts[FV.V] = counts[FV.U]
+                    counts[vname_mean_ws] = counts[FV.U]
+                    dvrs[vname_mean_ws] = (
+                        dms,
+                        np.sum(np.linalg.norm(uv, axis=-1), axis=ax_time),
+                    )
+                    dvrs[FV.U] = (dms, np.sum(uv[..., 0], axis=ax_time))
+                    dvrs[FV.V] = (dms, np.sum(uv[..., 1], axis=ax_time))
                 else:
                     dvrs[FV.U] = (dms, uv[..., 0])
                     dvrs[FV.V] = (dms, uv[..., 1])
-                    dvrs[FV.WS] = (dms, np.linalg.norm(uv, axis=-1))
+                    dvrs[vname_mean_ws] = (dms, np.linalg.norm(uv, axis=-1))
         elif v == FV.WS or v == FV.WD:
             assert var2ncvar[FV.WD] in data and var2ncvar[FV.WS] in data, (
                 f"Both {c} and {var2ncvar[FV.WD]} must be in data."
@@ -74,26 +94,56 @@ def _read_nc(
                 ws = data[c].values
                 uv = wd2uv(data[var2ncvar[FV.WD]].values, ws)
                 if coord in dms:
-                    di = dms.index(coord)
-                    counts[FV.WS] = np.sum(~np.isnan(ws), axis=di)
-                    counts[FV.U] = np.sum(~np.any(np.isnan(uv), axis=-1), axis=di)
+                    ax_time = dms.index(coord)
+                    a = list(range(len(uv.shape)))
+                    a.remove(ax_time)
+                    uvsel = ~np.any(np.isnan(uv), axis=tuple(a))
+                    s = [slice(None)] * len(uv.shape)
+                    s[ax_time] = uvsel
+                    s = tuple(s)
+                    a = tuple(
+                        [m for ii, m in enumerate(uv.shape[:-1]) if ii != ax_time]
+                    )
+                    uv = uv[s]
+
+                    counts[vname_mean_ws] = np.sum(~np.isnan(ws), axis=ax_time)
+                    counts[FV.U] = np.full(a, np.sum(uvsel), dtype=config.dtype_int)
                     counts[FV.V] = counts[FV.U]
-                    dvrs[FV.WS] = (dms, np.nansum(ws, axis=di))
-                    dvrs[FV.U] = (dms, np.nansum(uv[..., 0], axis=di))
-                    dvrs[FV.V] = (dms, np.nansum(uv[..., 1], axis=di))
+                    dvrs[vname_mean_ws] = (dms, np.nansum(ws, axis=ax_time))
+                    dvrs[FV.U] = (dms, np.sum(uv[..., 0], axis=ax_time))
+                    dvrs[FV.V] = (dms, np.sum(uv[..., 1], axis=ax_time))
                 else:
-                    dvrs[FV.WS] = (dms, ws)
+                    dvrs[vname_mean_ws] = (dms, ws)
                     dvrs[FV.U] = (dms, uv[..., 0])
                     dvrs[FV.V] = (dms, uv[..., 1])
         else:
             d = data[c].values
             dms = data[c].dims
             if coord in dms:
-                di = dms.index(coord)
-                counts[v] = np.sum(~np.isnan(d), axis=di)
-                dvrs[v] = (dms, np.nansum(d, axis=di))
+                axt = dms.index(coord)
+                counts[v] = np.sum(~np.isnan(d), axis=axt)
+                dvrs[v] = (dms, np.nansum(d, axis=axt))
             else:
                 dvrs[v] = (dms, d)
+
+    # compute wd histogram counts:
+    if vname_main_wd is not None:
+        # prepare:
+        wd = np.moveaxis(uv2wd(uv), ax_time, -1)
+        del uv
+
+        wds = np.linspace(0.0, 360.0, 2 * int(180 / wd_histo_width * 2) + 1)
+        n_bins = len(wds) - 1
+        shp = wd.shape[:-1] + (n_bins,)
+        wd_histo = np.zeros(shp, dtype=config.dtype_int)
+        wd_bin_wd = np.zeros(shp, dtype=config.dtype_double)
+
+        # full vectorization crashes memory, loop over bins:
+        for i in range(n_bins):
+            sel = (wd >= wds[i]) & (wd < wds[i + 1])
+            if np.any(sel):
+                wd_histo[..., i] = np.sum(sel, axis=-1)
+                wd_bin_wd[..., i] = np.sum(np.where(sel, wd, 0), axis=-1)
 
     crds = {}
     for dms, __ in dvrs.values():
@@ -101,13 +151,18 @@ def _read_nc(
             if d != coord and d not in crds and d in data.coords:
                 crds[d] = data[d].values
 
-    return crds, dvrs, counts
+    return crds, dvrs, counts, wd_histo, wd_bin_wd
 
 
 def create_dataset_mean(
     data_source,
     coord,
     var2ncvar,
+    vname_mean_ws=FV.MEAN_WS,
+    vname_main_wd=FV.MAIN_WD,
+    wd_histo_width=10.0,
+    add_uv=False,
+    add_counts=False,
     to_file=None,
     preprocess=None,
     verbosity=1,
@@ -124,8 +179,17 @@ def create_dataset_mean(
     coord: str
         Name of the coordinate which should be averaged over
     var2ncvar: dict
-        Mapping from variable names to netCDF variable names. Will
-        be searched for FV.WS, FV.WD, FV.U, FV.V
+        Mapping from variable names to netCDF variable names
+    vname_mean_ws: str
+        The variable name to use for the mean wind speed
+    vname_main_wd: str
+        The variable name to use for the main wind direction
+    wd_histo_width: float
+        The minimal wind direction histogramm bin width
+    add_uv: bool
+        Flag for adding U and V to the resulting data
+    add_counts: bool
+        Flag for adding the counts of each data variable
     to_file: str, optional
         If given, write the mean state to this file
     preprocess: callable, optional
@@ -144,6 +208,14 @@ def create_dataset_mean(
     :group: input.states.create
 
     """
+    # prepare:
+    engine = get_engine()
+    crds = {}
+    dvrs = {}
+    counts = {}
+    wd_histo = None
+    wd_bin_wd = None
+
     # extend names by defaults:
     v2nc = {v: v for v in {FV.WS, FV.WD, FV.U, FV.V, FV.TI, FV.RHO}}
     v2nc.update(var2ncvar)
@@ -161,18 +233,34 @@ def create_dataset_mean(
         prt = prt.parent
     files = sorted(list(prt.glob(glb)))
 
-    # read files in parallel and compute mean:
-    crds = {}
-    dvrs = {}
-    counts = {}
-    for hcrds, hdvrs, hcounts in map_with_engine(
-        _read_nc,
-        files,
-        coord=coord,
-        var2ncvar=v2nc,
-        preprocess=preprocess,
-        **kwargs,
-    ):
+    # submit file reading and processing to workers:
+    futures = [
+        engine.submit(
+            _read_nc,
+            fpath,
+            coord=coord,
+            var2ncvar=v2nc,
+            preprocess=preprocess,
+            vname_mean_ws=vname_mean_ws,
+            vname_main_wd=vname_main_wd,
+            wd_histo_width=wd_histo_width,
+            **kwargs,
+        )
+        for fpath in files
+    ]
+
+    def _eval_result(hcrds, hdvrs, hcounts, hwd_histo, hwd_bin_wd):
+        """Helper function that evaluates single result"""
+        nonlocal wd_histo, wd_bin_wd, crds, dvrs, counts
+
+        if hwd_histo is not None:
+            if wd_histo is None:
+                wd_histo = hwd_histo.astype(config.dtype_double, copy=True)
+                wd_bin_wd = hwd_bin_wd.copy()
+            else:
+                wd_histo += hwd_histo
+                wd_bin_wd += hwd_bin_wd
+
         for v, t in hcounts.items():
             if v not in counts:
                 counts[v] = t.copy() if t is not None else None
@@ -203,13 +291,71 @@ def create_dataset_mean(
             else:
                 dvrs[v][1] += d
 
+    # Await and evaluate results:
+    proc = -1
+    if verbosity > 0:
+        print(f"Reading and processing {len(files)} files...")
+    for i in range(len(files)):
+        _eval_result(*engine.await_result(futures.pop(0)))
+        if verbosity > 0:
+            hproc = int((i + 1) / len(files) * 100)
+            if hproc > proc:
+                proc = hproc
+                print(f"Processed files: {proc}% ({i + 1}/{len(files)})")
+
     cnts = {}
     for v in dvrs:
         if coord in dvrs[v][0]:
             dvrs[v][0] = tuple(d for d in dvrs[v][0] if d != coord)
             dvrs[v][1] /= counts[v]
             cnts[f"counts_{v}"] = (dvrs[v][0], counts[v])
-    dvrs.update(cnts)
+
+    uv = np.stack([dvrs[FV.U][1], dvrs[FV.V][1]], axis=-1)
+    dvrs[FV.WS] = (dvrs[FV.U][0], np.linalg.norm(uv, axis=-1))
+    dvrs[FV.WD] = (dvrs[FV.U][0], uv2wd(uv))
+    cnts[f"counts_{FV.WS}"] = cnts[f"counts_{FV.U}"]
+    cnts[f"counts_{FV.WD}"] = cnts[f"counts_{FV.U}"]
+
+    if not add_uv:
+        del dvrs[FV.U], dvrs[FV.V], cnts[f"counts_{FV.U}"], cnts[f"counts_{FV.V}"]
+
+    if wd_histo is not None:
+        if verbosity > 0:
+            print("Computing main wind direction")
+
+        vname_histo_counts = f"{vname_main_wd}_counts"
+        dms = dvrs[FV.WD][0]
+        n_bins = int(wd_histo.shape[-1] / 2)
+        assert n_bins == wd_histo.shape[-1] / 2, (
+            f"Number of bins must be integer, got {wd_histo.shape[-1] / 2}"
+        )
+        dvrs[vname_main_wd] = (dms, np.full_like(dvrs[FV.WD][1], np.nan))
+        if add_counts:
+            cnts[vname_histo_counts] = (
+                dms + ("wd_bins",),
+                np.zeros_like(wd_histo[..., :n_bins]),
+            )
+
+        maxhits = np.zeros_like(wd_histo[..., 0])
+        for b in range(n_bins):
+            hits = wd_histo[..., 2 * b] + wd_histo[..., 2 * b - 1]
+            wd = (
+                wd_bin_wd[..., 0] + 360 * wd_histo[..., 0]
+                if b == 0
+                else wd_bin_wd[..., 2 * b]
+            )
+            wd = np.mod((wd + wd_bin_wd[..., 2 * b - 1]) / hits, 360)
+            if add_counts:
+                cnts[vname_histo_counts][1][..., b] = hits
+            sel = hits > maxhits
+            if np.any(sel):
+                maxhits[sel] = hits[sel]
+                dvrs[vname_main_wd][1][sel] = wd[sel]
+            del hits, sel
+        del maxhits
+
+    if add_counts:
+        dvrs.update(cnts)
 
     data = Dataset(
         coords=crds,
@@ -237,12 +383,43 @@ def main():
         default="time",
     )
     parser.add_argument(
+        "-mws",
+        "--mean_ws_name",
+        help="Output variable name for mean wind speed",
+        default=FV.MEAN_WS,
+    )
+    parser.add_argument(
+        "-mwd",
+        "--main_wd_name",
+        help="Output variable name for main wind direction",
+        default=FV.MAIN_WD,
+    )
+    parser.add_argument(
         "-v",
         "--var2ncvar",
         help="Variable to netCDF variable name mapping, format: var1:ncvar1,var2:ncvar2,...",
         type=str,
         default="",
         nargs="+",
+    )
+    parser.add_argument(
+        "-uv",
+        "--add_uv",
+        help="Add U and V to the output",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-cts",
+        "--add_counts",
+        help="Add counts for each variable",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-wdm",
+        "--wd_histo_width",
+        help="The bin width of the main wind direction histogram",
+        type=float,
+        default=10.0,
     )
     parser.add_argument(
         "-o",
@@ -275,6 +452,11 @@ def main():
         return create_dataset_mean(
             data_source=args.nc_files,
             coord=args.coord,
+            vname_mean_ws=args.mean_ws_name,
+            vname_main_wd=args.main_wd_name,
+            wd_histo_width=args.wd_histo_width,
+            add_uv=args.add_uv,
+            add_counts=args.add_counts,
             var2ncvar=v2nc,
             to_file=args.to_file,
             preprocess=None,

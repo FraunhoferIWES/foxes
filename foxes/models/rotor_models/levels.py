@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.core import RotorModel
 from foxes.config import config
+import foxes.variables as FV
 
 
 class LevelRotor(RotorModel):
@@ -99,6 +100,18 @@ class LevelRotor(RotorModel):
             self.dpoints[:, 1] = x
             self.dpoints[:, 2] = y
             self.weights = np.ones(self.n, dtype=config.dtype_double) / self.n
+
+    def input_variables(self):
+        """
+        The input variables which are required by the model.
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        return [FV.D, FV.TXYH, FV.YAW]
 
     def n_rotor_points(self):
         """

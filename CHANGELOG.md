@@ -918,3 +918,19 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Bug fixed in `iconDream2foxes` with verbosity during file processing step
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.3](https://github.com/FraunhoferIWES/foxes/commits/v1.7.3)
+
+## v1.7.4
+
+- Applications:
+  - New command line application `wrf2foxes`, converting data files from WRF-NEWA NetCDF format into a regular UTM based grid that is readable by the `FieldData` states class. The subsequent *foxes* run might then be faster than using the `NEWAStates` class.
+- Inputs:
+  - New ambient states `SingleStateField`, for heterogeneous data without state dimension, e.g. the mean field output of `foxes_create_mean_dataset`
+- Models:
+  - Removing `pre_rotor` flag. The position before or after the rotor model is now automatically determined based on the overlap of model output variables and the newly introduced input variables of the selected rotor model.
+  - New turbine model `YawController` for sequential runs, simulating basic yaw manoeuvres that follow window averages of ambient wind direction
+- Examples:
+  - New example `sequential_yawcontroller`, demonstrating the new `YawController` model
+- Bug fixes:
+  - Fix for bug with states averaging in `PointCalculator`
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.4](https://github.com/FraunhoferIWES/foxes/commits/v1.7.4)

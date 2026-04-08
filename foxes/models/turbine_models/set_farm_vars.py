@@ -21,20 +21,17 @@ class SetFarmVars(TurbineModel):
 
     """
 
-    def __init__(self, pre_rotor=False, once=False):
+    def __init__(self, once=False):
         """
         Constructor.
 
         Parameters
         ----------
-        pre_rotor: bool
-            Flag for running this model before
-            running the rotor model.
         once: bool
             Flag for running only once
 
         """
-        super().__init__(pre_rotor=pre_rotor)
+        super().__init__()
         self.once = once
         self.reset()
 

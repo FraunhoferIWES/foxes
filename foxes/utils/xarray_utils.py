@@ -77,11 +77,14 @@ def pack_value(unpacked_value, scale_factor, add_offset, dtype, fill_value):
     if fill_value is None:
         return np.floor((unpacked_value - add_offset) / scale_factor).astype(dtype)
     else:
-        return np.where(
-            np.isnan(unpacked_value),
-            fill_value,
-            np.floor((unpacked_value - add_offset) / scale_factor),
-        ).astype(dtype)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", category=RuntimeWarning)
+            packed = np.where(
+                np.isnan(unpacked_value),
+                fill_value,
+                np.floor((unpacked_value - add_offset) / scale_factor),
+            )
+            return packed.astype(dtype)
 
 
 def unpack_value(packed_value, scale_factor, add_offset, fill_value):
@@ -115,7 +118,7 @@ def unpack_value(packed_value, scale_factor, add_offset, fill_value):
         ).astype(scale_factor.dtype)
 
 
-def get_encoding(data, complevel=5):
+def get_encoding(data, complevel=5, pack=True):
     """
     Get the encoding parameters for a numpy array.
 
@@ -125,6 +128,8 @@ def get_encoding(data, complevel=5):
         The numpy array for which to get the encoding information.
     complevel: int
         The compression level (1-9)
+    pack: bool
+        Whether to pack data using scale_factor and add_offset
 
     Returns
     -------
@@ -135,29 +140,30 @@ def get_encoding(data, complevel=5):
 
     """
     enc = {"zlib": True, "complevel": complevel}
-    if np.issubdtype(data.dtype, np.integer):
-        for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32]:
-            if np.all(data == data.astype(t)):
-                enc["dtype"] = t.__name__
-    elif np.issubdtype(data.dtype, np.floating):
-        min = np.min(data)
-        max = np.max(data)
-        hasnan = np.any(np.isnan(data))
-        for t, n in zip([np.int8, np.int16], [8, 16]):
-            scale_factor, add_offset, fill_value = compute_scale_and_offset(
-                min, max, n, hasnan
-            )
-            packed = pack_value(data, scale_factor, add_offset, t, fill_value)
-            unpacked = unpack_value(packed, scale_factor, add_offset, fill_value)
-            try:
-                np.testing.assert_allclose(data, unpacked, atol=scale_factor)
-                enc["dtype"] = t.__name__
-                enc["scale_factor"] = scale_factor
-                enc["add_offset"] = add_offset
-                enc["_FillValue"] = fill_value
-                break
-            except AssertionError:
-                continue
+    if pack:
+        if np.issubdtype(data.dtype, np.integer):
+            for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32]:
+                if np.all(data == data.astype(t)):
+                    enc["dtype"] = t.__name__
+        elif np.issubdtype(data.dtype, np.floating):
+            min = np.min(data)
+            max = np.max(data)
+            hasnan = np.any(np.isnan(data))
+            for t, n in zip([np.int8, np.int16], [8, 16]):
+                scale_factor, add_offset, fill_value = compute_scale_and_offset(
+                    min, max, n, hasnan
+                )
+                packed = pack_value(data, scale_factor, add_offset, t, fill_value)
+                unpacked = unpack_value(packed, scale_factor, add_offset, fill_value)
+                try:
+                    np.testing.assert_allclose(data, unpacked, atol=scale_factor)
+                    enc["dtype"] = t.__name__
+                    enc["scale_factor"] = scale_factor
+                    enc["add_offset"] = add_offset
+                    enc["_FillValue"] = fill_value
+                    break
+                except AssertionError:
+                    continue
     return enc
 
 
@@ -167,6 +173,7 @@ def write_nc(
     round={},
     complevel=5,
     nc_engine="netcdf4",
+    pack=False,
     verbosity=1,
     **kwargs,
 ):
@@ -184,6 +191,8 @@ def write_nc(
         The compression level
     nc_engine: str
         The NetCDF engine to use
+    pack: bool
+        Whether to pack data using scale_factor and add_offset
     verbosity: int
         The verbosity level, 0 = silent
     kwargs: dict, optional
@@ -215,7 +224,7 @@ def write_nc(
             else:
                 d = round.get(v, FV.get_default_digits(v))
             crds[v] = _round(x.to_numpy(), v, d)
-            enc[v] = get_encoding(crds[v], complevel=complevel)
+            enc[v] = get_encoding(crds[v], complevel=complevel, pack=pack)
             # print("WRITENC ENC",v, enc[v])
         dvrs = {}
         for v, x in ds.data_vars.items():
@@ -227,11 +236,15 @@ def write_nc(
                 dvrs[v] = (x.dims, _round(x.to_numpy(), v, d))
             else:
                 dvrs[v] = (x.dims, x.to_numpy())
-            enc[v] = get_encoding(dvrs[v][1], complevel=complevel)
+            enc[v] = get_encoding(dvrs[v][1], complevel=complevel, pack=pack)
             # print("WRITENC ENC",v, enc[v])
         ds = Dataset(coords=crds, data_vars=dvrs)
 
-    if verbosity > 0:
+    if verbosity > 1:
+        print(
+            f"Writing file {fpath} using pack={pack}, complevel={complevel}, engine={nc_engine}"
+        )
+    elif verbosity > 0:
         print("Writing file", fpath)
 
     kw = dict(encoding=enc, engine=nc_engine)

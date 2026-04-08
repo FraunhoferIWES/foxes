@@ -176,6 +176,37 @@ class FarmController(FarmDataModel):
 
         return [m.name for m in tmodels], tmsels
 
+    @property
+    def has_pre_rotor_models(self):
+        """
+        Flag for having pre-rotor models
+
+        Returns
+        -------
+        flag: bool
+            True if pre-rotor models are present
+
+        """
+        return (
+            self.pre_rotor_models is not None and len(self.pre_rotor_models.models) > 0
+        )
+
+    @property
+    def has_post_rotor_models(self):
+        """
+        Flag for having post-rotor models
+
+        Returns
+        -------
+        flag: bool
+            True if post-rotor models are present
+
+        """
+        return (
+            self.post_rotor_models is not None
+            and len(self.post_rotor_models.models) > 0
+        )
+
     def find_turbine_types(self, algo):
         """
         Collects the turbine types.
@@ -228,11 +259,14 @@ class FarmController(FarmDataModel):
         prer_models = [[] for t in algo.farm.turbines]
         postr_models = [[] for t in algo.farm.turbines]
         ttypes = {m.name: m for m in self.turbine_types}
+        rotor_inputs = set(algo.rotor_model.input_variables())
         for ti, t in enumerate(algo.farm.turbines):
-            prer = None
+            mlist = []
+            ttp = None
             for mi, mname in enumerate(t.models):
                 if mname in ttypes:
                     models = [ttypes[mname]]
+                    ttp = mname
                 elif mname in algo.mbook.turbine_models:
                     m = algo.mbook.turbine_models[mname]
                     models = m.models if isinstance(m, FarmDataModelList) else [m]
@@ -246,19 +280,27 @@ class FarmController(FarmDataModel):
                     raise KeyError(
                         f"Model {mname} not found in model book types or models"
                     )
+                mlist += models
 
-                prer = None
-                for m in models:
-                    if prer is None:
-                        prer = m.pre_rotor
-                    elif not prer and m.pre_rotor:
-                        raise ValueError(
-                            f"Turbine {ti}, {t.name}: Model is classified as pre-rotor, but following the post-rotor model '{t.models[mi - 1]}'"
-                        )
-                    if m.pre_rotor:
-                        prer_models[ti].append(m)
-                    else:
-                        postr_models[ti].append(m)
+            # find last model that has rotor inputs,
+            # and split pre/post-rotor models there:
+            mi = len(mlist) - 1
+            while mi >= 0:
+                m = mlist[mi]
+                ovars = m.output_farm_vars(algo)
+                if len(rotor_inputs.intersection(ovars)) > 0:
+                    break
+                mi -= 1
+            prer_models[ti] = mlist[: mi + 1]
+            postr_models[ti] = mlist[mi + 1 :]
+            assert ttp not in prer_models[ti], (
+                f"Turbine type model {ttp} of turbine {ti} cannot be a pre-rotor model. "
+                f"Please check turbine model order {[m.name for m in mlist]}, especially "
+                f"'{ttp}' and '{prer_models[ti][-1].name}', "
+                "and make sure that all models that compute rotor input variables "
+                f"{rotor_inputs} appear at the beginning of the model list. "
+                f"Identified pre-rotor models: {[m.name for m in prer_models[ti]]}"
+            )
 
         # analyze models:
         mnames_pre, tmsels_pre = self._analyze_models(

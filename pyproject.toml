@@ -8,7 +8,7 @@ requires = [
 
 [project]
 name = "foxes"
-version = "1.7.3"
+version = "1.7.4"
 authors = [
   {name = "Jonas Schulte"},
 ]
@@ -49,7 +49,7 @@ dependencies = [
 
 [project.optional-dependencies]
 opt = [
-    "foxes-opt>=0.6"
+    "foxes-opt>=0.7"
 ]
 icon_dream = [
     "cdo>=0.1",
@@ -99,5 +99,6 @@ exclude = ["notebooks", "examples", "tests", "docs"]
 foxes_yaml = "foxes.input.yaml.yaml:foxes_yaml"
 foxes_windio = "foxes.input.yaml.windio.windio:foxes_windio"
 foxes_create_mean_dataset = "foxes.input.states.create.dataset_mean:main"
+wrf2foxes = "foxes.input.states.create.wrf2foxes:main"
 iconDream2foxes = "foxes.input.states.create.icon_dream:main"
 eww2foxes = "foxes.input.farm_layout.from_eww:main"

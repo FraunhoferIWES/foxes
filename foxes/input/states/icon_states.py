@@ -207,7 +207,14 @@ class ICONStates(DatasetStates):
         )
 
     def preproc_first(
-        self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
+        self,
+        algo,
+        data,
+        cmap,
+        vars,
+        bounds_extra_space,
+        height_bounds,
+        verbosity=0,
     ):
         """
         Preprocesses the first file.
@@ -268,40 +275,49 @@ class ICONStates(DatasetStates):
         )
 
         if self.icon_point_plot is not None:
-            if self.isel is not None:
-                data = data.isel(self.isel)
-            if self.sel is not None:
-                data = data.sel(self.sel)
+            try:
+                if self.isel is not None:
+                    data = data.isel(self.isel)
+                if self.sel is not None:
+                    data = data.sel(self.sel)
+                has_data = True
+                for c, s in data.sizes.items():
+                    if s == 0:
+                        has_data = False
+                        break
+            except KeyError:
+                has_data = False
 
-            fpath = get_output_path(self.icon_point_plot)
-            if verbosity > 0:
-                print(
-                    f"States '{self.name}': Writing ICON grid point plot to '{fpath}'"
+            if has_data:
+                fpath = get_output_path(self.icon_point_plot)
+                if verbosity > 0:
+                    print(
+                        f"States '{self.name}': Writing ICON grid point plot to '{fpath}'"
+                    )
+                fig, ax = plt.subplots(figsize=(8, 8))
+                xx, yy = np.meshgrid(
+                    data[cmap[FV.X]].values.flatten(),
+                    data[cmap[FV.Y]].values.flatten(),
                 )
-            fig, ax = plt.subplots(figsize=(8, 8))
-            xx, yy = np.meshgrid(
-                data[cmap[FV.X]].values.flatten(),
-                data[cmap[FV.Y]].values.flatten(),
-            )
-            pts = from_lonlat(np.stack((xx.flatten(), yy.flatten()), axis=-1))
-            ax.plot(
-                pts[:, 0],
-                pts[:, 1],
-                c="blue",
-                alpha=0.2,
-                marker=".",
-                linestyle="None",
-            )
-            anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
-            FarmLayoutOutput(farm=algo.farm).get_figure(
-                fig=fig, ax=ax, annotate=anno, fontsize=12
-            )
-            ax.set_xlabel(f"{FV.X} [m]")
-            ax.set_ylabel(f"{FV.Y} [m]")
-            ax.set_aspect("equal", adjustable="box")
-            ax.autoscale_view(tight=True)
-            fig.savefig(fpath, bbox_inches="tight")
-            plt.close()
+                pts = from_lonlat(np.stack((xx.flatten(), yy.flatten()), axis=-1))
+                ax.plot(
+                    pts[:, 0],
+                    pts[:, 1],
+                    c="blue",
+                    alpha=0.2,
+                    marker=".",
+                    linestyle="None",
+                )
+                anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+                FarmLayoutOutput(farm=algo.farm).get_figure(
+                    fig=fig, ax=ax, annotate=anno, fontsize=12
+                )
+                ax.set_xlabel(f"{FV.X} [m]")
+                ax.set_ylabel(f"{FV.Y} [m]")
+                ax.set_aspect("equal", adjustable="box")
+                ax.autoscale_view(tight=True)
+                fig.savefig(fpath, bbox_inches="tight")
+                plt.close()
 
     def load_data(self, algo, verbosity=0):
         """

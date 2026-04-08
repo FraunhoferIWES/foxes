@@ -13,3 +13,4 @@ from .yawm2yaw import YAWM2YAW as YAWM2YAW
 from .calculator import Calculator as Calculator
 from .rotor_centre_calc import RotorCentreCalc as RotorCentreCalc
 from .lookup_table import LookupTable as LookupTable
+from .yawcontroller import YawController as YawController

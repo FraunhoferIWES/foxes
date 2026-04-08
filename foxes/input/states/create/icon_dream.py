@@ -1,14 +1,24 @@
 import argparse
 import numpy as np
 from xarray import Dataset
+from pandas import DataFrame
 from pathlib import Path
 from tqdm.autonotebook import tqdm
+from shutil import rmtree
 
 from foxes.core import get_engine, Engine
 from foxes.config import config
 from foxes.utils import write_nc, import_module, download_file
 from foxes.data import StaticData, STATES
 import foxes.variables as FV
+
+
+def _rm_tmp_dir(cdo_tmp_dir, verbosity=1):
+    """Remove the temporary directory for CDO intermediate files."""
+    if cdo_tmp_dir.exists():
+        if verbosity > 0:
+            print("Removing tmp directory", cdo_tmp_dir)
+        rmtree(cdo_tmp_dir)
 
 
 def _get_file_var_str(var, for_fname=False):
@@ -47,7 +57,12 @@ def _download_icon_dream(ymv, base_url, out_dir, verbosity=1):
 
 
 def _prepare_grid(
-    path_grid_select, path_icon_grid, path_weights_out, url_icon_grid, verbosity=1
+    path_grid_select,
+    path_icon_grid,
+    path_weights_out,
+    url_icon_grid,
+    cdo_tmp_dir,
+    verbosity=1,
 ):
     """Download and prepare grid files for remapping."""
     if path_weights_out.is_file():
@@ -60,11 +75,146 @@ def _prepare_grid(
         pip_hint="pip install cdo",
         conda_hint="conda install -c conda-forge cdo",
     ).Cdo
-    cdo = Cdo()
-    cdo.gencon(
-        path_grid_select, input=f"{path_icon_grid}", output=str(path_weights_out)
-    )
+    cdo = Cdo(tempdir=str(cdo_tmp_dir))
+
+    try:
+        cdo.gencon(
+            path_grid_select, input=f"{path_icon_grid}", output=str(path_weights_out)
+        )
+    except Exception as e:
+        if verbosity > 3:
+            _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+            raise e
+        elif verbosity > 1:
+            print(f"Generating grid weights failed with exception {e}")
+        elif verbosity > 0:
+            print("Generating grid weights failed.")
+        return -1  # Indicate failure
+
     return 1  # Indicate success
+
+
+def _check_grb(
+    year,
+    month,
+    grb_dir,
+    var2ncvar,
+    cdo_tmp_dir,
+    verbosity=1,
+):
+    """Check dimensions of the grb files for a given year and month."""
+    Cdo = import_module(
+        "cdo",
+        pip_hint="pip install cdo",
+        conda_hint="conda install -c conda-forge cdo",
+    ).Cdo
+    cdo = Cdo(tempdir=str(cdo_tmp_dir))
+
+    dms = None
+    valid = []
+    fname = []
+    reason = []
+    details = []
+    for var, vname in var2ncvar.items():
+        grb_fname = _get_fname(year, month, var, region=None, suffix="grb")
+        grb_path = grb_dir / _get_file_var_str(var) / grb_fname
+        if verbosity > 2:
+            print(f"{grb_fname}: Starting check")
+
+        # check file exists:
+        if not grb_path.exists():
+            if verbosity > 3:
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+                raise FileNotFoundError(f"File {grb_path} not found.")
+            elif verbosity > 1:
+                print(f"{grb_fname}: Check FAILED, file not found.")
+            valid.append(False)
+            fname.append(grb_fname)
+            reason.append("missing")
+            details.append("File not found")
+            continue
+
+        # check dimensions:
+
+        if verbosity > 2:
+            print(f"{grb_fname}: Reading file")
+        try:
+            data = cdo.selvar(vname, input=str(grb_path), returnXArray=vname)
+        except Exception as e:
+            if verbosity > 3:
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+                raise e
+            elif verbosity > 2:
+                print(
+                    f"{grb_fname}: Selecting variable '{vname}' failed with exception {e}"
+                )
+            elif verbosity > 1:
+                print(f"{grb_fname}: Selecting variable '{vname}' failed.")
+            valid.append(False)
+            fname.append(grb_fname)
+            reason.append("cdo")
+            details.append(f"cdo.selvar failed for variable '{vname}'")
+            continue
+
+        hdms = list(data.sizes.keys())
+        try:
+            assert hdms == ["time", "height", "ncells"], (
+                f"{grb_fname}: Unexpected dimensions {hdms}, expected ['time', 'height', 'ncells']."
+            )
+        except Exception as e:
+            if verbosity > 3:
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+                raise e
+            elif verbosity > 2:
+                print(f"{grb_fname}: Check FAILED with exception {e}")
+            elif verbosity > 1:
+                print(f"{grb_fname}: Check FAILED.")
+            valid.append(False)
+            fname.append(grb_fname)
+            reason.append("coords")
+            details.append(f"Unexpected dimensions {hdms}")
+            continue
+
+        if dms is None:
+            dms = {c: s for c, s in data.sizes.items()}
+            if var == FV.TKE:
+                dms["height"] += 1
+            if verbosity > 2:
+                print(f"{grb_fname}: Dimensions are {dms}")
+
+        for dim, size in dms.items():
+            try:
+                if var == FV.TKE and dim == "height":
+                    assert data.sizes["height"] == size + 1, (
+                        f"{grb_fname}: Dimension mismatch for TKE, expected height to be {size + 1}, got {data.sizes['height']}."
+                    )
+                else:
+                    assert data.sizes[dim] == size, (
+                        f"{grb_fname}: Dimension mismatch for {dim}, expected {size}, got {data.sizes[dim]}."
+                    )
+            except Exception as e:
+                if verbosity > 3:
+                    _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+                    raise e
+                elif verbosity > 2:
+                    print(f"{grb_fname}: Check FAILED with exception {e}")
+                elif verbosity > 1:
+                    print(f"{grb_fname}: Check FAILED.")
+                valid.append(False)
+                fname.append(grb_fname)
+                reason.append("shape")
+                details.append(f"Size mismatch for {dim}: {size} vs {data.sizes[dim]}")
+                continue
+
+        if verbosity > 3:
+            print(f"{grb_fname}: Dimensions match {data.sizes}.")
+            print(f"{grb_fname}: Checks OK")
+        valid.append(True)
+        fname.append(grb_fname)
+        reason.append("ok")
+        details.append("")
+
+    return valid, fname, reason, details
 
 
 def _process(
@@ -77,6 +227,9 @@ def _process(
     levels,
     path_grid_select,
     path_grid_weights,
+    check_nans=True,
+    pack=True,
+    cdo_tmp_dir="cdo_tmp",
     verbosity=1,
 ):
     """Process grb files and convert to NetCDF."""
@@ -90,12 +243,13 @@ def _process(
         pip_hint="pip install cdo",
         conda_hint="conda install -c conda-forge cdo",
     ).Cdo
-    cdo = Cdo()
+    cdo = Cdo(tempdir=str(cdo_tmp_dir))
+
     data = {}
     for var, vname in var2ncvar.items():
         grb_fname = _get_fname(year, month, var, region=None, suffix="grb")
         grb_path = grb_dir / _get_file_var_str(var) / grb_fname
-        if verbosity > 1:
+        if verbosity > 0:
             print(f"Processing {grb_fname}")
 
         if not grb_path.exists():
@@ -108,22 +262,72 @@ def _process(
             print(f"{grb_fname}: Selecting levels")
         lvls = levels if var != "TKE" else levels + [levels[-1] + 1]
         lvls = ",".join(str(lv) for lv in lvls)
-        temp = cdo.sellevel(lvls, input=str(grb_path), returnXArray=vname)
+        try:
+            temp = cdo.sellevel(lvls, input=str(grb_path), returnXArray=vname)
+        except Exception as e:
+            if verbosity > 3:
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+                raise e
+            elif verbosity > 2:
+                print(f"{grb_fname}: Selecting levels failed with exception {e}")
+            elif verbosity > 1:
+                print(f"{grb_fname}: Selecting levels failed, skipping.")
+            return -1  # Indicate failure
 
         # remap:
         if verbosity > 2:
             print(f"{grb_fname}: Remapping")
-        data[var] = cdo.remap(
-            str(path_grid_select), path_grid_weights, input=temp, returnXArray=vname
-        )
+        try:
+            data[var] = cdo.remap(
+                str(path_grid_select), path_grid_weights, input=temp, returnXArray=vname
+            )
+        except Exception as e:
+            if verbosity > 3:
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+                raise e
+            elif verbosity > 2:
+                print(f"{grb_fname}: Remapping failed with exception {e}")
+            elif verbosity > 1:
+                print(f"{grb_fname}: Remapping failed, skipping.")
+            return -1  # Indicate failure
         if var == "TKE":
             data[var] = data[var].rename({"height": "height_2"})
 
-        if verbosity > 2:
+        if check_nans and np.isnan(data[var].to_numpy()).any():
+            if verbosity > 3:
+                _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+                raise ValueError(
+                    f"{grb_fname}: Found NaNs in data for variable '{var}'."
+                )
+            elif verbosity > 1:
+                print(
+                    f"{grb_fname}: Found NaNs in data for variable '{var}', skipping."
+                )
+            return -1  # Indicate failure
+
+        if verbosity > 1:
             print(f"{grb_fname}: Processing done.")
 
+    """
+    # for debugging, complains if array sizes do not match:
+    crds = {}
+    dvrs = {}
+    for v, d in data.items():
+       crds.update(d.coords)
+       dvrs[v] = (d.dims, d.to_numpy())
+       grb_fname = _get_fname(year, month, v, region=None, suffix="grb")
+       print("PROCESSED DATA", grb_fname, d.to_numpy().shape, "NaNs:", np.sum(np.isnan(d.to_numpy())))
+    data = Dataset(coords=crds, data_vars=dvrs)
+    """
     data = Dataset(data)
-    write_nc(data, nc_path, nc_engine=config.nc_engine, verbosity=verbosity)
+    write_nc(
+        data,
+        nc_path,
+        nc_engine=config.nc_engine,
+        pack=pack,
+        verbosity=verbosity,
+    )
+
     return 1  # Indicate success
 
 
@@ -138,6 +342,10 @@ def iconDream2foxes(
     url_icon_grid="http://icon-downloads.mpimet.mpg.de/grids/public/edzw/icon_grid_0027_R03B08_N02.nc",
     levels=None,
     skip_download=False,
+    check_grb=False,
+    check_nans=True,
+    pack=True,
+    cdo_tmp_dir="cdo_tmp",
     verbosity=1,
 ):
     """
@@ -166,6 +374,14 @@ def iconDream2foxes(
         The ICON height levels, e.g. [69,70,71,72,73,74].
     skip_download: bool
         If True, skip the download step and assume all files are present.
+    check_grb: bool
+        If True, check the grb files for expected dimensions before processing
+    check_nans: bool
+        If True, check for NaNs in the data
+    pack: bool
+        Whether to pack data using scale_factor and add_offset
+    cdo_tmp_dir: str
+        Temporary directory for CDO intermediate files.
     verbosity: int
         The verbosity level, 0 = silent, 1 = progress bars and summary.
 
@@ -180,6 +396,16 @@ def iconDream2foxes(
     grb_dir.mkdir(parents=True, exist_ok=True)
     nc_dir.mkdir(parents=True, exist_ok=True)
     levels = list(range(69, 75)) if levels is None else levels
+
+    cdo_tmp_dir = Path(cdo_tmp_dir).expanduser()
+    if cdo_tmp_dir.exists():
+        raise FileExistsError(
+            f"Temporary directory {cdo_tmp_dir} already exists. Please remove it or choose another one."
+        )
+    else:
+        if verbosity > 0:
+            print("Creating tmp directory for CDO intermediate files:", cdo_tmp_dir)
+        cdo_tmp_dir.mkdir(parents=True)
 
     var2ncvar = {
         FV.U: "u",
@@ -199,6 +425,7 @@ def iconDream2foxes(
             STATES, "target_grid_icon_eu_R03B08_ostsee.txt"
         )
     else:
+        _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
         raise ValueError(f"Unknown region: {region}, choose 'northsea' or 'baltic'.")
     path_grid_weights = nc0_dir / f"icon_weights_{region}.nc"
     path_icon_grid = nc0_dir / "icon_grid_0027_R03B08_N02.nc"
@@ -229,6 +456,7 @@ def iconDream2foxes(
             path_icon_grid,
             path_grid_weights,
             url_icon_grid,
+            cdo_tmp_dir=cdo_tmp_dir,
             verbosity=verbosity - 1,
         )
     ]
@@ -266,9 +494,68 @@ def iconDream2foxes(
         if failed > 0:
             if verbosity > 0:
                 print("Some downloads failed. Please retry.")
+            _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
             return
         elif verbosity > 0:
             print(f"All grb files present in {grb_dir}.")
+
+    # check grb files in parallel:
+    if check_grb:
+        futures = [
+            engine.submit(
+                _check_grb,
+                year,
+                month,
+                grb_dir,
+                var2ncvar,
+                cdo_tmp_dir=cdo_tmp_dir,
+                verbosity=verbosity - 1,
+            )
+            for year, month in ym
+        ]
+        if verbosity > 0:
+            valid, fname, reason, details = zip(
+                *[
+                    engine.await_result(f)
+                    for f in tqdm(
+                        futures, desc=f"Checking GRB files for {len(ym)} months"
+                    )
+                ]
+            )
+        else:
+            valid, fname, reason, details = zip(
+                *[engine.await_result(f) for f in futures]
+            )
+        valid = np.concatenate(valid, dtype=bool)
+        fname = np.concatenate(fname)
+        reason = np.concatenate(reason)
+        details = np.concatenate(details)
+        fpath = out_dir / "grb_check_results.csv"
+
+        df = DataFrame(
+            {
+                "file": fname,
+                "valid": valid.astype(np.int8),
+                "reason": reason,
+                "details": details,
+            }
+        )
+        if verbosity > 1:
+            print(df)
+        if verbosity > 0:
+            print(f"Writing GRB check results to {fpath}")
+        df.to_csv(fpath, index=False)
+
+        failed = np.sum(~valid)
+        if failed > 0:
+            if verbosity > 0:
+                print(
+                    f"Found {failed} GBR files that failed checks. Writing file {fpath}. Please investigate."
+                )
+            _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+            return
+        elif verbosity > 0:
+            print("All GRB files passed the check.")
 
     # process files in parallel:
     futures = [
@@ -283,6 +570,9 @@ def iconDream2foxes(
             levels,
             path_grid_select,
             path_grid_weights,
+            check_nans=check_nans,
+            pack=pack,
+            cdo_tmp_dir=cdo_tmp_dir,
             verbosity=verbosity - 1,
         )
         for year, month in ym
@@ -302,6 +592,8 @@ def iconDream2foxes(
             f"{failed} failed, "
             f"{np.sum(results == 0)} already present."
         )
+
+    _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
 
 
 def main():
@@ -363,19 +655,51 @@ def main():
         help="If given, skip the download step and assume all files are present",
         action="store_true",
     )
+    parser.add_argument(
+        "-sc",
+        "--skip_check_nans",
+        help="If given, skip the check for NaNs in the data",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-sp",
+        "--skip_pack",
+        help="If given, skip packing the data using scale_factor and add_offset",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-cg",
+        "--check_grb",
+        help="If given, check the grb files for expected dimensions before processing",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--cdo_tmp_dir",
+        help="Temporary directory for CDO intermediate files",
+        default="cdo_tmp",
+        type=str,
+    )
     args = parser.parse_args()
 
-    with Engine.new(args.engine, n_procs=args.n_cpus):
-        return iconDream2foxes(
-            out_dir=args.out_dir,
-            region=args.region,
-            min_year=args.min_year,
-            min_month=args.min_month,
-            max_year=args.max_year,
-            max_month=args.max_month,
-            skip_download=args.skip_download,
-            verbosity=args.verbosity,
-        )
+    try:
+        with Engine.new(args.engine, n_procs=args.n_cpus):
+            return iconDream2foxes(
+                out_dir=args.out_dir,
+                region=args.region,
+                min_year=args.min_year,
+                min_month=args.min_month,
+                max_year=args.max_year,
+                max_month=args.max_month,
+                skip_download=args.skip_download,
+                check_grb=args.check_grb,
+                check_nans=not args.skip_check_nans,
+                pack=not args.skip_pack,
+                cdo_tmp_dir=args.cdo_tmp_dir,
+                verbosity=args.verbosity,
+            )
+    except Exception as e:
+        _rm_tmp_dir(args.cdo_tmp_dir, verbosity=args.verbosity)
+        raise e
 
 
 if __name__ == "__main__":

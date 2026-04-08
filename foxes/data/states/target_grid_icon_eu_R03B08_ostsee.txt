@@ -6,7 +6,7 @@
 
 gridtype = lonlat
 xsize    = 85
-ysize    = 27
+ysize    = 49
 xfirst   = 9.75
 xinc     = 0.065
 yfirst   = 53.55

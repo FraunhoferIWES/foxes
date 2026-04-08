@@ -49,6 +49,7 @@ class PartialCentre(RotorPoints):
         variable,
         rotor_res,
         rotor_weights,
+        downwind_index=None,
     ):
         """
         Map ambient rotor point results onto target points.
@@ -67,22 +68,48 @@ class PartialCentre(RotorPoints):
             The variable name to map
         rotor_res: numpy.ndarray
             The results at rotor points, shape:
-            (n_states, n_turbines, n_rotor_points)
+            (n_states, n_turbines, n_rotor_points) if downwind_index is None,
+            otherwise shape: (n_states, n_rotor_points)
         rotor_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
+        downwind_index: int, optional
+            The downwind index of the updated turbine,
+            if None, maps for all turbines
 
         Returns
         -------
         res: numpy.ndarray
             The mapped results at target points, shape:
-            (n_states, n_targets, n_tpoints)
+            (n_states, n_targets, n_tpoints) if downwind_index is None,
+            otherwise shape: (n_states, n_tpoints)
 
         """
-        if rotor_res.shape[2] > 1:
+
+        if (
+            downwind_index is None
+            and len(rotor_res.shape) == 3
+            and rotor_res.shape[:2]
+            == (
+                tdata.n_states,
+                tdata.n_targets,
+            )
+        ):
             return np.einsum(
                 "str,r->st",
                 rotor_res,
                 rotor_weights,
             )[:, :, None]
+
+        elif (
+            downwind_index is not None
+            and len(rotor_res.shape) == 2
+            and rotor_res.shape[0] == tdata.n_states
+        ):
+            return np.einsum(
+                "sr,r->s",
+                rotor_res,
+                rotor_weights,
+            )[:, None]
+
         else:
             return rotor_res
