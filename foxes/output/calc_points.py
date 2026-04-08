@@ -101,11 +101,14 @@ class PointCalculator(Output):
         pres = self.algo.calc_points(self.farm_results, pts, *args, **kwargs)
 
         if states_mean:
-            weights = self.farm_results[FV.WEIGHT].to_numpy()[:, weight_turbine]
+            weights = self.farm_results[FV.WEIGHT].to_numpy()
+            if len(weights.shape) > 1:
+                weights = weights[:, weight_turbine]
             pres = Dataset(
                 data_vars={
-                    v: np.einsum("s,sp->p", weights, pres[v].to_numpy())
-                    for v in pres.data_vars.keys()
+                    v: (FC.POINT, np.einsum("s,sp->p", weights, d.to_numpy()))
+                    for v, d in pres.data_vars.items()
+                    if len(d.shape) == 2
                 }
             )
 
