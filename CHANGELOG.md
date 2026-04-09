@@ -937,5 +937,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.7.5
 
+- Bug fixes:
+  - Bug fixed with `PopulationStates` in combination with `SingleStateField` states
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.5](https://github.com/FraunhoferIWES/foxes/commits/v1.7.5)
