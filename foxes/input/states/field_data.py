@@ -1,7 +1,9 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from foxes.utils import weibull_weights
-from foxes.config import config
+from foxes.config import config, get_output_path
+from foxes.output import FarmLayoutOutput
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -30,6 +32,9 @@ class FieldData(DatasetStates):
         or str for units of D, e.g. '2.5D'
     height_bounds: tuple, optional
         The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+    grid_point_plot: str, optional
+        Path to a plot file, e.g. grid_points.png, to visualize the
+        selected data grid points and the layout of the farm.
 
     Examples
     --------
@@ -60,6 +65,7 @@ class FieldData(DatasetStates):
         weight_ncvar=None,
         bounds_extra_space=1000,
         height_bounds=None,
+        grid_point_plot=None,
         **kwargs,
     ):
         """
@@ -86,6 +92,9 @@ class FieldData(DatasetStates):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        grid_point_plot: str, optional
+            Path to a plot file, e.g. grid_points.png, to visualize the
+            selected data grid points and the layout of the farm.
         kwargs: dict, optional
             Additional parameters for the base class
 
@@ -98,6 +107,7 @@ class FieldData(DatasetStates):
         self.weight_ncvar = weight_ncvar
         self.bounds_extra_space = bounds_extra_space
         self.height_bounds = height_bounds
+        self.grid_point_plot = grid_point_plot
 
         assert FV.WEIGHT not in self.ovars, (
             f"States '{self.name}': Cannot have '{FV.WEIGHT}' as output variable, got {self.ovars}"
@@ -150,6 +160,91 @@ class FieldData(DatasetStates):
             height_bounds=self.height_bounds,
             verbosity=verbosity,
         )
+
+    def preproc_first(
+        self,
+        algo,
+        data,
+        cmap,
+        vars,
+        bounds_extra_space,
+        height_bounds,
+        verbosity=0,
+    ):
+        """
+        Preprocesses the first file.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data: xarray.Dataset
+            The dataset to preprocess
+        cmap: dict
+            A mapping from foxes variable names to Dataset dimension names
+        vars: list
+            The list of variable names
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/-
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+
+        super().preproc_first(
+            algo,
+            data,
+            cmap,
+            vars,
+            bounds_extra_space=bounds_extra_space,
+            height_bounds=height_bounds,
+            verbosity=verbosity,
+        )
+
+        if self.grid_point_plot is not None:
+            try:
+                if self.isel is not None:
+                    data = data.isel(self.isel)
+                if self.sel is not None:
+                    data = data.sel(self.sel)
+                has_data = True
+                for c, s in data.sizes.items():
+                    if s == 0:
+                        has_data = False
+                        break
+            except KeyError:
+                has_data = False
+
+            if has_data:
+                fpath = get_output_path(self.grid_point_plot)
+                if verbosity > 0:
+                    print(f"States '{self.name}': Writing grid point plot to '{fpath}'")
+                fig, ax = plt.subplots(figsize=(8, 8))
+                xx, yy = np.meshgrid(
+                    data[cmap[FV.X]].values.flatten(),
+                    data[cmap[FV.Y]].values.flatten(),
+                )
+                ax.plot(
+                    xx,
+                    yy,
+                    c="blue",
+                    alpha=0.2,
+                    marker=".",
+                    linestyle="None",
+                )
+                anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+                FarmLayoutOutput(farm=algo.farm).get_figure(
+                    fig=fig, ax=ax, annotate=anno, fontsize=12
+                )
+                ax.set_xlabel(f"{FV.X} [m]")
+                ax.set_ylabel(f"{FV.Y} [m]")
+                ax.set_aspect("equal", adjustable="box")
+                ax.autoscale_view(tight=True)
+                fig.savefig(fpath, bbox_inches="tight")
+                plt.close()
 
 
 class WeibullField(FieldData):
