@@ -365,7 +365,7 @@ def _process_file(
 
     def _interpolate(pts, arr, qts):
         if not check_nan:
-            s = np.any(np.isnan(arr), axis=tuple(range(len(arr.shape))))
+            s = np.any(np.isnan(arr), axis=tuple(range(1, len(arr.shape))))
             s = np.s_[~s, ...]
             pts = pts[s]
             arr = arr[s]
