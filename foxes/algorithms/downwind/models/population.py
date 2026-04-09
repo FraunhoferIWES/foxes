@@ -213,6 +213,14 @@ class PopulationStates(States):
         )
         out[FV.WEIGHT][:] = htdata[FV.WEIGHT]
 
+        # ensure that all states have full dimensions:
+        for v in out.keys():
+            if out[v].shape[0] == 1 and htdata.n_states > 1:
+                tmp = out[v]
+                out[v] = np.zeros((htdata.n_states,) + tmp.shape[1:], dtype=tmp.dtype)
+                out[v][:] = tmp
+                del tmp
+
         return out
 
 
