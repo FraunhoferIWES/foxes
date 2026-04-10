@@ -475,6 +475,21 @@ class DatasetStates(States):
         )
         states_coord = self._cmap[FC.STATE]
 
+        def _update_vars(ds, vars):
+            """Helper function to automatically update variables"""
+            # automatically switch TI to TKE, if TI not provided:
+            if FV.TI in vars:
+                cti = self.var2ncvar.get(FV.TI, FV.TI)
+                ctke = self.var2ncvar.get(FV.TKE, FV.TKE)
+                if cti not in ds.data_vars and ctke in ds.data_vars:
+                    if verbosity > 1:
+                        print(
+                            f"States '{self.name}': Variable '{cti}' not found, but '{ctke}' found, using it as {FV.TKE} for the calculation of {FV.TI}"
+                        )
+                    vars[FV.TKE] = ctke
+                    del vars[FV.TI]
+            return vars
+
         if not isinstance(self.data_source, xr.Dataset):
             # check static data:
             fpath = get_input_path(self.data_source)
@@ -517,19 +532,7 @@ class DatasetStates(States):
             )
             if verbosity > 0:
                 print(f"States '{self.name}': Preprocessing file", fpath.name)
-
-            # automatically switch TI to TKE, if TI not provided:
-            if FV.TI in vars:
-                cti = self.var2ncvar.get(FV.TI, FV.TI)
-                ctke = self.var2ncvar.get(FV.TKE, FV.TKE)
-                if cti not in data_first.data_vars and ctke in data_first.data_vars:
-                    if verbosity > 1:
-                        print(
-                            f"States '{self.name}': Variable '{cti}' not found, but '{ctke}' found, using it as {FV.TKE} for the calculation of {FV.TI}"
-                        )
-                    vars[FV.TKE] = ctke
-                    del vars[FV.TI]
-            self._vars = vars
+            self._vars = _update_vars(data_first, vars)
             self.drop_vars = [
                 v for v in data_first.data_vars if v not in coords + list(vars.values())
             ]
@@ -637,6 +640,8 @@ class DatasetStates(States):
         else:
             self._inds = self.data_source[states_coord].to_numpy()
             self._N = len(self._inds)
+            self._vars = {v: self.var2ncvar.get(v, v) for v in self.variables}
+            self._vars = _update_vars(self.data_source, self._vars)
 
         # make sure state indices are sorted ascending:
         def _is_sorted(a):
