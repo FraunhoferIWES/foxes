@@ -127,7 +127,7 @@ class PointCloudData(DatasetStates):
     def __repr__(self):
         return f"{type(self).__name__}(n_pt={self._n_pt}, n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, cmap, variables, verbosity=0):
+    def _read_ds(self, ds, cmap=None, verbosity=0):
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -135,10 +135,8 @@ class PointCloudData(DatasetStates):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        variables: list of str
-            The variables to extract from the Dataset
+        cmap: dict, optional
+            A mapping from foxes variable names to Dataset dimension names, if not given self._cmap will be used
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -153,7 +151,7 @@ class PointCloudData(DatasetStates):
             data_array is a numpy.ndarray with the data values
 
         """
-        coords, data = super()._read_ds(ds, cmap, variables, verbosity)
+        coords, data = super()._read_ds(ds, cmap=cmap, verbosity=verbosity)
 
         assert FV.X in data and FV.Y in data, (
             f"States '{self.name}': Expecting variables '{FV.X}' and '{FV.Y}' in data, found {list(data.keys())}"
@@ -201,8 +199,6 @@ class PointCloudData(DatasetStates):
         """
         return super().load_data(
             algo,
-            cmap=self._cmap,
-            variables=self.variables,
             bounds_extra_space=None,
             verbosity=verbosity,
         )
@@ -419,7 +415,7 @@ class WeibullPointCloud(PointCloudData):
     def __repr__(self):
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, cmap, variables, verbosity=0):
+    def _read_ds(self, ds, cmap=None, verbosity=0):
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -427,10 +423,8 @@ class WeibullPointCloud(PointCloudData):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        variables: list of str
-            The variables to extract from the Dataset
+        cmap: dict, optional
+            A mapping from foxes variable names to Dataset dimension names, if not given self._cmap will be used
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -446,10 +440,10 @@ class WeibullPointCloud(PointCloudData):
 
         """
         # read data, using wd_coord as state coordinate
-        hcmap = cmap.copy()
+        hcmap = self._cmap.copy() if cmap is None else cmap.copy()
         if self.ws_coord is not None:
-            hcmap = {FV.WS: self.ws_coord, **cmap}
-        coords, data0 = super()._read_ds(ds, hcmap, variables, verbosity)
+            hcmap = {FV.WS: self.ws_coord, **hcmap}
+        coords, data0 = super()._read_ds(ds, cmap=hcmap, verbosity=verbosity)
         wd = coords.pop(FC.STATE)
         wss = coords.pop(FV.WS, None)
 
@@ -660,8 +654,6 @@ class TurbinePointCloud(DatasetStates):
         """
         return super().load_data(
             algo,
-            cmap=self._cmap,
-            variables=self.variables,
             bounds_extra_space=None,
             verbosity=verbosity,
         )

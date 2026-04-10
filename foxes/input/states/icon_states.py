@@ -210,8 +210,6 @@ class ICONStates(DatasetStates):
         self,
         algo,
         data,
-        cmap,
-        vars,
         bounds_extra_space,
         height_bounds,
         verbosity=0,
@@ -225,10 +223,6 @@ class ICONStates(DatasetStates):
             The calculation algorithm
         data: xarray.Dataset
             The dataset to preprocess
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        vars: list
-            The list of variable names
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
@@ -248,9 +242,15 @@ class ICONStates(DatasetStates):
             lonlat = np.stack(
                 [
                     0.5
-                    * (data[cmap[FV.X]].values.min() + data[cmap[FV.X]].values.max()),
+                    * (
+                        data[self._cmap[FV.X]].values.min()
+                        + data[self._cmap[FV.X]].values.max()
+                    ),
                     0.5
-                    * (data[cmap[FV.Y]].values.min() + data[cmap[FV.Y]].values.max()),
+                    * (
+                        data[self._cmap[FV.Y]].values.min()
+                        + data[self._cmap[FV.Y]].values.max()
+                    ),
                 ]
             )
             zone = get_utm_zone(lonlat[None, :])
@@ -270,9 +270,7 @@ class ICONStates(DatasetStates):
                 f"States '{self.name}': config.utm_zone = {config.utm_zone} differs from determined zone {zone}"
             )
 
-        super().preproc_first(
-            algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity
-        )
+        super().preproc_first(algo, data, bounds_extra_space, height_bounds, verbosity)
 
         if self.icon_point_plot is not None:
             try:
@@ -296,8 +294,8 @@ class ICONStates(DatasetStates):
                     )
                 fig, ax = plt.subplots(figsize=(8, 8))
                 xx, yy = np.meshgrid(
-                    data[cmap[FV.X]].values.flatten(),
-                    data[cmap[FV.Y]].values.flatten(),
+                    data[self._cmap[FV.X]].values.flatten(),
+                    data[self._cmap[FV.Y]].values.flatten(),
                 )
                 pts = from_lonlat(np.stack((xx.flatten(), yy.flatten()), axis=-1))
                 ax.plot(
@@ -355,8 +353,6 @@ class ICONStates(DatasetStates):
 
         return super().load_data(
             algo,
-            cmap=self._cmap,
-            variables=self.variables,
             bounds_extra_space=self.bounds_extra_space,
             height_bounds=self.height_bounds,
             verbosity=verbosity,

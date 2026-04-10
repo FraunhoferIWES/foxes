@@ -154,8 +154,6 @@ class FieldData(DatasetStates):
         """
         return super().load_data(
             algo,
-            cmap=self._cmap,
-            variables=self.variables,
             bounds_extra_space=self.bounds_extra_space,
             height_bounds=self.height_bounds,
             verbosity=verbosity,
@@ -165,8 +163,6 @@ class FieldData(DatasetStates):
         self,
         algo,
         data,
-        cmap,
-        vars,
         bounds_extra_space,
         height_bounds,
         verbosity=0,
@@ -180,10 +176,6 @@ class FieldData(DatasetStates):
             The calculation algorithm
         data: xarray.Dataset
             The dataset to preprocess
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        vars: list
-            The list of variable names
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
@@ -197,8 +189,6 @@ class FieldData(DatasetStates):
         super().preproc_first(
             algo,
             data,
-            cmap,
-            vars,
             bounds_extra_space=bounds_extra_space,
             height_bounds=height_bounds,
             verbosity=verbosity,
@@ -224,8 +214,8 @@ class FieldData(DatasetStates):
                     print(f"States '{self.name}': Writing grid point plot to '{fpath}'")
                 fig, ax = plt.subplots(figsize=(8, 8))
                 xx, yy = np.meshgrid(
-                    data[cmap[FV.X]].values.flatten(),
-                    data[cmap[FV.Y]].values.flatten(),
+                    data[self._cmap[FV.X]].values.flatten(),
+                    data[self._cmap[FV.Y]].values.flatten(),
                 )
                 ax.plot(
                     xx,
@@ -335,7 +325,7 @@ class WeibullField(FieldData):
     def __repr__(self):
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, cmap, variables, verbosity=0):
+    def _read_ds(self, ds, cmap=None, verbosity=0):
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -343,10 +333,8 @@ class WeibullField(FieldData):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        variables: list of str
-            The variables to extract from the Dataset
+        cmap: dict, optional
+            A mapping from foxes variable names to Dataset dimension names, if not given self._cmap will be used
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -362,7 +350,7 @@ class WeibullField(FieldData):
 
         """
         # read data, using wd_coord as state coordinate
-        coords, data0 = super()._read_ds(ds, cmap, variables, verbosity)
+        coords, data0 = super()._read_ds(ds, cmap=cmap, verbosity=verbosity)
         wd = coords.pop(FC.STATE)
 
         # replace state by wd coordinate
