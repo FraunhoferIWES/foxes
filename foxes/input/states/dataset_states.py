@@ -532,7 +532,8 @@ class DatasetStates(States):
             )
             if verbosity > 0:
                 print(f"States '{self.name}': Preprocessing file", fpath.name)
-            self._vars = _update_vars(data_first, vars)
+            vars = _update_vars(data_first, vars)
+            self._vars = vars
             self.drop_vars = [
                 v for v in data_first.data_vars if v not in coords + list(vars.values())
             ]
