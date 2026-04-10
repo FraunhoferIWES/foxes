@@ -126,6 +126,8 @@ def add_from_eww(
                     data = data[data[k] > float(val[1:])]
                 elif val.startswith("<"):
                     data = data[data[k] < float(val[1:])]
+                elif val.startswith("!="):
+                    data = data[data[k] != val[2:]]
                 if verbosity > 0:
                     print(f"Applying filter {k}{val}, now {len(data.index)} turbines")
             elif isinstance(val, (list, tuple, set)):
