@@ -103,6 +103,11 @@ class DatasetStates(States):
         the chunk calculation
     time_format: str
         The datetime parsing format string
+    bounds_extra_space: float or str
+        The extra space, either float in m,
+        or str for units of D, e.g. '2.5D'
+    height_bounds: tuple
+        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
     sel: dict, optional
         Subset selection via xr.Dataset.sel()
     isel: dict, optional
@@ -130,6 +135,8 @@ class DatasetStates(States):
         fixed_vars={},
         load_mode="preload",
         time_format=None,
+        bounds_extra_space=None,
+        height_bounds=None,
         sel=None,
         isel=None,
         weight_factor=None,
@@ -164,6 +171,11 @@ class DatasetStates(States):
             the chunk calculation
         time_format: str, optional
             The datetime parsing format string
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         sel: dict, optional
             Subset selection via xr.Dataset.sel()
         isel: dict, optional
@@ -192,10 +204,12 @@ class DatasetStates(States):
         self.sel = sel
         self.isel = isel
         self.weight_factor = weight_factor
+        self.bounds_extra_space = bounds_extra_space
+        self.height_bounds = height_bounds
         self.check_times = check_times
         self.check_input_nans = check_input_nans
         self.preprocess_nc = preprocess_nc
-        self.interp_pars = interp_pars
+        self.interp_pars = interp_pars if interp_pars is not None else {}
         self.variables = [v for v in self.ovars if v not in self.fixed_vars]
 
         self._N = None
@@ -266,6 +280,11 @@ class DatasetStates(States):
                 )
         coords = {v: ds[c].to_numpy() for v, c in cmap.items() if c in ds.coords}
 
+        if FC.STATE in coords and self.time_format is not None:
+            coords[FC.STATE] = pd.to_datetime(
+                coords[FC.STATE], format=self.time_format
+            ).to_numpy()
+
         if verbosity > 1:
             if len(coords):
                 print(f"\n{self.name}: Coordinate ranges")
@@ -273,14 +292,14 @@ class DatasetStates(States):
                     print(f"  {c}: {np.min(d)} --> {np.max(d)}")
             print(f"\n{self.name}: Data ranges")
             for v, d in data.items():
-                nn = np.sum(np.isnan(d))
+                nn = np.sum(np.isnan(d[1]))
                 print(
-                    f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100 * nn / len(d.flat):.2f}%)"
+                    f"  {v}: {np.nanmin(d[1])} --> {np.nanmax(d[1])}, nans: {nn} ({100 * nn / len(d[1].flat):.2f}%)"
                 )
 
         return coords, data
 
-    def _get_data(self, ds, verbosity=0):
+    def _get_data(self, ds, bounds_extra_space=None, height_bounds=None, verbosity=0):
         """
         Gets the data from the Dataset and prepares it for calculations.
 
@@ -288,6 +307,11 @@ class DatasetStates(States):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -346,8 +370,8 @@ class DatasetStates(States):
         self,
         algo,
         data,
-        bounds_extra_space,
-        height_bounds,
+        bounds_extra_space=None,
+        height_bounds=None,
         verbosity=0,
     ):
         """
@@ -363,11 +387,12 @@ class DatasetStates(States):
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/-
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         verbosity: int
             The verbosity level, 0 = silent
 
         """
+
         # check for UTM zone:
         if "utm_number" in data or "utm_letter" in data:
             assert "utm_number" in data and "utm_letter" in data, (
@@ -709,10 +734,18 @@ class DatasetStates(States):
 
         """
         # preload data:
+        bounds_extra_space = (
+            bounds_extra_space
+            if bounds_extra_space is not None
+            else self.bounds_extra_space
+        )
+        height_bounds = (
+            height_bounds if height_bounds is not None else self.height_bounds
+        )
         self.__preload(
             algo,
-            bounds_extra_space,
-            height_bounds,
+            bounds_extra_space=bounds_extra_space,
+            height_bounds=height_bounds,
             verbosity=verbosity,
         )
 
@@ -720,7 +753,10 @@ class DatasetStates(States):
 
         if self.load_mode == "preload":
             self._coords, data, w = self._get_data(
-                self.data_source, verbosity=verbosity
+                self.data_source,
+                bounds_extra_space=bounds_extra_space,
+                height_bounds=height_bounds,
+                verbosity=verbosity,
             )
 
             if FC.STATE in self._coords:

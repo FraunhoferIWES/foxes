@@ -27,11 +27,6 @@ class FieldData(DatasetStates):
         The height coordinate name in the data
     weight_ncvar: str
         Name of the weight data variable in the nc file(s)
-    bounds_extra_space: float or str
-        The extra space, either float in m,
-        or str for units of D, e.g. '2.5D'
-    height_bounds: tuple, optional
-        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
     grid_point_plot: str, optional
         Path to a plot file, e.g. grid_points.png, to visualize the
         selected data grid points and the layout of the farm.
@@ -63,8 +58,6 @@ class FieldData(DatasetStates):
         h_coord="height",
         time_format=r"%Y-%m-%d_%H:%M:%S",
         weight_ncvar=None,
-        bounds_extra_space=1000,
-        height_bounds=None,
         grid_point_plot=None,
         **kwargs,
     ):
@@ -87,11 +80,6 @@ class FieldData(DatasetStates):
             The datetime parsing format string
         weight_ncvar: str, optional
             Name of the weight data variable in the nc file(s)
-        bounds_extra_space: float or str, optional
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         grid_point_plot: str, optional
             Path to a plot file, e.g. grid_points.png, to visualize the
             selected data grid points and the layout of the farm.
@@ -105,8 +93,6 @@ class FieldData(DatasetStates):
         self.y_coord = y_coord
         self.h_coord = h_coord
         self.weight_ncvar = weight_ncvar
-        self.bounds_extra_space = bounds_extra_space
-        self.height_bounds = height_bounds
         self.grid_point_plot = grid_point_plot
 
         assert FV.WEIGHT not in self.ovars, (
@@ -128,36 +114,6 @@ class FieldData(DatasetStates):
         }
         if self.h_coord is not None:
             self._cmap[FV.H] = self.h_coord
-
-    def load_data(self, algo, verbosity=0):
-        """
-        Load and/or create all model data that is subject to chunking.
-
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        return super().load_data(
-            algo,
-            bounds_extra_space=self.bounds_extra_space,
-            height_bounds=self.height_bounds,
-            verbosity=verbosity,
-        )
 
     def preproc_first(
         self,

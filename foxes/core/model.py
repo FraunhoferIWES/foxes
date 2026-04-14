@@ -171,7 +171,9 @@ class Model(ABC):
 
             if verbosity > 0:
                 print(f"Initializing model '{self.name}'")
-            algo.store_model_data(self, self.load_data(algo, verbosity), force)
+            algo.store_model_data(
+                self, self.load_data(algo, verbosity=verbosity), force
+            )
 
             self.__initialized = True
 

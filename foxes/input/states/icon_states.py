@@ -28,14 +28,6 @@ class ICONStates(DatasetStates):
         The latitude coordinate name in the data
     lon_coord: str
         The longitude coordinate name in the data
-    bounds_extra_space: float or str, optional
-        The extra space, either float in m,
-        or str for units of D, e.g. '2.5D'
-    height_bounds: tuple, optional
-        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-    interp_pars: dict, optional
-        Additional parameters for scipy.interpolate.griddata,
-        e.g. {'method': 'linear', 'fill_value': None, 'rescale': True}
     icon_point_plot: str, optional
         Path to a plot file, e.g. wrf_points.png, to visualize the
         selected ICON grid points and the layout of the farm.
@@ -64,9 +56,6 @@ class ICONStates(DatasetStates):
         var2ncvar=None,
         load_mode="fly",
         time_format=None,
-        bounds_extra_space=0.0,
-        height_bounds=None,
-        interp_pars=None,
         icon_point_plot=None,
         utm_zone=None,
         **kwargs,
@@ -105,14 +94,6 @@ class ICONStates(DatasetStates):
             the chunk calculations.
         time_format: str
             The datetime parsing format string
-        bounds_extra_space: float or str, optional
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        interp_pars: dict, optional
-            Additional parameters for scipy.interpolate.griddata,
-            e.g. {'method': 'linear', 'fill_value': None, 'rescale': True}
         icon_point_plot: str, optional
             Path to a plot file, e.g. wrf_points.png, to visualize the
             selected ICON grid points and the layout of the farm.
@@ -154,10 +135,7 @@ class ICONStates(DatasetStates):
         self.time_coord = time_coord
         self.lat_coord = lat_coord
         self.lon_coord = lon_coord
-        self.bounds_extra_space = bounds_extra_space
-        self.height_bounds = height_bounds
         self.icon_point_plot = icon_point_plot
-        self.interp_pars = interp_pars if interp_pars is not None else {}
         self._prepr0 = self.preprocess_nc
         self.preprocess_nc = self._preproc_icon_nc
         self.__utm_zone = utm_zone

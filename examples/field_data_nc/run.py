@@ -43,7 +43,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-e", "--engine", help="The engine", default="ProcessEngine")
     parser.add_argument(
-        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
+        "-n", "--n_cpus", help="The number of cpus", default=8, type=int
     )
     parser.add_argument(
         "-c",
@@ -74,6 +74,8 @@ if __name__ == "__main__":
         args.file_pattern,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         load_mode=args.load_mode,
+        bounds_extra_space=None,
+        height_bounds=None,
     )
 
     mbook = foxes.models.ModelBook()
@@ -98,7 +100,7 @@ if __name__ == "__main__":
         wake_frame=args.wake_frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        verbosity=1,
+        verbosity=2,
     )
 
     engine = foxes.Engine.new(
