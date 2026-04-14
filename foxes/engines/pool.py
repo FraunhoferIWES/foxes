@@ -403,7 +403,7 @@ class PoolEngine(Engine):
                         futures[(chunki_states, chunki_points)] = self.submit(
                             _run,
                             deepcopy(algo),
-                            deepcopy(model),
+                            model,
                             *data,
                             chunk_store=chunk_store,
                             chunk_key=key,
@@ -417,11 +417,13 @@ class PoolEngine(Engine):
 
                     i0_targets = i1_targets
 
+                    """
                     if self.n_workers >= 10:
                         while len(futures) > self.n_workers * 2:
                             k = next(iter(futures))
                             results[k] = self.await_result(futures.pop(k))
                             results_mgr.update(results, futures)
+                    """
 
                 i0_states = i1_states
 
