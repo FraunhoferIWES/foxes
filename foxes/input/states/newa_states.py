@@ -29,11 +29,6 @@ class NEWAStates(DatasetStates):
         Name of the weight data variable in the nc file(s)
     interpn_pars: dict, optional
         Additional parameters for scipy.interpolate.interpn
-    bounds_extra_space: float or str
-        The extra space, either float in m,
-        or str for units of D, e.g. '2.5D'
-    height_bounds: tuple, optional
-        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
 
     Examples
     --------
@@ -68,8 +63,6 @@ class NEWAStates(DatasetStates):
         var2ncvar=None,
         load_mode="fly",
         time_format=None,
-        bounds_extra_space=0.0,
-        height_bounds=None,
         interp_pars={},
         wrf_point_plot=None,
         **kwargs,
@@ -110,11 +103,6 @@ class NEWAStates(DatasetStates):
             the chunk calculations.
         time_format: str
             The datetime parsing format string
-        bounds_extra_space: float or str, optional
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         interp_pars: dict, optional
             Additional parameters for scipy.interpolate.griddata,
             e.g. {'method': 'linear', 'fill_value': None, 'rescale': True}
@@ -155,8 +143,6 @@ class NEWAStates(DatasetStates):
         self.height_coord = height_coord
         self.xlat_coord = xlat_coord
         self.xlon_coord = xlon_coord
-        self.bounds_extra_space = bounds_extra_space
-        self.height_bounds = height_bounds
         self.wrf_point_plot = wrf_point_plot
         self.variables = list(set([v if v != FV.TI else FV.TKE for v in ovars]))
 
@@ -318,38 +304,6 @@ class NEWAStates(DatasetStates):
             ax.autoscale_view(tight=True)
             fig.savefig(fpath, bbox_inches="tight")
             plt.close()
-
-    def load_data(self, algo, verbosity=0):
-        """
-        Load and/or create all model data that is subject to chunking.
-
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        return super().load_data(
-            algo,
-            cmap=self._cmap,
-            variables=self.variables,
-            bounds_extra_space=self.bounds_extra_space,
-            height_bounds=self.height_bounds,
-            verbosity=verbosity,
-        )
 
     def interpolate_data(self, idims, icrds, d, pts, vrs, times):
         """

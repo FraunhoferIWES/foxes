@@ -103,6 +103,11 @@ class DatasetStates(States):
         the chunk calculation
     time_format: str
         The datetime parsing format string
+    bounds_extra_space: float or str
+        The extra space, either float in m,
+        or str for units of D, e.g. '2.5D'
+    height_bounds: tuple
+        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
     sel: dict, optional
         Subset selection via xr.Dataset.sel()
     isel: dict, optional
@@ -130,6 +135,8 @@ class DatasetStates(States):
         fixed_vars={},
         load_mode="preload",
         time_format=None,
+        bounds_extra_space=None,
+        height_bounds=None,
         sel=None,
         isel=None,
         weight_factor=None,
@@ -164,6 +171,11 @@ class DatasetStates(States):
             the chunk calculation
         time_format: str, optional
             The datetime parsing format string
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         sel: dict, optional
             Subset selection via xr.Dataset.sel()
         isel: dict, optional
@@ -192,10 +204,12 @@ class DatasetStates(States):
         self.sel = sel
         self.isel = isel
         self.weight_factor = weight_factor
+        self.bounds_extra_space = bounds_extra_space
+        self.height_bounds = height_bounds
         self.check_times = check_times
         self.check_input_nans = check_input_nans
         self.preprocess_nc = preprocess_nc
-        self.interp_pars = interp_pars
+        self.interp_pars = interp_pars if interp_pars is not None else {}
         self.variables = [v for v in self.ovars if v not in self.fixed_vars]
 
         self._N = None
@@ -219,7 +233,7 @@ class DatasetStates(States):
             )
         return self.__data_source
 
-    def _read_ds(self, ds, cmap, variables, verbosity=0):
+    def _read_ds(self, ds, cmap=None, verbosity=0):
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -227,10 +241,8 @@ class DatasetStates(States):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        variables: list of str
-            The variables to extract from the Dataset
+        cmap: dict, optional
+            A mapping from foxes variable names to Dataset dimension names, if None, use self._cmap
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -245,9 +257,9 @@ class DatasetStates(States):
             data_array is a numpy.ndarray with the data values
 
         """
+        cmap = cmap if cmap is not None else self._cmap
         data = {}
-        for v in variables:
-            w = self.var2ncvar.get(v, v)
+        for v, w in self._vars.items():
             if w in ds.data_vars:
                 d = ds[w]
                 i = [d.dims.index(c) for c in cmap.values() if c in d.dims]
@@ -264,10 +276,14 @@ class DatasetStates(States):
                     data[v] = (dms, np.moveaxis(d.to_numpy(), i, j))
             else:
                 raise KeyError(
-                    f"States '{self.name}': Variable '{w}' not found in data source '{self.data_source}', available variables: {list(ds.data_vars)}"
+                    f"States '{self.name}': Variable '{w}' not found in data, available variables: {list(ds.data_vars)}"
                 )
-
         coords = {v: ds[c].to_numpy() for v, c in cmap.items() if c in ds.coords}
+
+        if FC.STATE in coords and self.time_format is not None:
+            coords[FC.STATE] = pd.to_datetime(
+                coords[FC.STATE], format=self.time_format
+            ).to_numpy()
 
         if verbosity > 1:
             if len(coords):
@@ -276,14 +292,14 @@ class DatasetStates(States):
                     print(f"  {c}: {np.min(d)} --> {np.max(d)}")
             print(f"\n{self.name}: Data ranges")
             for v, d in data.items():
-                nn = np.sum(np.isnan(d))
+                nn = np.sum(np.isnan(d[1]))
                 print(
-                    f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100 * nn / len(d.flat):.2f}%)"
+                    f"  {v}: {np.nanmin(d[1])} --> {np.nanmax(d[1])}, nans: {nn} ({100 * nn / len(d[1].flat):.2f}%)"
                 )
 
         return coords, data
 
-    def _get_data(self, ds, cmap, variables, verbosity=0):
+    def _get_data(self, ds, bounds_extra_space=None, height_bounds=None, verbosity=0):
         """
         Gets the data from the Dataset and prepares it for calculations.
 
@@ -291,10 +307,11 @@ class DatasetStates(States):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        variables: list of str
-            The variables to extract from the Dataset
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -314,10 +331,10 @@ class DatasetStates(States):
             weights are among data. Shape: (n_states,)
 
         """
-        coords, data0 = self._read_ds(ds, cmap, variables, verbosity=verbosity)
+        coords, data0 = self._read_ds(ds, verbosity=verbosity)
 
         weights = None
-        if FV.WEIGHT in variables:
+        if FV.WEIGHT in self._vars:
             assert FV.WEIGHT in data0, (
                 f"States '{self.name}': Missing weights variable '{FV.WEIGHT}' in data, found {sorted(list(data0.keys()))}"
             )
@@ -353,10 +370,8 @@ class DatasetStates(States):
         self,
         algo,
         data,
-        cmap,
-        vars,
-        bounds_extra_space,
-        height_bounds,
+        bounds_extra_space=None,
+        height_bounds=None,
         verbosity=0,
     ):
         """
@@ -368,19 +383,16 @@ class DatasetStates(States):
             The calculation algorithm
         data: xarray.Dataset
             The dataset to preprocess
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        vars: list
-            The list of variable names
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/-
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         verbosity: int
             The verbosity level, 0 = silent
 
         """
+
         # check for UTM zone:
         if "utm_number" in data or "utm_letter" in data:
             assert "utm_number" in data and "utm_letter" in data, (
@@ -393,7 +405,7 @@ class DatasetStates(States):
             return
 
         # find vertical bounds:
-        if FV.H in cmap:
+        if FV.H in self._cmap:
             if height_bounds is None:
                 H = algo.farm.get_hub_heights(algo)
                 D = algo.farm.get_rotor_diameters(algo)
@@ -404,7 +416,7 @@ class DatasetStates(States):
                 print(
                     f"States '{self.name}': Restricting heights to {height_bounds[0]} - {height_bounds[1]} m"
                 )
-            self._heights = data[cmap[FV.H]].to_numpy()
+            self._heights = data[self._cmap[FV.H]].to_numpy()
             if (
                 np.min(self._heights) > height_bounds[0]
                 or np.max(self._heights) < height_bounds[1]
@@ -412,7 +424,7 @@ class DatasetStates(States):
                 raise ValueError(
                     f"States '{self.name}': Height bounds {height_bounds} m are outside of data height range {np.min(self._heights)} - {np.max(self._heights)} m"
                 )
-            ch = cmap[FV.H]
+            ch = self._cmap[FV.H]
             if self.isel is None or ch not in self.isel:
                 i0 = 0
                 while (
@@ -437,11 +449,11 @@ class DatasetStates(States):
 
         # find horizontal bounds:
         if bounds_extra_space is not None:
-            assert FV.X in cmap, (
-                f"States '{self.name}': x coordinate '{FV.X}' not in cmap {cmap}"
+            assert FV.X in self._cmap, (
+                f"States '{self.name}': x coordinate '{FV.X}' not in cmap {self._cmap}"
             )
-            assert FV.Y in cmap, (
-                f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {cmap}"
+            assert FV.Y in self._cmap, (
+                f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {self._cmap}"
             )
             xy_min, xy_max = self._find_xy_bounds(algo, bounds_extra_space)
             if verbosity > 0:
@@ -449,9 +461,9 @@ class DatasetStates(States):
                     f"States '{self.name}': Restricting xy to bounds {xy_min} - {xy_max}"
                 )
             for v, i in zip((FV.X, FV.Y), (0, 1)):
-                if self.isel is None or cmap[v] not in self.isel:
+                if self.isel is None or self._cmap[v] not in self.isel:
                     x0, x1 = xy_min[i], xy_max[i]
-                    x = data[cmap[v]].to_numpy()
+                    x = data[self._cmap[v]].to_numpy()
                     i0 = 0
                     while i0 < len(x) - 1 and x[i0 + 1] <= x0:
                         i0 += 1
@@ -463,27 +475,45 @@ class DatasetStates(States):
                         i1 = min(len(x) - 1, i1 + 1)
                     if self.isel is None:
                         self.isel = {}
-                    self.isel.update({cmap[v]: slice(i0, i1 + 1)})
+                    self.isel.update({self._cmap[v]: slice(i0, i1 + 1)})
                 if verbosity > 0:
-                    hv = data[cmap[v]].isel({cmap[v]: self.isel[cmap[v]]}).to_numpy()
+                    hv = (
+                        data[self._cmap[v]]
+                        .isel({self._cmap[v]: self.isel[self._cmap[v]]})
+                        .to_numpy()
+                    )
                     print(
-                        f"States '{self.name}': Selected {cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
+                        f"States '{self.name}': Selected {self._cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
                     )
 
     def __preload(
         self,
         algo,
-        cmap,
         bounds_extra_space,
         height_bounds,
         verbosity=0,
     ):
         """Helper function for preloading data."""
 
-        assert FC.STATE in cmap, (
-            f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {cmap}"
+        assert FC.STATE in self._cmap, (
+            f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {self._cmap}"
         )
-        states_coord = cmap[FC.STATE]
+        states_coord = self._cmap[FC.STATE]
+
+        def _update_vars(ds, vars):
+            """Helper function to automatically update variables"""
+            # automatically switch TI to TKE, if TI not provided:
+            if FV.TI in vars:
+                cti = self.var2ncvar.get(FV.TI, FV.TI)
+                ctke = self.var2ncvar.get(FV.TKE, FV.TKE)
+                if cti not in ds.data_vars and ctke in ds.data_vars:
+                    if verbosity > 1:
+                        print(
+                            f"States '{self.name}': Variable '{cti}' not found, but '{ctke}' found, using it as {FV.TKE} for the calculation of {FV.TI}"
+                        )
+                    vars[FV.TKE] = ctke
+                    del vars[FV.TI]
+            return vars
 
         if not isinstance(self.data_source, xr.Dataset):
             # check static data:
@@ -501,8 +531,8 @@ class DatasetStates(States):
                 glb = prt.name + "/" + glb
                 prt = prt.parent
             files = sorted(list(prt.glob(glb)))
-            coords = list(cmap.values())
-            vars = [self.var2ncvar.get(v, v) for v in self.variables]
+            coords = list(self._cmap.values())
+            vars = {v: self.var2ncvar.get(v, v) for v in self.variables}
 
             # pre-process first file:
             data_first = None
@@ -527,17 +557,19 @@ class DatasetStates(States):
             )
             if verbosity > 0:
                 print(f"States '{self.name}': Preprocessing file", fpath.name)
-            self.drop_vars = [v for v in data_first.data_vars if v not in coords + vars]
+            vars = _update_vars(data_first, vars)
+            self._vars = vars
+            self.drop_vars = [
+                v for v in data_first.data_vars if v not in coords + list(vars.values())
+            ]
             if len(self.drop_vars) > 0 and verbosity > 0:
-                print(f"States '{self.name}': Keeping variables  {vars}")
+                print(f"States '{self.name}': Keeping variables  {list(vars.values())}")
                 print(f"States '{self.name}': Dropping variables {self.drop_vars}")
             if self.preprocess_nc is not None:
                 data_first = self.preprocess_nc(data_first)
             self.preproc_first(
                 algo,
                 data=data_first,
-                cmap=cmap,
-                vars=vars,
                 bounds_extra_space=bounds_extra_space,
                 height_bounds=height_bounds,
                 verbosity=verbosity,
@@ -563,7 +595,7 @@ class DatasetStates(States):
                 _read_nc_file,
                 files,
                 coords=coords,
-                vars=vars,
+                vars=list(vars.values()),
                 nc_engine=config.nc_engine,
                 isel=self.isel,
                 sel=self.sel,
@@ -634,6 +666,8 @@ class DatasetStates(States):
         else:
             self._inds = self.data_source[states_coord].to_numpy()
             self._N = len(self._inds)
+            self._vars = {v: self.var2ncvar.get(v, v) for v in self.variables}
+            self._vars = _update_vars(self.data_source, self._vars)
 
         # make sure state indices are sorted ascending:
         def _is_sorted(a):
@@ -669,8 +703,6 @@ class DatasetStates(States):
     def load_data(
         self,
         algo,
-        cmap,
-        variables,
         bounds_extra_space=None,
         height_bounds=None,
         verbosity=0,
@@ -686,10 +718,6 @@ class DatasetStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        variables: list of str
-            The variables to extract from the Dataset
         bounds_extra_space: float, optional
             The extra space in meters to add to the horizontal wind farm bounds
         height_bounds: tuple, optional
@@ -706,11 +734,18 @@ class DatasetStates(States):
 
         """
         # preload data:
+        bounds_extra_space = (
+            bounds_extra_space
+            if bounds_extra_space is not None
+            else self.bounds_extra_space
+        )
+        height_bounds = (
+            height_bounds if height_bounds is not None else self.height_bounds
+        )
         self.__preload(
             algo,
-            cmap,
-            bounds_extra_space,
-            height_bounds,
+            bounds_extra_space=bounds_extra_space,
+            height_bounds=height_bounds,
             verbosity=verbosity,
         )
 
@@ -718,7 +753,10 @@ class DatasetStates(States):
 
         if self.load_mode == "preload":
             self._coords, data, w = self._get_data(
-                self.data_source, cmap, variables, verbosity
+                self.data_source,
+                bounds_extra_space=bounds_extra_space,
+                height_bounds=height_bounds,
+                verbosity=verbosity,
             )
 
             if FC.STATE in self._coords:
@@ -863,7 +901,7 @@ class DatasetStates(States):
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self._inds
 
-    def get_calc_data(self, mdata, fdata, cmap, variables):
+    def get_calc_data(self, mdata, fdata):
         """
         Gathers data for calculations.
 
@@ -876,10 +914,6 @@ class DatasetStates(States):
             The mdata object
         fdata: foxes.core.FData
             The fdata object
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        variables: list of str
-            The variables to extract from the Dataset
 
         Returns
         -------
@@ -898,10 +932,10 @@ class DatasetStates(States):
 
         """
         # prepare
-        assert FC.STATE in cmap, (
-            f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {cmap}"
+        assert FC.STATE in self._cmap, (
+            f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {self._cmap}"
         )
-        states_coord = cmap[FC.STATE]
+        states_coord = self._cmap[FC.STATE]
         n_states = mdata.n_states
 
         # case preload
@@ -926,7 +960,7 @@ class DatasetStates(States):
             i0 = mdata.states_i0(counter=True)
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({states_coord: s}).load()
-            coords, data, weights = self._get_data(ds, cmap, variables, verbosity=0)
+            coords, data, weights = self._get_data(ds, verbosity=0)
             data = {dims: (d[1], d[2]) for dims, d in data.items()}
             for dims, (vrs, __) in data.items():
                 assert FC.TURBINE not in dims, (
@@ -937,7 +971,6 @@ class DatasetStates(States):
         # case fly
         elif self.load_mode == "fly":
             data = []
-            vars = [self.var2ncvar.get(v, v) for v in variables]
             i0 = mdata.states_i0(counter=True)
             i1 = i0 + n_states
             j0 = 0
@@ -957,8 +990,8 @@ class DatasetStates(States):
 
                         d = _read_nc_file(
                             fpath,
-                            coords=list(cmap.values()),
-                            vars=vars,
+                            coords=list(self._cmap.values()),
+                            vars=list(self._vars.values()),
                             nc_engine=config.nc_engine,
                             isel=isel,
                             sel=self.sel,
@@ -995,7 +1028,7 @@ class DatasetStates(States):
                     join="exact",
                     combine_attrs="drop",
                 )
-            coords, data, weights = self._get_data(data, cmap, variables, verbosity=0)
+            coords, data, weights = self._get_data(data, verbosity=0)
             data = {dims: (d[1], d[2]) for dims, d in data.items()}
 
             for dims, (vrs, __) in data.items():
@@ -1136,9 +1169,7 @@ class DatasetStates(States):
         times = mdata[FC.STATE]
 
         # get data for calculation
-        coords, data, weights = self.get_calc_data(
-            mdata, fdata, self._cmap, self.variables
-        )
+        coords, data, weights = self.get_calc_data(mdata, fdata)
         coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
 
         # check if points are state dependent

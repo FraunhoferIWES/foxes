@@ -934,3 +934,11 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fix for bug with states averaging in `PointCalculator`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.4](https://github.com/FraunhoferIWES/foxes/commits/v1.7.4)
+
+## v1.7.5
+
+- Bug fixes:
+  - Memory leak fixed, causing cases with many chunk to pile up memory for pool engines
+  - Bug fixed with `PopulationStates` in combination with `SingleStateField` states
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.5](https://github.com/FraunhoferIWES/foxes/commits/v1.7.5)

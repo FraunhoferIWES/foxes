@@ -1,6 +1,7 @@
 import numpy as np
 from xarray import Dataset
 from abc import abstractmethod
+from copy import deepcopy
 
 from foxes.config import config, get_output_path
 from foxes.core import Engine
@@ -82,9 +83,24 @@ def _run(
     **cpars,
 ):
     """Helper function for running in a single process"""
+
+    """
+    # For debugging: Check memory usage at the start of the calculation
+    import psutil
+    print(psutil.Process().pid, f"{algo.name} MEMORY ENTERING _RUN:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
+    """
+
     if utm_zone is not None:  # needed in some cases for mpi engine TODO investigate
         config.set_utm_zone(*utm_zone)
     algo.reset_chunk_store(chunk_store.copy())
+
+    """
+    # For debugging: Check object sizes in memory
+    import psutil
+    import objsize
+    print(psutil.Process().pid, f"{algo.name} OBJECT SIZES ENTERING _RUN:", {k: objsize.get_deep_size(v) / 1024 ** 2 for k, v in {"algo": algo, "model": model, "data": data}.items()}, "MB")
+    """
+
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store()
     cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
@@ -363,6 +379,12 @@ class PoolEngine(Engine):
                         n_chunks_points=n_chunks_targets,
                     )
 
+                    """
+                    # For debugging: Check memory usage of main process before submitting the chunk calculation
+                    import psutil
+                    print(psutil.Process().pid, f"{algo.name} SUBMITTING {key} MEMORY:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
+                    """
+
                     # submit model calculation:
                     if self.share_cstore:
                         futures[(chunki_states, chunki_points)] = self.submit(
@@ -380,7 +402,7 @@ class PoolEngine(Engine):
                         utm_zone = config.utm_zone if config.utm_zone_set else None
                         futures[(chunki_states, chunki_points)] = self.submit(
                             _run,
-                            algo,
+                            deepcopy(algo),  # prevents memory leak
                             model,
                             *data,
                             chunk_store=chunk_store,
@@ -393,14 +415,13 @@ class PoolEngine(Engine):
                         )
                     del data
 
+                    f = 5 if self.n_workers < 5 else 2
+                    while len(futures) > self.n_workers * f:
+                        k = next(iter(futures))
+                        results[k] = self.await_result(futures.pop(k))
+                        results_mgr.update(results, futures)
+
                     i0_targets = i1_targets
-
-                    if self.n_workers >= 10:
-                        while len(futures) > self.n_workers * 2:
-                            k = next(iter(futures))
-                            results[k] = self.await_result(futures.pop(k))
-                            results_mgr.update(results, futures)
-
                 i0_states = i1_states
 
             fkeys = list(futures.keys())

@@ -281,12 +281,13 @@ def _process_file(
             else:
                 data.append(wrf_data[w].values)
                 dims.append(wrf_data[w].dims)
-            if check_nan:
-                n_nan = np.sum(np.isnan(data[-1]))
-                if n_nan > 0:
-                    raise ValueError(
-                        f"{fpath.name}: Found {n_nan} NaN values in variable {w}"
-                    )
+    if check_nan:
+        for i, w in enumerate(var2ncvar.values()):
+            n_nan = np.sum(np.isnan(data[i]))
+            if n_nan > 0:
+                raise ValueError(
+                    f"{fpath.name}: Found {n_nan} NaN values in variable {w}"
+                )
     times = wrf_data[cs].values
     heights = wrf_data[ch].values if ch in wrf_data else None
     del wrf_data
@@ -364,7 +365,7 @@ def _process_file(
 
     def _interpolate(pts, arr, qts):
         if not check_nan:
-            s = np.any(np.isnan(arr), axis=tuple(range(len(arr.shape))))
+            s = np.any(np.isnan(arr), axis=tuple(range(1, len(arr.shape))))
             s = np.s_[~s, ...]
             pts = pts[s]
             arr = arr[s]
