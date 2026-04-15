@@ -402,7 +402,7 @@ class PoolEngine(Engine):
                         utm_zone = config.utm_zone if config.utm_zone_set else None
                         futures[(chunki_states, chunki_points)] = self.submit(
                             _run,
-                            deepcopy(algo),
+                            deepcopy(algo),  # prevents memory leak
                             model,
                             *data,
                             chunk_store=chunk_store,
@@ -415,16 +415,13 @@ class PoolEngine(Engine):
                         )
                     del data
 
+                    f = 5 if self.n_workers < 5 else 2
+                    while len(futures) > self.n_workers * f:
+                        k = next(iter(futures))
+                        results[k] = self.await_result(futures.pop(k))
+                        results_mgr.update(results, futures)
+
                     i0_targets = i1_targets
-
-                    """
-                    if self.n_workers >= 10:
-                        while len(futures) > self.n_workers * 2:
-                            k = next(iter(futures))
-                            results[k] = self.await_result(futures.pop(k))
-                            results_mgr.update(results, futures)
-                    """
-
                 i0_states = i1_states
 
             fkeys = list(futures.keys())
