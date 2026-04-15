@@ -415,8 +415,7 @@ class PoolEngine(Engine):
                         )
                     del data
 
-                    f = 5 if self.n_workers < 5 else 2
-                    while len(futures) > self.n_workers * f:
+                    while len(futures) > self.n_workers * 3:
                         k = next(iter(futures))
                         results[k] = self.await_result(futures.pop(k))
                         results_mgr.update(results, futures)
