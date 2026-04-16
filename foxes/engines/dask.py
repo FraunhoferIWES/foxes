@@ -443,9 +443,9 @@ class DaskEngine(DaskBaseEngine):
             results = dask.compute(futures)[0]
             results_mgr.update(results)
 
-        if iterative:
-            chunk_store.update(new_chunk_store)
-            algo.reset_chunk_store(chunk_store)
+        # update chunk store:
+        chunk_store.update(new_chunk_store)
+        algo.reset_chunk_store(chunk_store)
 
         return results_mgr.results
 
@@ -860,9 +860,9 @@ class LocalClusterEngine(DaskBaseEngine):
                 results[k] = self.await_result(futures.pop(k))
                 results_mgr.update(results, futures)
 
-        if iterative:
-            chunk_store.update(new_chunk_store)
-            algo.reset_chunk_store(chunk_store)
+        # update chunk store:
+        chunk_store.update(new_chunk_store)
+        algo.reset_chunk_store(chunk_store)
 
         return results_mgr.results
 

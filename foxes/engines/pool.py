@@ -439,10 +439,10 @@ class PoolEngine(Engine):
                 results[k] = self.await_result(futures.pop(k))
                 results_mgr.update(results, futures)
 
-            del calc_pars, farm_data, point_data, results, futures
+            del calc_pars, farm_data, results, futures
 
-        if iterative:
-            chunk_store.update(new_chunk_store)
-            algo.reset_chunk_store(chunk_store)
+        # update chunk store:
+        chunk_store.update(new_chunk_store)
+        algo.reset_chunk_store(chunk_store)
 
         return results_mgr.results
