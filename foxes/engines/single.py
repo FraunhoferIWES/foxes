@@ -222,6 +222,7 @@ class SingleChunkEngine(Engine):
         # start calculation:
         with self.new_chunk_results_manager(
             algo,
+            chunk_store=chunk_store,
             goal_data=goal_data,
             n_chunks_states=1,
             n_chunks_targets=1,

@@ -323,8 +323,6 @@ class DaskEngine(DaskBaseEngine):
             The model results
 
         """
-        # reset chunk store:
-        algo.reset_chunk_store(chunk_store)
 
         # subset selection:
         model_data, farm_data, point_data = self.select_subsets(
@@ -344,6 +342,7 @@ class DaskEngine(DaskBaseEngine):
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
         algo.reset_chunk_store(chunk_store)
+        new_chunk_store = {}
 
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -370,6 +369,7 @@ class DaskEngine(DaskBaseEngine):
         with self.new_chunk_results_manager(
             algo,
             goal_data=goal_data,
+            chunk_store=new_chunk_store,
             n_chunks_states=n_chunks_states,
             n_chunks_targets=n_chunks_targets,
             out_vars=out_vars,
@@ -442,6 +442,10 @@ class DaskEngine(DaskBaseEngine):
                 )
             results = dask.compute(futures)[0]
             results_mgr.update(results)
+
+        if iterative:
+            chunk_store.update(new_chunk_store)
+            algo.reset_chunk_store(chunk_store)
 
         return results_mgr.results
 
@@ -738,6 +742,7 @@ class LocalClusterEngine(DaskBaseEngine):
         if farm_data is None:
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
+        new_chunk_store = {}
 
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -757,9 +762,16 @@ class LocalClusterEngine(DaskBaseEngine):
         cpars = self._client.scatter(calc_pars, broadcast=True)
         all_data = [falgo, fmodel, cpars]
 
+        # scatter chunk store data:
+        cstore = chunk_store
+        if len(cstore):
+            cstore = self._client.scatter(cstore, hash=False)
+            all_data.append(cstore)
+
         # start calculation:
         with self.new_chunk_results_manager(
             algo,
+            chunk_store=new_chunk_store,
             goal_data=goal_data,
             n_chunks_states=n_chunks_states,
             n_chunks_targets=n_chunks_targets,
@@ -808,12 +820,6 @@ class LocalClusterEngine(DaskBaseEngine):
                     ldims = self._client.scatter(ldims)
                     all_data += [fut_data, names, dims, ldims]
 
-                    # scatter chunk store data:
-                    cstore = chunk_store
-                    if len(cstore):
-                        cstore = self._client.scatter(cstore, hash=False)
-                        all_data.append(cstore)
-
                     # submit model calculation:
                     futures[(chunki_states, chunki_points)] = self.submit(
                         _run_on_cluster,
@@ -837,7 +843,7 @@ class LocalClusterEngine(DaskBaseEngine):
                         cpars=cpars,
                         retries=10,
                     )
-                    del fut_data, cstore
+                    del fut_data
 
                     i0_targets = i1_targets
 
@@ -853,6 +859,10 @@ class LocalClusterEngine(DaskBaseEngine):
             for k in list(futures.keys()):
                 results[k] = self.await_result(futures.pop(k))
                 results_mgr.update(results, futures)
+
+        if iterative:
+            chunk_store.update(new_chunk_store)
+            algo.reset_chunk_store(chunk_store)
 
         return results_mgr.results
 

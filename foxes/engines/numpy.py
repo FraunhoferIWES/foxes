@@ -224,6 +224,7 @@ class NumpyEngine(Engine):
         with self.new_chunk_results_manager(
             algo,
             goal_data=goal_data,
+            chunk_store=chunk_store,
             n_chunks_states=n_chunks_states,
             n_chunks_targets=n_chunks_targets,
             out_vars=out_vars,

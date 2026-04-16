@@ -1,7 +1,6 @@
 import numpy as np
 from xarray import Dataset
 from abc import abstractmethod
-from copy import deepcopy
 
 from foxes.config import config, get_output_path
 from foxes.core import Engine
@@ -120,6 +119,7 @@ def _run_shared(
     **cpars,
 ):
     """Helper function for running in a single process"""
+
     results = model.calculate(algo, *data, **cpars)
     cstore = (
         {chunk_key: algo.chunk_store[chunk_key]}
@@ -306,6 +306,9 @@ class PoolEngine(Engine):
         # reset chunk store:
         if self.share_cstore:
             algo.reset_chunk_store(chunk_store)
+            new_chunk_store = chunk_store
+        else:
+            new_chunk_store = {}
 
         # subset selection:
         model_data, farm_data, point_data = self.select_subsets(
@@ -345,6 +348,7 @@ class PoolEngine(Engine):
         # start calculation:
         with self.new_chunk_results_manager(
             algo,
+            chunk_store=new_chunk_store,
             goal_data=goal_data,
             n_chunks_states=n_chunks_states,
             n_chunks_targets=n_chunks_targets,
@@ -385,6 +389,13 @@ class PoolEngine(Engine):
                     print(psutil.Process().pid, f"{algo.name} SUBMITTING {key} MEMORY:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
                     """
 
+                    """
+                    # For debugging: Check object sizes in memory
+                    import psutil
+                    import objsize
+                    print(psutil.Process().pid, f"{algo.name} OBJECT SIZES BEFORE SUBMIT:", key, {k: objsize.get_deep_size(v) / 1024 ** 2 for k, v in {"algo": algo, "chunk_store": chunk_store}.items()}, "MB")
+                    """
+
                     # submit model calculation:
                     if self.share_cstore:
                         futures[(chunki_states, chunki_points)] = self.submit(
@@ -402,7 +413,7 @@ class PoolEngine(Engine):
                         utm_zone = config.utm_zone if config.utm_zone_set else None
                         futures[(chunki_states, chunki_points)] = self.submit(
                             _run,
-                            deepcopy(algo),  # prevents memory leak
+                            algo,
                             model,
                             *data,
                             chunk_store=chunk_store,
@@ -429,5 +440,9 @@ class PoolEngine(Engine):
                 results_mgr.update(results, futures)
 
             del calc_pars, farm_data, point_data, results, futures
+
+        if iterative:
+            chunk_store.update(new_chunk_store)
+            algo.reset_chunk_store(chunk_store)
 
         return results_mgr.results

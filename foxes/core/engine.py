@@ -639,6 +639,7 @@ class Engine(ABC):
             self,
             algo,
             engine,
+            chunk_store,
             goal_data,
             n_chunks_states,
             n_chunks_targets,
@@ -657,6 +658,8 @@ class Engine(ABC):
                 The algorithm object
             engine: foxes.core.Engine
                 The engine object
+            chunk_store: foxes.utils.Dict
+                The chunk store
             goal_data: xarray.Dataset
                 The goal data
             n_chunks_states: int
@@ -677,6 +680,7 @@ class Engine(ABC):
             """
             self.algo = algo
             self.engine = engine
+            self.chunk_store = chunk_store
             self.name = engine.name
             self.ci_states = 0
             self.ci_targets = 0
@@ -857,10 +861,10 @@ class Engine(ABC):
                 r, cstore = results.pop(chunk_key)
 
                 for k, c in cstore.items():
-                    if k in self.algo.chunk_store:
-                        self.algo.chunk_store[k].update(c)
+                    if k in self.chunk_store:
+                        self.chunk_store[k].update(c)
                     else:
-                        self.algo.chunk_store[k] = c
+                        self.chunk_store[k] = c
 
                 if r is not None:
                     if self.res_vars is None:
