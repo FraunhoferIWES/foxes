@@ -170,7 +170,104 @@ def read_windio_file(yml_file, ret_wio=False, verbosity=1, **algo_kwargs):
         return idict, algo, odir
 
 
-def foxes_windio():
+def foxes_windio(
+    yml_file,
+    output_dir=None,
+    rotor=None,
+    pwakes=None,
+    wakes=None,
+    frame=None,
+    engine=None,
+    n_procs=None,
+    chunksize_states=None,
+    chunksize_points=None,
+    iterative=False,
+    nofig=False,
+    verbosity=1,
+):
+    """Run foxes from windio yaml file input
+
+    Parameters
+    ----------
+    yml_file: str or Path
+        The yaml file path
+    output_dir: str or Path, optional
+        The output directory, default: None (same as input file)
+    rotor: str, optional
+        The rotor model, default: None (use the one from the yaml file)
+    pwakes: list of str, optional
+        The partial wakes models, default: None (use the ones from the yaml file)
+    wakes: list of str, optional
+        The wake models, default: None (use the ones from the yaml file)
+    frame: str, optional
+        The wake frame, default: None (use the one from the yaml file)
+    engine: str, optional
+        The engine, default: None (use the one from the yaml file)
+    n_procs: int, optional
+        The number of processes, default: None (use the one from the yaml file)
+    chunksize_states: int, optional
+        The chunk size for states, default: None (use the one from the yaml file)
+    chunksize_points: int, optional
+        The chunk size for points, default: None (use the one from the yaml file)
+    iterative: bool, optional
+        Use iterative algorithm, default: False
+    nofig: bool, optional
+        Do not show figures, default: False
+    verbosity: int, optional
+        The verbosity level, 0 = silent, default: 1
+
+    Returns
+    -------
+    farm_results: xarray.Dataset, optional
+        The farm results
+    point_results: xarray.Dataset, optional
+        The point results
+    outputs: list of tuple
+        For each output enty, a tuple (dict, results),
+        where results is a list that represents one
+        entry per function call
+
+
+    """
+
+    if (
+        engine is not None
+        or n_procs is not None
+        or chunksize_states is not None
+        or chunksize_points is not None
+    ):
+        epars = dict(
+            engine_type=engine,
+            n_procs=n_procs,
+            chunk_size_states=chunksize_states,
+            chunk_size_points=chunksize_points,
+            verbosity=verbosity,
+        )
+    else:
+        epars = None
+
+    wio_file = Path(yml_file)
+    idict, algo, odir = read_windio_file(wio_file, verbosity=verbosity)
+
+    if output_dir is not None:
+        odir = output_dir
+
+    return run_dict(
+        idict,
+        algo=algo,
+        rotor_model=rotor,
+        partial_wakes=pwakes,
+        wake_models=wakes,
+        wake_frame=frame,
+        engine_pars=epars,
+        iterative=iterative,
+        input_dir=wio_file.parent,
+        output_dir=odir,
+        verbosity=verbosity,
+    )
+
+
+def main():
     """
     Command line tool for running foxes from windio yaml file input.
 
@@ -233,38 +330,22 @@ def foxes_windio():
     )
     args = parser.parse_args()
 
-    if (
-        args.engine is not None
-        or args.n_procs is not None
-        or args.chunksize_states is not None
-        or args.chunksize_points is not None
-    ):
-        epars = dict(
-            engine_type=args.engine,
-            n_procs=args.n_procs,
-            chunk_size_states=args.chunksize_states,
-            chunk_size_points=args.chunksize_points,
-            verbosity=args.verbosity,
-        )
-    else:
-        epars = None
-
-    wio_file = Path(args.yml_file)
-    idict, algo, odir = read_windio_file(wio_file, verbosity=args.verbosity)
-
-    if args.output_dir is not None:
-        odir = args.odir
-
-    run_dict(
-        idict,
-        algo=algo,
-        rotor_model=args.rotor,
-        partial_wakes=args.pwakes,
-        wake_models=args.wakes,
-        wake_frame=args.frame,
-        engine_pars=epars,
+    foxes_windio(
+        yml_file=args.yml_file,
+        output_dir=args.output_dir,
+        rotor=args.rotor,
+        pwakes=args.pwakes,
+        wakes=args.wakes,
+        frame=args.frame,
+        engine=args.engine,
+        n_procs=args.n_procs,
+        chunksize_states=args.chunksize_states,
+        chunksize_points=args.chunksize_points,
         iterative=args.iterative,
-        input_dir=wio_file.parent,
-        output_dir=odir,
+        nofig=args.nofig,
         verbosity=args.verbosity,
     )
+
+
+if __name__ == "__main__":
+    main()

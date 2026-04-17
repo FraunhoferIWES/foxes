@@ -96,8 +96,8 @@ Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/CHANGELOG.md"
 exclude = ["notebooks", "examples", "tests", "docs"]
 
 [project.scripts]
-foxes_yaml = "foxes.input.yaml.yaml:foxes_yaml"
-foxes_windio = "foxes.input.yaml.windio.windio:foxes_windio"
+foxes_yaml = "foxes.input.yaml.yaml:main"
+foxes_windio = "foxes.input.yaml.windio.windio:main"
 foxes_create_mean_dataset = "foxes.input.states.create.dataset_mean:main"
 wrf2foxes = "foxes.input.states.create.wrf2foxes:main"
 iconDream2foxes = "foxes.input.states.create.icon_dream:main"
