@@ -80,6 +80,13 @@ if __name__ == "__main__":
         default=["Bastankhah2014_linear_loc_k004"],
         nargs="+",
     )
+    parser.add_argument(
+        "-wl",
+        "--wake_length_km",
+        help="The maximal wake length in km (for applicable wake models)",
+        type=float,
+        default=8.0,
+    )
     parser.add_argument("-f", "--frame", help="The wake frame", default="dyn_wakes")
     parser.add_argument(
         "-d", "--deflection", help="The wake deflection", default="no_deflection"
@@ -126,9 +133,6 @@ if __name__ == "__main__":
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
-    mbook.wake_frames["dyn_wakes"] = foxes.models.wake_frames.DynamicWakes(
-        max_length_km=8
-    )
 
     # optionally set turbines in yaw:
     N = int(args.n_turbines**0.5)
@@ -190,10 +194,11 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
+        max_wake_length_km=args.wake_length_km,
         mbook=mbook,
         max_it=args.max_it,
         conv_crit="default" if args.max_it is None else None,
-        verbosity=1,
+        verbosity=2,
     )
 
     engine = foxes.Engine.new(

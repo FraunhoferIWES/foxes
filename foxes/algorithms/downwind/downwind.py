@@ -78,6 +78,7 @@ class Downwind(Algorithm):
         ground_models=None,
         farm_controller="basic_ctrl",
         mbook=None,
+        max_wake_length_km=None,
         population_params=None,
         **kwargs,
     ):
@@ -112,6 +113,8 @@ class Downwind(Algorithm):
             looked up in the model book
         mbook: foxes.ModelBook, optional
             The model book
+        max_wake_length_km: float, optional
+            The maximum wake length in km. If None, no maximum length is applied.
         population_params: dict, optional
             The population parameters. If provided, this will be
             used to create the population model.
@@ -215,6 +218,8 @@ class Downwind(Algorithm):
         self.__farm_controller = self.mbook.farm_controllers.get_item(farm_controller)
         self.farm_controller.name = farm_controller
         self.farm_controller.find_turbine_types(self)
+
+        self.__max_wlength_km = max_wake_length_km
 
     @property
     def states(self):
@@ -348,6 +353,34 @@ class Downwind(Algorithm):
             return None
         return self._pop_model
 
+    @property
+    def max_wake_length_km(self):
+        """
+        The maximum wake length in km
+
+        Returns
+        -------
+        l: float or None
+            The maximum wake length in km, or None if not set
+
+        """
+        if self.__max_wlength_km is None:
+            raise KeyError(f"Algorithm '{self.name}': No maximum wake length set")
+        return self.__max_wlength_km
+
+    @property
+    def has_max_wake_length(self):
+        """
+        Whether a maximum wake length is set
+
+        Returns
+        -------
+        has: bool
+            True if a maximum wake length is set, False otherwise
+
+        """
+        return self.__max_wlength_km is not None
+
     def select_population_member(self, pop_farm_results, pop_index):
         """
         Select a specific population member from the population model results.
@@ -454,8 +487,14 @@ class Downwind(Algorithm):
             print(f"  states    : {self.states}")
             print(f"  rotor     : {self.rotor_model}")
             print(f"  controller: {self.farm_controller}")
-            print(f"  wake frame: {self.wake_frame}")
             print(f"  deflection: {self.wake_deflection}")
+            print(f"  wake frame: {self.wake_frame}")
+            wl = (
+                f"{self.__max_wlength_km} km"
+                if self.__max_wlength_km is not None
+                else None
+            )
+            print(f"  wake lngth: {wl}")
             print(deco)
             print("  wakes:")
             for i, w in enumerate(self.wake_models.values()):

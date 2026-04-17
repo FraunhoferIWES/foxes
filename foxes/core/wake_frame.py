@@ -22,27 +22,9 @@ class WakeFrame(Model):
     They are also responsible for the calculation of
     the turbine evaluation order.
 
-    Attributes
-    ----------
-    max_length_km: float
-        The maximal wake length in km
-
     :group: core
 
     """
-
-    def __init__(self, max_length_km=3e4):
-        """
-        Constructor.
-
-        Parameters
-        ----------
-        max_length_km: float
-            The maximal wake length in km
-
-        """
-        super().__init__()
-        self.max_length_km = max_length_km
 
     @abstractmethod
     def calc_order(self, algo, mdata, fdata):
@@ -238,7 +220,7 @@ class WakeFrame(Model):
 
         # calc evaluation points:
         xmin = 0.0
-        xmax = min(np.nanmax(x), self.max_length_km * 1e3)
+        xmax = min(np.nanmax(x), algo.max_wake_length_km * 1e3)
         n_steps = int((xmax - xmin) / dx)
         if xmin + n_steps * dx < xmax:
             n_steps += 1

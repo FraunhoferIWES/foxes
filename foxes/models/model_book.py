@@ -316,25 +316,13 @@ class ModelBook:
         )
         self.wake_frames.add_factory(
             fm.wake_frames.Streamlines2D,
-            "streamlines_<step>_l<max_length_km>",
+            "streamlines_<step>_c<chunksize>",
             step=lambda x: float(x),
-            max_length_km=lambda x: float(x),
-            hints={
-                "step": "(Step size in m)",
-                "max_length_km": "(Maximal streamline length in km)",
-            },
-        )
-        self.wake_frames.add_factory(
-            fm.wake_frames.Streamlines2D,
-            "streamlines_<step>_l<max_length_km>_c<chunksize>",
-            step=lambda x: float(x),
-            max_length_km=lambda x: float(x),
             chunksize=lambda x: int(x),
             var2arg={"chunksize": "chunksize_steps"},
             hints={
                 "step": "(Step size in m)",
                 "chunksize": "(Chunk size in steps)",
-                "max_length_km": "(Maximal streamline length in km)",
             },
         )
 
@@ -364,13 +352,6 @@ class ModelBook:
             dt=_todt,
             var2arg={"dt": "dt_min"},
             hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
-        )
-        self.wake_frames.add_factory(
-            fm.wake_frames.DynamicWakes,
-            "dyn_wakes_<length>",
-            length=_tokm,
-            var2arg={"length": "max_length_km"},
-            hints={"length": "(Maximal wake length, e.g. '5km' or '5000m')"},
         )
         self.wake_frames.add_factory(
             fm.wake_frames.SeqDynamicWakes,

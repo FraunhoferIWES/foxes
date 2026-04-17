@@ -233,7 +233,9 @@ class Data(Dict):
                     self.sizes[c] = self[name].shape[ci]
                 elif c != FC.TARGET and self[name].shape[ci] == 1:
                     pass
-                elif self.sizes[c] != self[name].shape[ci]:
+                elif (
+                    self.sizes[c] != self[name].shape[ci] and self[name].shape[ci] != 1
+                ):
                     raise ValueError(
                         f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
                     )
@@ -772,6 +774,60 @@ class TData(Data):
             return None
         else:
             return self[FC.TARGET][0]
+
+    def get_targets_subset(self, sel_targets):
+        """
+        Get a subset of targets
+
+        Parameters
+        ----------
+        sel_targets: array_like of int
+            The target indices to select
+
+        Returns
+        -------
+        tdata: TData
+            The new TData object with the selected targets
+
+        """
+        data = {}
+        dims = {}
+        for v in self.keys():
+            if v in self.dims and FC.TARGET in self.dims[v]:
+                if len(self.dims[v]) >= 2 and self.dims[v][1] == FC.TARGET:
+                    if self.n_targets > 1 and self[v].shape[1] > 1:
+                        data[v] = self[v][:, sel_targets, ...]
+                    else:
+                        data[v] = self[v]
+                elif len(self.dims[v]) >= 1 and self.dims[v][0] == FC.TARGET:
+                    if self.n_targets > 1 and self[v].shape[0] > 1:
+                        data[v] = self[v][sel_targets, ...]
+                    else:
+                        data[v] = self[v]
+                else:
+                    raise ValueError(
+                        f"TData '{self.name}': Cannot subset variable '{v}' with dims {self.dims[v]} for target selection, expecting '{FC.TARGET}' in dims at positions 0 or 1"
+                    )
+                dims[v] = self.dims[v]
+            else:
+                data[v] = self[v]
+                dims[v] = self.dims[v]
+
+        try:
+            states_i0 = self.states_i0(counter=True)
+        except KeyError:
+            states_i0 = None
+
+        return self.__class__(
+            data=data,
+            dims=dims,
+            name=f"{self.name}_subset",
+            states_i0=states_i0,
+            chunki_states=self.chunki_states,
+            chunki_points=self.chunki_points,
+            n_chunks_states=self.n_chunks_states,
+            n_chunks_points=self.n_chunks_points,
+        )
 
     @classmethod
     def from_points(

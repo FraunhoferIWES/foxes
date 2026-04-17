@@ -1,5 +1,8 @@
+import numpy as np
+
 from foxes.core import PointDataModel
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 class PointWakesCalculation(PointDataModel):
@@ -116,6 +119,34 @@ class PointWakesCalculation(PointDataModel):
 
         """
 
+        def _contribute(gmodel, tdata, oi, wdeltas, wmodel):
+            """Helper function for contribution of wake deltas to wake results"""
+
+            # reduce to targets within max wake length, if applicable:
+            if algo.has_max_wake_length:
+                tpts = tdata[FC.TARGETS]
+                opts = fdata[FV.TXYH][:, oi]
+                tsel = np.all(
+                    np.linalg.norm(tpts - opts[:, None, None, :], axis=-1)
+                    <= algo.max_wake_length_km * 1e3,
+                    axis=(0, 2),
+                )
+                if not np.any(tsel):
+                    return
+                wdeltas0 = wdeltas
+                tdata = tdata.get_targets_subset(tsel)
+                wdeltas = {v: d[:, tsel, ...] for v, d in wdeltas0.items()}
+
+            # compute contributions:
+            gmodel.contribute_to_point_wakes(
+                algo, mdata, fdata, tdata, oi, wdeltas, wmodel
+            )
+
+            # restore full data, if applicable:
+            if algo.has_max_wake_length:
+                for v in wdeltas0.keys():
+                    wdeltas0[v][:, tsel, ...] = wdeltas[v]
+
         wmodels = (
             algo.wake_models.values() if self.wake_models is None else self.wake_models
         )
@@ -128,13 +159,9 @@ class PointWakesCalculation(PointDataModel):
             if len(set(pvrs).intersection(wdeltas.keys())):
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):
-                        gmodel.contribute_to_point_wakes(
-                            algo, mdata, fdata, tdata, oi, wdeltas, wmodel
-                        )
+                        _contribute(gmodel, tdata, oi, wdeltas, wmodel)
                 else:
-                    gmodel.contribute_to_point_wakes(
-                        algo, mdata, fdata, tdata, downwind_index, wdeltas, wmodel
-                    )
+                    _contribute(gmodel, tdata, downwind_index, wdeltas, wmodel)
 
                 gmodel.finalize_point_wakes(algo, mdata, fdata, tdata, wdeltas, wmodel)
 

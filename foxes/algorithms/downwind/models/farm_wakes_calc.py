@@ -81,11 +81,37 @@ class FarmWakesCalculation(FarmDataModel):
                 )
                 pwake2wmodels[pwake.name] = wmodels
 
-        def _get_wdata(tdatap, wdeltas, variables, s):
-            """Helper function for wake data extraction"""
+        def _contribute(gmodel, pwake, tdatap, wdeltas, variables, s):
+            """Helper function for contribution of wake deltas to wake results"""
+
+            # grab target slice:
             tdata = tdatap.get_slice(variables, s)
             wdelta = {v: d[s] for v, d in wdeltas.items()}
-            return tdata, wdelta
+
+            # reduce to targets within max wake length, if applicable:
+            if algo.has_max_wake_length:
+                tpts = tdata[FC.TARGETS]
+                opts = fdata[FV.TXYH][:, oi]
+                tsel = np.all(
+                    np.linalg.norm(tpts - opts[:, None, None, :], axis=-1)
+                    <= algo.max_wake_length_km * 1e3,
+                    axis=(0, 2),
+                )
+                if not np.any(tsel):
+                    return
+                wdelta0 = wdelta
+                tdata = tdata.get_targets_subset(tsel)
+                wdelta = {v: d[:, tsel, ...] for v, d in wdelta0.items()}
+
+            # compute contributions:
+            gmodel.contribute_to_farm_wakes(
+                algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
+            )
+
+            # restore full data, if applicable:
+            if algo.has_max_wake_length:
+                for v in wdelta0.keys():
+                    wdelta0[v][:, tsel, ...] = wdelta[v]
 
         def _evaluate(gmodel, tdata, rwghts, wake_res, wdeltas, oi, wmodel, pwake):
             """Helper function for data evaluation at turbines"""
@@ -158,11 +184,13 @@ class FarmWakesCalculation(FarmDataModel):
                         )
 
                     if oi < n_turbines - 1:
-                        tdata, wdelta = _get_wdata(
-                            tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, oi + 1 :]
-                        )
-                        gmodel.contribute_to_farm_wakes(
-                            algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
+                        _contribute(
+                            gmodel,
+                            pwake,
+                            tdatap,
+                            wdeltas,
+                            [FC.STATE, FC.TARGET],
+                            np.s_[:, oi + 1 :],
                         )
 
             # upwind:
@@ -182,11 +210,13 @@ class FarmWakesCalculation(FarmDataModel):
                         )
 
                     if oi > 0:
-                        tdata, wdelta = _get_wdata(
-                            tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, :oi]
-                        )
-                        gmodel.contribute_to_farm_wakes(
-                            algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
+                        _contribute(
+                            gmodel,
+                            pwake,
+                            tdatap,
+                            wdeltas,
+                            [FC.STATE, FC.TARGET],
+                            np.s_[:, :oi],
                         )
 
             if run_up is not None and run_down is not None:
