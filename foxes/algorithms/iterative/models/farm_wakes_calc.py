@@ -123,7 +123,7 @@ class FarmWakesCalculation(FarmDataModel):
             if algo.has_max_wake_length:
                 tpts = tdata[FC.TARGETS]
                 opts = fdata[FV.TXYH][:, oi]
-                tsel = np.all(
+                tsel = np.any(
                     np.linalg.norm(tpts - opts[:, None, None, :], axis=-1)
                     <= algo.max_wake_length_km * 1e3,
                     axis=(0, 2),
