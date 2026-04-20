@@ -29,7 +29,6 @@ class DynamicWakes(WakeFrame):
 
     def __init__(
         self,
-        max_length_km=20,
         max_age=None,
         max_age_mean_ws=5,
         cl_ipars={},
@@ -41,8 +40,6 @@ class DynamicWakes(WakeFrame):
 
         Parameters
         ----------
-        max_length_km: float
-            The maximal wake length in km
         max_age: int, optional
             The maximal number of wake steps
         max_age_mean_ws: float
@@ -58,7 +55,7 @@ class DynamicWakes(WakeFrame):
             Additional parameters for the base class
 
         """
-        super().__init__(max_length_km=max_length_km, **kwargs)
+        super().__init__(**kwargs)
 
         self.max_age = max_age
         self.cl_ipars = cl_ipars
@@ -66,7 +63,7 @@ class DynamicWakes(WakeFrame):
         self._mage_ws = max_age_mean_ws
 
     def __repr__(self):
-        return f"{type(self).__name__}(dt_min={self.dt_min}, max_length_km={self.max_length_km}, max_age={self.max_age})"
+        return f"{type(self).__name__}(dt_min={self.dt_min}, max_age={self.max_age})"
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -117,7 +114,7 @@ class DynamicWakes(WakeFrame):
         # find max age if not given:
         if self.max_age is None:
             step = np.mean(self._mage_ws * self._dt)
-            self.max_age = max(int(self.max_length_km * 1e3 / step), 1)
+            self.max_age = max(int(algo.max_wake_length_km * 1e3 / step), 1)
             if verbosity > 0:
                 print(
                     f"{self.name}: Assumed mean step = {step} m, setting max_age = {self.max_age}"
@@ -224,7 +221,7 @@ class DynamicWakes(WakeFrame):
 
                 if age < self.max_age - 2:
                     s = ~np.isnan(data[:, age + 1, 3])
-                    if np.min(data[s, age + 1, 3]) >= self.max_length_km * 1e3:
+                    if np.min(data[s, age + 1, 3]) >= algo.max_wake_length_km * 1e3:
                         break
 
                 del res, uv, s, hdt, dxy
@@ -296,7 +293,7 @@ class DynamicWakes(WakeFrame):
                         sel = (
                             np.all(~np.isnan(pts[:, :2]), axis=-1)
                             & np.any(np.isnan(hdata[sts, ags + 1, :2]), axis=-1)
-                            & (hdata[sts, ags, 3] <= self.max_length_km * 1e3)
+                            & (hdata[sts, ags, 3] <= algo.max_wake_length_km * 1e3)
                         )
                         if np.any(sel):
                             sts = sts[sel]

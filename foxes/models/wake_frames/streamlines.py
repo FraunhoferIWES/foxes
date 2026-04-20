@@ -42,7 +42,6 @@ class Streamlines2D(WakeFrame):
     def __init__(
         self,
         step,
-        max_length_km=20,
         chunksize_steps=100,
         cl_ipars={},
         intersection_error=True,
@@ -55,8 +54,6 @@ class Streamlines2D(WakeFrame):
         ----------
         step: float
             The streamline step size in m
-        max_length_km: float
-            The maximal streamline length in km
         chunksize_steps: int
             The number of steps per chunk for streamline
         cl_ipars: dict
@@ -69,7 +66,7 @@ class Streamlines2D(WakeFrame):
             Additional parameters for the base class
 
         """
-        super().__init__(max_length_km=max_length_km, **kwargs)
+        super().__init__(**kwargs)
         self.step = step
         self.chunksize_steps = chunksize_steps
         self.cl_ipars = cl_ipars
@@ -139,7 +136,9 @@ class Streamlines2D(WakeFrame):
             # prepare:
             n_states = mdata.n_states
             n_turbines = algo.n_turbines
-            n_steps = np.ceil((self.max_length_km * 1000) / self.step).astype(int) + 1
+            n_steps = (
+                np.ceil((algo.max_wake_length_km * 1000) / self.step).astype(int) + 1
+            )
             states_ovars = algo.states.output_point_vars(algo)
             assert FV.WD in states_ovars and FV.WS in states_ovars, (
                 f"Wake frame '{self.name}': Require '{FV.WD}' and '{FV.WS}' in states output, found {states_ovars}"

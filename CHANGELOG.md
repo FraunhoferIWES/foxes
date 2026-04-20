@@ -945,6 +945,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.7.6
 
-
+- Algorithms:
+  - All algorithms now accept a parameter `max_wake_length_km`, reducing the number of target points in wake calculations. Note that this replaces the correcponding parameter in some of the wake frames, like `DynamicWakes` or `Streamlines2D`.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.6](https://github.com/FraunhoferIWES/foxes/commits/v1.7.6)

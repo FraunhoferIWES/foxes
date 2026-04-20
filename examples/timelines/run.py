@@ -73,6 +73,13 @@ if __name__ == "__main__":
         default=["Bastankhah2014_linear_lim_k004"],
         nargs="+",
     )
+    parser.add_argument(
+        "-wl",
+        "--wake_length_km",
+        help="The maximal wake length in km (for applicable wake models)",
+        type=float,
+        default=8.0,
+    )
     parser.add_argument("-f", "--frame", help="The wake frame", default="timelines")
     parser.add_argument(
         "-d", "--deflection", help="The wake deflection", default="no_deflection"
@@ -172,6 +179,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
+        max_wake_length_km=args.wake_length_km,
         mbook=mbook,
         verbosity=1,
     )

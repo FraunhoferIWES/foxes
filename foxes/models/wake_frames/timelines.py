@@ -15,8 +15,6 @@ class Timelines(WakeFrame):
 
     Attributes
     ----------
-    max_length_km: float
-        The maximal wake length in km
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
@@ -28,14 +26,12 @@ class Timelines(WakeFrame):
 
     """
 
-    def __init__(self, max_length_km=2e4, cl_ipars={}, dt_min=None, **kwargs):
+    def __init__(self, cl_ipars={}, dt_min=None, **kwargs):
         """
         Constructor.
 
         Parameters
         ----------
-        max_length_km: float
-            The maximal wake length in km
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
@@ -46,12 +42,12 @@ class Timelines(WakeFrame):
             Additional parameters for the base class
 
         """
-        super().__init__(max_length_km=max_length_km, **kwargs)
+        super().__init__(**kwargs)
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min
 
     def __repr__(self):
-        return f"{type(self).__name__}(dt_min={self.dt_min}, max_length_km={self.max_length_km})"
+        return f"{type(self).__name__}(dt_min={self.dt_min})"
 
     def _precalc_data(self, algo, states, heights, verbosity, needs_res=False):
         """Helper function for pre-calculation of ambient wind vectors"""
@@ -404,7 +400,11 @@ class Timelines(WakeFrame):
             # step backwards in time, until wake source turbine is hit:
             _update_wcoos(precond)
             while True:
-                sel = precond & (h_trace_si > 0) & (trace_l < self.max_length_km * 1e3)
+                sel = (
+                    precond
+                    & (h_trace_si > 0)
+                    & (trace_l < algo.max_wake_length_km * 1e3)
+                )
                 if np.any(sel):
                     h_trace_si[sel] -= 1
 
