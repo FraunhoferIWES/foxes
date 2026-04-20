@@ -46,7 +46,14 @@ if __name__ == "__main__":
         "-wf",
         "--wake_frame",
         help="The wake frame choice",
-        default="streamlines_100_l3",
+        default="streamlines_100",
+    )
+    parser.add_argument(
+        "-wl",
+        "--wake_length_km",
+        help="The maximal wake length in km (for applicable wake models)",
+        type=float,
+        default=3.0,
     )
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
@@ -130,6 +137,7 @@ if __name__ == "__main__":
         wake_models=args.wakes,
         wake_frame=args.wake_frame,
         wake_deflection=args.deflection,
+        max_wake_length_km=args.wake_length_km,
         partial_wakes=args.pwakes,
         mbook=mbook,
     )

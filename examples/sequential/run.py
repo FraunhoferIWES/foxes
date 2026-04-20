@@ -56,6 +56,13 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument(
+        "-wl",
+        "--wake_length_km",
+        help="The maximal wake length in km (for applicable wake models)",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
         "-f", "--frame", help="The wake frame", default="seq_dyn_wakes_1min"
     )
     parser.add_argument(
@@ -165,6 +172,7 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
+        max_wake_length_km=args.wake_length_km,
         wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
         mbook=mbook,
