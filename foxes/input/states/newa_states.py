@@ -157,10 +157,8 @@ class NEWAStates(DatasetStates):
         self,
         algo,
         data,
-        cmap,
-        vars,
-        bounds_extra_space,
-        height_bounds,
+        bounds_extra_space=None,
+        height_bounds=None,
         verbosity=0,
     ):
         """
@@ -172,15 +170,11 @@ class NEWAStates(DatasetStates):
             The calculation algorithm
         data: xarray.Dataset
             The dataset to preprocess
-        cmap: dict
-            A mapping from foxes variable names to Dataset dimension names
-        vars: list
-            The list of variable names
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/-
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -189,12 +183,15 @@ class NEWAStates(DatasetStates):
         super().preproc_first(
             algo,
             data,
-            cmap,
-            vars,
             bounds_extra_space=None,
             height_bounds=height_bounds,
             verbosity=verbosity,
         )
+
+        if verbosity > 0:
+            print(
+                f"States '{self.name}': Selected UTM zone: {config.utm_zone[0]}{config.utm_zone[1]}"
+            )
 
         lonlat = np.stack(
             (data[self.xlon_coord].values, data[self.xlat_coord].values), axis=-1
@@ -208,11 +205,11 @@ class NEWAStates(DatasetStates):
 
         # find horizontal bounds:
         if bounds_extra_space is not None:
-            assert FV.X in cmap, (
-                f"States '{self.name}': x coordinate '{FV.X}' not in cmap {cmap}"
+            assert FV.X in self._cmap, (
+                f"States '{self.name}': x coordinate '{FV.X}' not in cmap {self._cmap}"
             )
-            assert FV.Y in cmap, (
-                f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {cmap}"
+            assert FV.Y in self._cmap, (
+                f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {self._cmap}"
             )
 
             # if bounds and self.x_coord is not None and self.x_coord not in self.sel:
