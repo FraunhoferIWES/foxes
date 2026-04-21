@@ -71,7 +71,7 @@ def add_from_eww(
         if verbosity:
             print("Reading file", data_source)
         pth = get_input_path(data_source)
-        data = pd.read_csv(pth, index_col=0, parse_dates=["commissioning_date"])
+        data = pd.read_csv(pth, index_col=0, parse_dates=False)
 
     comm_dates = data["commissioning_date"].str.strip()
     comm_dates = pd.to_datetime(comm_dates)
