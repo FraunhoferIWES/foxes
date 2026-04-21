@@ -135,7 +135,7 @@ class DatasetStates(States):
         fixed_vars={},
         load_mode="preload",
         time_format=None,
-        bounds_extra_space=None,
+        bounds_extra_space=100.0,
         height_bounds=None,
         sel=None,
         isel=None,
@@ -173,7 +173,8 @@ class DatasetStates(States):
             The datetime parsing format string
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
+            or str for units of D, e.g. '2.5D'. If None,
+            all points from the input data are used
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         sel: dict, optional
