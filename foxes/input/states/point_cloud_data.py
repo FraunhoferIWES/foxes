@@ -80,7 +80,7 @@ class PointCloudData(DatasetStates):
             Additional parameters for the base class
 
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, bounds_extra_space=None, **kwargs)
 
         self.states_coord = states_coord
         self.point_coord = point_coord
@@ -173,35 +173,6 @@ class PointCloudData(DatasetStates):
         coords[FC.POINT] = np.stack(points, axis=-1)
 
         return coords, data
-
-    def load_data(self, algo, verbosity=0):
-        """
-        Load and/or create all model data that is subject to chunking.
-
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        return super().load_data(
-            algo,
-            bounds_extra_space=None,
-            verbosity=verbosity,
-        )
 
     def _check_nan(self, ipars, gpts, d, pts, idims, vrs, results):
         """Checks for NaN results and raises errors."""

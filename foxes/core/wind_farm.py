@@ -26,7 +26,7 @@ class WindFarm:
         name="wind_farm",
         boundary=None,
         input_is_lonlat=False,
-        utm_zone="from_farm",
+        utm_zone=None,
     ):
         """
         Constructor.
@@ -136,20 +136,20 @@ class WindFarm:
                 self.__data_is_lonlat = False
 
             elif self.__utm_zone is not None:
-                if isinstance(self.__utm_zone, str):
+                if isinstance(self.__utm_zone, str) and len(self.__utm_zone) <= 3:
                     zone = (int(self.__utm_zone[:-1]), self.__utm_zone[-1])
                 elif len(self.__utm_zone) == 2:
                     lonlat = np.asarray(self.__utm_zone)
                     zone = get_utm_zone(lonlat[None, :])
                 else:
                     raise ValueError(
-                        f"WindFarm '{self.name}': invalid utm_zone argument: {self.__utm_zone}"
+                        f"WindFarm '{self.name}': invalid utm_zone argument: {self.__utm_zone} for 'input_is_lonlat=False'"
                     )
                 if not config.utm_zone_set:
                     config.set_utm_zone(*zone)
                 elif config.utm_zone != zone:
                     raise ValueError(
-                        f"WindFarm '{self.name}': input_is_lonlat is True, but config.utm_zone = {config.utm_zone} differs from determined zone {zone}"
+                        f"WindFarm '{self.name}': config.utm_zone = {config.utm_zone} differs from requested zone {zone}"
                     )
 
         return self.__turbines
