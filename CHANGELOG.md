@@ -947,5 +947,10 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Algorithms:
   - All algorithms now accept a parameter `max_wake_length_km`, reducing the number of target points in wake calculations. Note that this replaces the correcponding parameter in some of the wake frames, like `DynamicWakes` or `Streamlines2D`.
+- Inputs:
+  - Additionally to the `wind_farm_name` parameter, turbines now also accept a `cluster_name`. Both can be accessed by `farm.wind_farm_names` and `farm.cluster_names`, respectively (note there is also `farm.get_wind_farm_mapping` and `farm.get_cluster_mapping`).
+  - The farm layout function `add_from_csv` now optionally reads the wind farm and cluster names from corresponding columns.
+- Outputs:
+  - The `FarmLayoutOutput` class now also writes wind farm names and cluster names to columns via function `write_csv`. The new function `get_dataframe` returns the same data instead.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.6](https://github.com/FraunhoferIWES/foxes/commits/v1.7.6)

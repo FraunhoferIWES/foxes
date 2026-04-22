@@ -17,6 +17,8 @@ def add_from_csv(
     cols_models_pre=None,
     col_turbine_type=None,
     cols_models_post=None,
+    col_wind_farm=None,
+    col_cluster=None,
     turbine_base_name="T",
     turbine_ids=None,
     turbine_base_name_count_shift=False,
@@ -54,6 +56,10 @@ def add_from_csv(
     cols_models_post: list of str, optional
         The turbine model columns, entered after
         turbine_models
+    col_wind_farm: str, optional
+        The wind farm name column
+    col_cluster: str, optional
+        The cluster name column
     turbine_base_name: str, optional
         The turbine base name, only used
         if col_name is None
@@ -114,6 +120,10 @@ def add_from_csv(
                 H=H if col_H not in data.columns else data.loc[i, col_H],
                 D=D if col_D not in data.columns else data.loc[i, col_D],
                 turbine_models=hmodels,
+                wind_farm_name=None
+                if col_wind_farm is None
+                else data.loc[i, col_wind_farm],
+                cluster_name=None if col_cluster is None else data.loc[i, col_cluster],
                 **turbine_parameters,
             ),
             verbosity=verbosity,

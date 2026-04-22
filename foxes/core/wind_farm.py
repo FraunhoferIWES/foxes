@@ -286,7 +286,7 @@ class WindFarm:
             The wind farm names for all turbines
 
         """
-        return list(
+        fnames = list(
             set(
                 [
                     t.wind_farm_name if t.wind_farm_name is not None else self.name
@@ -294,6 +294,7 @@ class WindFarm:
                 ]
             )
         )
+        return fnames if fnames != [None] else None
 
     def get_wind_farm_mapping(self):
         """
@@ -313,6 +314,46 @@ class WindFarm:
                 mapping[wf_name] = []
             mapping[wf_name].append(i)
         return mapping
+
+    @property
+    def cluster_names(self):
+        """
+        The list of cluster names for all turbines
+
+        Returns
+        -------
+        names: list of str
+            The cluster names for all turbines
+
+        """
+        clusters = list(
+            set(
+                [
+                    t.cluster_name if t.cluster_name is not None else None
+                    for t in self.__turbines
+                ]
+            )
+        )
+        return clusters if clusters != [None] else None
+
+    def get_cluster_mapping(self):
+        """
+        Returns a mapping from cluster names to turbine indices
+
+        Returns
+        -------
+        mapping: dict
+            A dictionary, where keys are cluster names and
+            values are lists of turbine indices belonging to that cluster
+
+        """
+        mapping = {}
+        for i, t in enumerate(self.__turbines):
+            cluster_name = t.cluster_name if t.cluster_name is not None else None
+            if cluster_name not in mapping:
+                mapping[cluster_name] = []
+            mapping[cluster_name].append(i)
+        return mapping if list(mapping.keys()) != [None] else None
 
     def get_xy_bounds(self, extra_space=None, algo=None, lonlat=False, sample_dx=10.0):
         """

@@ -352,28 +352,49 @@ class FarmLayoutOutput(Output):
         fname = file_path if file_path is not None else self.farm.name + ".xyh"
         np.savetxt(fname, data, header="x y h")
 
-    def write_csv(self, file_name=None, type_col=None, algo=None):
+    def get_dataframe(
+        self,
+        type_col=None,
+        algo=None,
+        col_farm="wind_farm",
+        col_cluster="cluster",
+    ):
         """
-        Writes csv layout file.
+        Returns a pandas DataFrame with the layout data.
 
         Parameters
         ----------
-        file_name: str
-            Name of the file into which to plot, or None
-            for default
         type_col: str, optional
             Name of the turbine type column
         algo: foxes.core.Algorithm, optional
             The algorithm, needed for turbine types
+        col_farm: str, optional
+            The wind farm name column
+        col_cluster: str, optional
+            The cluster name column
+
+        Returns
+        -------
+        lyt: pandas.DataFrame
+            The layout data
 
         """
 
         data = self.get_layout_data()
 
-        fname = file_name if file_name is not None else self.farm.name + ".csv"
-        fpath = self.get_fpath(fname)
+        cols = ["name", "x", "y", "h", "D"]
+        if self.farm.wind_farm_names is not None:
+            cols.append(col_farm)
+            wfarms = [t.wind_farm_name for t in self.farm.turbines]
+        else:
+            wfarms = None
+        if self.farm.cluster_names is not None:
+            cols.append(col_cluster)
+            clusters = [t.cluster_name for t in self.farm.turbines]
+        else:
+            clusters = None
 
-        lyt = pd.DataFrame(index=range(len(data)), columns=["name", "x", "y", "h", "D"])
+        lyt = pd.DataFrame(index=range(len(data)), columns=cols)
         lyt.index.name = "index"
         lyt["name"] = [t.name for t in self.farm.turbines]
         lyt["x"] = np.round(data[:, 0], 4)
@@ -384,7 +405,33 @@ class FarmLayoutOutput(Output):
         if type_col is not None:
             lyt[type_col] = [m.name for m in algo.farm_controller.turbine_types]
 
-        lyt.to_csv(fpath)
+        if wfarms is not None:
+            lyt[col_farm] = wfarms
+        if clusters is not None:
+            lyt[col_cluster] = clusters
+
+        return lyt
+
+    def write_csv(self, file_name=None, verbosity=1, **kwargs):
+        """
+        Writes the layout data to csv file.
+
+        Parameters
+        ----------
+        file_name: str
+            Name of the file into which to plot, or None
+            for default
+        verbosity: int
+            The verbosity level, 0 = silent
+        kwargs: dict, optional
+            Additional arguments for get_dataframe()
+
+        """
+        fname = file_name if file_name is not None else self.farm.name + ".csv"
+        fpath = self.get_fpath(fname)
+        if verbosity > 0:
+            print(f"Writing farm layout to '{fpath}'")
+        self.get_dataframe(**kwargs).to_csv(fpath)
 
     def write_json(self, file_name=None):
         """
