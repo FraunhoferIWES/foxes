@@ -120,6 +120,8 @@ class DatasetStates(States):
         Whether to check input data for NaNs
     preprocess_nc: callable, optional
         A function to preprocess the netcdf Dataset before use
+    force_keep_vars: list of str
+        Variables to remove from the drop_vars list when reading the nc files
     interp_pars: dict
         Additional parameters the interpolation
 
@@ -143,6 +145,7 @@ class DatasetStates(States):
         check_times=True,
         check_input_nans=True,
         preprocess_nc=None,
+        force_keep_vars=None,
         interp_pars={},
         **kwargs,
     ):
@@ -189,6 +192,8 @@ class DatasetStates(States):
             Whether to check input data for NaNs, otherwise NaNs are removed
         preprocess_nc: callable, optional
             A function to preprocess the netcdf Dataset before use
+        force_keep_vars: list of str, optional
+            Variables to remove from the drop_vars list when reading the nc files
         interp_pars: dict, optional
             Additional parameters the interpolation
         kwargs: dict, optional
@@ -212,6 +217,7 @@ class DatasetStates(States):
         self.preprocess_nc = preprocess_nc
         self.interp_pars = interp_pars if interp_pars is not None else {}
         self.variables = [v for v in self.ovars if v not in self.fixed_vars]
+        self.force_keep_vars = force_keep_vars if force_keep_vars is not None else []
 
         self._N = None
         self._inds = None
@@ -561,7 +567,10 @@ class DatasetStates(States):
             vars = _update_vars(data_first, vars)
             self._vars = vars
             self.drop_vars = [
-                v for v in data_first.data_vars if v not in coords + list(vars.values())
+                v
+                for v in data_first.data_vars
+                if v not in coords + list(vars.values())
+                and v not in self.force_keep_vars
             ]
             if len(self.drop_vars) > 0 and verbosity > 0:
                 print(f"States '{self.name}': Keeping variables  {list(vars.values())}")
