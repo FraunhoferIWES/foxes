@@ -247,7 +247,9 @@ class WindFarm:
             The UTM zone as a string, or None if not set
 
         """
-        return f"{config.utm_zone[0]}{config.utm_zone[1]}" if config.utm_zone_set else None
+        return (
+            f"{config.utm_zone[0]}{config.utm_zone[1]}" if config.utm_zone_set else None
+        )
 
     @property
     def n_turbines(self):
