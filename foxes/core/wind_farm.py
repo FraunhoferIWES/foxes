@@ -237,6 +237,19 @@ class WindFarm:
                 )
 
     @property
+    def utm_zone(self):
+        """
+        The UTM zone of the wind farm, if set.
+
+        Returns
+        -------
+        utm_zone: str or None
+            The UTM zone as a string, or None if not set
+
+        """
+        return f"{config.utm_zone[0]}{config.utm_zone[1]}" if config.utm_zone_set else None
+
+    @property
     def n_turbines(self):
         """
         The number of turbines in the wind farm
