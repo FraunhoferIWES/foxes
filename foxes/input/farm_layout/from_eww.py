@@ -158,12 +158,12 @@ def add_from_eww(
         if ttype not in ttypes:
             ttype = ttype.replace(" ", "_").replace("/", "_")
         if csv_dir is not None and mbook.turbine_types[ttype] is None:
-            j = ttypes.index(ttype)
+            u = ttypes.index(ttype)
             if verbosity > 0:
-                print(f"Creating turbine type: {ttype} from file {csv_map[j].name}")
+                print(f"Creating turbine type: {ttype} from file {csv_map[u].name}")
             pars = dict(col_P="power")
             pars.update(pct_pars)
-            mbook.turbine_types[ttype] = PCtFile(csv_map[j], rho=rho, **pars)
+            mbook.turbine_types[ttype] = PCtFile(csv_map[u], rho=rho, **pars)
 
         lonlat = data.loc[i, ["longitude", "latitude"]].to_numpy(np.float64)
         farm.add_turbine(
