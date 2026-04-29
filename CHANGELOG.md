@@ -954,3 +954,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - The `FarmLayoutOutput` class now also writes wind farm names and cluster names to columns via function `write_csv`. The new function `get_dataframe` returns the same data instead.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.6](https://github.com/FraunhoferIWES/foxes/commits/v1.7.6)
+
+## v1.7.7
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.7](https://github.com/FraunhoferIWES/foxes/commits/v1.7.7)

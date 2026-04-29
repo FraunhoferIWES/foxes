@@ -1,14 +1,8 @@
 # pyproject.toml file specified at the root of the directory
 
-[build-system]
-build-backend = "setuptools.build_meta"
-requires = [
-    "setuptools>=61.0",
-]
-
 [project]
 name = "foxes"
-version = "1.7.6"
+version = "1.7.7"
 authors = [
   {name = "Jonas Schulte"},
 ]
@@ -92,8 +86,12 @@ Repository = "https://github.com/FraunhoferIWES/foxes.git"
 "Bug Tracker" = "https://github.com/FraunhoferIWES/foxes/issues"
 Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/CHANGELOG.md"
 
-[tool.setuptools.packages.find]
-exclude = ["notebooks", "examples", "tests", "docs"]
+[build-system]
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
 
 [project.scripts]
 foxes_yaml = "foxes.input.yaml.yaml:main"
