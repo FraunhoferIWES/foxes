@@ -26,54 +26,62 @@ def _read_nc_file(
     preprocess=None,
 ):
     """Helper function for nc file reading"""
-    data = xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine)
-    for c in coords:
-        if c is not None and c not in data.sizes:
-            raise KeyError(
-                f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
-            )
-    if preprocess is not None:
-        data = preprocess(data)
-    if minimal:
-        c = coords[0]
-        try:
-            if isel is not None and c in isel:
-                data = data.isel({c: isel[c]})
-            if sel is not None and c in sel:
-                data = data.sel({c: sel[c]})
-        except KeyError:
-            return None
-        data = data[c].to_numpy()
-    else:
-        if vars is not None:
-            data = data[vars]
-        data.attrs = {}
-        try:
-            if isel is not None and len(isel):
-                isel = {c: s for c, s in isel.items() if c in data.sizes}
-                data = data.isel(**isel)
-            if sel is not None and len(sel):
-                sel = {c: s for c, s in sel.items() if c in data.sizes}
-                data = data.sel(**sel)
-        except KeyError:
-            return None
-        if min(data.sizes.values()) == 0:
-            return None
-        data = data.load()
-        if check_input_nans:
-            for v, d in data.data_vars.items():
-                sel = np.isnan(d.to_numpy())
-                if sel.any():
-                    i = tuple([j[0] for j in np.where(sel)])
-                    print("\n\nError: NaN data found in input data:")
-                    print(f"  File: {fpath}\n")
-                    print(f"  Variable: {v}")
-                    for ic, c in enumerate(d.dims):
-                        print(f"  {c}: {data[c].to_numpy()[i[ic]]}")
-                    print("\n\n")
-                    raise ValueError(
-                        f"States: NaN data found in input data for variable '{v}' with dims {d.dims} in file {fpath} at index {i}"
-                    )
+    with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as data:
+        for c in coords:
+            if c is not None and c not in data.sizes:
+                raise KeyError(
+                    f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
+                )
+
+        if preprocess is not None:
+            data = preprocess(data)
+
+        if minimal:
+            c = coords[0]
+            try:
+                if isel is not None and c in isel:
+                    data = data.isel({c: isel[c]})
+                if sel is not None and c in sel:
+                    data = data.sel({c: sel[c]})
+                data = data[c].to_numpy()
+            except KeyError:
+                data = None
+
+        else:
+            if vars is not None:
+                data = data[vars]
+            data.attrs = {}
+
+            try:
+                if isel is not None and len(isel):
+                    isel = {c: s for c, s in isel.items() if c in data.sizes}
+                    data = data.isel(**isel)
+                if sel is not None and len(sel):
+                    sel = {c: s for c, s in sel.items() if c in data.sizes}
+                    data = data.sel(**sel)
+            except KeyError:
+                return None
+
+            if min(data.sizes.values()) == 0:
+                data = None
+            else:
+                data = data.load()
+
+    if data is not None and not minimal and check_input_nans:
+        for v, d in data.data_vars.items():
+            sel = np.isnan(d.to_numpy())
+            if sel.any():
+                i = tuple([j[0] for j in np.where(sel)])
+                print("\n\nError: NaN data found in input data:")
+                print(f"  File: {fpath}\n")
+                print(f"  Variable: {v}")
+                for ic, c in enumerate(d.dims):
+                    print(f"  {c}: {data[c].to_numpy()[i[ic]]}")
+                print("\n\n")
+                raise ValueError(
+                    f"States: NaN data found in input data for variable '{v}' with dims {d.dims} in file {fpath} at index {i}"
+                )
+
     return data
 
 
