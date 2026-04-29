@@ -55,7 +55,7 @@ bleach==6.3.0 ; python_full_version >= '3.10'
     # via nbconvert
 cdo==1.6.1
     # via foxes
-certifi==2026.2.25
+certifi==2026.4.22
     # via
     #   httpcore
     #   httpx
@@ -81,7 +81,7 @@ click==8.1.8 ; python_full_version < '3.10'
     #   dask
     #   distributed
     #   jupyter-cache
-click==8.3.2 ; python_full_version >= '3.10'
+click==8.3.3 ; python_full_version >= '3.10'
     # via
     #   dask
     #   distributed
@@ -170,7 +170,7 @@ filelock==3.19.1 ; python_full_version < '3.10'
     # via
     #   python-discovery
     #   virtualenv
-filelock==3.25.2 ; python_full_version >= '3.10'
+filelock==3.29.0 ; python_full_version >= '3.10'
     # via
     #   python-discovery
     #   virtualenv
@@ -190,7 +190,7 @@ graphemeu==0.7.2
     # via alive-progress
 greenlet==3.2.5 ; (python_full_version < '3.10' and platform_machine == 'AMD64') or (python_full_version < '3.10' and platform_machine == 'WIN32') or (python_full_version < '3.10' and platform_machine == 'aarch64') or (python_full_version < '3.10' and platform_machine == 'amd64') or (python_full_version < '3.10' and platform_machine == 'ppc64le') or (python_full_version < '3.10' and platform_machine == 'win32') or (python_full_version < '3.10' and platform_machine == 'x86_64')
     # via sqlalchemy
-greenlet==3.3.2 ; (python_full_version >= '3.10' and platform_machine == 'AMD64') or (python_full_version >= '3.10' and platform_machine == 'WIN32') or (python_full_version >= '3.10' and platform_machine == 'aarch64') or (python_full_version >= '3.10' and platform_machine == 'amd64') or (python_full_version >= '3.10' and platform_machine == 'ppc64le') or (python_full_version >= '3.10' and platform_machine == 'win32') or (python_full_version >= '3.10' and platform_machine == 'x86_64')
+greenlet==3.5.0 ; (python_full_version >= '3.10' and platform_machine == 'AMD64') or (python_full_version >= '3.10' and platform_machine == 'WIN32') or (python_full_version >= '3.10' and platform_machine == 'aarch64') or (python_full_version >= '3.10' and platform_machine == 'amd64') or (python_full_version >= '3.10' and platform_machine == 'ppc64le') or (python_full_version >= '3.10' and platform_machine == 'win32') or (python_full_version >= '3.10' and platform_machine == 'x86_64')
     # via sqlalchemy
 h11==0.16.0
     # via httpcore
@@ -200,9 +200,9 @@ httpx==0.28.1
     # via jupyterlab
 identify==2.6.15 ; python_full_version < '3.10'
     # via pre-commit
-identify==2.6.18 ; python_full_version >= '3.10'
+identify==2.6.19 ; python_full_version >= '3.10'
     # via pre-commit
-idna==3.11
+idna==3.13
     # via
     #   anyio
     #   httpx
@@ -261,13 +261,7 @@ ipython==8.39.0 ; python_full_version == '3.10.*'
     #   ipywidgets
     #   jupyter-console
     #   myst-nb
-ipython==9.10.1 ; python_full_version == '3.11.*'
-    # via
-    #   ipykernel
-    #   ipywidgets
-    #   jupyter-console
-    #   myst-nb
-ipython==9.12.0 ; python_full_version >= '3.12'
+ipython==9.13.0 ; python_full_version >= '3.11'
     # via
     #   ipykernel
     #   ipywidgets
@@ -350,7 +344,7 @@ jupyter-core==5.9.1 ; python_full_version >= '3.10'
     #   nbclient
     #   nbconvert
     #   nbformat
-jupyter-events==0.12.0
+jupyter-events==0.12.1
     # via jupyter-server
 jupyter-lsp==2.3.1
     # via jupyterlab
@@ -385,7 +379,7 @@ locket==1.0.0
     # via
     #   distributed
     #   partd
-lxml==6.0.2
+lxml==6.1.0
     # via
     #   lxml-html-clean
     #   nbconvert
@@ -411,7 +405,7 @@ matplotlib==3.9.4 ; python_full_version < '3.10'
     #   foxes
     #   iwopy
     #   pymoo
-matplotlib==3.10.8 ; python_full_version >= '3.10'
+matplotlib==3.10.9 ; python_full_version >= '3.10'
     # via
     #   foxes
     #   iwopy
@@ -540,7 +534,7 @@ objsize==0.8.0
     # via foxes
 overrides==7.7.0 ; python_full_version < '3.12'
     # via jupyter-server
-packaging==26.0
+packaging==26.2
     # via
     #   cdo
     #   dask
@@ -580,7 +574,7 @@ platformdirs==4.4.0 ; python_full_version < '3.10'
     #   jupyter-core
     #   python-discovery
     #   virtualenv
-platformdirs==4.9.4 ; python_full_version >= '3.10'
+platformdirs==4.9.6 ; python_full_version >= '3.10'
     # via
     #   jupyter-core
     #   moocore
@@ -590,9 +584,9 @@ pluggy==1.6.0
     # via pytest
 pre-commit==4.3.0 ; python_full_version < '3.10'
     # via foxes
-pre-commit==4.5.1 ; python_full_version >= '3.10'
+pre-commit==4.6.0 ; python_full_version >= '3.10'
     # via foxes
-prometheus-client==0.24.1
+prometheus-client==0.25.0
     # via jupyter-server
 prompt-toolkit==3.0.52
     # via
@@ -602,6 +596,7 @@ psutil==7.2.2
     # via
     #   distributed
     #   ipykernel
+    #   ipython
 ptyprocess==0.7.0 ; (python_full_version < '3.10' and sys_platform == 'emscripten') or os_name != 'nt' or (sys_platform != 'emscripten' and sys_platform != 'win32')
     # via
     #   pexpect
@@ -612,13 +607,13 @@ pycparser==2.23 ; python_full_version < '3.10' and implementation_name != 'PyPy'
     # via cffi
 pycparser==3.0 ; python_full_version >= '3.10' and implementation_name != 'PyPy'
     # via cffi
-pydantic==2.12.5
+pydantic==2.13.3
     # via
     #   pydantic-extra-types
     #   sphinx-immaterial
-pydantic-core==2.41.5
+pydantic-core==2.46.3
     # via pydantic
-pydantic-extra-types==2.11.2
+pydantic-extra-types==2.11.1
     # via sphinx-immaterial
 pygments==2.20.0
     # via
@@ -639,7 +634,7 @@ pytest==8.4.2 ; python_full_version < '3.10'
     # via
     #   foxes
     #   nbmake
-pytest==9.0.2 ; python_full_version >= '3.10'
+pytest==9.0.3 ; python_full_version >= '3.10'
     # via
     #   foxes
     #   nbmake
@@ -649,7 +644,7 @@ python-dateutil==2.9.0.post0
     #   jupyter-client
     #   matplotlib
     #   pandas
-python-discovery==1.2.1
+python-discovery==1.2.2
     # via virtualenv
 python-json-logger==4.0.0 ; python_full_version < '3.10'
     # via jupyter-events
@@ -867,7 +862,7 @@ typing-extensions==4.15.0
     #   virtualenv
 typing-inspection==0.4.2
     # via pydantic
-tzdata==2026.1
+tzdata==2026.2
     # via
     #   arrow
     #   pandas
@@ -879,7 +874,7 @@ urllib3==2.6.3
     #   requests
 utm==0.8.1
     # via foxes
-virtualenv==21.2.0
+virtualenv==21.3.0
     # via pre-commit
 wcwidth==0.6.0
     # via prompt-toolkit
@@ -905,13 +900,13 @@ xarray==2025.6.1 ; python_full_version == '3.10.*'
     # via
     #   foxes
     #   foxes-opt
-xarray==2026.2.0 ; python_full_version >= '3.11'
+xarray==2026.4.0 ; python_full_version >= '3.11'
     # via
     #   foxes
     #   foxes-opt
 zict==3.0.0
     # via distributed
-zipp==3.23.0
+zipp==3.23.1
     # via
     #   importlib-metadata
     #   importlib-resources
