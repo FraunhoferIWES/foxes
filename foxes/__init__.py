@@ -25,16 +25,45 @@ from . import input as input
 from . import output as output
 from . import utils as utils
 
-import importlib
+
+# Robust __version__ assignment for all supported Python versions
 from pathlib import Path
 
+# Try to import importlib.metadata (Python 3.8+), else importlib_metadata (backport)
 try:
-    tomllib = importlib.import_module("tomllib")
+    from importlib.metadata import version as _pkg_version
+except ImportError:
+    try:
+        from importlib_metadata import version as _pkg_version  # type: ignore
+    except ImportError:
+        _pkg_version = None
+
+# Try to import tomllib (Python 3.11+), else tomli (backport)
+try:
+    import tomllib
+except ImportError:
+    try:
+        import tomli as tomllib  # type: ignore
+    except ImportError:
+        tomllib = None
+
+
+def _get_version():
     source_location = Path(__file__).parent
-    if (source_location.parent / "pyproject.toml").exists():
-        with open(source_location.parent / "pyproject.toml", "rb") as f:
-            __version__ = tomllib.load(f)["project"]["version"]
-    else:
-        __version__ = importlib.metadata.version(__package__ or __name__)
-except ModuleNotFoundError:
-    __version__ = importlib.metadata.version(__package__ or __name__)
+    pyproject = source_location.parent / "pyproject.toml"
+    if tomllib is not None and pyproject.exists():
+        try:
+            with open(pyproject, "rb") as f:
+                return tomllib.load(f)["project"]["version"]
+        except Exception:
+            pass
+
+    if _pkg_version is not None:
+        try:
+            return _pkg_version(__package__ or __name__)
+        except Exception:
+            pass
+    return "unknown"
+
+
+__version__ = _get_version()
