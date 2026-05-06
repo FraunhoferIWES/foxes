@@ -17,7 +17,31 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
 
-from foxes import __version__
+
+# -- Version extraction from pyproject.toml (no import from foxes)
+import pathlib
+
+pyproject_path = pathlib.Path(__file__).parent.parent.parent / "pyproject.toml"
+
+# Try tomllib (Python 3.11+), else tomli (backport)
+try:
+    import tomllib
+except ImportError:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        tomllib = None
+
+
+def get_version_from_pyproject(pyproject_path):
+    if tomllib is not None and pyproject_path.exists():
+        with open(pyproject_path, "rb") as f:
+            data = tomllib.load(f)
+            return data.get("project", {}).get("version", "unknown")
+    return "unknown"
+
+
+__version__ = get_version_from_pyproject(pyproject_path)
 
 # -- Project information -----------------------------------------------------
 
