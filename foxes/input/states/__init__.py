@@ -14,6 +14,7 @@ from .states_table import Timeseries as Timeseries
 from .states_table import TabStates as TabStates
 
 from .field_data import FieldData as FieldData
+from .field_data import LatLonFieldData as LatLonFieldData
 from .field_data import WeibullField as WeibullField
 
 from .point_cloud_data import WeibullPointCloud as WeibullPointCloud

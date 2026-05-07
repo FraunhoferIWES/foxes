@@ -34,6 +34,8 @@ from .xarray_utils import pack_value as pack_value
 from .xarray_utils import unpack_value as unpack_value
 from .xarray_utils import get_encoding as get_encoding
 
+from .era5_utils import calc_era5_density as calc_era5_density
+
 from .exec_python import exec_python as exec_python
 from .exec_python import eval_dict_values as eval_dict_values
 

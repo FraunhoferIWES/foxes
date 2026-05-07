@@ -230,6 +230,7 @@ class DatasetStates(States):
 
         self._N = None
         self._inds = None
+        self._cmap = {}
         self.__data_source = data_source
 
     @property

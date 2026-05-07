@@ -1,4 +1,5 @@
 import numpy as np
+from pandas import read_csv
 
 from foxes.core import Turbine
 from foxes.config import get_input_path
@@ -11,6 +12,9 @@ def add_from_wrf(
     mbook,
     txt_file="windturbines.txt",
     tbl_name_fun=lambda i: f"wind-turbine-{i}.tbl",
+    csv_file=None,
+    csv_col_windfarm="wind_farm",
+    csv_col_cluster=None,
     rho=1.225,
     verbosity=1,
     **turbine_parameters,
@@ -29,8 +33,12 @@ def add_from_wrf(
         The model book, only needed if tbl_dir is specified
     txt_file: str
         The txt file name
-    tbl_name_fun: function
-        A function that takes an integer index and returns the corresponding tbl file name
+    csv_file: str, optional
+        An optional csv file containing additional turbine parameters.
+    csv_col_windfarm: str, optional
+        The column name in the CSV file for the wind farm identifier
+    csv_col_cluster: str, optional
+        The column name in the CSV file for the cluster identifier
     rho: float
         The air density for the turbine types, if tbl_dir is given
     verbosity: int
@@ -69,6 +77,28 @@ def add_from_wrf(
             print(f"Creating turbine type: {ttypes[i]}")
         mbook.turbine_types[ttypes[i]] = TBLFile(tbl_path, rho=rho)
 
+    if csv_file is not None:
+        csv_path = directory / csv_file
+        if not csv_path.exists():
+            raise FileNotFoundError(f"File {csv_path} not found")
+        if verbosity > 0:
+            print("Reading file", csv_path)
+        df = read_csv(csv_path)
+        assert len(df.index) == len(data), (
+            "CSV file must have the same number of rows as the txt file"
+        )
+        if csv_col_windfarm is not None:
+            wfrm = df[csv_col_windfarm].values
+        else:
+            wfrm = [turbine_parameters.pop("wind_farm_name", None)] * len(df.index)
+        if csv_col_cluster is not None:
+            clstr = df[csv_col_cluster].values
+        else:
+            clstr = [turbine_parameters.pop("cluster_name", None)] * len(df.index)
+    else:
+        wfrm = [turbine_parameters.pop("wind_farm_name", None)] * len(data)
+        clstr = [turbine_parameters.pop("cluster_name", None)] * len(data)
+
     tmodels = turbine_parameters.pop("turbine_models", [])
     for i, row in enumerate(data):
         ttype = ttypes[int(row[-1])]
@@ -79,6 +109,8 @@ def add_from_wrf(
                 H=None,
                 D=None,
                 turbine_models=[ttype] + tmodels,
+                wind_farm_name=wfrm[i],
+                cluster_name=clstr[i],
                 **turbine_parameters,
             ),
             verbosity=verbosity,

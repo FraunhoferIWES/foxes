@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from foxes.utils import weibull_weights
+from foxes.utils import weibull_weights, get_utm_zone, to_lonlat, from_lonlat
 from foxes.config import config, get_output_path
 from foxes.output import FarmLayoutOutput
 import foxes.variables as FV
@@ -191,6 +191,250 @@ class FieldData(DatasetStates):
                 ax.autoscale_view(tight=True)
                 fig.savefig(fpath, bbox_inches="tight")
                 plt.close()
+
+
+class LatLonFieldData(DatasetStates):
+    """
+    Heterogeneous ambient states based on regular lat-lon grid in NetCDF format.
+
+    Attributes
+    ----------
+    states_coord: str
+        The states coordinate name in the data
+    lat_coord: str
+        The latitude coordinate name in the data
+    lon_coord: str
+        The longitude coordinate name in the data
+    h_coord: str
+        The height coordinate name in the data
+    grid_point_plot: str, optional
+        Path to a plot file, e.g. wrf_points.png, to visualize the
+        selected grid points and the layout of the farm.
+
+    :group: input.states
+
+    """
+
+    def __init__(
+        self,
+        data_source,
+        states_coord="Time",
+        lat_coord="latitude",
+        lon_coord="longitude",
+        h_coord="height",
+        time_format=None,
+        grid_point_plot=None,
+        utm_zone=None,
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str
+            The input netcdf file(s) containing, can contain
+            wildcards, e.g. '*2025*.nc'
+        states_coord: str
+            The states coordinate name in the data
+        lat_coord: str
+            The latitude coordinate name in the data
+        lon_coord: str
+            The longitude coordinate name in the data
+        h_coord: str, optional
+            The height coordinate name in the data
+        time_format: str
+            The datetime parsing format string
+        grid_point_plot: str, optional
+            Path to a plot file, e.g. wrf_points.png, to visualize the
+            selected grid points and the layout of the farm.
+        utm_zone: str or tuple, optional
+            Method for setting UTM zone in config, if not already set.
+            Options are:
+            - "from_grid": get UTM zone from the centre of the (lon, lat) grid
+            - "XA": use given number X, letter A
+            - (lon, lat): use given lon, lat values
+            - None: do not set UTM zone, assume it is already set,
+            typically during the wind farm creation.
+        kwargs: dict, optional
+            Additional parameters for the base class
+
+        """
+        super().__init__(
+            data_source=data_source,
+            time_format=time_format,
+            **kwargs,
+        )
+
+        self.states_coord = states_coord
+        self.lat_coord = lat_coord
+        self.lon_coord = lon_coord
+        self.h_coord = h_coord
+        self.grid_point_plot = grid_point_plot
+        self.__utm_zone = utm_zone
+
+        # longitude and latitude play the role of x and y here:
+        self._cmap = {
+            FC.STATE: self.states_coord,
+            FV.X: self.lon_coord,
+            FV.Y: self.lat_coord,
+        }
+        if self.h_coord is not None:
+            self._cmap[FV.H] = self.h_coord
+
+    def _find_xy_bounds(self, algo, bounds_extra_space):
+        """Helper function to determine x/y bounds with extra space."""
+        return algo.farm.get_xy_bounds(
+            extra_space=bounds_extra_space, algo=algo, lonlat=True
+        )
+
+    def preproc_first(
+        self,
+        algo,
+        data,
+        bounds_extra_space,
+        height_bounds,
+        verbosity=0,
+    ):
+        """
+        Preprocesses the first file.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data: xarray.Dataset
+            The dataset to preprocess
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/-
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        if not config.utm_zone_set and self.__utm_zone is None:
+            raise ValueError(
+                f"States '{self.name}': config.utm_zone is not set and no utm_zone argument given."
+            )
+        if self.__utm_zone is None:
+            zone = config.utm_zone
+        elif self.__utm_zone == "from_grid":
+            lonlat = np.stack(
+                [
+                    0.5
+                    * (
+                        data[self._cmap[FV.X]].values.min()
+                        + data[self._cmap[FV.X]].values.max()
+                    ),
+                    0.5
+                    * (
+                        data[self._cmap[FV.Y]].values.min()
+                        + data[self._cmap[FV.Y]].values.max()
+                    ),
+                ]
+            )
+            zone = get_utm_zone(lonlat[None, :])
+        elif isinstance(self.__utm_zone, str):
+            zone = (int(self.__utm_zone[:-1]), self.__utm_zone[-1])
+        elif len(self.__utm_zone) == 2:
+            lonlat = np.asarray(self.__utm_zone)
+            zone = get_utm_zone(lonlat[None, :])
+        else:
+            raise ValueError(
+                f"States '{self.name}': invalid utm_zone argument: {self.__utm_zone}"
+            )
+        if not config.utm_zone_set:
+            config.set_utm_zone(*zone)
+        elif config.utm_zone != zone:
+            raise ValueError(
+                f"States '{self.name}': config.utm_zone = {config.utm_zone} differs from determined zone {zone}"
+            )
+
+        super().preproc_first(algo, data, bounds_extra_space, height_bounds, verbosity)
+
+        if self.grid_point_plot is not None:
+            try:
+                if self.isel is not None:
+                    data = data.isel(self.isel)
+                if self.sel is not None:
+                    data = data.sel(self.sel)
+                has_data = True
+                for c, s in data.sizes.items():
+                    if s == 0:
+                        has_data = False
+                        break
+            except KeyError:
+                has_data = False
+
+            if has_data:
+                fpath = get_output_path(self.grid_point_plot)
+                if verbosity > 0:
+                    print(f"States '{self.name}': Writing grid point plot to '{fpath}'")
+                fig, ax = plt.subplots(figsize=(8, 8))
+                xx, yy = np.meshgrid(
+                    data[self._cmap[FV.X]].values.flatten(),
+                    data[self._cmap[FV.Y]].values.flatten(),
+                )
+                pts = from_lonlat(np.stack((xx.flatten(), yy.flatten()), axis=-1))
+                ax.plot(
+                    pts[:, 0],
+                    pts[:, 1],
+                    c="blue",
+                    alpha=0.2,
+                    marker=".",
+                    linestyle="None",
+                )
+                anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+                FarmLayoutOutput(farm=algo.farm).get_figure(
+                    fig=fig, ax=ax, annotate=anno, fontsize=12
+                )
+                ax.set_xlabel(f"{FV.X} [m]")
+                ax.set_ylabel(f"{FV.Y} [m]")
+                ax.set_aspect("equal", adjustable="box")
+                ax.autoscale_view(tight=True)
+                fig.savefig(fpath, bbox_inches="tight")
+                plt.close()
+
+    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+        """
+        Interpolates data to points.
+
+        This function should be implemented in derived classes.
+
+        Parameters
+        ----------
+        idims: list of str
+            The input dimensions, e.g. [x, y, height]
+        icrds: list of numpy.ndarray
+            The input coordinates, each with shape (n_i,)
+            where n_i is the number of grid points in dimension i
+        d: numpy.ndarray
+            The data array, with shape (n1, n2, ..., nv)
+            where ni represents the dimension sizes and
+            nv is the number of variables
+        pts: numpy.ndarray
+            The points to interpolate to, with shape (n_pts, n_idims)
+        vrs: list of str
+            The variable names, length nv
+        times: numpy.ndarray
+            The time coordinates of the states, with shape (n_states,)
+        Returns
+        -------
+        d_interp: numpy.ndarray
+            The interpolated data array with shape (n_pts, nv)
+
+        """
+        # convert (x, y) to (lon, lat) before interpolation:
+        if FV.X in idims:
+            ix = idims.index(FV.X)
+            assert len(idims) > ix + 1 and idims[ix + 1] == FV.Y, (
+                f"States {self.name}: Expecting subsequent ({FV.X}, {FV.Y}) in idims, got {idims}"
+            )
+            pts[:, ix : ix + 2] = to_lonlat(pts[:, ix : ix + 2])
+
+        return super().interpolate_data(idims, icrds, d, pts, vrs, times)
 
 
 class WeibullField(FieldData):

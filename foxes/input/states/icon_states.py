@@ -1,44 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from pandas import read_csv
 
-from foxes.utils import get_utm_zone, to_lonlat, from_lonlat
-from foxes.config import config, get_output_path
-from foxes.output import FarmLayoutOutput
 from foxes.data import MODEL_DATA
 import foxes.variables as FV
-import foxes.constants as FC
 
-from .dataset_states import DatasetStates
+from .field_data import LatLonFieldData
 
 
-class ICONStates(DatasetStates):
+class ICONStates(LatLonFieldData):
     """
     Heterogeneous ambient states in DWD-ICON format.
-
-    Attributes
-    ----------
-    height_coord_default: str, optional
-        The default height level coordinate name in the data
-    height_coord_tke: str, optional
-        The height level coordinate name for TKE in the data
-    time_coord: str
-        The time coordinate name in the data
-    lat_coord: str
-        The latitude coordinate name in the data
-    lon_coord: str
-        The longitude coordinate name in the data
-    icon_point_plot: str, optional
-        Path to a plot file, e.g. wrf_points.png, to visualize the
-        selected ICON grid points and the layout of the farm.
-    utm_zone: str or tuple, optional
-        Method for setting UTM zone in config, if not already set.
-        Options are:
-        - "from_grid": get UTM zone from the centre of the (lon, lat) grid
-        - "XA": use given number X, letter A
-        - (lon, lat): use given lon, lat values
-        - None: do not set UTM zone, assume it is already set,
-        typically during the wind farm creation.
 
     :group: input.states
 
@@ -46,7 +16,7 @@ class ICONStates(DatasetStates):
 
     def __init__(
         self,
-        input_files_nc,
+        data_source,
         height_coord_default="height",
         height_coord_tke="height_2",
         time_coord="time",
@@ -55,9 +25,6 @@ class ICONStates(DatasetStates):
         output_vars=None,
         var2ncvar=None,
         load_mode="fly",
-        time_format=None,
-        icon_point_plot=None,
-        utm_zone=None,
         **kwargs,
     ):
         """
@@ -65,7 +32,7 @@ class ICONStates(DatasetStates):
 
         Parameters
         ----------
-        input_files_nc: str
+        data_source: str
             The input netcdf file(s) containing, can contain
             wildcards, e.g. '2025*_icon.nc'
         height_coord_default: str, optional
@@ -92,19 +59,6 @@ class ICONStates(DatasetStates):
             reads only states index and weights during initialization
             and then opens the relevant files again within
             the chunk calculations.
-        time_format: str
-            The datetime parsing format string
-        icon_point_plot: str, optional
-            Path to a plot file, e.g. wrf_points.png, to visualize the
-            selected ICON grid points and the layout of the farm.
-        utm_zone: str or tuple, optional
-            Method for setting UTM zone in config, if not already set.
-            Options are:
-            - "from_grid": get UTM zone from the centre of the (lon, lat) grid
-            - "XA": use given number X, letter A
-            - (lon, lat): use given lon, lat values
-            - None: do not set UTM zone, assume it is already set,
-            typically during the wind farm creation.
         kwargs: dict, optional
             Additional parameters for the base class
 
@@ -123,22 +77,18 @@ class ICONStates(DatasetStates):
             }
 
         super().__init__(
-            data_source=input_files_nc,
+            data_source=data_source,
+            states_coord=time_coord,
+            lat_coord=lat_coord,
+            lon_coord=lon_coord,
             output_vars=ovars,
             var2ncvar=var2ncvar,
-            time_format=time_format,
             load_mode=load_mode,
-            weight_factor=None,
             **kwargs,
         )
 
-        self.time_coord = time_coord
-        self.lat_coord = lat_coord
-        self.lon_coord = lon_coord
-        self.icon_point_plot = icon_point_plot
         self._prepr0 = self.preprocess_nc
         self.preprocess_nc = self._preproc_icon_nc
-        self.__utm_zone = utm_zone
 
         self.variables = []
         for v in ovars:
@@ -156,12 +106,7 @@ class ICONStates(DatasetStates):
             elif v not in self.variables:
                 self.variables.append(v)
 
-        # longitude and latitude play the role of x and y here:
-        self._cmap = {
-            FC.STATE: self.time_coord,
-            FV.X: self.lon_coord,
-            FV.Y: self.lat_coord,
-        }
+        # adjust height coordinate mapping for ICON data:
         if height_coord_default is not None:
             self._cmap[FV.H] = height_coord_default
         if height_coord_tke is not None:
@@ -177,123 +122,6 @@ class ICONStates(DatasetStates):
             c = ds[self._cmap[self.H_TKE]].values.astype(int)
             ds = ds.assign_coords({self._cmap[self.H_TKE]: self.__icon_heights_TKE[c]})
         return self._prepr0(ds) if self._prepr0 is not None else ds
-
-    def _find_xy_bounds(self, algo, bounds_extra_space):
-        """Helper function to determine x/y bounds with extra space."""
-        return algo.farm.get_xy_bounds(
-            extra_space=bounds_extra_space, algo=algo, lonlat=True
-        )
-
-    def preproc_first(
-        self,
-        algo,
-        data,
-        bounds_extra_space,
-        height_bounds,
-        verbosity=0,
-    ):
-        """
-        Preprocesses the first file.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data: xarray.Dataset
-            The dataset to preprocess
-        bounds_extra_space: float or str, optional
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/-
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        if not config.utm_zone_set and self.__utm_zone is None:
-            raise ValueError(
-                f"States '{self.name}': config.utm_zone is not set and no utm_zone argument given."
-            )
-        if self.__utm_zone is None:
-            zone = config.utm_zone
-        elif self.__utm_zone == "from_grid":
-            lonlat = np.stack(
-                [
-                    0.5
-                    * (
-                        data[self._cmap[FV.X]].values.min()
-                        + data[self._cmap[FV.X]].values.max()
-                    ),
-                    0.5
-                    * (
-                        data[self._cmap[FV.Y]].values.min()
-                        + data[self._cmap[FV.Y]].values.max()
-                    ),
-                ]
-            )
-            zone = get_utm_zone(lonlat[None, :])
-        elif isinstance(self.__utm_zone, str):
-            zone = (int(self.__utm_zone[:-1]), self.__utm_zone[-1])
-        elif len(self.__utm_zone) == 2:
-            lonlat = np.asarray(self.__utm_zone)
-            zone = get_utm_zone(lonlat[None, :])
-        else:
-            raise ValueError(
-                f"States '{self.name}': invalid utm_zone argument: {self.__utm_zone}"
-            )
-        if not config.utm_zone_set:
-            config.set_utm_zone(*zone)
-        elif config.utm_zone != zone:
-            raise ValueError(
-                f"States '{self.name}': config.utm_zone = {config.utm_zone} differs from determined zone {zone}"
-            )
-
-        super().preproc_first(algo, data, bounds_extra_space, height_bounds, verbosity)
-
-        if self.icon_point_plot is not None:
-            try:
-                if self.isel is not None:
-                    data = data.isel(self.isel)
-                if self.sel is not None:
-                    data = data.sel(self.sel)
-                has_data = True
-                for c, s in data.sizes.items():
-                    if s == 0:
-                        has_data = False
-                        break
-            except KeyError:
-                has_data = False
-
-            if has_data:
-                fpath = get_output_path(self.icon_point_plot)
-                if verbosity > 0:
-                    print(
-                        f"States '{self.name}': Writing ICON grid point plot to '{fpath}'"
-                    )
-                fig, ax = plt.subplots(figsize=(8, 8))
-                xx, yy = np.meshgrid(
-                    data[self._cmap[FV.X]].values.flatten(),
-                    data[self._cmap[FV.Y]].values.flatten(),
-                )
-                pts = from_lonlat(np.stack((xx.flatten(), yy.flatten()), axis=-1))
-                ax.plot(
-                    pts[:, 0],
-                    pts[:, 1],
-                    c="blue",
-                    alpha=0.2,
-                    marker=".",
-                    linestyle="None",
-                )
-                anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
-                FarmLayoutOutput(farm=algo.farm).get_figure(
-                    fig=fig, ax=ax, annotate=anno, fontsize=12
-                )
-                ax.set_xlabel(f"{FV.X} [m]")
-                ax.set_ylabel(f"{FV.Y} [m]")
-                ax.set_aspect("equal", adjustable="box")
-                ax.autoscale_view(tight=True)
-                fig.savefig(fpath, bbox_inches="tight")
-                plt.close()
 
     def load_data(self, algo, verbosity=0):
         """
@@ -348,42 +176,3 @@ class ICONStates(DatasetStates):
             coords = coords.copy()
             coords[FV.H] = coords[self.H_TKE]
         return dims, coords
-
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
-        """
-        Interpolates data to points.
-
-        This function should be implemented in derived classes.
-
-        Parameters
-        ----------
-        idims: list of str
-            The input dimensions, e.g. [x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
-        d: numpy.ndarray
-            The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
-        pts: numpy.ndarray
-            The points to interpolate to, with shape (n_pts, n_idims)
-        vrs: list of str
-            The variable names, length nv
-        times: numpy.ndarray
-            The time coordinates of the states, with shape (n_states,)
-        Returns
-        -------
-        d_interp: numpy.ndarray
-            The interpolated data array with shape (n_pts, nv)
-
-        """
-        # convert (x, y) to (lon, lat) before interpolation:
-        if FV.X in idims:
-            ix = idims.index(FV.X)
-            assert len(idims) > ix + 1 and idims[ix + 1] == FV.Y, (
-                f"States {self.name}: Expecting subsequent ({FV.X}, {FV.Y}) in idims, got {idims}"
-            )
-            pts[:, ix : ix + 2] = to_lonlat(pts[:, ix : ix + 2])
-
-        return super().interpolate_data(idims, icrds, d, pts, vrs, times)

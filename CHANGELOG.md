@@ -957,6 +957,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.7.7
 
-
+- Applications:
+  - New command line tool `era52foxes`, reducing and localizing ERA5 data files to FieldData-ready NetCDF files
+- Inputs:
+  - New ambient states class `LatLonFieldData`, for NetCDF input on regular latitude/longitude grids
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.7](https://github.com/FraunhoferIWES/foxes/commits/v1.7.7)

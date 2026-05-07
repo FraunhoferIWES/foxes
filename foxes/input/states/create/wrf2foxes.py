@@ -242,18 +242,23 @@ def _process_file(
     verbosity=0,
 ):
     """Process a single file"""
-    wrf_data = open_dataset(fpath, drop_variables=drop_vars, engine=config.nc_engine)
-    if preprocess is not None:
-        wrf_data = preprocess(wrf_data)
-    n_times = wrf_data.sizes[cmap[FC.STATE]]
-
-    # extract data:
+    # prepare:
     cs = cmap[FC.STATE]
     cx = cmap[FV.X]
     cy = cmap[FV.Y]
     ch = cmap[FV.H]
-    if FV.H in points_isel:
-        wrf_data = wrf_data.isel({ch: points_isel[FV.H]})
+
+    with open_dataset(
+        fpath, drop_variables=drop_vars, engine=config.nc_engine
+    ) as wrf_data:
+        if preprocess is not None:
+            wrf_data = preprocess(wrf_data)
+        if FV.H in points_isel:
+            wrf_data = wrf_data.isel({ch: points_isel[FV.H]})
+        wrf_data = wrf_data.load()
+
+    # extract data:
+    n_times = wrf_data.sizes[cs]
     if FV.X in points_isel:
         assert FV.Y in points_isel, (
             f"If {FV.X} is in points_isel, {FV.Y} must also be in points_isel"
