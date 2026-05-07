@@ -1,6 +1,5 @@
-import numpy as np
-
 from foxes.core import PointDataModel
+from foxes.utils import tke2ti
 import foxes.variables as FV
 
 
@@ -29,7 +28,7 @@ class TKE2TI(PointDataModel):
         """
         return [FV.TI]
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
 
@@ -54,7 +53,9 @@ class TKE2TI(PointDataModel):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        tke = pdata[FV.TKE]
-        ws = pdata[FV.WS]
+        tke = tdata[FV.TKE]
+        ws = tdata[FV.WS]
 
-        return {FV.TI: np.sqrt(1.5 * tke) / ws}
+        ti = tke2ti(tke, ws)
+
+        return {FV.TI: ti}

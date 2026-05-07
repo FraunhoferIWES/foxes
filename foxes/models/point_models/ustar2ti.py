@@ -1,7 +1,6 @@
-import numpy as np
 from foxes.core import PointDataModel
+from foxes.utils import ustar2ti
 import foxes.variables as FV
-import foxes.constants as FC
 
 
 class Ustar2TI(PointDataModel):
@@ -49,7 +48,7 @@ class Ustar2TI(PointDataModel):
         """
         return [FV.TI]
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
 
@@ -74,11 +73,9 @@ class Ustar2TI(PointDataModel):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        ustar = pdata[FV.USTAR]
-        ws = pdata[FV.WS]
+        ustar = tdata[FV.USTAR]
+        ws = tdata[FV.WS]
 
-        ti = (ustar / FC.KAPPA) / ws
-        if self.max_ti is not None:
-            ti = np.maximum(ti, self.max_ti)
+        ti = ustar2ti(ustar, ws, self.max_ti)
 
         return {FV.TI: ti}

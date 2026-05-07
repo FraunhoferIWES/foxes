@@ -6,7 +6,7 @@ from xarray import open_dataset, Dataset, concat
 
 from foxes.config import config
 from foxes.core import Engine, get_engine
-from foxes.utils import write_nc, calc_era5_density
+from foxes.utils import write_nc, calc_era5_density, ustar2ti
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -41,17 +41,21 @@ def _process_first_file(
     assert var2ncvar[FV.V].endswith("100"), (
         f"Expected V variable to be at 100m height, got {var2ncvar[FV.V]}"
     )
-    c_msl = var2ncvar.get("msl", "msl")
+    c_msl = var2ncvar["msl"]
     assert c_msl in data.data_vars, (
         f"Mean sea level pressure variable '{c_msl}' is required to compute air density, but not found in data variables: {list(data.data_vars.keys())}"
     )
-    c_t2m = var2ncvar.get("t2m", "t2m")
+    c_t2m = var2ncvar["t2m"]
     assert c_t2m in data.data_vars, (
         f"2m temperature variable '{c_t2m}' is required to compute air density, but not found in data variables: {list(data.data_vars.keys())}"
     )
-    c_d2m = var2ncvar.get("d2m", "d2m")
+    c_d2m = var2ncvar["d2m"]
     assert c_d2m in data.data_vars, (
         f"2m dew point variable '{c_d2m}' is required to compute air density, but not found in data variables: {list(data.data_vars.keys())}"
+    )
+    c_zust = var2ncvar["zust"]
+    assert c_zust in data.data_vars, (
+        f"Ustar variable '{c_zust}' is required to compute TI, but not found in data variables: {list(data.data_vars.keys())}"
     )
 
     # reduce variables:
@@ -138,6 +142,7 @@ def _process_file(
     points_isel,
     preprocess=None,
     check_nan=True,
+    max_ti=1.0,
     verbosity=0,
 ):
     """Process a single file"""
@@ -145,11 +150,15 @@ def _process_file(
     cs = cmap[FC.STATE]
     clon = cmap[FV.LON]
     clat = cmap[FV.LAT]
-    c_msl = var2ncvar.get("msl", "msl")
-    c_t2m = var2ncvar.get("t2m", "t2m")
-    c_d2m = var2ncvar.get("d2m", "d2m")
-
-    with open_dataset(fpath, drop_variables=drop_vars, engine=config.nc_engine) as era5_data:
+    c_u = var2ncvar[FV.U]
+    c_v = var2ncvar[FV.V]
+    c_msl = var2ncvar["msl"]
+    c_t2m = var2ncvar["t2m"]
+    c_d2m = var2ncvar["d2m"]
+    c_zust = var2ncvar["zust"]
+    with open_dataset(
+        fpath, drop_variables=drop_vars, engine=config.nc_engine
+    ) as era5_data:
         if preprocess is not None:
             era5_data = preprocess(era5_data)
         if FV.LON in points_isel:
@@ -160,11 +169,13 @@ def _process_file(
 
     # extract times:
     times = era5_data[cs].values
-    years = np.unique(times.astype('datetime64[Y]').astype(int) + 1970)
-    months = np.unique(times.astype('datetime64[M]').astype(int) % 12 + 1)
-    #days = (times.astype('datetime64[D]') - times.astype('datetime64[M]')).astype(int) + 1
+    years = np.unique(times.astype("datetime64[Y]").astype(int) + 1970)
+    months = np.unique(times.astype("datetime64[M]").astype(int) % 12 + 1)
+    # days = (times.astype('datetime64[D]') - times.astype('datetime64[M]')).astype(int) + 1
     assert len(years) == 1, f"Expected all times to be in the same year, found: {years}"
-    assert len(months) == 1, f"Expected all times to be in the same month, found: {months}"
+    assert len(months) == 1, (
+        f"Expected all times to be in the same month, found: {months}"
+    )
     year = years[0]
     month = months[0]
     del times, years, months
@@ -181,13 +192,23 @@ def _process_file(
 
     # compute air density:
     data.append(calc_era5_density(era5_data, z=100.0, var2ncvar=var2ncvar))
-    del era5_data
     vrs = list(var2ncvar.keys()) + [FV.RHO]
     for v in [c_msl, c_t2m, c_d2m]:
         if v in vrs:
             i = vrs.index(v)
             data.pop(i)
             vrs.pop(i)
+
+    # compute ti:
+    ws = np.sqrt(era5_data[c_u].values ** 2 + era5_data[c_v].values ** 2)
+    ustar = era5_data[c_zust].values
+    data.append(ustar2ti(ustar, ws, max_ti=max_ti))
+    vrs.append(FV.TI)
+    if c_zust in vrs:
+        i = vrs.index(c_zust)
+        data.pop(i)
+        vrs.pop(i)
+    del era5_data, ws, ustar
 
     # check for nan values:
     if check_nan:
@@ -197,14 +218,11 @@ def _process_file(
                 raise ValueError(
                     f"{fpath.name}: Found {n_nan} NaN values in variable {w}"
                 )
-    
+
     # create Dataset:
     data = Dataset(
         coords=crds,
-        data_vars={
-            v: (tuple(ocmap.values()), data[i]) 
-            for i, v in enumerate(vrs)
-        },
+        data_vars={v: (tuple(ocmap.values()), data[i]) for i, v in enumerate(vrs)},
         attrs={
             "source_file": fpath.name,
             f"height_{FV.U}": 100.0,
@@ -214,12 +232,14 @@ def _process_file(
 
     return data, f"{year:04d}{month:02d}"
 
+
 def _write_file(data, fpath, write_pars=None, verbosity=0):
-    """ Write the processed data to a NetCDF file """
+    """Write the processed data to a NetCDF file"""
     wpars = dict(pack=True)
     if write_pars is not None:
         wpars.update(write_pars)
     write_nc(data, fpath, verbosity=verbosity, **wpars)
+
 
 def era52foxes(
     source_files,
@@ -232,6 +252,7 @@ def era52foxes(
     write_points_png=False,
     check_nan=False,
     write_pars=None,
+    max_ti=1.0,
     verbosity=1,
 ):
     """
@@ -258,6 +279,8 @@ def era52foxes(
         Whether to save a plot of the grid points
     write_pars: dict, optional
         Parameters for writing the NetCDF file, e.g. pack
+    max_ti: float, optional
+        The maximum turbulence intensity (TI) value to compute
     verbosity : int, optional
         The verbosity level, 0 = silent, by default 1
 
@@ -294,6 +317,7 @@ def era52foxes(
         "msl": "msl",
         "t2m": "t2m",
         "d2m": "d2m",
+        "zust": "zust",
     }
     if var2ncvar is not None:
         var2ncvar.update(var2ncvar)
@@ -323,6 +347,7 @@ def era52foxes(
             preprocess=preprocess,
             points_isel=points_isel,
             check_nan=check_nan,
+            max_ti=max_ti,
             verbosity=verbosity - 2,
         )
         for fpath in files
@@ -352,10 +377,11 @@ def era52foxes(
 
         done += 1
         if verbosity > 0:
-            hproc = int(100*(done/total))
+            hproc = int(100 * (done / total))
             if hproc > proc:
                 proc = hproc
                 print(f"Progress: {proc}% ({done}/{total} files processed)")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -424,6 +450,13 @@ def main():
         action="store_true",
     )
     parser.add_argument(
+        "-mti",
+        "--max_ti",
+        help="The maximum turbulence intensity (TI) value to compute",
+        type=float,
+        default=1.0,
+    )
+    parser.add_argument(
         "-v",
         "--verbosity",
         help="The verbosity level, 0 = silent",
@@ -441,6 +474,7 @@ def main():
             write_points_png=args.write_points_png,
             check_nan=not args.skip_check_nan,
             write_pars=dict(pack=not args.skip_packing),
+            max_ti=args.max_ti,
             verbosity=args.verbosity,
         )
 
