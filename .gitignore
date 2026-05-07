@@ -148,6 +148,9 @@ submodules/
 results/
 result*.*
 
+# AI
+Agents.md
+
 # exceptions:
 !foxes/output/results_writer.py
 !tests/**/results*
