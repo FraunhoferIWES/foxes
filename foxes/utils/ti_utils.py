@@ -2,6 +2,7 @@ import numpy as np
 
 import foxes.constants as FC
 
+
 def tke2ti(tke, ws, max_ti=None):
     """
     Convert turbulent kinetic energy (TKE) to turbulence intensity (TI).
@@ -14,7 +15,7 @@ def tke2ti(tke, ws, max_ti=None):
         Wind speed.
     max_ti : float, optional
         Upper limit of the computed TI values.
-        
+
     Returns
     -------
     ti :numpy.ndarray
@@ -26,7 +27,7 @@ def tke2ti(tke, ws, max_ti=None):
     ti = np.sqrt(1.5 * tke) / ws
     if max_ti is not None:
         ti = np.minimum(ti, max_ti)
-    
+
     return ti
 
 
