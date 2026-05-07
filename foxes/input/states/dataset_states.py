@@ -228,6 +228,17 @@ class DatasetStates(States):
         self.variables = [v for v in self.ovars if v not in self.fixed_vars]
         self.force_keep_vars = force_keep_vars if force_keep_vars is not None else []
 
+        # keep U and V in variables, but replace by WS, WD in output variables:
+        if FV.U in self.ovars or FV.V in self.ovars:
+            assert FV.U in self.ovars and FV.V in self.ovars, (
+                f"States '{self.name}': Require both {FV.U} and {FV.V} in output_vars to compute wind direction, got {self.ovars}"
+            )
+            assert FV.WS not in self.ovars and FV.WD not in self.ovars, (
+                f"States '{self.name}': Cannot have {FV.U} and {FV.V} together with {FV.WS} or {FV.WD} in output_vars, got {self.ovars}"
+            )
+            self.ovars[self.ovars.index(FV.U)] = FV.WS
+            self.ovars[self.ovars.index(FV.V)] = FV.WD
+
         self._N = None
         self._inds = None
         self._cmap = {}
