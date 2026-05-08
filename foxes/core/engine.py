@@ -696,6 +696,7 @@ class Engine(ABC):
             self.goal_data = goal_data
             self.data_vars = {}
             self.out_dir = None
+            self.pack = None
             self.base_name = None
             self.ret_data = True
             self.gen_size = None
@@ -719,6 +720,7 @@ class Engine(ABC):
                 self.ret_data = write_nc.get("ret_data", False)
                 self.split_mode = write_nc.get("split", None)
                 self.out_dir.mkdir(parents=True, exist_ok=True)
+                self.pack = write_nc.get("pack", True)
                 out_fpath = self.out_dir / (self.base_name + "_*.nc")
                 if self.split_mode == "chunks":
                     self.engine.print(
@@ -818,7 +820,9 @@ class Engine(ABC):
 
                     fpath = self.out_dir / f"{self.base_name}_{self.fcounter:06d}.nc"
                     args = (ds, fpath)
-                    kwargs = dict(nc_engine=config.nc_engine, verbosity=vrb)
+                    kwargs = dict(
+                        nc_engine=config.nc_engine, verbosity=vrb, pack=self.pack
+                    )
                     if futures is not None and len(futures) < self.engine.n_workers:
                         future = self.engine.submit(write_nc_file, *args, **kwargs)
                         wfutures.append(future)
