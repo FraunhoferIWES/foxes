@@ -114,6 +114,11 @@ class MultipleFarmsOutput(Output):
         kwargs: dict, optional
             Additional parameters for the xarray.Dataset.to_netcdf() method
 
+        Returns
+        -------
+        xarray.Dataset
+            The aggregated results that were written to the netCDF file
+
         """
         if agg == FC.FARM:
             ds = self.agg_farm_results
@@ -126,6 +131,8 @@ class MultipleFarmsOutput(Output):
 
         fpath = self.get_fpath(fname)
         write_nc(ds, fpath, **kwargs)
+
+        return ds
 
     def split_by_farm(self):
         """
@@ -168,11 +175,20 @@ class MultipleFarmsOutput(Output):
         kwargs: dict, optional
             Additional parameters for the xarray.Dataset.to_netcdf() method
 
+        Returns
+        -------
+        dict
+            A dictionary with the wind farm names as keys and the corresponding results that
+            were written to the netCDF files as values
+
         """
-        for farm, ds in self.split_by_farm().items():
+        fdict = self.split_by_farm()
+        for farm, ds in fdict.items():
             fname = f"{base_name}_{farm}.nc"
             fpath = self.get_fpath(fname)
             write_nc(ds, fpath, **kwargs)
+
+        return fdict
 
     def write_cluster_nc_files(self, base_name, **kwargs):
         """
@@ -185,8 +201,17 @@ class MultipleFarmsOutput(Output):
         kwargs: dict, optional
             Additional parameters for the xarray.Dataset.to_netcdf() method
 
+        Returns
+        -------
+        dict
+            A dictionary with the cluster names as keys and the corresponding results that
+            were written to the netCDF files as values
+
         """
-        for cluster, ds in self.split_by_cluster().items():
+        cdict = self.split_by_cluster()
+        for cluster, ds in cdict.items():
             fname = f"{base_name}_{cluster}.nc"
             fpath = self.get_fpath(fname)
             write_nc(ds, fpath, **kwargs)
+
+        return cdict
