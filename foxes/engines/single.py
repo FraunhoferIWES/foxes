@@ -62,24 +62,7 @@ class SingleChunkEngine(Engine):
             The future object
 
         """
-        return f(*args, **kwargs)
-
-    def future_is_done(self, future):
-        """
-        Checks if a future is done
-
-        Parameters
-        ----------
-        future: object
-            The future
-
-        Returns
-        -------
-        is_done: bool
-            True if the future is done
-
-        """
-        return True
+        return {"f": f, "args": args, "kwargs": kwargs, "result": None, "done": False}
 
     def await_result(self, future):
         """
@@ -96,7 +79,29 @@ class SingleChunkEngine(Engine):
             The calculation result
 
         """
-        return future
+        if not future["done"]:
+            f, args, kwargs = future.pop("f"), future.pop("args"), future.pop("kwargs")
+            future["result"] = f(*args, **kwargs)
+            future["done"] = True
+
+        return future["result"]
+
+    def future_is_done(self, future):
+        """
+        Checks if a future is done
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        is_done: bool
+            True if the future is done
+
+        """
+        return future["done"]
 
     def map(
         self,
