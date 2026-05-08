@@ -318,6 +318,50 @@ waked variable
 """
 
 
+extensive_farm = set(
+    [
+        AMB_P,
+        P,
+        AMB_YLD,
+        YLD,
+        AMB_CAP,
+        CAP,
+    ]
+)
+""" Set of extensive variables, i.e. variables that should be summed when aggregating over turbines
+:group: foxes.variables
+"""
+
+intensive_farm = (
+    set(var2amb.keys()).union(set(var2amb.values())).difference(extensive_farm)
+)
+""" Set of intensive variables, i.e. variables that should be averaged when aggregating over turbines
+:group: foxes.variables
+"""
+
+
+extensive_state = set(
+    [
+        AMB_P,
+        P,
+        AMB_YLD,
+        YLD,
+        AMB_CAP,
+        CAP,
+        WEIGHT,
+    ]
+)
+""" Set of extensive variables, i.e. variables that should be summed when aggregating over states
+:group: foxes.variables
+"""
+intensive_state = (
+    set(var2amb.keys()).union(set(var2amb.values())).difference(extensive_state)
+)
+""" Set of intensive variables, i.e. variables that should be averaged when aggregating over states
+:group: foxes.variables
+"""
+
+
 MEAN_WS = "MEAN_WS"
 """ The mean wind speed in m/s
 :group: foxes.variables

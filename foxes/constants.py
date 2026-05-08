@@ -8,8 +8,13 @@ XYH = "xyh"
 :group: foxes.variables
 """
 
-FARM = "farm"
+FARM = "wind_farm"
 """ Wind farm identifier
+:group: foxes.constants
+"""
+
+CLUSTER = "cluster"
+""" Cluster identifier
 :group: foxes.constants
 """
 

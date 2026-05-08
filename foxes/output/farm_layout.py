@@ -232,7 +232,13 @@ class FarmLayoutOutput(Output):
             if color_by is not None:
                 if self.fres is None:
                     raise ValueError(f"Missing farm_results for color_by '{color_by}'")
-                if color_by[:5] == "mean_":
+                if color_by in self.fres and self.fres[color_by].dims == (FC.TURBINE,):
+                    kw["c"] = self.fres[color_by]
+                elif color_by == FC.FARM:
+                    kw["c"] = self.farm.wind_farm_list
+                elif color_by == FC.CLUSTER:
+                    kw["c"] = self.farm.cluster_list
+                elif color_by[:5] == "mean_":
                     weights = self.fres[FV.WEIGHT]
                     if weights.dims == (FC.STATE,):
                         wx = "s"
@@ -254,7 +260,19 @@ class FarmLayoutOutput(Output):
                         f"Unknown color_by '{color_by}'. Choose: mean_X, sum_X, min_X, max_X, where X is a farm_results variable"
                     )
 
-            im = ax.scatter(x, y, **kw)
+            if np.all(np.isreal(kw["c"])):
+                im = ax.scatter(x, y, **kw)
+                legend = False
+            else:
+                legend = True
+                lbls = np.array(kw.pop("c"))
+                u = np.unique(lbls)
+                for lbl in u:
+                    sel = lbls == lbl
+                    im = ax.scatter(x[sel], y[sel], label=lbl, **kw)
+                    ax.legend(
+                        title=color_by, loc="center left", bbox_to_anchor=(1, 0.5)
+                    )
 
             if annotate == 1:
                 for i, txt in enumerate(n):
@@ -300,7 +318,7 @@ class FarmLayoutOutput(Output):
 
         ax.autoscale_view(tight=True)
 
-        if color_by is not None:
+        if color_by is not None and not legend:
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.05)
             fig.colorbar(im, cax=cax)

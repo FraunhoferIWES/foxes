@@ -961,5 +961,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New command line tool `era52foxes`, reducing and localizing ERA5 data files to FieldData-ready NetCDF files
 - Inputs:
   - New ambient states class `LatLonFieldData`, for NetCDF input on regular latitude/longitude grids
+- Output:
+  - New output class: `MultipleFarmsOutput`, splitting and aggregating farm results for sub-farms and clusters
+  - The `FarmLayoutOutput` can now also color by `wind_farm` and `cluster` fields.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.7](https://github.com/FraunhoferIWES/foxes/commits/v1.7.7)

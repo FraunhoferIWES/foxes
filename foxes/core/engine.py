@@ -980,7 +980,7 @@ class Engine(ABC):
                             )
 
                             fpath = self.out_dir / f"{self.base_name}_{fcounter:06d}.nc"
-                            future = self.submit(
+                            future = self.engine.submit(
                                 write_nc_file,
                                 dssub,
                                 fpath,
@@ -1002,7 +1002,7 @@ class Engine(ABC):
                                 except StopIteration:
                                     self.split_size = self.algo.n_states - wcount
                         for wf in wfutures:
-                            self.await_result(wf)
+                            self.engine.await_result(wf)
 
             del (
                 self.ci_states,

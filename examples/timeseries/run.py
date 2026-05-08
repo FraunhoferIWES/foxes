@@ -91,7 +91,11 @@ if __name__ == "__main__":
 
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_from_file(
-        farm, args.layout, turbine_models=args.tmodels + [ttype.name]
+        farm,
+        args.layout,
+        col_wind_farm="subfarm",
+        col_cluster="cluster",
+        turbine_models=args.tmodels + [ttype.name],
     )
 
     if args.show_layout:
@@ -186,3 +190,9 @@ if __name__ == "__main__":
         o = foxes.output.StateTurbineMap(farm_results)
         ax = o.plot_map(FV.P, cmap="inferno", figsize=(6, 7))
         plt.show()
+
+        o = foxes.output.MultipleFarmsOutput(farm, farm_results)
+        print(o.results)
+        print(o.agg_farm_results)
+        print(o.agg_cluster_results)
+        print(o.split_by_farm())
