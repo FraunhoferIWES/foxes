@@ -66,7 +66,7 @@ def add_from_wrf(
     txt_path = directory / txt_file
     if not txt_path.exists():
         raise FileNotFoundError(f"File {txt_path} not found")
-    data = np.genfromtxt(txt_path)
+    data = np.genfromtxt(txt_path)[:, :3]
     ttypes = {}
     for i in np.unique(data[:, 2]).astype(int):
         tbl_path = directory / tbl_name_fun(i)
