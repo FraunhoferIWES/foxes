@@ -260,16 +260,20 @@ class FarmLayoutOutput(Output):
                         f"Unknown color_by '{color_by}'. Choose: mean_X, sum_X, min_X, max_X, where X is a farm_results variable"
                     )
 
-            if np.all(np.isreal(kw["c"])):
-                im = ax.scatter(x, y, **kw)
+            c = kw.pop("c", "orange")
+            if c is None or isinstance(c, str) or np.all(np.isreal(c)):
+                im = ax.scatter(x, y, c=c, **kw)
                 legend = False
             else:
                 legend = True
-                lbls = np.array(kw.pop("c"))
+                lbls = np.array(c)
+                assert lbls.shape == (len(x),), (
+                    f"Expecting color_by variable with shape {(len(x),)}, got {lbls.shape}"
+                )
                 u = np.unique(lbls)
                 for lbl in u:
                     sel = lbls == lbl
-                    im = ax.scatter(x[sel], y[sel], label=lbl, **kw)
+                    im = ax.scatter(x[sel], y[sel], c=c[sel], label=lbl, **kw)
                     ax.legend(
                         title=color_by, loc="center left", bbox_to_anchor=(1, 0.5)
                     )
