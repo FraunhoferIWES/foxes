@@ -27,6 +27,11 @@ def _read_nc_file(
 ):
     """Helper function for nc file reading"""
     with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as data:
+        # Ensure deterministic ascending coordinate order for all dimensions.
+        for d in data.dims:
+            if d in data.coords:
+                data = data.sortby(d)
+
         for c in coords:
             if c is not None and c not in data.sizes:
                 raise KeyError(
