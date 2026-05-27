@@ -25,6 +25,8 @@ def _process_first_file(
 
     # read file:
     data = open_dataset(fpath, engine=config.nc_engine)
+    for d in data.dims:
+        data = data.sortby(d)
     if preprocess is not None:
         data = preprocess(data)
 
@@ -159,6 +161,8 @@ def _process_file(
     with open_dataset(
         fpath, drop_variables=drop_vars, engine=config.nc_engine
     ) as era5_data:
+        for d in era5_data.dims:
+            era5_data = era5_data.sortby(d)
         if preprocess is not None:
             era5_data = preprocess(era5_data)
         if FV.LON in points_isel:

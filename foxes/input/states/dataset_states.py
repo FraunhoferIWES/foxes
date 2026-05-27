@@ -22,15 +22,29 @@ def _read_nc_file(
     isel,
     minimal,
     drop_vars=None,
+    sort=False,
     check_input_nans=True,
     preprocess=None,
 ):
     """Helper function for nc file reading"""
     with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as data:
         # Ensure deterministic ascending coordinate order for all dimensions.
-        for d in data.dims:
-            if d in data.coords:
-                data = data.sortby(d)
+        if sort is not None:
+            if isinstance(sort, bool):
+                if sort:
+                    for d in data.dims:
+                        if d in data.coords:
+                            data = data.sortby(d)
+            elif isinstance(sort, list):
+                for d in sort:
+                    assert d in data.dims, (
+                        f"Cannot sort by dimension '{d}' in file {fpath}, not found among dimensions {list(data.dims)}"
+                    )
+                    data = data.sortby(d)
+            else:
+                raise ValueError(
+                    f"Invalid sort argument of type {type(sort).__name__}, expected bool or list of str"
+                )
 
         for c in coords:
             if c is not None and c not in data.sizes:
@@ -128,6 +142,8 @@ class DatasetStates(States):
         Subset selection via xr.Dataset.isel()
     weight_factor: float
         The factor to multiply the weights with
+    sort: bool or list of str
+        Whether to sort the data by the state coordinate, or list of coordinates to sort by
     check_times: bool
         Whether to check the time coordinates for consistency
     check_input_nans: bool
@@ -158,6 +174,7 @@ class DatasetStates(States):
         weight_factor=None,
         check_times=True,
         check_input_nans=True,
+        sort=False,
         preprocess_nc=None,
         force_keep_vars=None,
         interp_pars={},
@@ -204,6 +221,8 @@ class DatasetStates(States):
             Whether to check the time coordinates for consistency
         check_input_nans: bool
             Whether to check input data for NaNs, otherwise NaNs are removed
+        sort: bool or list of str, optional
+            Whether to sort the data by the state coordinate, or list of coordinates to sort by
         preprocess_nc: callable, optional
             A function to preprocess the netcdf Dataset before use
         force_keep_vars: list of str, optional
@@ -226,6 +245,7 @@ class DatasetStates(States):
         self.weight_factor = weight_factor
         self.bounds_extra_space = bounds_extra_space
         self.height_bounds = height_bounds
+        self.sort = sort
         self.check_times = check_times
         self.check_input_nans = check_input_nans
         self.preprocess_nc = preprocess_nc
@@ -581,6 +601,7 @@ class DatasetStates(States):
                     sel=self.sel,
                     minimal=False,
                     drop_vars=None,
+                    sort=self.sort,
                     check_input_nans=False,
                     preprocess=None,
                 )
@@ -637,6 +658,7 @@ class DatasetStates(States):
                 sel=self.sel,
                 minimal=self.load_mode == "fly",
                 drop_vars=self.drop_vars,
+                sort=self.sort,
                 check_input_nans=self.check_input_nans,
                 preprocess=self.preprocess_nc,
             )
@@ -1033,6 +1055,7 @@ class DatasetStates(States):
                             sel=self.sel,
                             minimal=False,
                             drop_vars=self.drop_vars,
+                            sort=self.sort,
                             check_input_nans=self.check_input_nans,
                             preprocess=self.preprocess_nc,
                         )

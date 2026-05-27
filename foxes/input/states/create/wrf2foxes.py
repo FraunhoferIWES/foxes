@@ -35,6 +35,8 @@ def _process_first_file(
 
     # read file:
     wrf_data = open_dataset(fpath, engine=config.nc_engine)
+    for d in wrf_data.dims:
+        wrf_data = wrf_data.sortby(d)
     if preprocess is not None:
         wrf_data = preprocess(wrf_data)
 
@@ -251,6 +253,8 @@ def _process_file(
     with open_dataset(
         fpath, drop_variables=drop_vars, engine=config.nc_engine
     ) as wrf_data:
+        for d in wrf_data.dims:
+            wrf_data = wrf_data.sortby(d)
         if preprocess is not None:
             wrf_data = preprocess(wrf_data)
         if FV.H in points_isel:
