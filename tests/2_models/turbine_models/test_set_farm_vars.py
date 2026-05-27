@@ -55,5 +55,9 @@ def test_set_farm_vars():
             assert np.allclose(g["x"].values, g[FV.WD].values + i / 10)
 
 
-if __name__ == "__main__":
+def main():
     test_set_farm_vars()
+
+
+if __name__ == "__main__":
+    main()

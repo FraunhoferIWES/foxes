@@ -147,11 +147,10 @@ class LookupTable(TurbineModel):
             dvars = {}
             for oname in self.output_vars:
                 pivot_matrix = data.pivot_table(index=self.input_vars, values=[oname])
+                shape = tuple(len(coords[v]) for v in self.input_vars)
                 dvars[oname] = (
                     self.input_vars,
-                    pivot_matrix.to_numpy(config.dtype_double).reshape(
-                        pivot_matrix.index.levshape
-                    ),
+                    pivot_matrix.to_numpy(config.dtype_double).reshape(shape),
                 )
 
             self._data = xr.Dataset(coords=coords, data_vars=dvars)
