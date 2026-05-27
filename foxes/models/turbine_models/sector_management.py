@@ -141,8 +141,8 @@ class SectorManagement(TurbineModel):
             self._tcols.append(col)
 
         n_rvars = len(self._rvars)
-        self._rdata = data[self._rcols].to_numpy().reshape(n_trbs, n_rvars, 2)
-        self._tdata = data[self._tcols].to_numpy()
+        self._rdata = data[self._rcols].to_numpy(copy=True).reshape(n_trbs, n_rvars, 2)
+        self._tdata = data[self._tcols].to_numpy(copy=True)
 
         for vi, v in enumerate(self._rvars):
             if v in self._perds:
