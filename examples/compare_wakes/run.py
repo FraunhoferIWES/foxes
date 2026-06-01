@@ -240,5 +240,5 @@ if __name__ == "__main__":
         ax.legend(loc="best")
         ax.grid()
 
-if not args.nofig:
-    plt.show()
+    if not args.nofig:
+        plt.show()
