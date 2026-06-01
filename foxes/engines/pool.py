@@ -2,133 +2,9 @@ import numpy as np
 from xarray import Dataset
 from abc import abstractmethod
 
-from foxes.config import config, get_output_path
+from foxes.config import config
 from foxes.core import Engine
-from foxes.utils import write_nc as write_nc_file
-from foxes.output import write_chunk_ani_xy
 import foxes.constants as FC
-
-
-def _write_chunk_results(algo, results, write_nc, out_dims, mdata):
-    """Helper function for optionally writing chunk results to netCDF file"""
-    ret_data = True
-    if write_nc is not None and write_nc["split"] == "chunks":
-        ret_data = write_nc.get("ret_data", False)
-        out_dir = get_output_path(write_nc.get("out_dir", "."))
-        base_name = write_nc["base_name"]
-        ret_data = write_nc.get("ret_data", False)
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        coords = {}
-        if FC.STATE in out_dims and FC.STATE in mdata:
-            coords[FC.STATE] = mdata[FC.STATE]
-
-        dvars = {}
-        for v, d in results.items():
-            if (
-                out_dims == (FC.STATE, FC.TURBINE)
-                and d.shape[1] == 1
-                and algo.n_turbines > 1
-            ):
-                dvars[v] = ((FC.STATE,), d[:, 0])
-            else:
-                dvars[v] = (out_dims, d)
-
-        ds = Dataset(coords=coords, data_vars=dvars)
-
-        i0 = mdata.chunki_states
-        t0 = mdata.chunki_points
-        vrb = max(algo.verbosity - 1, 0)
-        if out_dims == (FC.STATE, FC.TURBINE):
-            fpath = out_dir / f"{base_name}_{i0:06d}.nc"
-        else:
-            fpath = out_dir / f"{base_name}_{i0:06d}_{t0:06d}.nc"
-        write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
-
-    return results if ret_data else None
-
-
-def _write_ani(algo, chunk_key, write_chunk_ani, *data):
-    """Helper function for optionally writing chunk flow animations to file"""
-    if write_chunk_ani is not None:
-        pars = write_chunk_ani.copy()
-        chk = pars.pop("chunk")
-
-        def _do_run(chk):
-            if isinstance(chk, list):
-                for c in chk:
-                    if _do_run(c):
-                        return True
-                return False
-            else:
-                return (
-                    chk == chunk_key if isinstance(chk, tuple) else chk == chunk_key[0]
-                )
-
-        if _do_run(chk):
-            write_chunk_ani_xy(algo, *data, **pars)
-
-
-def _run(
-    algo,
-    model,
-    *data,
-    chunk_store,
-    chunk_key,
-    out_dims,
-    write_nc,
-    write_chunk_ani=None,
-    utm_zone=None,
-    **cpars,
-):
-    """Helper function for running in a single process"""
-
-    """
-    # For debugging: Check memory usage at the start of the calculation
-    import psutil
-    print(psutil.Process().pid, f"{algo.name} MEMORY ENTERING _RUN:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
-    """
-
-    if utm_zone is not None:  # needed in some cases for mpi engine TODO investigate
-        config.set_utm_zone(*utm_zone)
-    algo.reset_chunk_store(chunk_store.copy())
-
-    """
-    # For debugging: Check object sizes in memory
-    import psutil
-    import objsize
-    print(psutil.Process().pid, f"{algo.name} OBJECT SIZES ENTERING _RUN:", {k: objsize.get_deep_size(v) / 1024 ** 2 for k, v in {"algo": algo, "model": model, "data": data}.items()}, "MB")
-    """
-
-    results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store()
-    cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
-    _write_ani(algo, chunk_key, write_chunk_ani, *data)
-    results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
-    return results, cstore
-
-
-def _run_shared(
-    algo,
-    model,
-    *data,
-    chunk_key,
-    out_dims,
-    write_nc,
-    write_chunk_ani=None,
-    **cpars,
-):
-    """Helper function for running in a single process"""
-
-    results = model.calculate(algo, *data, **cpars)
-    cstore = (
-        {chunk_key: algo.chunk_store[chunk_key]}
-        if chunk_key in algo.chunk_store
-        else {}
-    )
-    _write_ani(algo, chunk_key, write_chunk_ani, *data)
-    results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
-    return results, cstore
 
 
 def _run_map(func, inputs, *args, **kwargs):
@@ -143,7 +19,7 @@ class PoolEngine(Engine):
     Parameters
     ----------
     share_cstore: bool
-        Share chunk store between chunks
+        Whether to share the chunk store between chunks.
     pool_args: dict
         Arguments for the pool constructor
 
@@ -159,10 +35,10 @@ class PoolEngine(Engine):
         ----------
         args: tuple, optional
             Arguments for the base class
-        share_cstore: bool
-            Share chunk store between chunks
         pool_args: dict
             Arguments for the pool constructor
+        share_cstore: bool
+            Whether to share the chunk store between chunks.
         kwargs: dict, optional
             Additional arguments for the base class
 
@@ -179,6 +55,14 @@ class PoolEngine(Engine):
     @abstractmethod
     def _shutdown_pool(self):
         """Shuts down the pool"""
+        pass
+
+    def prepare_shared_data(self, runner, shared):
+        """Prepare shared input data before the first chunk submission."""
+        return shared
+
+    def release_shared_data(self, runner, shared):
+        """Release shared input data after all chunk submissions finished."""
         pass
 
     def __enter__(self):
@@ -346,76 +230,70 @@ class PoolEngine(Engine):
         )
 
         # start calculation:
-        with self.new_chunk_results_manager(
-            algo,
-            chunk_store=new_chunk_store,
-            goal_data=goal_data,
-            n_chunks_states=n_chunks_states,
-            n_chunks_targets=n_chunks_targets,
-            out_vars=out_vars,
-            out_dims=out_dims,
-            coords=coords,
-            iterative=iterative,
-            write_nc=write_nc,
-        ) as results_mgr:
-            futures = {}
-            results = {}
-            i0_states = 0
-            for chunki_states in range(n_chunks_states):
-                i1_states = i0_states + chunk_sizes_states[chunki_states]
-                i0_targets = 0
-                for chunki_points in range(n_chunks_targets):
-                    key = (chunki_states, chunki_points)
-                    i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
+        runner = self.new_runner()
+        shared = None
+        try:
+            with self.new_chunk_results_manager(
+                algo,
+                chunk_store=new_chunk_store,
+                goal_data=goal_data,
+                n_chunks_states=n_chunks_states,
+                n_chunks_targets=n_chunks_targets,
+                out_vars=out_vars,
+                out_dims=out_dims,
+                coords=coords,
+                iterative=iterative,
+                write_nc=write_nc,
+            ) as results_mgr:
+                futures = {}
+                results = {}
+                i0_states = 0
+                for chunki_states in range(n_chunks_states):
+                    i1_states = i0_states + chunk_sizes_states[chunki_states]
+                    i0_targets = 0
+                    for chunki_points in range(n_chunks_targets):
+                        key = (chunki_states, chunki_points)
+                        i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
-                    # get this chunk's data:
-                    data = self.get_chunk_input_data(
-                        algo=algo,
-                        model_data=model_data,
-                        farm_data=farm_data,
-                        point_data=point_data,
-                        states_i0_i1=(i0_states, i1_states),
-                        targets_i0_i1=(i0_targets, i1_targets),
-                        out_vars=out_vars,
-                        chunki_states=chunki_states,
-                        chunki_points=chunki_points,
-                        n_chunks_states=n_chunks_states,
-                        n_chunks_points=n_chunks_targets,
-                    )
-
-                    """
-                    # For debugging: Check memory usage of main process before submitting the chunk calculation
-                    import psutil
-                    print(psutil.Process().pid, f"{algo.name} SUBMITTING {key} MEMORY:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
-                    """
-
-                    """
-                    # For debugging: Check object sizes in memory
-                    import psutil
-                    import objsize
-                    print(psutil.Process().pid, f"{algo.name} OBJECT SIZES BEFORE SUBMIT:", key, {k: objsize.get_deep_size(v) / 1024 ** 2 for k, v in {"algo": algo, "chunk_store": chunk_store}.items()}, "MB")
-                    """
-
-                    # submit model calculation:
-                    if self.share_cstore:
-                        futures[(chunki_states, chunki_points)] = self.submit(
-                            _run_shared,
-                            algo,
-                            model,
-                            *data,
-                            chunk_key=key,
-                            out_dims=out_dims,
-                            write_nc=write_nc,
-                            write_chunk_ani=write_chunk_ani,
-                            **calc_pars,
+                        # get this chunk's data:
+                        data, shrd = self.get_chunk_input_data(
+                            algo=algo,
+                            model_data=model_data,
+                            farm_data=farm_data,
+                            point_data=point_data,
+                            states_i0_i1=(i0_states, i1_states),
+                            targets_i0_i1=(i0_targets, i1_targets),
+                            out_vars=out_vars,
+                            chunki_states=chunki_states,
+                            chunki_points=chunki_points,
+                            n_chunks_states=n_chunks_states,
+                            n_chunks_points=n_chunks_targets,
                         )
-                    else:
+                        if shared is None:
+                            shared = self.init_shared_memory(shrd)
+                        del shrd
+
+                        """
+                        # For debugging: Check memory usage of main process before submitting the chunk calculation
+                        import psutil
+                        print(psutil.Process().pid, f"{algo.name} SUBMITTING {key} MEMORY:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
+                        """
+
+                        """
+                        # For debugging: Check object sizes in memory
+                        import psutil
+                        import objsize
+                        print(psutil.Process().pid, f"{algo.name} OBJECT SIZES BEFORE SUBMIT:", key, {k: objsize.get_deep_size(v) / 1024 ** 2 for k, v in {"algo": algo, "chunk_store": chunk_store, "shared": shared}.items()}, "MB")
+                        """
+
+                        # submit model calculation:
                         utm_zone = config.utm_zone if config.utm_zone_set else None
                         futures[(chunki_states, chunki_points)] = self.submit(
-                            _run,
+                            runner.run,
                             algo,
                             model,
                             *data,
+                            shared=shared,
                             chunk_store=chunk_store,
                             chunk_key=key,
                             out_dims=out_dims,
@@ -424,22 +302,24 @@ class PoolEngine(Engine):
                             utm_zone=utm_zone,
                             **calc_pars,
                         )
-                    del data
+                        del data
 
-                    while len(futures) > self.n_workers * 3:
-                        k = next(iter(futures))
-                        results[k] = self.await_result(futures.pop(k))
-                        results_mgr.update(results, futures)
+                        while len(futures) > self.n_workers * 3:
+                            k = next(iter(futures))
+                            results[k] = self.await_result(futures.pop(k))
+                            results_mgr.update(results, futures)
 
-                    i0_targets = i1_targets
-                i0_states = i1_states
+                        i0_targets = i1_targets
+                    i0_states = i1_states
 
-            fkeys = list(futures.keys())
-            for k in fkeys:
-                results[k] = self.await_result(futures.pop(k))
-                results_mgr.update(results, futures)
+                fkeys = list(futures.keys())
+                for k in fkeys:
+                    results[k] = self.await_result(futures.pop(k))
+                    results_mgr.update(results, futures)
 
-            del calc_pars, farm_data, results, futures
+                del calc_pars, farm_data, results, futures
+        finally:
+            self.release_shared_memory(shared)
 
         # update chunk store:
         chunk_store.update(new_chunk_store)

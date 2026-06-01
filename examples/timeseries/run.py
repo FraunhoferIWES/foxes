@@ -120,7 +120,7 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-        verbosity=1,
+        verbosity=2,
     )
 
     with engine:

@@ -14,6 +14,81 @@ from .data import MData, FData, TData
 __global_engine_data__ = dict(engine=None)
 
 
+class EngineRunner(ABC):
+    """
+    Helper class for running calculations in engines
+
+    :group: core
+    """
+
+    def _write_chunk_results(self, algo, results, write_nc, out_dims, mdata):
+        """Helper function for optionally writing chunk results to netCDF file"""
+        ret_data = True
+        if write_nc is not None and write_nc["split"] == "chunks":
+            ret_data = write_nc.get("ret_data", False)
+            out_dir = get_output_path(write_nc.get("out_dir", "."))
+            base_name = write_nc["base_name"]
+            ret_data = write_nc.get("ret_data", False)
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            coords = {}
+            if FC.STATE in out_dims and FC.STATE in mdata:
+                coords[FC.STATE] = mdata[FC.STATE]
+
+            dvars = {}
+            for v, d in results.items():
+                if (
+                    out_dims == (FC.STATE, FC.TURBINE)
+                    and d.shape[1] == 1
+                    and algo.n_turbines > 1
+                ):
+                    dvars[v] = ((FC.STATE,), d[:, 0])
+                else:
+                    dvars[v] = (out_dims, d)
+
+            ds = Dataset(coords=coords, data_vars=dvars)
+
+            i0 = mdata.chunki_states
+            t0 = mdata.chunki_points
+            vrb = max(algo.verbosity - 1, 0)
+            if out_dims == (FC.STATE, FC.TURBINE):
+                fpath = out_dir / f"{base_name}_{i0:06d}.nc"
+            else:
+                fpath = out_dir / f"{base_name}_{i0:06d}_{t0:06d}.nc"
+            write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
+
+        return results if ret_data else None
+
+    def _write_ani(self, algo, chunk_key, write_chunk_ani, *data):
+        """Helper function for optionally writing chunk flow animations to file"""
+        if write_chunk_ani is not None:
+            from foxes.output import write_chunk_ani_xy
+
+            pars = write_chunk_ani.copy()
+            chk = pars.pop("chunk")
+
+            def _do_run(chk):
+                if isinstance(chk, list):
+                    for c in chk:
+                        if _do_run(c):
+                            return True
+                    return False
+                else:
+                    return (
+                        chk == chunk_key
+                        if isinstance(chk, tuple)
+                        else chk == chunk_key[0]
+                    )
+
+            if _do_run(chk):
+                write_chunk_ani_xy(algo, *data, **pars)
+
+    @abstractmethod
+    def run(self, *args, **kwargs):
+        """Runs the chunk calculation"""
+        pass
+
+
 class Engine(ABC):
     """
     Abstract base clas for foxes calculation engines
@@ -433,6 +508,35 @@ class Engine(ABC):
 
         return chunk_sizes_states, chunk_sizes_targets
 
+    def init_shared_memory(self, shared_mdata):
+        """
+        Sets the shared memory for the chunk calculation
+
+        Parameters
+        ----------
+        shared_mdata: foxes.core.MData
+            The shared mdata to be used in the chunk calculation
+
+        Returns
+        -------
+        handle: object
+            The handle for accessing the shared data
+
+        """
+        return shared_mdata
+
+    def release_shared_memory(self, handle):
+        """
+        Releases the shared memory after the chunk calculation
+
+        Parameters
+        ----------
+        handle: object
+            The handle for accessing the shared data
+
+        """
+        pass
+
     def get_chunk_input_data(
         self,
         algo,
@@ -480,6 +584,8 @@ class Engine(ABC):
         data: tuple of foxes.core.Data
             The input data for the chunk calculation,
             either (mdata, fdata) or (mdata, fdata, tdata)
+        shared_mdata: foxes.core.MData
+            The shared mdata for the chunk calculation
 
         """
         # prepare:
@@ -536,7 +642,14 @@ class Engine(ABC):
             else None
         )
 
-        return (mdata, fdata) if tdata is None else (mdata, fdata, tdata)
+        # extract shared data:
+        shared = mdata.pop_shared()
+
+        return (
+            ((mdata, fdata), shared)
+            if tdata is None
+            else ((mdata, fdata, tdata), shared)
+        )
 
     def get_start_calc_message(
         self,
@@ -599,6 +712,19 @@ class Engine(ABC):
             )
         if not model.initialized:
             raise ValueError(f"Model '{model.name}' not initialized")
+
+    @abstractmethod
+    def new_runner(self):
+        """
+        Creates a new EngineRunner for running calculations in this engine
+
+        Returns
+        -------
+        runner: foxes.core.EngineRunner
+            The engine runner
+
+        """
+        pass
 
     def new_chunk_results_manager(self, algo, **kwargs):
         """

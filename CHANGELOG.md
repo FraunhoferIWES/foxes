@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Engines
+  - Updated `MPIEngine` to use worker-local MPI shared windows (`MPI.Win.Allocate_shared`) for shared input data.
+  - Shared input is initialized once per calculation via a tokenized worker cache and reused across chunk tasks in each worker.
+
 ## v0.1.0-alpha
 
 This is the initial release of **foxes** - ready for testing.

@@ -1,9 +1,37 @@
 from xarray import Dataset
 
-from foxes.core import Engine
+from foxes.core import Engine, EngineRunner
 import foxes.constants as FC
 
-from .pool import _write_chunk_results, _write_ani
+
+class SingleChunkEngineRunner(EngineRunner):
+    """
+    Engine runner for SingleChunkEngine.
+
+    :group: engines
+
+    """
+
+    def run(
+        self,
+        algo,
+        model,
+        mdata,
+        *data,
+        shared,
+        chunk_key,
+        out_dims,
+        write_nc,
+        write_chunk_ani,
+        **cpars,
+    ):
+        """Helper function for running in a single chunk."""
+        mdata.recombine_with_shared(shared)
+        results = model.calculate(algo, mdata, *data, **cpars)
+        self._write_ani(algo, chunk_key, write_chunk_ani, mdata, *data)
+        results = self._write_chunk_results(algo, results, write_nc, out_dims, mdata)
+
+        return results, cstore
 
 
 class SingleChunkEngine(Engine):
@@ -41,6 +69,18 @@ class SingleChunkEngine(Engine):
 
     def __repr__(self):
         return f"{type(self).__name__}()"
+
+    def new_runner(self):
+        """
+        Creates a new EngineRunner for running calculations in this engine
+
+        Returns
+        -------
+        runner: foxes.core.EngineRunner
+            The engine runner
+
+        """
+        return SingleChunkEngineRunner()
 
     def submit(self, f, *args, **kwargs):
         """
@@ -237,7 +277,8 @@ class SingleChunkEngine(Engine):
             iterative=iterative,
             write_nc=write_nc,
         ) as results_mgr:
-            data = self.get_chunk_input_data(
+            runner = self.new_runner()
+            data, shared = self.get_chunk_input_data(
                 algo=algo,
                 model_data=model_data,
                 farm_data=farm_data,
@@ -251,12 +292,20 @@ class SingleChunkEngine(Engine):
                 n_chunks_points=1,
             )
 
-            results = model.calculate(algo, *data, **calc_pars)
-            _write_ani(algo, (0, 0), write_chunk_ani, *data)
-            results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
-            results = {(0, 0): (results, algo.chunk_store)}
+            results, cstore = runner.run(
+                algo,
+                model,
+                *data,
+                shared=shared,
+                chunk_key=(0, 0),
+                out_dims=out_dims,
+                write_nc=write_nc,
+                write_chunk_ani=write_chunk_ani,
+                **calc_pars,
+            )
+            results = {(0, 0): (results, cstore)}
             results_mgr.update(results)
 
-            del data, results, farm_data, point_data, calc_pars
+            del data, shared, results, cstore, farm_data, point_data, calc_pars
 
         return results_mgr.results

@@ -6,8 +6,8 @@ from .mpi import MPIEngine as MPIEngine
 from .ray import RayEngine as RayEngine
 from .default import DefaultEngine as DefaultEngine
 
-from .futures import ThreadsEngine as ThreadsEngine
-from .futures import ProcessEngine as ProcessEngine
+from .threads import ThreadsEngine as ThreadsEngine
+from .process import ProcessEngine as ProcessEngine
 
 from .dask import DaskBaseEngine as DaskBaseEngine
 from .dask import DaskEngine as DaskEngine

@@ -1,4 +1,5 @@
 import numpy as np
+from xarray import Dataset
 
 from foxes.utils import Dict
 from foxes.config import config
@@ -86,6 +87,26 @@ class Data(Dict):
             self._run_entry_checks(v, d, dims[v])
 
         self._auto_update()
+
+    def to_dataset(self):
+        """
+        Convert to xarray.Dataset
+
+        Returns
+        -------
+        ds: xarray.Dataset
+            The dataset
+
+        """
+        return Dataset(
+            data_vars={
+                v: (self.dims[v], self[v]) for v in self.keys() if v not in self.sizes
+            },
+            coords={c: self[c] for c in self.sizes.keys()},
+        )
+
+    def __str__(self):
+        return self.to_dataset().__str__()
 
     @property
     def n_states(self):
@@ -345,6 +366,47 @@ class Data(Dict):
                 n_chunks_states=self.n_chunks_states,
                 n_chunks_points=self.n_chunks_points,
             )
+
+    def pop_shared(self):
+        """
+        Pop the shared data, i.e. the data that is independent of the loop variables.
+
+        Returns
+        -------
+        shared: Data
+            The shared data
+
+        """
+        data = {}
+        dims = {}
+        vrs = set(self.keys()) - set(self.sizes.keys())
+        for v in vrs:
+            d = self.dims[v]
+            if d is not None and all([dd not in self.loop_dims for dd in d]):
+                data[v] = self.pop(v)
+                dims[v] = self.dims.pop(v)
+
+        shared = type(self)(data, dims, name=self.name + "_shared")
+
+        return shared
+
+    def recombine_with_shared(self, shared):
+        """
+        Recombine with shared data, i.e. add the shared data entries to the current data.
+
+        Parameters
+        ----------
+        shared: Data
+            The shared data
+
+        """
+        for v in shared.keys():
+            if v in self:
+                raise KeyError(
+                    f"Cannot recombine with shared data, entry '{v}' already exists in data"
+                )
+            self[v] = shared[v]
+            self.dims[v] = shared.dims[v]
 
     @classmethod
     def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):

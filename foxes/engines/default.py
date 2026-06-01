@@ -23,6 +23,28 @@ class DefaultEngine(Engine):
             )
         self._entered = False
 
+    def new_runner(self):
+        """
+        Creates a new EngineRunner for running calculations in this engine.
+
+        DefaultEngine delegates calculations to process or single engines,
+        therefore it reuses the process-engine runner implementation.
+
+        Returns
+        -------
+        runner: foxes.core.EngineRunner
+            The engine runner
+
+        """
+        e = Engine.new(
+            "process",
+            n_procs=self.n_procs,
+            chunk_size_states=self.chunk_size_states,
+            chunk_size_points=self.chunk_size_points,
+            verbosity=self.verbosity,
+        )
+        return e.new_runner()
+
     def submit(self, f, *args, **kwargs):
         """
         Submits a job to worker, obtaining a future

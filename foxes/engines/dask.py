@@ -7,7 +7,6 @@ from foxes.core import Engine, MData, FData, TData
 from foxes.utils import import_module
 import foxes.constants as FC
 
-from .pool import _run_shared, _write_chunk_results, _write_ani
 
 dask = None
 distributed = None
