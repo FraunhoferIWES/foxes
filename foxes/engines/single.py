@@ -28,6 +28,11 @@ class SingleChunkEngineRunner(EngineRunner):
         """Helper function for running in a single chunk."""
         mdata.recombine_with_shared(shared)
         results = model.calculate(algo, mdata, *data, **cpars)
+        cstore = (
+            {chunk_key: algo.chunk_store[chunk_key]}
+            if chunk_key in algo.chunk_store
+            else {}
+        )
         self._write_ani(algo, chunk_key, write_chunk_ani, mdata, *data)
         results = self._write_chunk_results(algo, results, write_nc, out_dims, mdata)
 
