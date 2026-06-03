@@ -20,6 +20,11 @@ from .geopandas_utils import read_shp as read_shp
 from .geopandas_utils import shp2csv as shp2csv
 from .geopandas_utils import read_shp_polygons as read_shp_polygons
 from .geopandas_utils import shp2geom2d as shp2geom2d
+from .geojson_utils import area_contains_point as area_contains_point
+from .geojson_utils import geojson_geometry_to_area as geojson_geometry_to_area
+from .geojson_utils import load_areas_from_geojson as load_areas_from_geojson
+from .geojson_utils import load_areas_from_geojson_data as load_areas_from_geojson_data
+from .geojson_utils import normalize_areas_input as normalize_areas_input
 
 from .utm_utils import to_lonlat as to_lonlat
 from .utm_utils import from_lonlat as from_lonlat

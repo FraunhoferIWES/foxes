@@ -2,6 +2,10 @@ import numpy as np
 
 from foxes.config import config
 from foxes.utils import get_utm_zone, from_lonlat, to_lonlat
+from foxes.utils.geojson_utils import (
+    area_contains_point,
+    normalize_areas_input,
+)
 
 
 class WindFarm:
@@ -58,6 +62,7 @@ class WindFarm:
         self.__data_is_lonlat = input_is_lonlat
         self.__utm_zone = utm_zone
         self.__locked = False
+        self.__cluster_areas = None
 
     @property
     def data_is_lonlat(self):
@@ -235,6 +240,86 @@ class WindFarm:
                 print(
                     f"Turbine {turbine.index}, {turbine.name}: xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
                 )
+
+    def map_turbines_to_areas(
+        self,
+        areas,
+        set_cluster=True,
+        geojson_name_key="name",
+        plot_file=None,
+    ):
+        """
+        Maps turbines to areas.
+
+        Parameters
+        ----------
+        areas: list or str or pathlib.Path or dict
+            The areas to map turbines to. Accepted forms are:
+            - list of AreaGeometry objects
+            - list of (name, AreaGeometry) tuples for named areas
+            - dict mapping names to AreaGeometry objects
+            - path to GeoJSON file
+            - GeoJSON dictionary
+        set_cluster: bool
+            If True, set each mapped turbine's cluster_name to
+            the mapped area name.
+        geojson_name_key: str or list of str
+            Preferred GeoJSON feature property key(s) used
+            to read area names from GeoJSON inputs.
+        plot_file: str or pathlib.Path, optional
+            If provided, write a plot file that visualizes areas
+            and the turbine-to-area mapping.
+
+        Returns
+        -------
+        mapping: dict
+            A dictionary, where keys are area names and values are
+            lists of turbine indices belonging to that area.
+
+        """
+        area_map = normalize_areas_input(areas, geojson_name_key)
+
+        mapping = {name: [] for name in area_map}
+        for i, t in enumerate(self.__turbines):
+            for name, area in area_map.items():
+                if area_contains_point(area, t.xy):
+                    mapping[name].append(i)
+                    if set_cluster:
+                        t.cluster_name = name
+                    break
+
+        if set_cluster:
+            if self.__cluster_areas is None:
+                self.__cluster_areas = area_map
+            else:
+                self.__cluster_areas.update(area_map)
+
+        if plot_file is not None:
+            from foxes.output import MultipleFarmsOutput
+
+            MultipleFarmsOutput(self, None).write_area_mapping_plot(
+                plot_file,
+                areas=areas,
+                mapping=mapping,
+                level="cluster",
+                geojson_name_key=geojson_name_key,
+            )
+
+        return mapping
+
+    @property
+    def cluster_areas(self):
+        """
+        The cluster areas, if set by map_turbines_to_areas.
+
+        Returns
+        -------
+        cluster_areas: dict or None
+            The mapping from cluster names to AreaGeometry objects, or
+            None if not set
+
+        """
+        return self.__cluster_areas
 
     @property
     def utm_zone(self):
