@@ -104,6 +104,11 @@ P = "P"
 :group: foxes.variables
 """
 
+P_NOMINAL = "P_nominal"
+""" The nominal power
+:group: foxes.variables
+"""
+
 MAX_P = "MAXP"
 """ The maximal power, for derating/boost
 :group: foxes.variables
@@ -136,6 +141,11 @@ EFF = "EFF"
 
 CAP = "CAP"
 """ Capacity, equals P/P_nominal
+:group: foxes.variables
+"""
+
+FLF = "FLF"
+""" The full load fraction
 :group: foxes.variables
 """
 
@@ -251,6 +261,11 @@ AMB_CAP = "AMB_CAP"
 :group: foxes.variables
 """
 
+AMB_FLF = "AMB_FLF"
+""" The ambient full load fraction
+:group: foxes.variables
+"""
+
 
 AMB_REWS = "AMB_REWS"
 """ Ambient rotor effective wind speed in m/s
@@ -301,6 +316,7 @@ var2amb = {
         WEIBULL_k,
         YLD,
         CAP,
+        FLF,
         UV,
         U,
         V,

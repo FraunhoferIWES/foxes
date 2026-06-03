@@ -591,6 +591,41 @@ class FarmResultsEval(Output):
         if verbosity > 0:
             print("Efficiency added to farm results")
 
+    def add_full_load_fraction(self, algo, ambient=False, verbosity=1):
+        """
+        Adds full load fraction to the farm results
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm,
+            The algorithm, for nominal power calculation
+        ambient: bool, optional
+            Flag for calculating ambient full load fraction, by default False
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        if ambient:
+            var_in = FV.AMB_P
+            var_out = FV.AMB_FLF
+        else:
+            var_in = FV.P
+            var_out = FV.FLF
+
+        # get results data for the vars variable (by state and turbine)
+        vdata = self.results[var_in]
+
+        # get nominal power values for each turbine
+        P_nom = algo.farm.get_P_nominal_array(algo)
+
+        # add to farm results
+        self.results[var_out] = (vdata == P_nom[None, :]).astype(config.dtype_double)
+        if verbosity > 0:
+            if ambient:
+                print("Ambient full load fraction added to farm results")
+            else:
+                print("Full load fraction added to farm results")
+
     def calc_farm_efficiency(self):
         """
         Calculates farm efficiency

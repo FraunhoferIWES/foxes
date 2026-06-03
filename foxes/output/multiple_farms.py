@@ -1,3 +1,4 @@
+import numpy as np
 from xarray import DataArray, merge
 
 from .output import Output
@@ -21,7 +22,7 @@ class MultipleFarmsOutput(Output):
 
     """
 
-    def __init__(self, farm, farm_results, **kwargs):
+    def __init__(self, farm, farm_results, algo=None, **kwargs):
         """
         Constructor.
 
@@ -31,12 +32,15 @@ class MultipleFarmsOutput(Output):
             The wind farm object
         farm_results: xarray.Dataset
             The farm results
+        algo: foxes.core.Algorithm, optional
+            The algorithm object, used to get the nominal power for the farms if available
         kwargs: dict, optional
             Additional parameters for the base class
 
         """
         super().__init__(**kwargs)
         self.farm = farm
+        self.algo = algo
         self.results = merge(
             (
                 farm_results,
@@ -46,13 +50,141 @@ class MultipleFarmsOutput(Output):
             join="exact",
         )
 
+        if algo is not None:
+            assert self.farm == self.algo.farm, (
+                "The algorithm's farm does not match the output's farm"
+            )
+
         self._agg_farm_results = None
         self._agg_cluster_results = None
+
+    def _aggregate(self, group_key, mapping=None):
+        gb = self.results.groupby(group_key)
+        aggsum = gb.sum().transpose(FC.STATE, group_key).sortby(group_key)
+        aggmean = gb.mean().transpose(FC.STATE, group_key).sortby(group_key)
+        results = []
+        for v in self.results.data_vars.keys():
+            if v in FV.extensive_farm and v in aggsum:
+                results.append(aggsum[v])
+            elif v in FV.intensive_farm and v in aggmean:
+                results.append(aggmean[v])
+
+        trbns = {f: g.sizes[FC.TURBINE] for f, g in gb}
+        results.append(
+            DataArray(
+                list(trbns.values()),
+                coords={group_key: list(trbns.keys())},
+                dims=(group_key,),
+                name="n_turbines",
+            ).sortby(group_key)
+        )
+
+        if self.algo is not None:
+            assert mapping is not None, (
+                f"Mapping from {group_key} to turbine indices must be provided when algo is not None"
+            )
+            Pnom = self.algo.farm.get_P_nominal_array(self.algo)
+            Pnomf = {f: np.sum(Pnom[i]) for f, i in mapping.items()}
+            results.append(
+                DataArray(
+                    list(Pnomf.values()),
+                    coords={group_key: list(Pnomf.keys())},
+                    dims=(group_key,),
+                    name=FV.P_NOMINAL,
+                ).sortby(group_key)
+            )
+
+            if FV.P in self.results.data_vars:
+                cap = {
+                    f: self.results[FV.AMB_P].values[:, i].sum(axis=1) / Pnom[i].sum()
+                    for f, i in mapping.items()
+                }
+                keys = list(cap.keys())
+                cap = np.stack(list(cap.values()), axis=-1)
+                results.append(
+                    DataArray(
+                        cap,
+                        coords={
+                            FC.STATE: self.results[FC.STATE].values,
+                            group_key: keys,
+                        },
+                        dims=(FC.STATE, group_key),
+                        name=FV.AMB_CAP,
+                    ).sortby(group_key)
+                )
+
+                cap = {
+                    f: self.results[FV.P].values[:, i].sum(axis=1) / Pnom[i].sum()
+                    for f, i in mapping.items()
+                }
+                keys = list(cap.keys())
+                cap = np.stack(list(cap.values()), axis=-1)
+                results.append(
+                    DataArray(
+                        cap,
+                        coords={
+                            FC.STATE: self.results[FC.STATE].values,
+                            group_key: keys,
+                        },
+                        dims=(FC.STATE, group_key),
+                        name=FV.CAP,
+                    ).sortby(group_key)
+                )
+
+            eff = {
+                f: self.results[FV.P].values[:, i].sum(axis=1)
+                / np.maximum(self.results[FV.AMB_P].values[:, i].sum(axis=1), 1e-10)
+                for f, i in mapping.items()
+            }
+            keys = list(eff.keys())
+            eff = np.stack(list(eff.values()), axis=-1)
+            results.append(
+                DataArray(
+                    eff,
+                    coords={FC.STATE: self.results[FC.STATE].values, group_key: keys},
+                    dims=(FC.STATE, group_key),
+                    name=FV.EFF,
+                ).sortby(group_key)
+            )
+
+        if FV.WEIGHT in self.results.data_vars:
+            weight = self.results[FV.WEIGHT]
+            if weight.dims == (FC.STATE,):
+                results.append(weight)
+            elif weight.dims == (FC.STATE, FC.TURBINE):
+                wgts = {}
+                for f, i in mapping.items():
+                    wgts[f] = weight.values[:, i].mean(axis=1)
+                    wgts[f] /= wgts[f].sum()
+                keys = list(wgts.keys())
+                wgts = np.stack(list(wgts.values()), axis=-1)
+                results.append(
+                    DataArray(
+                        wgts,
+                        coords={
+                            FC.STATE: self.results[FC.STATE].values,
+                            group_key: keys,
+                        },
+                        dims=(FC.STATE, group_key),
+                        name=FV.WEIGHT,
+                    ).sortby(group_key)
+                )
+            else:
+                raise ValueError(
+                    f"Unexpected dimensions for weight variable: {weight.dims}"
+                )
+
+        return merge(results, join="exact")
 
     @property
     def agg_farm_results(self):
         """
         Get the aggregated farm results.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm, optional
+            The algorithm object
 
         Returns
         -------
@@ -61,17 +193,8 @@ class MultipleFarmsOutput(Output):
 
         """
         if self._agg_farm_results is None:
-            aggsum = self.results.groupby(FC.FARM).sum()
-            aggmean = self.results.groupby(FC.FARM).mean()
-            self._agg_farm_results = []
-            for v in self.results.data_vars.keys():
-                if v in FV.extensive_farm and v in aggsum:
-                    self._agg_farm_results.append(aggsum[v])
-                elif v in FV.intensive_farm and v in aggmean:
-                    self._agg_farm_results.append(aggmean[v])
-            self._agg_farm_results = merge(self._agg_farm_results, join="exact")
-            self._agg_farm_results = self._agg_farm_results.transpose(FC.STATE, FC.FARM)
-
+            mapping = self.farm.get_wind_farm_mapping()
+            self._agg_farm_results = self._aggregate(FC.FARM, mapping)
         return self._agg_farm_results
 
     @property
@@ -86,19 +209,8 @@ class MultipleFarmsOutput(Output):
 
         """
         if self._agg_cluster_results is None:
-            aggsum = self.results.groupby(FC.CLUSTER).sum()
-            aggmean = self.results.groupby(FC.CLUSTER).mean()
-            self._agg_cluster_results = []
-            for v in self.results.data_vars.keys():
-                if v in FV.extensive_farm and v in aggsum:
-                    self._agg_cluster_results.append(aggsum[v])
-                elif v in FV.intensive_farm and v in aggmean:
-                    self._agg_cluster_results.append(aggmean[v])
-            self._agg_cluster_results = merge(self._agg_cluster_results, join="exact")
-            self._agg_cluster_results = self._agg_cluster_results.transpose(
-                FC.STATE, FC.CLUSTER
-            )
-
+            mapping = self.farm.get_cluster_mapping()
+            self._agg_cluster_results = self._aggregate(FC.CLUSTER, mapping)
         return self._agg_cluster_results
 
     def write_agg_nc(self, fname, agg, **kwargs):

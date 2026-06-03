@@ -504,7 +504,7 @@ class WindFarm:
         Returns
         -------
         hhs: numpy.ndarray
-            The hub heights, shape: (n_turbienes,)
+            The hub heights, shape: (n_turbines,)
 
         """
         hhs = [
@@ -540,3 +540,32 @@ class WindFarm:
             )
             cap += tt.P_nominal
         return cap
+
+    def get_P_nominal_array(self, algo):
+        """
+        Gets the nominal power array for all turbines
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        Returns
+        -------
+        P_nominal_array: numpy.ndarray
+            The nominal power array, shape: (n_turbines,)
+
+        """
+        ttypes = algo.farm_controller.turbine_types
+        assert ttypes is not None, (
+            f"WindFarm '{self.name}': turbine types not set in farm controller {algo.farm_controller.name}"
+        )
+
+        P_nominal_array = np.zeros(self.n_turbines, dtype=config.dtype_double)
+        for i, t in enumerate(self.__turbines):
+            tt = ttypes[i]
+            assert tt.P_nominal is not None, (
+                f"WindFarm '{self.name}': P_nominal not set for turbine type '{tt.name}' "
+            )
+            P_nominal_array[i] = tt.P_nominal
+        return P_nominal_array
