@@ -77,7 +77,9 @@ def geojson_geometry_to_area(geometry):
         return _polygon_with_holes(geometry.get("coordinates", []))
 
     if gtype == "MultiPolygon":
-        geoms = [_polygon_with_holes(rings) for rings in geometry.get("coordinates", [])]
+        geoms = [
+            _polygon_with_holes(rings) for rings in geometry.get("coordinates", [])
+        ]
         geoms = [g for g in geoms if g is not None]
         if not geoms:
             return None
@@ -155,10 +157,7 @@ def load_areas_from_geojson_data(
 
     """
     if not isinstance(data, dict):
-        raise TypeError(
-            "Expected GeoJSON data as dict, "
-            f"got '{type(data).__name__}'"
-        )
+        raise TypeError(f"Expected GeoJSON data as dict, got '{type(data).__name__}'")
 
     def _feature_name(feature):
         props = feature.get("properties", {}) or {}

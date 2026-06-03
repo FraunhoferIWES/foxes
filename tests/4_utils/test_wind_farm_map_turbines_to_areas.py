@@ -86,7 +86,13 @@ def test_map_turbines_to_areas_with_geojson_path(tmp_path):
                     "type": "Polygon",
                     "coordinates": [
                         _geojson_polygon_from_xy(
-                            [[-1.0, -1.0], [15.0, -1.0], [15.0, 1.0], [-1.0, 1.0], [-1.0, -1.0]]
+                            [
+                                [-1.0, -1.0],
+                                [15.0, -1.0],
+                                [15.0, 1.0],
+                                [-1.0, 1.0],
+                                [-1.0, -1.0],
+                            ]
                         )
                     ],
                 },
@@ -99,12 +105,24 @@ def test_map_turbines_to_areas_with_geojson_path(tmp_path):
                     "coordinates": [
                         [
                             _geojson_polygon_from_xy(
-                                [[15.0, -1.0], [25.0, -1.0], [25.0, 1.0], [15.0, 1.0], [15.0, -1.0]]
+                                [
+                                    [15.0, -1.0],
+                                    [25.0, -1.0],
+                                    [25.0, 1.0],
+                                    [15.0, 1.0],
+                                    [15.0, -1.0],
+                                ]
                             )
                         ],
                         [
                             _geojson_polygon_from_xy(
-                                [[100.0, 100.0], [110.0, 100.0], [110.0, 110.0], [100.0, 110.0], [100.0, 100.0]]
+                                [
+                                    [100.0, 100.0],
+                                    [110.0, 100.0],
+                                    [110.0, 110.0],
+                                    [100.0, 110.0],
+                                    [100.0, 100.0],
+                                ]
                             )
                         ],
                     ],
@@ -132,7 +150,13 @@ def test_map_turbines_to_areas_with_geojson_dict():
                     "type": "Polygon",
                     "coordinates": [
                         _geojson_polygon_from_xy(
-                            [[-1.0, -1.0], [15.0, -1.0], [15.0, 1.0], [-1.0, 1.0], [-1.0, -1.0]]
+                            [
+                                [-1.0, -1.0],
+                                [15.0, -1.0],
+                                [15.0, 1.0],
+                                [-1.0, 1.0],
+                                [-1.0, -1.0],
+                            ]
                         )
                     ],
                 },
@@ -144,7 +168,13 @@ def test_map_turbines_to_areas_with_geojson_dict():
                     "type": "Polygon",
                     "coordinates": [
                         _geojson_polygon_from_xy(
-                            [[15.0, -1.0], [25.0, -1.0], [25.0, 1.0], [15.0, 1.0], [15.0, -1.0]]
+                            [
+                                [15.0, -1.0],
+                                [25.0, -1.0],
+                                [25.0, 1.0],
+                                [15.0, 1.0],
+                                [15.0, -1.0],
+                            ]
                         )
                     ],
                 },
@@ -168,7 +198,13 @@ def test_load_areas_from_geojson_data_returns_name_area_dict():
                     "type": "Polygon",
                     "coordinates": [
                         _geojson_polygon_from_xy(
-                            [[-1.0, -1.0], [15.0, -1.0], [15.0, 1.0], [-1.0, 1.0], [-1.0, -1.0]]
+                            [
+                                [-1.0, -1.0],
+                                [15.0, -1.0],
+                                [15.0, 1.0],
+                                [-1.0, 1.0],
+                                [-1.0, -1.0],
+                            ]
                         )
                     ],
                 },
@@ -180,7 +216,13 @@ def test_load_areas_from_geojson_data_returns_name_area_dict():
                     "type": "Polygon",
                     "coordinates": [
                         _geojson_polygon_from_xy(
-                            [[15.0, -1.0], [25.0, -1.0], [25.0, 1.0], [15.0, 1.0], [15.0, -1.0]]
+                            [
+                                [15.0, -1.0],
+                                [25.0, -1.0],
+                                [25.0, 1.0],
+                                [15.0, 1.0],
+                                [15.0, -1.0],
+                            ]
                         )
                     ],
                 },
@@ -207,7 +249,13 @@ def test_map_turbines_to_areas_with_geojson_custom_name_key():
                     "type": "Polygon",
                     "coordinates": [
                         _geojson_polygon_from_xy(
-                            [[-1.0, -1.0], [15.0, -1.0], [15.0, 1.0], [-1.0, 1.0], [-1.0, -1.0]]
+                            [
+                                [-1.0, -1.0],
+                                [15.0, -1.0],
+                                [15.0, 1.0],
+                                [-1.0, 1.0],
+                                [-1.0, -1.0],
+                            ]
                         )
                     ],
                 },
@@ -219,7 +267,13 @@ def test_map_turbines_to_areas_with_geojson_custom_name_key():
                     "type": "Polygon",
                     "coordinates": [
                         _geojson_polygon_from_xy(
-                            [[15.0, -1.0], [25.0, -1.0], [25.0, 1.0], [15.0, 1.0], [15.0, -1.0]]
+                            [
+                                [15.0, -1.0],
+                                [25.0, -1.0],
+                                [25.0, 1.0],
+                                [15.0, 1.0],
+                                [15.0, -1.0],
+                            ]
                         )
                     ],
                 },
@@ -343,7 +397,13 @@ def test_write_area_mapping_plot_accepts_geojson_input(tmp_path):
                     "type": "Polygon",
                     "coordinates": [
                         _geojson_polygon_from_xy(
-                            [[-1.0, -1.0], [15.0, -1.0], [15.0, 1.0], [-1.0, 1.0], [-1.0, -1.0]]
+                            [
+                                [-1.0, -1.0],
+                                [15.0, -1.0],
+                                [15.0, 1.0],
+                                [-1.0, 1.0],
+                                [-1.0, -1.0],
+                            ]
                         )
                     ],
                 },
@@ -355,7 +415,13 @@ def test_write_area_mapping_plot_accepts_geojson_input(tmp_path):
                     "type": "Polygon",
                     "coordinates": [
                         _geojson_polygon_from_xy(
-                            [[15.0, -1.0], [25.0, -1.0], [25.0, 1.0], [15.0, 1.0], [15.0, -1.0]]
+                            [
+                                [15.0, -1.0],
+                                [25.0, -1.0],
+                                [25.0, 1.0],
+                                [15.0, 1.0],
+                                [15.0, -1.0],
+                            ]
                         )
                     ],
                 },
