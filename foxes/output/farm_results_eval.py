@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from .output import Output
 from foxes.config import config
+from foxes.utils import write_nc
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -18,14 +19,14 @@ class FarmResultsEval(Output):
 
     Attributes
     ----------
-    results: xarray.Dataset
-        The farm results
+    algo: foxes.core.Algorithm, optional
+        The algorithm object
 
     :group: output
 
     """
 
-    def __init__(self, farm_results, **kwargs):
+    def __init__(self, farm_results, algo=None, **kwargs):
         """
         Constructor.
 
@@ -33,12 +34,29 @@ class FarmResultsEval(Output):
         ----------
         farm_results: xarray.Dataset
             The farm results
+        algo: foxes.core.Algorithm, optional
+            The algorithm object
         kwargs: dict, optional
             Additional parameters for the base class
 
         """
         super().__init__(**kwargs)
-        self.results = farm_results
+        self.algo = algo
+        self._results = farm_results
+        self._LEVEL = FC.TURBINE
+
+    @property
+    def results(self):
+        """
+        Get the farm results.
+
+        Returns
+        -------
+        xarray.Dataset
+            The farm results
+
+        """
+        return self._results
 
     def weinsum(self, rhs, *vars):
         """
@@ -73,8 +91,12 @@ class FarmResultsEval(Output):
                     f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
                 )
                 fields.append(vdata)
-            else:
+            elif isinstance(v, np.ndarray):
                 fields.append(v)
+            else:
+                raise TypeError(
+                    f"Expecting variable name as str or array, got {type(v)}"
+                )
             if nas is None:
                 nas = np.zeros_like(fields[-1], dtype=bool)
             nas = nas | np.isnan(fields[-1])
@@ -97,7 +119,7 @@ class FarmResultsEval(Output):
             else:
                 fields.append(self.results[FV.WEIGHT].to_numpy())
 
-        elif self.results[FV.WEIGHT].dims == (FC.STATE, FC.TURBINE):
+        elif self.results[FV.WEIGHT].dims == (FC.STATE, self._LEVEL):
             inds += ["st"]
 
             if np.any(nas):
@@ -116,19 +138,19 @@ class FarmResultsEval(Output):
 
         else:
             raise ValueError(
-                f"Expecting '{FV.WEIGHT}' variable with dimensions {(FC.STATE,)} or {(FC.STATE, FC.TURBINE)}, got {self.results[FV.WEIGHT].dims}"
+                f"Expecting '{FV.WEIGHT}' variable with dimensions {(FC.STATE,)} or {(FC.STATE, self._LEVEL)}, got {self.results[FV.WEIGHT].dims}"
             )
         expr = ",".join(inds) + "->" + rhs
 
         return np.einsum(expr, *fields)
 
-    def reduce_states(self, vars_op):
+    def reduce_states(self, vars_op=None):
         """
         Reduces the states dimension by some operation
 
         Parameters
         ----------
-        vars_op: dict
+        vars_op: dict, optional
             The operation per variable. Key: str, the variable
             name. Value: str, the operation, choices
             are: weights, mean_no_weights, sum, min, max.
@@ -139,7 +161,10 @@ class FarmResultsEval(Output):
             The results per turbine
 
         """
-        n_turbines = self.results.sizes[FC.TURBINE]
+
+        if vars_op is None:
+            vrs = [v for v, d in self.results.data_vars.items() if FC.STATE in d.dims]
+            vars_op = {v: "sum" if v in FV.extensive_state else "weights" for v in vrs}
 
         rdata = {}
         for v, op in vars_op.items():
@@ -166,8 +191,8 @@ class FarmResultsEval(Output):
                     f"Unknown operation '{op}' for variable '{v}'. Please choose: weights, mean_no_weights, sum, min, max"
                 )
 
-        data = pd.DataFrame(index=range(n_turbines), data=rdata)
-        data.index.name = FC.TURBINE
+        data = pd.DataFrame(index=self.results[self._LEVEL].values, data=rdata)
+        data.index.name = self._LEVEL
 
         return data
 
@@ -414,7 +439,6 @@ class FarmResultsEval(Output):
 
     def calc_turbine_yield(
         self,
-        algo=None,
         annual=False,
         ambient=False,
         hours=None,
@@ -426,8 +450,6 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm, optional
-            The algorithm, for P_nominal lookup
         annual: bool, optional
             Flag for returning annual results, by default False
         ambient: bool, optional
@@ -454,15 +476,15 @@ class FarmResultsEval(Output):
             var_in = FV.P
             var_out = FV.YLD
 
-        if algo is not None and P_unit_W is None:
+        if self.algo is not None and P_unit_W is None:
             P_unit_W = np.array(
-                [FC.P_UNITS[t.P_unit] for t in algo.farm_controller.turbine_types],
+                [FC.P_UNITS[t.P_unit] for t in self.algo.farm_controller.turbine_types],
                 dtype=config.dtype_double,
             )[:, None]
-        elif algo is None and P_unit_W is not None:
+        elif self.algo is None and P_unit_W is not None:
             pass
         else:
-            raise KeyError("Expecting either 'algo' or 'P_unit_W'")
+            raise KeyError("Expecting either algorithm or 'P_unit_W'")
 
         # compute yield per turbine
         if np.issubdtype(self.results[FC.STATE].dtype, np.datetime64):
@@ -491,16 +513,44 @@ class FarmResultsEval(Output):
         yld.rename(columns={var_in: var_out}, inplace=True)
         return yld
 
-    def add_capacity(self, algo=None, P_nom=None, ambient=False, verbosity=1):
+    def get_capacity(self):
         """
-        Adds capacity to the farm results
+        Gets the capacity values for each turbine, equals nominal power
+
+        Returns
+        -------
+        capacity_array: numpy.ndarray
+            The capacity array (nominal power) for all turbines, shape: (n_turbines,)
+
+        """
+        assert self.algo is not None, (
+            "Algorithm object is required for adding capacity to farm results"
+        )
+        Pnom = self.algo.farm.get_capacity_array(self.algo)
+        return Pnom
+
+    def add_capacity(self, vebosity=1):
+        """
+        Adds capacity to the farm results, equals P_nominal on turbine level
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm, optional
-            The algorithm, for nominal power calculation
-        P_nom: list of float, optional
-            Nominal power values for each turbine, if algo not given
+        vebosity: int
+            The verbosity level, 0 = silent
+
+        """
+        self._results[FV.CAP] = ((self._LEVEL,), self.get_capacity())
+        if vebosity > 0:
+            print("Capacity added to farm results")
+
+    def add_capacity_factor(self, capacity=None, ambient=False, verbosity=1):
+        """
+        Adds capacity factor to the farm results, P / CAP
+
+        Parameters
+        ----------
+        capacity: list of float, optional
+            Capacity values for each turbine (nominal power), if algo not given
         ambient: bool, optional
             Flag for calculating ambient capacity, by default False
         verbosity: int
@@ -509,26 +559,20 @@ class FarmResultsEval(Output):
         """
         if ambient:
             var_in = FV.AMB_P
-            var_out = FV.AMB_CAP
+            var_out = FV.AMB_CAPF
         else:
             var_in = FV.P
-            var_out = FV.CAP
+            var_out = FV.CAPF
 
-        # get results data for the vars variable (by state and turbine)
-        vdata = self.results[var_in]
-
-        if algo is not None and P_nom is None:
-            P_nom = np.array(
-                [t.P_nominal for t in algo.farm_controller.turbine_types],
-                dtype=config.dtype_double,
-            )
-        elif algo is None and P_nom is not None:
-            P_nom = np.array(P_nom, dtype=config.dtype_double)
-        else:
-            raise KeyError("Expecting either 'algo' or 'P_nom'")
+        # compute capacity
+        cap = (
+            self.results[FV.CAP].to_numpy()
+            if FV.CAP in self.results
+            else self.get_capacity()
+        )
 
         # add to farm results
-        self.results[var_out] = vdata / P_nom[None, :]
+        self._results[var_out] = self.results[var_in] / cap[None, :]
         if verbosity > 0:
             if ambient:
                 print("Ambient capacity added to farm results")
@@ -587,18 +631,16 @@ class FarmResultsEval(Output):
         P0 = np.maximum(self.results[FV.AMB_P].to_numpy(), 1e-12)
         eff = np.minimum(P / P0, 1)
         eff[P < 1e-10] = 0
-        self.results[FV.EFF] = (self.results[FV.AMB_P].dims, eff)
+        self._results[FV.EFF] = (self.results[FV.AMB_P].dims, eff)
         if verbosity > 0:
             print("Efficiency added to farm results")
 
-    def add_full_load_fraction(self, algo, ambient=False, verbosity=1):
+    def add_full_load_fraction(self, ambient=False, verbosity=1):
         """
         Adds full load fraction to the farm results
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm,
-            The algorithm, for nominal power calculation
         ambient: bool, optional
             Flag for calculating ambient full load fraction, by default False
         verbosity: int
@@ -615,11 +657,15 @@ class FarmResultsEval(Output):
         # get results data for the vars variable (by state and turbine)
         vdata = self.results[var_in]
 
-        # get nominal power values for each turbine
-        P_nom = algo.farm.get_P_nominal_array(algo)
+        # compute capacity
+        cap = (
+            self.results[FV.CAP].to_numpy()
+            if FV.CAP in self.results
+            else self.get_capacity()
+        )
 
         # add to farm results
-        self.results[var_out] = (vdata == P_nom[None, :]).astype(config.dtype_double)
+        self._results[var_out] = (vdata == cap[None, :]).astype(config.dtype_double)
         if verbosity > 0:
             if ambient:
                 print("Ambient full load fraction added to farm results")
@@ -712,3 +758,24 @@ class FarmResultsEval(Output):
                 yield hfig, im
             else:
                 yield hfig
+
+    def write_nc(self, fname, **kwargs):
+        """
+        Write the results to a netCDF file.
+
+        Parameters
+        ----------
+        fname: str
+            The file name to write the netCDF file
+        kwargs: dict, optional
+            Additional parameters for the foxes.utils.write_nc() method
+
+        Returns
+        -------
+        xarray.Dataset
+            The aggregated results that were written to the netCDF file
+
+        """
+        fpath = self.get_fpath(fname)
+        write_nc(self.results, fpath, **kwargs)
+        return self.results

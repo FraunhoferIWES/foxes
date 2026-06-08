@@ -1,18 +1,18 @@
 import numpy as np
-from xarray import DataArray, merge
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from xarray import DataArray, merge
 
 from foxes.utils import write_nc
 import foxes.constants as FC
 import foxes.variables as FV
 
-from .output import Output
+from .farm_results_eval import FarmResultsEval
 
 
-class MultipleFarmsOutput(Output):
+class WindFarmsEval(FarmResultsEval):
     """
-    Output class for multiple wind farms.
+    Output class for aggregating and splitting multiple wind farms.
 
      Attributes
     ----------
@@ -25,7 +25,7 @@ class MultipleFarmsOutput(Output):
 
     """
 
-    def __init__(self, farm, farm_results=None, algo=None, **kwargs):
+    def __init__(self, farm, farm_results=None, results=None, **kwargs):
         """
         Constructor.
 
@@ -35,41 +35,65 @@ class MultipleFarmsOutput(Output):
             The wind farm object
         farm_results: xarray.Dataset, optional
             The farm results
+        results: xarray.Dataset, optional
+            The aggregated results, if already computed
         algo: foxes.core.Algorithm, optional
             The algorithm object, used to get the nominal power for the farms if available
         kwargs: dict, optional
             Additional parameters for the base class
 
         """
-        super().__init__(**kwargs)
+        super().__init__(farm_results=farm_results, **kwargs)
         self.farm = farm
-        self.algo = algo
-        self.results = None
+        self.farm_results = None
         if farm_results is not None:
-            self.results = merge(
+            self.farm_results = merge(
                 (
                     farm_results,
                     DataArray(farm.wind_farm_list, dims=[FC.TURBINE], name=FC.FARM),
-                    DataArray(farm.cluster_list, dims=[FC.TURBINE], name=FC.CLUSTER),
                 ),
                 join="exact",
             )
 
-        if algo is not None:
+        if self.algo is not None:
             assert self.farm == self.algo.farm, (
                 "The algorithm's farm does not match the output's farm"
             )
 
-        self._agg_farm_results = None
-        self._agg_cluster_results = None
+        self._LEVEL = FC.FARM
+        self._results = results
 
-    def _aggregate(self, group_key, mapping=None):
-        assert self.results is not None, "farm_results are required for aggregation"
-        gb = self.results.groupby(group_key)
-        aggsum = gb.sum().transpose(FC.STATE, group_key).sortby(group_key)
-        aggmean = gb.mean().transpose(FC.STATE, group_key).sortby(group_key)
+    def _aggregate(self, mapping=None):
+        assert self.farm_results is not None, "farm_results are required for aggregation"
+
+        needs_mapping = self.algo is not None
+        if (
+            not needs_mapping
+            and FV.WEIGHT in self.farm_results.data_vars
+            and self.farm_results[FV.WEIGHT].dims == (FC.STATE, FC.TURBINE)
+        ):
+            needs_mapping = True
+
+        if mapping is None and needs_mapping:
+            if self._LEVEL == FC.CLUSTER:
+                mapping = self.farm.get_cluster_mapping()
+            elif self._LEVEL == FC.FARM:
+                mapping = self.farm.get_wind_farm_mapping()
+            else:
+                raise ValueError(
+                    f"Unknown level '{self._LEVEL}', choice is '{FC.CLUSTER}' or '{FC.FARM}'"
+                )
+
+        if needs_mapping and mapping is None:
+            raise ValueError(
+                f"Mapping from {self._LEVEL} to turbine indices is required for aggregation"
+            )
+
+        gb = self.farm_results.groupby(self._LEVEL)
+        aggsum = gb.sum().transpose(FC.STATE, self._LEVEL).sortby(self._LEVEL)
+        aggmean = gb.mean().transpose(FC.STATE, self._LEVEL).sortby(self._LEVEL)
         results = []
-        for v in self.results.data_vars.keys():
+        for v in self.farm_results.data_vars.keys():
             if v in FV.extensive_farm and v in aggsum:
                 results.append(aggsum[v])
             elif v in FV.intensive_farm and v in aggmean:
@@ -79,101 +103,51 @@ class MultipleFarmsOutput(Output):
         results.append(
             DataArray(
                 list(trbns.values()),
-                coords={group_key: list(trbns.keys())},
-                dims=(group_key,),
+                coords={self._LEVEL: list(trbns.keys())},
+                dims=(self._LEVEL,),
                 name="n_turbines",
-            ).sortby(group_key)
+            ).sortby(self._LEVEL)
         )
 
         if self.algo is not None:
-            assert mapping is not None, (
-                f"Mapping from {group_key} to turbine indices must be provided when algo is not None"
-            )
-            Pnom = self.algo.farm.get_P_nominal_array(self.algo)
-            Pnomf = {f: np.sum(Pnom[i]) for f, i in mapping.items()}
+            Pnom = self.algo.farm.get_capacity_array(self.algo)
+            Pnomf = {f: np.sum(Pnom[i]) for f, i in mapping.items() if f is not None}
             results.append(
                 DataArray(
                     list(Pnomf.values()),
-                    coords={group_key: list(Pnomf.keys())},
-                    dims=(group_key,),
-                    name=FV.P_NOMINAL,
-                ).sortby(group_key)
+                    coords={self._LEVEL: list(Pnomf.keys())},
+                    dims=(self._LEVEL,),
+                    name=FV.CAP,
+                ).sortby(self._LEVEL)
             )
 
-            if FV.P in self.results.data_vars:
-                cap = {
-                    f: self.results[FV.AMB_P].values[:, i].sum(axis=1) / Pnom[i].sum()
-                    for f, i in mapping.items()
-                }
-                keys = list(cap.keys())
-                cap = np.stack(list(cap.values()), axis=-1)
-                results.append(
-                    DataArray(
-                        cap,
-                        coords={
-                            FC.STATE: self.results[FC.STATE].values,
-                            group_key: keys,
-                        },
-                        dims=(FC.STATE, group_key),
-                        name=FV.AMB_CAP,
-                    ).sortby(group_key)
-                )
-
-                cap = {
-                    f: self.results[FV.P].values[:, i].sum(axis=1) / Pnom[i].sum()
-                    for f, i in mapping.items()
-                }
-                keys = list(cap.keys())
-                cap = np.stack(list(cap.values()), axis=-1)
-                results.append(
-                    DataArray(
-                        cap,
-                        coords={
-                            FC.STATE: self.results[FC.STATE].values,
-                            group_key: keys,
-                        },
-                        dims=(FC.STATE, group_key),
-                        name=FV.CAP,
-                    ).sortby(group_key)
-                )
-
-            eff = {
-                f: self.results[FV.P].values[:, i].sum(axis=1)
-                / np.maximum(self.results[FV.AMB_P].values[:, i].sum(axis=1), 1e-10)
-                for f, i in mapping.items()
-            }
-            keys = list(eff.keys())
-            eff = np.stack(list(eff.values()), axis=-1)
-            results.append(
-                DataArray(
-                    eff,
-                    coords={FC.STATE: self.results[FC.STATE].values, group_key: keys},
-                    dims=(FC.STATE, group_key),
-                    name=FV.EFF,
-                ).sortby(group_key)
-            )
-
-        if FV.WEIGHT in self.results.data_vars:
-            weight = self.results[FV.WEIGHT]
+        if FV.WEIGHT in self.farm_results.data_vars:
+            weight = self.farm_results[FV.WEIGHT]
             if weight.dims == (FC.STATE,):
                 results.append(weight)
             elif weight.dims == (FC.STATE, FC.TURBINE):
                 wgts = {}
                 for f, i in mapping.items():
-                    wgts[f] = weight.values[:, i].mean(axis=1)
-                    wgts[f] /= wgts[f].sum()
+                    if f is not None:
+                        wgts[f] = weight.values[:, i].mean(axis=1)
+                        wsum = wgts[f].sum()
+                        if wsum <= 0.0:
+                            raise ValueError(
+                                f"Cannot normalize '{FV.WEIGHT}' for '{f}': sum is {wsum}"
+                            )
+                        wgts[f] /= wsum
                 keys = list(wgts.keys())
                 wgts = np.stack(list(wgts.values()), axis=-1)
                 results.append(
                     DataArray(
                         wgts,
                         coords={
-                            FC.STATE: self.results[FC.STATE].values,
-                            group_key: keys,
+                            FC.STATE: self.farm_results[FC.STATE].values,
+                            self._LEVEL: keys,
                         },
-                        dims=(FC.STATE, group_key),
+                        dims=(FC.STATE, self._LEVEL),
                         name=FV.WEIGHT,
-                    ).sortby(group_key)
+                    ).sortby(self._LEVEL)
                 )
             else:
                 raise ValueError(
@@ -183,7 +157,7 @@ class MultipleFarmsOutput(Output):
         return merge(results, join="exact")
 
     @property
-    def agg_farm_results(self):
+    def results(self):
         """
         Get the aggregated farm results.
 
@@ -198,61 +172,42 @@ class MultipleFarmsOutput(Output):
             The aggregated farm results
 
         """
-        if self._agg_farm_results is None:
+        if self._results is None:
             mapping = self.farm.get_wind_farm_mapping()
-            self._agg_farm_results = self._aggregate(FC.FARM, mapping)
-        return self._agg_farm_results
+            self._results = self._aggregate(mapping)
+        return self._results
 
-    @property
-    def agg_cluster_results(self):
+    def get_mapping(self):
         """
-        Get the aggregated cluster results.
+        Get the mapping from farm to turbine indices.
 
         Returns
         -------
-        xarray.Dataset
-            The aggregated cluster results
+        dict
+            The mapping from farm to turbine indices
 
         """
-        if self._agg_cluster_results is None:
-            mapping = self.farm.get_cluster_mapping()
-            self._agg_cluster_results = self._aggregate(FC.CLUSTER, mapping)
-        return self._agg_cluster_results
+        return self.farm.get_wind_farm_mapping() 
 
-    def write_agg_nc(self, fname, agg, **kwargs):
+    def get_capacity(self):
         """
-        Write the aggregated results to a netCDF file.
-
-        Parameters
-        ----------
-        fname: str
-            The file name to write the netCDF file
-        agg: str
-            The aggregation level, either "wind_farm" or "cluster"
-        kwargs: dict, optional
-            Additional parameters for the xarray.Dataset.to_netcdf() method
+        Gets the capacity values for each turbine, equals nominal power
 
         Returns
         -------
-        xarray.Dataset
-            The aggregated results that were written to the netCDF file
+        capacity_array: numpy.ndarray
+            The capacity array (nominal power) for all turbines, shape: (n_turbines,)
 
         """
-        if agg == FC.FARM:
-            ds = self.agg_farm_results
-        elif agg == FC.CLUSTER:
-            ds = self.agg_cluster_results
-        else:
-            raise ValueError(
-                f"Unknown aggregation level: {agg}, choice is either '{FC.FARM}' or '{FC.CLUSTER}'"
-            )
+        mapping = self.get_mapping()
+        Pnom = super().get_capacity()
+        cap = np.array([
+            Pnom[mapping[f]].sum()
+            for f in self.results[self._LEVEL].values
+        ])
+        return cap
 
-        fpath = self.get_fpath(fname)
-        write_nc(ds, fpath, **kwargs)
-
-        return ds
-
-    def split_by_farm(self):
+    def split(self):
         """
         Split the results by wind farm.
 
@@ -262,38 +217,22 @@ class MultipleFarmsOutput(Output):
             A dictionary with the wind farm names as keys and the corresponding results as values
 
         """
-        assert self.results is not None, "farm_results are required for splitting"
+        assert self.farm_results is not None, "farm_results are required for splitting"
         return {
-            farm: self.results.where(self.results[FC.FARM] == farm, drop=True)
+            farm: self.farm_results.where(self.farm_results[FC.FARM] == farm, drop=True)
             for farm in self.farm.wind_farm_names
         }
 
-    def split_by_cluster(self):
+    def write_split_nc_files(self, base_name, **kwargs):
         """
-        Split the results by cluster.
-
-        Returns
-        -------
-        dict
-            A dictionary with the cluster names as keys and the corresponding results as values
-
-        """
-        assert self.results is not None, "farm_results are required for splitting"
-        return {
-            cluster: self.results.where(self.results[FC.CLUSTER] == cluster, drop=True)
-            for cluster in self.farm.cluster_names
-        }
-
-    def write_farm_nc_files(self, base_name, **kwargs):
-        """
-        Write the results for each wind farm to separate netCDF files.
+        Write the results for each sub element to separate netCDF files.
 
         Parameters
         ----------
         base_name: str
-            The base name for the netCDF files, the actual file name will be "{base_name}_{farm}.nc"
+            The base name for the netCDF files
         kwargs: dict, optional
-            Additional parameters for the xarray.Dataset.to_netcdf() method
+            Additional parameters for the foxes.utils.write_nc() method
 
         Returns
         -------
@@ -302,39 +241,13 @@ class MultipleFarmsOutput(Output):
             were written to the netCDF files as values
 
         """
-        fdict = self.split_by_farm()
+        fdict = self.split()
         for farm, ds in fdict.items():
             fname = f"{base_name}_{farm}.nc"
             fpath = self.get_fpath(fname)
             write_nc(ds, fpath, **kwargs)
 
         return fdict
-
-    def write_cluster_nc_files(self, base_name, **kwargs):
-        """
-        Write the results for each cluster to separate netCDF files.
-
-        Parameters
-        ----------
-        base_name: str
-            The base name for the netCDF files, the actual file name will be "{base_name}_{cluster}.nc"
-        kwargs: dict, optional
-            Additional parameters for the xarray.Dataset.to_netcdf() method
-
-        Returns
-        -------
-        dict
-            A dictionary with the cluster names as keys and the corresponding results that
-            were written to the netCDF files as values
-
-        """
-        cdict = self.split_by_cluster()
-        for cluster, ds in cdict.items():
-            fname = f"{base_name}_{cluster}.nc"
-            fpath = self.get_fpath(fname)
-            write_nc(ds, fpath, **kwargs)
-
-        return cdict
 
     def get_area_mapping_plot_layout(self, area_by_name, n_areas):
         """
@@ -393,7 +306,6 @@ class MultipleFarmsOutput(Output):
         areas=None,
         mapping=None,
         geojson_name_key="name",
-        level=FC.CLUSTER,
         title=None,
         verbosity=1,
     ):
@@ -408,17 +320,14 @@ class MultipleFarmsOutput(Output):
             The areas to visualize. If None, farm.cluster_areas is used.
         mapping: dict, optional
             Mapping from area names to turbine indices. If None, mapping is
-            chosen from level.
+            chosen from self._LEVEL.
         geojson_name_key: str or list of str
             Preferred GeoJSON feature property key(s) used to read area
-            names from GeoJSON inputs.
-        level: str
-            Aggregation level for default mapping, either FC.CLUSTER or FC.FARM.
+            names from GeoJSON inputs
         title: str, optional
-            The plot title. If None, a default title based on the level is used.
+            The plot title. If None, a default title based on self._LEVEL is used.
         verbosity: int
-            Verbosity level. If greater than 0, print the output file path
-            after writing.
+            The verbosity level. 0 = silent
 
         :group: output
 
@@ -430,7 +339,7 @@ class MultipleFarmsOutput(Output):
             print(f"{type(self).__name__}: Creating {plot_file}")
 
         if areas is None:
-            if level == FC.CLUSTER:
+            if self._LEVEL == FC.CLUSTER:
                 area_by_name = self.farm.cluster_areas
                 if area_by_name is None:
                     raise ValueError(
@@ -438,19 +347,19 @@ class MultipleFarmsOutput(Output):
                     )
             else:
                 raise ValueError(
-                    f"Areas must be provided when plotting level '{level}'"
+                    f"Areas must be provided when plotting level '{self._LEVEL}'"
                 )
         else:
             area_by_name = normalize_areas_input(areas, geojson_name_key)
 
         if mapping is None:
-            if level == FC.CLUSTER:
+            if self._LEVEL == FC.CLUSTER:
                 mapping = self.farm.get_cluster_mapping()
-            elif level == FC.FARM:
+            elif self._LEVEL == FC.FARM:
                 mapping = self.farm.get_wind_farm_mapping()
             else:
                 raise ValueError(
-                    f"Unknown level '{level}', choice is '{FC.CLUSTER}' or '{FC.FARM}'"
+                    f"Unknown level '{self._LEVEL}', choice is '{FC.CLUSTER}' or '{FC.FARM}'"
                 )
 
             if mapping is None:
@@ -544,7 +453,7 @@ class MultipleFarmsOutput(Output):
             borderaxespad=0.0,
         )
         if title is None:
-            title = f"Turbine to {level} mapping"
+            title = f"Turbine to {self._LEVEL} mapping"
         ax.set_title(title)
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
@@ -556,3 +465,4 @@ class MultipleFarmsOutput(Output):
         fpath.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(fpath, dpi=150, bbox_inches="tight")
         plt.close(fig)
+        

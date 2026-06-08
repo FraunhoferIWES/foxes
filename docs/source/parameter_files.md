@@ -106,6 +106,47 @@ outputs:                          # this section is optional
 
 Any of the applicable *foxes* classes and functions can be added to the respective section of the input yaml file, together with the specific parameter choices.
 
+### Output evaluation with FarmResultsEval
+
+`FarmResultsEval` is the main post-processing output class for state-turbine farm results. It supports weighted and unweighted reductions over states and turbines, and helper functions for energy-yield and efficiency metrics.
+
+Typical setup in yaml:
+
+```yaml
+outputs:
+  - output_type: FarmResultsEval
+    functions:
+      - function: add_capacity
+      - function: add_capacity
+        ambient: True
+      - function: add_efficiency
+      - function: calc_states_mean
+        vars: [P, AMB_P, CAP, AMB_CAP]
+```
+
+Common reduction rules in `reduce_states`, `reduce_turbines`, and `reduce_all` are:
+
+- `weights`: weighted contraction using `WEIGHT` from farm results
+- `mean_no_weights`: arithmetic mean without state weights
+- `sum`, `min`, `max`
+- `std`: available for `reduce_states`
+
+Frequently used methods:
+
+- `calc_states_mean(vars, use_weights=True)`: returns per-turbine means for selected variables
+- `calc_turbine_mean(vars)`: returns per-state means over turbines
+- `calc_farm_mean(vars)` and `calc_farm_sum(vars)`: fully contracted farm values
+- `add_capacity(...)`, `add_efficiency()`, `add_full_load_fraction(...)`: writes derived variables back to farm results
+- `calc_turbine_yield(...)` and `calc_farm_yield(...)`: computes turbine/farm yield, including optional P75/P90 in `calc_farm_yield(power_uncert=...)`
+
+Notes:
+
+- `calc_turbine_yield(...)` expects exactly one of `algo` or `P_unit_W`.
+- For non-timeseries states, set `hours=...` or `annual=True` in yield calculations.
+- Weighted reductions require `WEIGHT` in the farm results with dimensions `(state,)` or `(state, turbine)`.
+
+The yield helper methods are often easiest to run in Python scripts or notebooks, where `algo` can be passed directly.
+
 Whenever the outputs provided by the `foxes.output` package are sufficient for what you are planning to do, e.g. simple results writing to csv or NetCDF files, `foxes_yaml` might be the easiest way of running *foxes* for you.
 
 ### Plot creation and variables

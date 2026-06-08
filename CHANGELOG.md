@@ -962,11 +962,12 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Inputs:
   - New ambient states class `LatLonFieldData`, for NetCDF input on regular latitude/longitude grids
 - Output:
-  - New output class: `MultipleFarmsOutput`, splitting and aggregating farm results for sub-farms and clusters
+  - New output classes: `WindFarmsEval` and `ClusterEval`, for simple computation of turbine aggregated results
   - The `FarmLayoutOutput` can now also color by `wind_farm` and `cluster` fields.
 - Models:
   - Refactored air density and yaw misalignment corrections for all turbine types
   - Re-implemented `CpCtFile` and `CpCtFromTwo`, now no longer mapping to `PCtFile`
+  - Variable change: `FV.CAP` now refers to capacity and no longer to capacity factor, i.e., it now represents the maximally available power in the power unit specified by the turbine type. The capacity factor is now referred to as `FV.CAPF`. Both can be computed by `FarmResultsEval`, `WindFarmsEval` and `ClusterEval`.
 - Tests:
   - New tests for turbine models and turbine types
 - Bugs:

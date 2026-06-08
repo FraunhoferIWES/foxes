@@ -112,10 +112,9 @@ if __name__ == "__main__":
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
-    o = foxes.output.FarmResultsEval(farm_results)
-    o = foxes.output.FarmResultsEval(farm_results)
-    o.add_capacity(algo)
-    o.add_capacity(algo, ambient=True)
+    o = foxes.output.FarmResultsEval(farm_results, algo=algo)
+    o.add_capacity_factor(ambient=False)
+    o.add_capacity_factor(ambient=True)
     o.add_efficiency()
 
     # state-turbine results
@@ -143,14 +142,12 @@ if __name__ == "__main__":
         {
             FV.AMB_P: "weights",
             FV.P: "weights",
-            FV.AMB_CAP: "weights",
-            FV.CAP: "weights",
+            FV.AMB_CAPF: "weights",
+            FV.CAPF: "weights",
         }
     )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
-        algo=algo, annual=True, ambient=True
-    )
-    turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(annual=True, ambient=True)
+    turbine_results[FV.YLD] = o.calc_turbine_yield(annual=True)
     turbine_results[FV.EFF] = turbine_results[FV.P] / turbine_results[FV.AMB_P]
     print("\nResults by turbine:\n")
     print(turbine_results)

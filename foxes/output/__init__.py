@@ -15,7 +15,8 @@ from .slices_data import SlicesData as SlicesData
 from .rotor_point_plots import RotorPointPlot as RotorPointPlot
 from .state_turbine_table import StateTurbineTable as StateTurbineTable
 from .plt import plt as plt
-from .multiple_farms import MultipleFarmsOutput as MultipleFarmsOutput
+from .farms_eval import WindFarmsEval as WindFarmsEval
+from .cluster_eval import ClusterEval as ClusterEval
 
 from .rose_plot import RosePlotOutput as RosePlotOutput
 from .rose_plot import StatesRosePlotOutput as StatesRosePlotOutput

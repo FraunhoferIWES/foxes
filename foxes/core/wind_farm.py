@@ -246,7 +246,6 @@ class WindFarm:
         areas,
         set_cluster=True,
         geojson_name_key="name",
-        plot_file=None,
     ):
         """
         Maps turbines to areas.
@@ -266,9 +265,6 @@ class WindFarm:
         geojson_name_key: str or list of str
             Preferred GeoJSON feature property key(s) used
             to read area names from GeoJSON inputs.
-        plot_file: str or pathlib.Path, optional
-            If provided, write a plot file that visualizes areas
-            and the turbine-to-area mapping.
 
         Returns
         -------
@@ -293,17 +289,6 @@ class WindFarm:
                 self.__cluster_areas = area_map
             else:
                 self.__cluster_areas.update(area_map)
-
-        if plot_file is not None:
-            from foxes.output import MultipleFarmsOutput
-
-            MultipleFarmsOutput(self, None).write_area_mapping_plot(
-                plot_file,
-                areas=areas,
-                mapping=mapping,
-                level="cluster",
-                geojson_name_key=geojson_name_key,
-            )
 
         return mapping
 
@@ -626,9 +611,9 @@ class WindFarm:
             cap += tt.P_nominal
         return cap
 
-    def get_P_nominal_array(self, algo):
+    def get_capacity_array(self, algo):
         """
-        Gets the nominal power array for all turbines
+        Gets the capacity array for all turbines (nominal power)
 
         Parameters
         ----------
@@ -637,8 +622,8 @@ class WindFarm:
 
         Returns
         -------
-        P_nominal_array: numpy.ndarray
-            The nominal power array, shape: (n_turbines,)
+        capacity_array: numpy.ndarray
+            The capacity array (nominal power) for all turbines, shape: (n_turbines,)
 
         """
         ttypes = algo.farm_controller.turbine_types
@@ -646,11 +631,11 @@ class WindFarm:
             f"WindFarm '{self.name}': turbine types not set in farm controller {algo.farm_controller.name}"
         )
 
-        P_nominal_array = np.zeros(self.n_turbines, dtype=config.dtype_double)
+        capacity_array = np.zeros(self.n_turbines, dtype=config.dtype_double)
         for i, t in enumerate(self.__turbines):
             tt = ttypes[i]
             assert tt.P_nominal is not None, (
                 f"WindFarm '{self.name}': P_nominal not set for turbine type '{tt.name}' "
             )
-            P_nominal_array[i] = tt.P_nominal
-        return P_nominal_array
+            capacity_array[i] = tt.P_nominal
+        return capacity_array

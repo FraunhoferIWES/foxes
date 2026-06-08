@@ -3,8 +3,8 @@
     :align: center
 
 .. versionadded:: 1.7.7
-    New output class `MultipleFarmsOutput` for handling splitting and aggregation of results for
-    simulations of multiple wind farms and wind farm clusters.
+    New output classes `WindFarmsEval` and `ClusterEval` for handling splitting and
+    aggregation of results for simulations of multiple wind farms and wind farm clusters.
 
 .. versionadded:: 1.7.7
     New command line application `era52foxes`, converting data files from ERA5

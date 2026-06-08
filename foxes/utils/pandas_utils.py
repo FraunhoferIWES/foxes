@@ -71,8 +71,8 @@ class PandasFileHelper:
         FV.AMB_T: "{:.3f}",
         FV.YLD: "{:.3f}",
         FV.AMB_YLD: "{:.3f}",
-        FV.CAP: "{:.5f}",
-        FV.AMB_CAP: "{:.5f}",
+        FV.CAPF: "{:.5f}",
+        FV.AMB_CAPF: "{:.5f}",
         FV.EFF: "{:.5f}",
     }
 
