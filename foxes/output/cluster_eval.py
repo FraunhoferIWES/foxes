@@ -30,11 +30,13 @@ class ClusterEval(WindFarmsEval):
             self.farm_results = merge(
                 (
                     self.farm_results,
-                    DataArray(self.farm.cluster_list, dims=[FC.TURBINE], name=FC.CLUSTER),
+                    DataArray(
+                        self.farm.cluster_list, dims=[FC.TURBINE], name=FC.CLUSTER
+                    ),
                 ),
                 join="exact",
             )
-        
+
         self._LEVEL = FC.CLUSTER
 
     @property
@@ -63,7 +65,7 @@ class ClusterEval(WindFarmsEval):
             The mapping from cluster to turbine indices
 
         """
-        return self.farm.get_cluster_mapping() 
+        return self.farm.get_cluster_mapping()
 
     def split(self):
         """
@@ -77,6 +79,8 @@ class ClusterEval(WindFarmsEval):
         """
         assert self.farm_results is not None, "farm_results are required for splitting"
         return {
-            cluster: self.farm_results.where(self.farm_results[FC.CLUSTER] == cluster, drop=True)
+            cluster: self.farm_results.where(
+                self.farm_results[FC.CLUSTER] == cluster, drop=True
+            )
             for cluster in self.farm.cluster_names
         }

@@ -64,7 +64,9 @@ class WindFarmsEval(FarmResultsEval):
         self._results = results
 
     def _aggregate(self, mapping=None):
-        assert self.farm_results is not None, "farm_results are required for aggregation"
+        assert self.farm_results is not None, (
+            "farm_results are required for aggregation"
+        )
 
         needs_mapping = self.algo is not None
         if (
@@ -187,7 +189,7 @@ class WindFarmsEval(FarmResultsEval):
             The mapping from farm to turbine indices
 
         """
-        return self.farm.get_wind_farm_mapping() 
+        return self.farm.get_wind_farm_mapping()
 
     def get_capacity(self):
         """
@@ -201,10 +203,9 @@ class WindFarmsEval(FarmResultsEval):
         """
         mapping = self.get_mapping()
         Pnom = super().get_capacity()
-        cap = np.array([
-            Pnom[mapping[f]].sum()
-            for f in self.results[self._LEVEL].values
-        ])
+        cap = np.array(
+            [Pnom[mapping[f]].sum() for f in self.results[self._LEVEL].values]
+        )
         return cap
 
     def split(self):
@@ -465,4 +466,3 @@ class WindFarmsEval(FarmResultsEval):
         fpath.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(fpath, dpi=150, bbox_inches="tight")
         plt.close(fig)
-        
