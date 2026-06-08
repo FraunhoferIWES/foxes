@@ -1,18 +1,35 @@
 import numpy as np
 import pandas as pd
 
-from foxes.data import parse_Pct_file_name
+from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
-from foxes.config import config, get_input_path
+from foxes.data import PCTCURVE, parse_Pct_file_name
+from foxes.config import get_input_path
+import foxes.variables as FV
 import foxes.constants as FC
 
-from .PCt_file import PCtFile
 
-
-class CpCtFile(PCtFile):
+class CpCtFile(TurbineType):
     """
     Calculate power and ct by interpolating
     from cp-ct-curve data file (or pandas DataFrame).
+
+    Attributes
+    ----------
+    source: str or pandas.DataFrame
+        The file path, static name, or data
+    col_ws: str
+        The wind speed column
+    col_cp: str
+        The cp column
+    col_ct: str
+        The ct column
+    WSCT: str
+        The wind speed variable for ct lookup
+    WSP: str
+        The wind speed variable for power lookup
+    rpars: dict, optional
+        Parameters for pandas file reading
 
     :group: models.turbine_types
 
@@ -23,7 +40,9 @@ class CpCtFile(PCtFile):
         data_source,
         col_ws="ws",
         col_cp="cp",
-        rho=1.225,
+        col_ct="ct",
+        var_ws_ct=FV.REWS2,
+        var_ws_cp=FV.REWS3,
         pd_file_read_pars={},
         **parameters,
     ):
@@ -38,39 +57,278 @@ class CpCtFile(PCtFile):
             The wind speed column
         col_cp: str
             The cp column
-        rho: float
-            The air density for the curves
+        col_ct: str
+            The ct column
+        var_ws_ct: str
+            The wind speed variable for ct lookup
+        var_ws_cp: str
+            The wind speed variable for cp lookup
         pd_file_read_pars: dict
-            Parameters for pandas file reading
-        paramerers: dict, optional
-            Additional parameters for PCtFile class
+        parameters: dict, optional
+            Additional parameters for TurbineType class
 
         """
         if not isinstance(data_source, pd.DataFrame):
             pars = parse_Pct_file_name(data_source)
             pars.update(parameters)
-            fpath = get_input_path(data_source)
-            data = PandasFileHelper.read_file(fpath, **pd_file_read_pars)
         else:
-            data = data_source
             pars = parameters
 
-        D = pars["D"]
-        A = np.pi * (D / 2) ** 2
-        ws = data[col_ws].to_numpy()
-        cp = data[col_cp].to_numpy()
-        P_unit = pars.pop("P_unit", FC.kW)
+        super().__init__(rho_corr_P=None, rho_corr_ct=None, **pars)
 
-        ws_delta = 0.0001
-        ws_min = np.min(ws)
-        ws_max = np.max(ws)
-        N = int((ws_max - ws_min) / ws_delta)
+        self.source = data_source
+        self.col_ws = col_ws
+        self.col_cp = col_cp
+        self.col_ct = col_ct
+        self.rho = None
+        self.WSCT = var_ws_ct
+        self.WSCP = var_ws_cp
+        self.rpars = pd_file_read_pars
 
-        data_P = pd.DataFrame(index=range(N), dtype=config.dtype_double)
-        data_P["ws"] = np.linspace(ws_min, ws_max, N, endpoint=True)
-        data_P["cp"] = np.interp(data_P["ws"], ws, cp, left=0, right=0)
-        data_P["P"] = (
-            0.5 * rho * A * data_P["cp"] * data_P["ws"] ** 3 / FC.P_UNITS[P_unit]
+    def __repr__(self):
+        a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
+        a += f", var_ws_ct={self.WSCT}, var_ws_cp={self.WSCP}"
+        return f"{type(self).__name__}({a})"
+
+    def needs_rews2(self):
+        """
+        Returns flag for requiring REWS2 variable
+
+        Returns
+        -------
+        flag: bool
+            True if REWS2 is required
+
+        """
+        return self.WSCT == FV.REWS2 or self.WSCP == FV.REWS2
+
+    def needs_rews3(self):
+        """
+        Returns flag for requiring REWS3 variable
+
+        Returns
+        -------
+        flag: bool
+            True if REWS3 is required
+
+        """
+        return self.WSCT == FV.REWS3 or self.WSCP == FV.REWS3
+
+    def output_farm_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        output_vars: list of str
+            The output variable names
+
+        """
+        return [FV.P, FV.CT]
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        if isinstance(self.source, pd.DataFrame):
+            data = self.source
+        else:
+            fpath = get_input_path(self.source)
+            if not fpath.is_file():
+                if verbosity > 0:
+                    print(
+                        f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
+                    )
+                fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=False)
+            if verbosity > 0:
+                print(f"Turbine type '{self.name}': Reading file", fpath)
+            data = PandasFileHelper.read_file(fpath, **self.rpars)
+
+        data = data.set_index(self.col_ws).sort_index()
+        self.data_ws = data.index.to_numpy()
+        self.data_cp = data[self.col_cp].to_numpy()
+        self.data_ct = data[self.col_ct].to_numpy()
+
+        assert self.P_nominal is not None, (
+            f"P_nominal must be provided for {type(self).__name__} turbine type"
         )
 
-        super().__init__(data_P, col_ws="ws", col_P="P", rho=rho, P_unit=P_unit, **pars)
+        return super().load_data(algo, verbosity)
+
+    def modify_cutin(
+        self,
+        modify_ct,
+        modify_P,
+        steps=20,
+        iterations=100,
+        a=0.55,
+        b=0.55,
+    ):
+        """
+        Modify the data such that a discontinuity
+        at cutin wind speed is avoided
+
+        Parameters
+        ----------
+        variable: str
+            The target variable
+        modify_ct: bool
+            Flag for modification of the ct curve
+        modify_P: bool
+            Flag for modification of the power curve
+        steps: int
+            The number of wind speed steps between 0 and
+            the cutin wind speed
+        iterations: int
+            The number of iterations
+        a: float
+            Coefficient for iterative mixing
+        b: float
+            Coefficient for iterative mixing
+
+        """
+        if modify_ct or modify_P:
+            ws = self.data_ws
+            ct = self.data_ct
+            cp = self.data_cp
+
+            i = 0
+            try:
+                while (
+                    i < len(ws)
+                    and (not modify_ct or ct[i] < 1e-5)
+                    and (not modify_P or cp[i] < 0.001)
+                ):
+                    i += 1
+            except IndexError:
+                raise IndexError(
+                    f"Turbine type '{self.name}': Failed not determine cutin wind speed. ws = {ws}, ct = {ct}, cp = {cp}"
+                )
+
+            if ws[i] > 0:
+                ws = ws[i:]
+                ct = ct[i:]
+                cp = cp[i:]
+
+                new_ws = np.linspace(0.0, ws[0], steps + 1, dtype=ws.dtype)
+                new_ct = np.zeros_like(new_ws)
+                new_cp = np.zeros_like(new_ws)
+
+                if modify_ct:
+                    new_ct[-1] = ct[0]
+                    for it in range(iterations):
+                        new_ct[1:-1] = a * new_ct[:-2] + (1 - a) * new_ct[2:]
+
+                if modify_P:
+                    new_cp[-1] = cp[0]
+                    for it in range(iterations):
+                        new_cp[1:-1] = b * new_cp[:-2] + (1 - b) * new_cp[2:]
+
+                self.data_ws = np.concatenate([new_ws[:-1], ws], axis=0)
+                self.data_ct = np.concatenate([new_ct[:-1], ct], axis=0)
+                self.data_cp = np.concatenate([new_cp[:-1], cp], axis=0)
+
+        else:
+            super().modify_cutin(modify_ct, modify_P)
+
+    def calculate(self, algo, mdata, fdata, st_sel):
+        """
+        The main model calculation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        st_sel: numpy.ndarray of bool
+            The state-turbine selection,
+            shape: (n_states, n_turbines)
+
+        Returns
+        -------
+        results: dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape (n_states, n_turbines)
+
+        """
+        self.ensure_output_vars(algo, fdata)
+        rews2 = fdata[self.WSCT][st_sel]
+        rews3 = fdata[self.WSCP][st_sel]
+        rho = fdata[FV.RHO][st_sel]
+
+        # compute yaw misalignment corrections:
+        corrects_yawm = FV.YAWM in fdata and (
+            self.yawm_corr_P is not None or self.yawm_corr_ct is not None
+        )
+        rews3, rews2, factor_cp, factor_ct = self.get_rho_yawm_corrections(
+            rews_P=rews3,
+            rews_ct=rews2,
+            rho=None,
+            yawm=fdata[FV.YAWM][st_sel] if corrects_yawm else None,
+        )
+
+        out = {FV.P: fdata[FV.P], FV.CT: fdata[FV.CT]}
+
+        cp = factor_cp * np.interp(
+            rews3, self.data_ws, self.data_cp, left=0.0, right=0.0
+        )
+        out[FV.P][st_sel] = (
+            0.5
+            * rho
+            * np.pi
+            * (self.D / 2) ** 2
+            * cp
+            * rews3**3
+            / FC.P_UNITS[self.P_unit]
+        )
+
+        out[FV.CT][st_sel] = factor_ct * np.interp(
+            rews2, self.data_ws, self.data_ct, left=0.0, right=0.0
+        )
+
+        return out
+
+    def finalize(self, algo, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level
+
+        """
+        super().finalize(algo, verbosity)
+        del self.data_ws, self.data_cp, self.data_ct

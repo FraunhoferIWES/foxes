@@ -49,8 +49,6 @@ class WsRho2PCtFromTwo(TurbineType):
         self,
         data_source_P,
         data_source_ct,
-        p_ct=1.0,
-        p_P=1.88,
         var_ws_ct=FV.REWS2,
         var_ws_P=FV.REWS3,
         pd_file_read_pars_P={},
@@ -68,10 +66,6 @@ class WsRho2PCtFromTwo(TurbineType):
             The file path for the power curve, static name, or data
         data_source_ct: str or pandas.DataFrame
             The file path for the ct curve, static name, or data
-        p_ct: float
-            The exponent for yaw dependency of ct
-        p_P: float
-            The exponent for yaw dependency of P
         var_ws_ct: str
             The wind speed variable for ct lookup
         var_ws_P: str
@@ -94,12 +88,14 @@ class WsRho2PCtFromTwo(TurbineType):
             pars = parse_Pct_two_files(data_source_P, data_source_ct)
         else:
             pars = parameters
-        super().__init__(**pars)
+        super().__init__(
+            rho_corr_P=None,
+            rho_corr_ct=None,
+            **pars,
+        )
 
         self.source_P = data_source_P
         self.source_ct = data_source_ct
-        self.p_ct = p_ct
-        self.p_P = p_P
         self.WSCT = var_ws_ct
         self.WSP = var_ws_P
         self.rpars_P = pd_file_read_pars_P
@@ -280,24 +276,21 @@ class WsRho2PCtFromTwo(TurbineType):
             qts = np.zeros((n_sel, 2), dtype=config.dtype_double)  # ws, rho
             qts[:, 0] = fdata[self.WSP][st_sel_P]
             qts[:, 1] = fdata[FV.RHO][st_sel_P]
+            factor_P = 1.0
 
-            # apply yaw corrections:
-            if FV.YAWM in fdata and self.p_P is not None:
-                # calculate corrected wind speed wsc,
-                # gives ws**3 * cos**p_P in partial load region
-                # and smoothly deals with full load region:
-                yawm = fdata[FV.YAWM][st_sel_P]
-                if np.any(np.isnan(yawm)):
-                    raise ValueError(
-                        f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?"
-                    )
-                cosm = np.cos(yawm / 180 * np.pi)
-                qts[:, 0] *= (cosm**self.p_P) ** (1.0 / 3.0)
-                del yawm, cosm
+            # apply yaw misalignment corrections:
+            if FV.YAWM in fdata and self.yawm_corr_P is not None:
+                rews_P, _, factor_P, _ = self.get_rho_yawm_corrections(
+                    rews_P=qts[:, 0],
+                    rews_ct=qts[:, 0].copy(),
+                    rho=None,
+                    yawm=fdata[FV.YAWM][st_sel_P],
+                )
+                qts[:, 0] = rews_P
 
             # run interpolation:
             try:
-                fdata[FV.P][st_sel_P] = interpn(
+                fdata[FV.P][st_sel_P] = factor_P * interpn(
                     (self._ws_P, self._rho_P), self._P, qts, **self.ipars_P
                 )
             except ValueError as e:
@@ -320,24 +313,21 @@ class WsRho2PCtFromTwo(TurbineType):
             qts = np.zeros((n_sel, 2), dtype=config.dtype_double)  # ws, rho
             qts[:, 0] = fdata[self.WSP][st_sel_ct]
             qts[:, 1] = fdata[FV.RHO][st_sel_ct]
+            factor_ct = 1.0
 
-            # apply yaw corrections:
-            if FV.YAWM in fdata and self.p_ct is not None:
-                # calculate corrected wind speed wsc,
-                # gives ws**3 * cos**p_P in partial load region
-                # and smoothly deals with full load region:
-                yawm = fdata[FV.YAWM][st_sel_ct]
-                if np.any(np.isnan(yawm)):
-                    raise ValueError(
-                        f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?"
-                    )
-                cosm = np.cos(yawm / 180 * np.pi)
-                qts[:, 0] *= (cosm**self.p_ct) ** 0.5
-                del yawm, cosm
+            # apply yaw misalignment corrections:
+            if FV.YAWM in fdata and self.yawm_corr_ct is not None:
+                _, rews_ct, _, factor_ct = self.get_rho_yawm_corrections(
+                    rews_P=qts[:, 0].copy(),
+                    rews_ct=qts[:, 0],
+                    rho=None,
+                    yawm=fdata[FV.YAWM][st_sel_ct],
+                )
+                qts[:, 0] = rews_ct
 
             # run interpolation:
             try:
-                fdata[FV.CT][st_sel_ct] = interpn(
+                fdata[FV.CT][st_sel_ct] = factor_ct * interpn(
                     (self._ws_ct, self._rho_ct), self._ct, qts, **self.ipars_ct
                 )
             except ValueError as e:

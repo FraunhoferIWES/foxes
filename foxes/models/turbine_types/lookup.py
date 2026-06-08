@@ -37,8 +37,6 @@ class FromLookupTable(TurbineType):
         varmap={},
         lookup_pars={},
         rho=None,
-        p_ct=1.0,
-        p_P=1.88,
         var_ws_ct=FV.REWS2,
         var_ws_P=FV.REWS3,
         pd_file_read_pars={},
@@ -62,10 +60,6 @@ class FromLookupTable(TurbineType):
         rho: float, optional
             The air density for which the data is valid
             or None for no correction
-        p_ct: float
-            The exponent for yaw dependency of ct
-        p_P: float
-            The exponent for yaw dependency of P
         var_ws_ct: str
             The wind speed variable for ct lookup
         var_ws_P: str
@@ -88,8 +82,6 @@ class FromLookupTable(TurbineType):
 
         self.source = data_source
         self.rho = rho
-        self.p_ct = p_ct
-        self.p_P = p_P
         self.WSCT = var_ws_ct
         self.WSP = var_ws_P
         self.rpars = pd_file_read_pars
@@ -265,43 +257,35 @@ class FromLookupTable(TurbineType):
 
         rews2 = None
         rews3 = None
+        factor_P = None
+        factor_ct = None
         if self.WSP != FV.REWS or self.WSCT != FV.REWS:
             rews2 = fdata[self.WSCT].copy()
             rews3 = fdata[self.WSP].copy()
 
-        # apply air density correction:
-        if self.rho is not None:
+        # compute air density and yaw misalignment corrections:
+        corrects_rho = (
+            FV.RHO in fdata
+            and self.rho is not None
+            and (self.rho_corr_P is not None or self.rho_corr_ct is not None)
+        )
+        corrects_yawm = FV.YAWM in fdata and (
+            self.yawm_corr_P is not None or self.yawm_corr_ct is not None
+        )
+        if corrects_rho or corrects_yawm:
             if rews2 is None:
                 rews2 = fdata[self.WSCT].copy()
                 rews3 = fdata[self.WSP].copy()
 
-            # correct wind speed by air density, such
-            # that in the partial load region the
-            # correct value is reconstructed:
-            rho = fdata[FV.RHO][st_sel]
-            rews3[st_sel] *= (self.rho / rho) ** (1.0 / 3.0)
-            del rho
-
-        # in yawed case, calc yaw corrected wind speed:
-        if FV.YAWM in fdata and (self.p_P is not None or self.p_ct is not None):
-            if rews2 is None:
-                rews2 = fdata[self.WSCT].copy()
-                rews3 = fdata[self.WSP].copy()
-
-            # calculate corrected wind speed wsc,
-            # gives ws**3 * cos**p_P in partial load region
-            # and smoothly deals with full load region:
-            yawm = fdata[FV.YAWM][st_sel]
-            if np.any(np.isnan(yawm)):
-                raise ValueError(
-                    f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?"
-                )
-            cosm = np.cos(yawm / 180 * np.pi)
-            if self.p_ct is not None:
-                rews2[st_sel] *= (cosm**self.p_ct) ** 0.5
-            if self.p_P is not None:
-                rews3[st_sel] *= (cosm**self.p_P) ** (1.0 / 3.0)
-            del yawm, cosm
+            rews3s, rews2s, factor_P, factor_ct = self.get_rho_yawm_corrections(
+                rews_P=rews3[st_sel],
+                rews_ct=rews2[st_sel],
+                rho=fdata[FV.RHO][st_sel] if corrects_rho else None,
+                rho_ref=self.rho,
+                yawm=fdata[FV.YAWM][st_sel] if corrects_yawm else None,
+            )
+            rews3[st_sel] = rews3s
+            rews2[st_sel] = rews2s
 
         # run lookup:
         if rews2 is None:
@@ -312,5 +296,10 @@ class FromLookupTable(TurbineType):
             fdata_lookup[FV.REWS] = rews3
             out = self._lookup.calculate(algo, mdata, fdata_lookup, st_sel)
             out[FV.CT] = ct
+
+        if factor_P is not None:
+            out[FV.P][st_sel] *= factor_P
+        if factor_ct is not None:
+            out[FV.CT][st_sel] *= factor_ct
 
         return out

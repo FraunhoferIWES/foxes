@@ -62,10 +62,10 @@ class TurbineType(TurbineModel):
         H=None,
         P_nominal=None,
         P_unit="kW",
-        rho_corr_P="factor",
+        rho_corr_P="wind_speed",
         rho_corr_ct=None,
-        yawm_corr_P="factor",
-        yawm_corr_ct="factor",
+        yawm_corr_P="wind_speed",
+        yawm_corr_ct="wind_speed",
         yawm_corr_p_P=1.88,
         yawm_corr_p_ct=1.0,
     ):

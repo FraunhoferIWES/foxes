@@ -964,7 +964,12 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Output:
   - New output class: `MultipleFarmsOutput`, splitting and aggregating farm results for sub-farms and clusters
   - The `FarmLayoutOutput` can now also color by `wind_farm` and `cluster` fields.
+- Models:
+  - Refactored air density and yaw misalignment corrections for all turbine types
+  - Re-implemented `CpCtFile` and `CpCtFromTwo`, now no longer mapping to `PCtFile`
 - Tests:
-  - New unit tests for turbine models
+  - New tests for turbine models and turbine types
+- Bugs:
+  - Bugs fixed with air density correction of power curves
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.7](https://github.com/FraunhoferIWES/foxes/commits/v1.7.7)
