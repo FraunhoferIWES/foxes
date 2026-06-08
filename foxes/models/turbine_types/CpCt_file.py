@@ -43,6 +43,7 @@ class CpCtFile(TurbineType):
         col_ct="ct",
         var_ws_ct=FV.REWS2,
         var_ws_cp=FV.REWS3,
+        rho=None,
         pd_file_read_pars={},
         **parameters,
     ):
@@ -63,6 +64,8 @@ class CpCtFile(TurbineType):
             The wind speed variable for ct lookup
         var_ws_cp: str
             The wind speed variable for cp lookup
+        rho: float, optional
+            The air density for which the data is valid
         pd_file_read_pars: dict
         parameters: dict, optional
             Additional parameters for TurbineType class
@@ -84,6 +87,7 @@ class CpCtFile(TurbineType):
         self.WSCT = var_ws_ct
         self.WSCP = var_ws_cp
         self.rpars = pd_file_read_pars
+        self.rho = rho
 
     def __repr__(self):
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
@@ -173,9 +177,15 @@ class CpCtFile(TurbineType):
         self.data_cp = data[self.col_cp].to_numpy()
         self.data_ct = data[self.col_ct].to_numpy()
 
-        assert self.P_nominal is not None, (
-            f"P_nominal must be provided for {type(self).__name__} turbine type"
-        )
+        if self.P_nominal is None and self.rho is not None:
+            area = np.pi * (self.D / 2) ** 2
+            self.P_nominal = (
+                0.5 * self.rho * area * np.max(self.data_cp) / FC.P_UNITS[self.P_unit]
+            )
+            if verbosity > 0:
+                print(
+                    f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}"
+                )
 
         return super().load_data(algo, verbosity)
 

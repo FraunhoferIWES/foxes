@@ -50,6 +50,7 @@ class CpCtFromTwo(TurbineType):
         col_ws_ct_file="ws",
         col_cp="cp",
         col_ct="ct",
+        rho=None,
         var_ws_ct=FV.REWS2,
         var_ws_cp=FV.REWS3,
         pd_file_read_pars_cp={},
@@ -73,6 +74,8 @@ class CpCtFromTwo(TurbineType):
             The cp column
         col_ct: str
             The ct column
+        rho: float, optional
+            The air density for which the data is valid
         var_ws_ct: str
             The wind speed variable for ct lookup
         var_ws_cp: str
@@ -91,7 +94,7 @@ class CpCtFromTwo(TurbineType):
             pars = parse_Pct_two_files(data_source_cp, data_source_ct)
         else:
             pars = parameters
-        super().__init__(rho=None, rho_corr_P=None, rho_corr_ct=None, **pars)
+        super().__init__(rho_corr_P=None, rho_corr_ct=None, **pars)
 
         self.source_cp = data_source_cp
         self.source_ct = data_source_ct
@@ -103,15 +106,12 @@ class CpCtFromTwo(TurbineType):
         self.WSCP = var_ws_cp
         self.rpars_cp = pd_file_read_pars_cp
         self.rpars_ct = pd_file_read_pars_ct
+        self.rho = rho
 
         self._data_cp = None
         self._data_ct = None
         self._data_ws_cp = None
         self._data_ws_ct = None
-
-        assert self.P_nominal is not None, (
-            f"P_nominal must be provided for {type(self).__name__} turbine type"
-        )
 
     def __repr__(self):
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
@@ -212,8 +212,11 @@ class CpCtFromTwo(TurbineType):
         self._data_ws_ct = self._data_ct.index.to_numpy()
         self._data_ct = self._data_ct[self.col_ct].to_numpy()
 
-        if self.P_nominal is None:
-            self.P_nominal = np.max(self._data_P) / FC.P_UNITS[self.P_unit]
+        if self.P_nominal is None and self.rho is not None:
+            area = np.pi * (self.D / 2) ** 2
+            self.P_nominal = (
+                0.5 * self.rho * area * np.max(self._data_cp) / FC.P_UNITS[self.P_unit]
+            )
             if verbosity > 0:
                 print(
                     f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}"
@@ -356,7 +359,7 @@ class CpCtFromTwo(TurbineType):
             FV.CT: fdata[FV.CT],
         }
         cp = factor_cp * np.interp(
-            rews3, self.data_ws, self.data_cp, left=0.0, right=0.0
+            rews3, self._data_ws_cp, self._data_cp, left=0.0, right=0.0
         )
         out[FV.P][st_sel] = (
             0.5
