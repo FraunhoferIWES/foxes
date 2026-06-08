@@ -185,7 +185,7 @@ class TurbineType(TurbineModel):
         self,
         rews_P,
         rews_ct,
-        rho,
+        rho=None,
         rho_ref=None,
         yawm=None,
     ):
@@ -198,7 +198,7 @@ class TurbineType(TurbineModel):
             The equivalent wind speeds for the power curve
         rews_ct: np.ndarray
             The equivalent wind speeds for the ct curve
-        rho: np.ndarray
+        rho: np.ndarray, optional
             The air density values in kg/m^3
         rho_ref: np.ndarray or float, optional
             The reference air density in kg/m^3 for the correction
@@ -221,7 +221,7 @@ class TurbineType(TurbineModel):
         factor_ct = 1.0
 
         # compute air density correction for power curve:
-        if rho_ref is None or self.rho_corr_P is None:
+        if rho is None or rho_ref is None or self.rho_corr_P is None:
             pass
         elif self.rho_corr_P == "factor":
             factor_P = rho / rho_ref
@@ -233,7 +233,7 @@ class TurbineType(TurbineModel):
             )
 
         # compute air density correction for ct curve:
-        if rho_ref is None or self.rho_corr_ct is None:
+        if rho is None or rho_ref is None or self.rho_corr_ct is None:
             pass
         elif self.rho_corr_ct == "factor":
             factor_ct = rho / rho_ref
