@@ -238,7 +238,7 @@ def write_nc(
                 dvrs[v] = (x.dims, x.to_numpy())
             enc[v] = get_encoding(dvrs[v][1], complevel=complevel, pack=pack)
             # print("WRITENC ENC",v, enc[v])
-        ds = Dataset(coords=crds, data_vars=dvrs)
+        ds = Dataset(coords=crds, data_vars=dvrs, attrs=ds.attrs)
 
     if verbosity > 1:
         print(
