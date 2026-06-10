@@ -964,6 +964,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Output:
   - New output classes: `WindFarmsEval` and `ClusterEval`, for simple computation of turbine aggregated results
   - The `FarmLayoutOutput` can now also color by `wind_farm` and `cluster` fields.
+  - Refactoring and generalizing `FarmResultsEval`
 - Models:
   - Refactored air density and yaw misalignment corrections for all turbine types
   - Re-implemented `CpCtFile` and `CpCtFromTwo`, now no longer mapping to `PCtFile`

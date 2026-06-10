@@ -137,11 +137,11 @@ Frequently used methods:
 - `calc_turbine_mean(vars)`: returns per-state means over turbines
 - `calc_farm_mean(vars)` and `calc_farm_sum(vars)`: fully contracted farm values
 - `add_capacity(...)`, `add_efficiency()`, `add_full_load_fraction(...)`: writes derived variables back to farm results
-- `calc_turbine_yield(...)` and `calc_farm_yield(...)`: computes turbine/farm yield, including optional P75/P90 in `calc_farm_yield(power_uncert=...)`
+- `calc_yield(...)` and `calc_farm_yield(...)`: computes turbine/farm yield, including optional P75/P90 in `calc_farm_yield(power_uncert=...)`
 
 Notes:
 
-- `calc_turbine_yield(...)` expects exactly one of `algo` or `P_unit_W`.
+- `calc_yield(...)` expects exactly one of `algo` or `P_unit_W`.
 - For non-timeseries states, set `hours=...` or `annual=True` in yield calculations.
 - Weighted reductions require `WEIGHT` in the farm results with dimensions `(state,)` or `(state, turbine)`.
 

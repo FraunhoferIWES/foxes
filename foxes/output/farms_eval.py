@@ -63,6 +63,35 @@ class WindFarmsEval(FarmResultsEval):
         self._LEVEL = FC.FARM
         self._results = results
 
+    def get_power_units(self):
+        """
+        Gets the power units in Watts for all elements
+
+        Returns
+        -------
+        P_unit_W: np.ndarray
+            The power units in Watts for all elements, shape: (n_elements,)
+
+        """
+        data = super().get_power_units()
+
+        mapping = self.get_mapping()
+        if mapping is None:
+            raise ValueError(
+                f"Mapping from {self._LEVEL} to turbine indices is required to get power units for each element"
+            )
+
+        P_unit_W = []
+        for f in self.results[self._LEVEL].values:
+            u = np.unique(data[mapping[f]])
+            assert len(u) == 1, (
+                f"Multiple power units found for {self._LEVEL} '{f}': {u}"
+            )
+            P_unit_W.append(u[0])
+        P_unit_W = np.array(P_unit_W, dtype=data.dtype)
+
+        return P_unit_W
+
     def _aggregate(self, mapping=None):
         assert self.farm_results is not None, (
             "farm_results are required for aggregation"
@@ -77,14 +106,7 @@ class WindFarmsEval(FarmResultsEval):
             needs_mapping = True
 
         if mapping is None and needs_mapping:
-            if self._LEVEL == FC.CLUSTER:
-                mapping = self.farm.get_cluster_mapping()
-            elif self._LEVEL == FC.FARM:
-                mapping = self.farm.get_wind_farm_mapping()
-            else:
-                raise ValueError(
-                    f"Unknown level '{self._LEVEL}', choice is '{FC.CLUSTER}' or '{FC.FARM}'"
-                )
+            mapping = self.get_mapping()
 
         if needs_mapping and mapping is None:
             raise ValueError(
