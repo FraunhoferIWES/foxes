@@ -575,9 +575,9 @@ class FarmResultsEval(Output):
         self._results[var_out] = self.results[var_in] / cap[None, :]
         if verbosity > 0:
             if ambient:
-                print("Ambient capacity added to farm results")
+                print("Ambient capacity factor added to farm results")
             else:
-                print("Capacity added to farm results")
+                print("Capacity factor added to farm results")
 
     def calc_farm_yield(self, turbine_yield=None, power_uncert=None, **kwargs):
         """
