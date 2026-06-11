@@ -180,10 +180,14 @@ class FarmResultsEval(Output):
         rdata = {}
         for v, op in vars_op.items():
             vdata = self.results[v].to_numpy()
-            nns = np.sum(np.isnan(vdata))
-            assert nns == 0, (
-                f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
-            )
+
+            try:
+                nns = np.sum(np.isnan(vdata))
+                assert nns == 0, (
+                    f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+                )
+            except TypeError:
+                pass
 
             if op is None:
                 rdata[v] = vdata
