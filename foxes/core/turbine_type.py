@@ -235,14 +235,18 @@ class TurbineType(TurbineModel):
         # compute air density correction for ct curve:
         if rho is None or rho_ref is None or self.rho_corr_ct is None:
             pass
-        elif self.rho_corr_ct == "factor":
-            factor_ct = rho / rho_ref
-        elif self.rho_corr_ct == "wind_speed":
-            rews_ct *= (rho / rho_ref) ** 0.5
         else:
-            raise KeyError(
-                f"Turbine type '{self.name}': Unkown rho_corr_ct '{self.rho_corr_ct}', expecting 'factor', 'wind_speed' or None"
+            raise NotImplementedError(
+                f"Turbine type '{self.name}': Air density correction for ct curve not implemented"
             )
+        # elif self.rho_corr_ct == "factor":
+        #    factor_ct = rho / rho_ref
+        # elif self.rho_corr_ct == "wind_speed":
+        #    rews_ct *= (rho / rho_ref) ** 0.5
+        # else:
+        #    raise KeyError(
+        #        f"Turbine type '{self.name}': Unkown rho_corr_ct '{self.rho_corr_ct}', expecting 'factor', 'wind_speed' or None"
+        #    )
 
         # compute yaw misalignment correction for power curve:
         if yawm is None or self.yawm_corr_P is None:

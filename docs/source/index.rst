@@ -2,11 +2,11 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionadded:: 1.7.7
+.. versionadded:: 1.8.0
     New output classes `WindFarmsEval` and `ClusterEval` for handling splitting and
     aggregation of results for simulations of multiple wind farms and wind farm clusters.
 
-.. versionadded:: 1.7.7
+.. versionadded:: 1.8.0
     New command line application `era52foxes`, converting data files from ERA5
     NetCDF format into a regular UTM based grid that is readable by the `LatLonFieldData`
     states class.
