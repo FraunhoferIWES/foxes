@@ -974,4 +974,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bugs:
   - Bugs fixed with air density correction of power curves
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.7](https://github.com/FraunhoferIWES/foxes/commits/v1.7.7)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.0](https://github.com/FraunhoferIWES/foxes/commits/v1.8.0)
+
+## v1.8.1
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.1](https://github.com/FraunhoferIWES/foxes/commits/v1.8.1)
