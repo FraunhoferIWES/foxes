@@ -11,7 +11,8 @@ maintainers = [
 ]
 description = "Farm Optimization and eXtended yield Evaluation Software"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["Wind farm", "Wake modelling", "Wind farm optimization"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -88,11 +89,14 @@ Repository = "https://github.com/FraunhoferIWES/foxes.git"
 Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/CHANGELOG.md"
 
 [build-system]
-requires = ["uv_build>=0.9.26,<0.10.0"]
-build-backend = "uv_build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
-[tool.uv.build-backend]
-module-root = ""
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["foxes*"]
 
 [project.scripts]
 foxes_yaml = "foxes.input.yaml.yaml:main"
