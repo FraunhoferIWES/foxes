@@ -982,3 +982,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixing a problem with `pyproject.toml` and `conda-forge`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.1](https://github.com/FraunhoferIWES/foxes/commits/v1.8.1)
+
+## v1.8.2
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.2](https://github.com/FraunhoferIWES/foxes/commits/v1.8.2)
