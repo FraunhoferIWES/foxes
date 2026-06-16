@@ -2,6 +2,10 @@ import numpy as np
 
 from foxes.config import config
 from foxes.utils import get_utm_zone, from_lonlat, to_lonlat
+from foxes.utils.geojson_utils import (
+    area_contains_point,
+    normalize_areas_input,
+)
 
 
 class WindFarm:
@@ -58,6 +62,7 @@ class WindFarm:
         self.__data_is_lonlat = input_is_lonlat
         self.__utm_zone = utm_zone
         self.__locked = False
+        self.__cluster_areas = None
 
     @property
     def data_is_lonlat(self):
@@ -235,6 +240,71 @@ class WindFarm:
                 print(
                     f"Turbine {turbine.index}, {turbine.name}: xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
                 )
+
+    def map_turbines_to_areas(
+        self,
+        areas,
+        set_cluster=True,
+        geojson_name_key="name",
+    ):
+        """
+        Maps turbines to areas.
+
+        Parameters
+        ----------
+        areas: list or str or pathlib.Path or dict
+            The areas to map turbines to. Accepted forms are:
+            - list of AreaGeometry objects
+            - list of (name, AreaGeometry) tuples for named areas
+            - dict mapping names to AreaGeometry objects
+            - path to GeoJSON file
+            - GeoJSON dictionary
+        set_cluster: bool
+            If True, set each mapped turbine's cluster_name to
+            the mapped area name.
+        geojson_name_key: str or list of str
+            Preferred GeoJSON feature property key(s) used
+            to read area names from GeoJSON inputs.
+
+        Returns
+        -------
+        mapping: dict
+            A dictionary, where keys are area names and values are
+            lists of turbine indices belonging to that area.
+
+        """
+        area_map = normalize_areas_input(areas, geojson_name_key)
+
+        mapping = {name: [] for name in area_map}
+        for i, t in enumerate(self.__turbines):
+            for name, area in area_map.items():
+                if area_contains_point(area, t.xy):
+                    mapping[name].append(i)
+                    if set_cluster:
+                        t.cluster_name = name
+                    break
+
+        if set_cluster:
+            if self.__cluster_areas is None:
+                self.__cluster_areas = area_map
+            else:
+                self.__cluster_areas.update(area_map)
+
+        return mapping
+
+    @property
+    def cluster_areas(self):
+        """
+        The cluster areas, if set by map_turbines_to_areas.
+
+        Returns
+        -------
+        cluster_areas: dict or None
+            The mapping from cluster names to AreaGeometry objects, or
+            None if not set
+
+        """
+        return self.__cluster_areas
 
     @property
     def utm_zone(self):
@@ -504,7 +574,7 @@ class WindFarm:
         Returns
         -------
         hhs: numpy.ndarray
-            The hub heights, shape: (n_turbienes,)
+            The hub heights, shape: (n_turbines,)
 
         """
         hhs = [
@@ -540,3 +610,32 @@ class WindFarm:
             )
             cap += tt.P_nominal
         return cap
+
+    def get_capacity_array(self, algo):
+        """
+        Gets the capacity array for all turbines (nominal power)
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        Returns
+        -------
+        capacity_array: numpy.ndarray
+            The capacity array (nominal power) for all turbines, shape: (n_turbines,)
+
+        """
+        ttypes = algo.farm_controller.turbine_types
+        assert ttypes is not None, (
+            f"WindFarm '{self.name}': turbine types not set in farm controller {algo.farm_controller.name}"
+        )
+
+        capacity_array = np.zeros(self.n_turbines, dtype=config.dtype_double)
+        for i, t in enumerate(self.__turbines):
+            tt = ttypes[i]
+            assert tt.P_nominal is not None, (
+                f"WindFarm '{self.name}': P_nominal not set for turbine type '{tt.name}' "
+            )
+            capacity_array[i] = tt.P_nominal
+        return capacity_array

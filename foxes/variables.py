@@ -104,6 +104,11 @@ P = "P"
 :group: foxes.variables
 """
 
+CAP = "CAP"
+""" The capacity (equals P_nominal for wind turbines)
+:group: foxes.variables
+"""
+
 MAX_P = "MAXP"
 """ The maximal power, for derating/boost
 :group: foxes.variables
@@ -134,8 +139,13 @@ EFF = "EFF"
 :group: foxes.variables
 """
 
-CAP = "CAP"
-""" Capacity, equals P/P_nominal
+CAPF = "CAPF"
+""" Capacity factor, equals P/CAP
+:group: foxes.variables
+"""
+
+FLF = "FLF"
+""" The full load fraction
 :group: foxes.variables
 """
 
@@ -246,8 +256,13 @@ AMB_YLD = "AMB_YLD"
 :group: foxes.variables
 """
 
-AMB_CAP = "AMB_CAP"
-""" Ambient capacity, equals AMB_P/P_nominal
+AMB_CAPF = "AMB_CAPF"
+""" Ambient capacity, equals AMB_P/CAP
+:group: foxes.variables
+"""
+
+AMB_FLF = "AMB_FLF"
+""" The ambient full load fraction
 :group: foxes.variables
 """
 
@@ -300,7 +315,8 @@ var2amb = {
         WEIBULL_A,
         WEIBULL_k,
         YLD,
-        CAP,
+        CAPF,
+        FLF,
         UV,
         U,
         V,
@@ -324,8 +340,8 @@ extensive_farm = set(
         P,
         AMB_YLD,
         YLD,
-        AMB_CAP,
-        CAP,
+        AMB_CAPF,
+        CAPF,
     ]
 )
 """ Set of extensive variables, i.e. variables that should be summed when aggregating over turbines
@@ -346,8 +362,8 @@ extensive_state = set(
         P,
         AMB_YLD,
         YLD,
-        AMB_CAP,
-        CAP,
+        AMB_CAPF,
+        CAPF,
         WEIGHT,
     ]
 )
@@ -442,7 +458,7 @@ ROUND_DIGITS = {
     CT: 6,
     T: 3,
     YLD: 3,
-    CAP: 5,
+    CAPF: 5,
     EFF: 5,
     WEIBULL_A: 3,
     WEIBULL_k: 3,

@@ -215,9 +215,9 @@ if __name__ == "__main__":
 
     print("\nCalc time =", time1 - time0, "\n")
 
-    o = foxes.output.FarmResultsEval(farm_results)
-    o.add_capacity(algo)
-    o.add_capacity(algo, ambient=True)
+    o = foxes.output.FarmResultsEval(farm_results, algo=algo)
+    o.add_capacity_factor(ambient=False)
+    o.add_capacity_factor(ambient=True)
     o.add_efficiency()
 
     print("\nFarm results:\n")

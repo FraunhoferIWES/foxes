@@ -961,16 +961,35 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.6](https://github.com/FraunhoferIWES/foxes/commits/v1.7.6)
 
-## v1.7.7
+## v1.8.0
 
 - Applications:
   - New command line tool `era52foxes`, reducing and localizing ERA5 data files to FieldData-ready NetCDF files
 - Inputs:
   - New ambient states class `LatLonFieldData`, for NetCDF input on regular latitude/longitude grids
 - Output:
-  - New output class: `MultipleFarmsOutput`, splitting and aggregating farm results for sub-farms and clusters
+  - New output classes: `WindFarmsEval` and `ClusterEval`, for simple computation of turbine aggregated results
   - The `FarmLayoutOutput` can now also color by `wind_farm` and `cluster` fields.
+  - Refactoring and generalizing `FarmResultsEval`
+- Models:
+  - Refactored air density and yaw misalignment corrections for all turbine types
+  - Re-implemented `CpCtFile` and `CpCtFromTwo`, now no longer mapping to `PCtFile`
+  - Variable change: `FV.CAP` now refers to capacity and no longer to capacity factor, i.e., it now represents the maximally available power in the power unit specified by the turbine type. The capacity factor is now referred to as `FV.CAPF`. Both can be computed by `FarmResultsEval`, `WindFarmsEval` and `ClusterEval`.
 - Tests:
-  - New unit tests for turbine models
+  - New tests for turbine models and turbine types
+- Bugs:
+  - Bugs fixed with air density correction of power curves
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.7](https://github.com/FraunhoferIWES/foxes/commits/v1.7.7)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.0](https://github.com/FraunhoferIWES/foxes/commits/v1.8.0)
+
+## v1.8.1
+
+- Bugs:
+  - Fixing a problem with `pyproject.toml` and `conda-forge`
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.1](https://github.com/FraunhoferIWES/foxes/commits/v1.8.1)
+
+## v1.8.2
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.2](https://github.com/FraunhoferIWES/foxes/commits/v1.8.2)

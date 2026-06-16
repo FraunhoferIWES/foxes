@@ -45,8 +45,6 @@ class PCtFile(TurbineType):
         col_P="P",
         col_ct="ct",
         rho=None,
-        p_ct=1.0,
-        p_P=1.88,
         var_ws_ct=FV.REWS2,
         var_ws_P=FV.REWS3,
         pd_file_read_pars={},
@@ -68,16 +66,11 @@ class PCtFile(TurbineType):
         rho: float, optional
             The air density for which the data is valid
             or None for no correction
-        p_ct: float
-            The exponent for yaw dependency of ct
-        p_P: float
-            The exponent for yaw dependency of P
         var_ws_ct: str
             The wind speed variable for ct lookup
         var_ws_P: str
             The wind speed variable for power lookup
         pd_file_read_pars: dict
-            Parameters for pandas file reading
         parameters: dict, optional
             Additional parameters for TurbineType class
 
@@ -95,8 +88,6 @@ class PCtFile(TurbineType):
         self.col_P = col_P
         self.col_ct = col_ct
         self.rho = rho
-        self.p_ct = p_ct
-        self.p_P = p_P
         self.WSCT = var_ws_ct
         self.WSP = var_ws_P
         self.rpars = pd_file_read_pars
@@ -304,39 +295,29 @@ class PCtFile(TurbineType):
         rews2 = fdata[self.WSCT][st_sel]
         rews3 = fdata[self.WSP][st_sel]
 
-        # apply air density correction:
-        if self.rho is not None:
-            # correct wind speed by air density, such
-            # that in the partial load region the
-            # correct value is reconstructed:
-            rho = fdata[FV.RHO][st_sel]
-            # rews2 *= (self.rho / rho) ** 0.5
-            rews3 *= (self.rho / rho) ** (1.0 / 3.0)
-            del rho
-
-        # in yawed case, calc yaw corrected wind speed:
-        if FV.YAWM in fdata and (self.p_P is not None or self.p_ct is not None):
-            # calculate corrected wind speed wsc,
-            # gives ws**3 * cos**p_P in partial load region
-            # and smoothly deals with full load region:
-            yawm = fdata[FV.YAWM][st_sel]
-            if np.any(np.isnan(yawm)):
-                raise ValueError(
-                    f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?"
-                )
-            cosm = np.cos(yawm / 180 * np.pi)
-            if self.p_ct is not None:
-                rews2 *= (cosm**self.p_ct) ** 0.5
-            if self.p_P is not None:
-                rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
-            del yawm, cosm
+        # compute air density and yaw misalignment corrections:
+        corrects_rho = (
+            FV.RHO in fdata
+            and self.rho is not None
+            and (self.rho_corr_P is not None or self.rho_corr_ct is not None)
+        )
+        corrects_yawm = FV.YAWM in fdata and (
+            self.yawm_corr_P is not None or self.yawm_corr_ct is not None
+        )
+        rews3, rews2, factor_P, factor_ct = self.get_rho_yawm_corrections(
+            rews_P=rews3,
+            rews_ct=rews2,
+            rho=fdata[FV.RHO][st_sel] if corrects_rho else None,
+            rho_ref=self.rho,
+            yawm=fdata[FV.YAWM][st_sel] if corrects_yawm else None,
+        )
 
         out = {FV.P: fdata[FV.P], FV.CT: fdata[FV.CT]}
 
-        out[FV.P][st_sel] = np.interp(
+        out[FV.P][st_sel] = factor_P * np.interp(
             rews3, self.data_ws, self.data_P, left=0.0, right=0.0
         )
-        out[FV.CT][st_sel] = np.interp(
+        out[FV.CT][st_sel] = factor_ct * np.interp(
             rews2, self.data_ws, self.data_ct, left=0.0, right=0.0
         )
 
