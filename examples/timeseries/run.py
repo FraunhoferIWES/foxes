@@ -189,8 +189,10 @@ if __name__ == "__main__":
         ax = o.plot_map(FV.P, cmap="inferno", figsize=(6, 7))
         plt.show()
 
-        o = foxes.output.ClusterOutput(farm, farm_results)
-        print(o.results)
-        print(o.agg_farm_results)
-        print(o.agg_cluster_results)
-        print(o.split_by_farm())
+    o = foxes.output.WindFarmsEval(farm, farm_results, algo=algo)
+    print("\nWind farms evaluation:\n")
+    print(o.results)
+
+    o = foxes.output.ClusterEval(farm, farm_results, algo=algo)
+    print("\nCluster evaluation:\n")
+    print(o.results)
