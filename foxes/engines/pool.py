@@ -270,6 +270,12 @@ class PoolEngine(Engine):
                             n_chunks_points=n_chunks_targets,
                         )
                         if shared is None:
+                            if (self.verbosity > 0 or algo.verbosity > 0) and len(
+                                shrd
+                            ) > 0:
+                                print(f"\n{type(self).__name__} shared data:\n")
+                                print(shrd)
+                                print()
                             shared = self.init_shared_memory(shrd)
                         del shrd
 

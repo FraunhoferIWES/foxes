@@ -22,7 +22,9 @@ def test_mpi_runner_recombine_uses_token_cache():
         "windows": {},
     }
 
-    mdata = MData(data={"B": np.array([1, 2], dtype=np.int32)}, dims={"B": ("u",)}, name="chunk")
+    mdata = MData(
+        data={"B": np.array([1, 2], dtype=np.int32)}, dims={"B": ("u",)}, name="chunk"
+    )
     handle = {"type": "mpi_shared_token", "token": token}
 
     try:
@@ -35,7 +37,9 @@ def test_mpi_runner_recombine_uses_token_cache():
 
 
 def test_mpi_runner_recombine_fails_for_missing_token():
-    mdata = MData(data={"B": np.array([1], dtype=np.int32)}, dims={"B": ("u",)}, name="chunk")
+    mdata = MData(
+        data={"B": np.array([1], dtype=np.int32)}, dims={"B": ("u",)}, name="chunk"
+    )
     handle = {"type": "mpi_shared_token", "token": "does-not-exist"}
 
     with pytest.raises(KeyError, match="token"):

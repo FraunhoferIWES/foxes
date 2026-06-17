@@ -64,7 +64,9 @@ def test_process_engine_runner_recombine_uses_shared_memory_buffer():
     shared = MData(data={"A": arr.copy()}, dims={"A": ("s", "t")}, name="shared")
     handle = engine.init_shared_memory(shared)
 
-    mdata = MData(data={"B": np.array([1, 2], dtype=np.int32)}, dims={"B": ("u",)}, name="chunk")
+    mdata = MData(
+        data={"B": np.array([1, 2], dtype=np.int32)}, dims={"B": ("u",)}, name="chunk"
+    )
     runner = ProcessEngineRunner()
 
     try:
@@ -113,7 +115,9 @@ def test_process_engine_pool_run_shares_memory_across_processes():
     runner = ProcessEngineRunner()
     algo = _DummyAlgo()
     model = _SharedMemoryMutatingModel()
-    mdata = MData(data={"B": np.array([1, 2], dtype=np.int32)}, dims={"B": ("u",)}, name="chunk")
+    mdata = MData(
+        data={"B": np.array([1, 2], dtype=np.int32)}, dims={"B": ("u",)}, name="chunk"
+    )
 
     try:
         engine._create_pool()

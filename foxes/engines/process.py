@@ -15,7 +15,7 @@ class ProcessEngineRunner(EngineRunner):
     :group: engines
 
     """
-    
+
     def _recombine_mdata_with_shared(self, mdata, handle):
         """
         Recombines the mdata with the shared data
@@ -186,11 +186,13 @@ class ProcessEngine(PoolEngine):
         """
         if shared_mdata is None:
             return None
-        
+
         self._shared_mem = []
         data = {}
         for v, d in shared_mdata.items():
-            assert isinstance(d, np.ndarray) and d.dtype.kind != "O" and d.nbytes, f"Shared mdata entry '{v}' must be a non-object numpy array with non-zero size"  
+            assert isinstance(d, np.ndarray) and d.dtype.kind != "O" and d.nbytes, (
+                f"Shared mdata entry '{v}' must be a non-object numpy array with non-zero size"
+            )
             arr = np.ascontiguousarray(d)
             shm = shared_memory.SharedMemory(create=True, size=arr.nbytes)
             shm_arr = np.ndarray(arr.shape, dtype=arr.dtype, buffer=shm.buf)
@@ -207,7 +209,7 @@ class ProcessEngine(PoolEngine):
             "dims": shared_mdata.dims,
             "data": data,
         }
-    
+
     def release_shared_memory(self, handle):
         """
         Releases the shared memory after the chunk calculation

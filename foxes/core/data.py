@@ -386,6 +386,17 @@ class Data(Dict):
                 data[v] = self.pop(v)
                 dims[v] = self.dims.pop(v)
 
+        crds = set()
+        for v in self.keys():
+            if v not in data and v not in self.sizes:
+                crds.update(self.dims[v])
+
+        vrs = set(self.sizes.keys()) - crds
+        for v in vrs:
+            data[v] = self.pop(v)
+            dims[v] = self.dims.pop(v)
+            del self.sizes[v]
+
         shared = type(self)(data, dims, name=self.name + "_shared")
 
         return shared

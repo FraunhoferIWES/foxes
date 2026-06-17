@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .process import ProcessEngine, ProcessEngineRunner
 
+
 class ThreadsEngineRunner(ProcessEngineRunner):
     """
     Engine runner for ThreadsEngine.
@@ -37,6 +38,7 @@ class ThreadsEngineRunner(ProcessEngineRunner):
         results = self._write_chunk_results(algo, results, write_nc, out_dims, mdata)
 
         return results, cstore
+
 
 class ThreadsEngine(ProcessEngine):
     """
