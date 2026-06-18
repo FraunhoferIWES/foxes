@@ -97,7 +97,8 @@ class PointDataModel(DataCalcModel):
             (n_states, n_targets, n_tpoints)
 
         """
-        pass
+        self.ensure_output_vars(algo, tdata)
+        super().calculate(algo, mdata, fdata, tdata)
 
     def run_calculation(self, algo, *data, out_vars, **calc_pars):
         """
@@ -250,7 +251,7 @@ class PointDataModelList(PointDataModel):
             (n_states, n_targets, n_tpoints)
 
         """
-        self.ensure_output_vars(algo, tdata)
+        super().calculate(algo, mdata, fdata, tdata)
 
         if parameters is None:
             parameters = [{}] * len(self.models)

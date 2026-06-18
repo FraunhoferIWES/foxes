@@ -20,7 +20,7 @@ def _read_nc_file(
     nc_engine,
     sel,
     isel,
-    minimal,
+    mode,
     drop_vars=None,
     sort=False,
     check_input_nans=True,
@@ -55,7 +55,7 @@ def _read_nc_file(
         if preprocess is not None:
             data = preprocess(data)
 
-        if minimal:
+        if mode == "minimal":
             c = coords[0]
             try:
                 if isel is not None and c in isel:
@@ -83,10 +83,16 @@ def _read_nc_file(
 
             if min(data.sizes.values()) == 0:
                 data = None
-            else:
+            elif mode == "load":
                 data = data.load()
+            elif mode == "lazy":
+                pass
+            else:
+                raise NotImplementedError(
+                    f"Mode '{mode}' not implemented, choices: minimal, lazy, load"
+                )
 
-    if data is not None and not minimal and check_input_nans:
+    if data is not None and mode != "minimal" and check_input_nans:
         for v, d in data.data_vars.items():
             sel = np.isnan(d.to_numpy())
             if sel.any():
@@ -122,13 +128,6 @@ class DatasetStates(States):
     fixed_vars: dict
         Uniform values for output variables, instead
         of reading from data
-    load_mode: str
-        The load mode, choices: preload, lazy, fly.
-        preload loads all data during initialization,
-        lazy lazy-loads the data using dask, and fly
-        reads only states index and weights during initialization
-        and then opens the relevant files again within
-        the chunk calculation
     time_format: str
         The datetime parsing format string
     bounds_extra_space: float or str
@@ -233,11 +232,10 @@ class DatasetStates(States):
             Additional arguments for the base class
 
         """
-        super().__init__(**kwargs)
+        super().__init__(load_mode=load_mode, **kwargs)
 
         self.ovars = list(output_vars)
         self.fixed_vars = fixed_vars
-        self.load_mode = load_mode
         self.var2ncvar = var2ncvar
         self.time_format = time_format
         self.sel = sel
@@ -539,7 +537,7 @@ class DatasetStates(States):
                         f"States '{self.name}': Selected {self._cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
                     )
 
-    def __preload(
+    def __load_data(
         self,
         algo,
         bounds_extra_space,
@@ -599,7 +597,7 @@ class DatasetStates(States):
                     nc_engine=config.nc_engine,
                     isel=self.isel,
                     sel=self.sel,
-                    minimal=False,
+                    mode="load",
                     drop_vars=None,
                     sort=self.sort,
                     check_input_nans=False,
@@ -648,7 +646,8 @@ class DatasetStates(States):
                         f"States '{self.name}': Reading states from '{self.data_source}'"
                     )
 
-            self.__data_source = map_with_engine(
+            mode = {"fly": "minimal", "lazy": "lazy", "preload": "load"}[self.load_mode]
+            data = map_with_engine(
                 _read_nc_file,
                 files,
                 coords=coords,
@@ -656,7 +655,7 @@ class DatasetStates(States):
                 nc_engine=config.nc_engine,
                 isel=self.isel,
                 sel=self.sel,
-                minimal=self.load_mode == "fly",
+                mode=mode,
                 drop_vars=self.drop_vars,
                 sort=self.sort,
                 check_input_nans=self.check_input_nans,
@@ -667,16 +666,14 @@ class DatasetStates(States):
                 """Helper function to get the number of states"""
                 return ds.sizes[states_coord] if isinstance(ds, xr.Dataset) else len(ds)
 
-            files, self.__data_source, self._input_sizes = zip(
+            files, data, self._input_sizes = zip(
                 *[
                     (f, ds, _len_ds(ds))
-                    for f, ds in zip(files, self.__data_source)
+                    for f, ds in zip(files, data)
                     if ds is not None and _len_ds(ds) > 0
                 ]
             )
-            assert len(self.__data_source) > 0, (
-                f"States '{self.name}': No valid data sources found."
-            )
+            assert len(data) > 0, f"States '{self.name}': No valid data sources found."
 
             if self.load_mode in ["preload", "lazy"]:
                 if self.load_mode == "lazy":
@@ -685,11 +682,11 @@ class DatasetStates(States):
                     except (ModuleNotFoundError, ValueError) as e:
                         import_module("dask")
                         raise e
-                if len(self.__data_source) == 1:
-                    self.__data_source = self.__data_source[0]
+                if len(data) == 1:
+                    data = data[0]
                 else:
-                    self.__data_source = xr.concat(
-                        self.__data_source,
+                    data = xr.concat(
+                        data,
                         dim=states_coord,
                         coords="minimal",
                         data_vars="minimal",
@@ -697,14 +694,11 @@ class DatasetStates(States):
                         join="exact",
                         combine_attrs="drop",
                     )
-                if self.load_mode == "preload":
-                    self.__data_source.load()
-                self._inds = self.__data_source[states_coord].to_numpy()
+                self._inds = data[states_coord].to_numpy()
                 self._N = len(self._inds)
 
             elif self.load_mode == "fly":
-                self._inds = self.__data_source
-                self.__data_source = fpath
+                self._inds = data
                 self._files_maxi = {f: len(inds) for f, inds in zip(files, self._inds)}
                 self._input_sizes = list(self._files_maxi.values())
                 self._inds = np.concatenate(self._inds, axis=0)
@@ -743,7 +737,7 @@ class DatasetStates(States):
                 f"States '{self.name}': State indices are not sorted ascending: {self._inds[i - 1]} > {self._inds[i]} at position {i - 1}"
             )
 
-        return self.__data_source
+        return data
 
     def gen_states_split_size(self):
         """
@@ -800,7 +794,7 @@ class DatasetStates(States):
         height_bounds = (
             height_bounds if height_bounds is not None else self.height_bounds
         )
-        self.__preload(
+        self.__load_data(
             algo,
             bounds_extra_space=bounds_extra_space,
             height_bounds=height_bounds,
@@ -825,19 +819,149 @@ class DatasetStates(States):
                 idata["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
 
             vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
-            self._data_state_keys = []
-            self._data_nostate = {}
             for dims, d in data.items():
                 dms = tuple([vmap.get(c, self.var(c)) for c in dims])
-                if FC.STATE in dims:
-                    self._data_state_keys.append(d[0])
-                    idata["coords"][dms[-1]] = d[1]
-                    idata["data_vars"][d[0]] = (dms, d[2])
-                else:
-                    self._data_nostate[dims] = (d[1], d[2])
+                idata["coords"][dms[-1]] = d[1]
+                idata["data_vars"][d[0]] = (dms, d[2])
+
             del data
 
         return idata
+
+    def load_chunk_data(self, algo, mdata, fdata, tdata):
+        """
+        Load chunk data according to load mode.
+
+        This function adds data to mdata.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+
+        """
+
+        # prepare:
+        assert FC.STATE in self._cmap, (
+            f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {self._cmap}"
+        )
+        states_coord = self._cmap[FC.STATE]
+        n_states = mdata.n_states
+
+        # preloading already done:
+        if self.load_mode == "preload":
+            return
+
+        # lazy loading:
+        elif self.load_mode == "lazy":
+            i0 = mdata.states_i0(counter=True)
+            s = slice(i0, i0 + n_states)
+            data = self.data_source.isel({states_coord: s}).load()
+
+        # loading this chunk's data on the fly:
+        elif self.load_mode == "fly":
+            data = []
+            i0 = mdata.states_i0(counter=True)
+            i1 = i0 + n_states
+            j0 = 0
+            for fpath, n in self._files_maxi.items():
+                if i0 < j0 or i0 == i1:
+                    break
+                else:
+                    j1 = j0 + n
+                    if i0 < j1:
+                        a = i0 - j0
+                        b = min(i1, j1) - j0
+                        assert b > a, (
+                            f"States '{self.name}': Invalid state indices for file {fpath}: (i0, i1, j0, j1, a, b) = {(i0, i1, j0, j1, a, b)}"
+                        )
+                        isel = copy(self.isel) if self.isel is not None else {}
+                        isel[states_coord] = slice(a, b)
+
+                        d = _read_nc_file(
+                            fpath,
+                            coords=list(self._cmap.values()),
+                            vars=list(self._vars.values()),
+                            nc_engine=config.nc_engine,
+                            isel=isel,
+                            sel=self.sel,
+                            mode="load",
+                            drop_vars=self.drop_vars,
+                            sort=self.sort,
+                            check_input_nans=self.check_input_nans,
+                            preprocess=self.preprocess_nc,
+                        )
+                        if d is not None:
+                            data.append(d)
+                        else:
+                            raise ValueError(
+                                f"States '{self.name}': Failed to read data for file {fpath}"
+                            )
+                        del d
+                        i0 += b - a
+                    j0 = j1
+
+            assert i0 == i1, (
+                f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
+            )
+            assert len(data) > 0, (
+                f"States '{self.name}': No data read for load_mode '{self.load_mode}'"
+            )
+            if len(data) == 1:
+                data = data[0]
+            else:
+                data = xr.concat(
+                    data,
+                    dim=states_coord,
+                    data_vars="minimal",
+                    coords="minimal",
+                    compat="override",
+                    join="exact",
+                    combine_attrs="drop",
+                )
+
+        else:
+            raise NotImplementedError(
+                f"States '{self.name}': load mode '{self.load_mode}' not implemented"
+            )
+
+        coords, data, weights = self._get_data(data, verbosity=0)
+        data = {dims: (d[1], d[2]) for dims, d in data.items()}
+
+        for dims, (vrs, __) in data.items():
+            assert FC.TURBINE not in dims, (
+                f"States '{self.name}': Turbine dimension not allowed for load_mode 'fly', but got {dims} for variables {vrs}"
+            )
+
+        # adjust turbine order for purely turbine dependent data:
+        mvd = []
+        for dims in data.keys():
+            if FC.STATE not in dims and FC.TURBINE in dims:
+                assert dims[0] == FC.TURBINE, (
+                    f"States '{self.name}': Turbine dimension must be the first dimension if state independent, but got {dims}"
+                )
+                mvd.append(dims)
+        if len(mvd) > 0:
+            ssel = fdata[FV.ORDER_SSEL].astype(config.dtype_int)
+            order = fdata[FV.ORDER].astype(config.dtype_int)
+            for dims0 in mvd:
+                vrs, d0 = data.pop(dims0)
+                dims = (FC.STATE,) + dims0
+                d = np.zeros((n_states,) + d0.shape, dtype=d0.dtype)
+                d[:] = d0[None, ...]
+                d = d[ssel, order, ...]
+                del d0
+
+                if dims in data:
+                    vrs = data[dims][0] + vrs
+                    d = np.concatenate((data[dims][1], d), axis=-1)
+                data[dims] = (vrs, d)
 
     def set_running(
         self,
@@ -1001,7 +1125,7 @@ class DatasetStates(States):
             coords = self._coords
             weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
             data = deepcopy(self._data_nostate)
-            for DATA in self._data_state_keys:
+            for DATA in self._vars:
                 dims = mdata.dims[DATA]
                 vrs = mdata[dims[-1]].tolist()
                 dms = tuple(
@@ -1053,7 +1177,7 @@ class DatasetStates(States):
                             nc_engine=config.nc_engine,
                             isel=isel,
                             sel=self.sel,
-                            minimal=False,
+                            load_mode="load",
                             drop_vars=self.drop_vars,
                             sort=self.sort,
                             check_input_nans=self.check_input_nans,

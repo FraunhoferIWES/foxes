@@ -26,6 +26,8 @@ class Data(Dict):
         The index of the states chunk
     chunki_points: int, optional
         The index of the points chunk
+    extra_data: dict, optional
+        Additional data that is not dimensioned
 
     :group: core
 
@@ -41,6 +43,7 @@ class Data(Dict):
         chunki_points=None,
         n_chunks_states=None,
         n_chunks_points=None,
+        extra_data={},
         name="data",
     ):
         """
@@ -66,6 +69,8 @@ class Data(Dict):
             The number of states chunks
         n_chunks_points: int, optional
             The number of points chunks
+        extra_data: dict, optional
+            Additional data that is not dimensioned
         name: str
             The data container name
 
@@ -75,6 +80,7 @@ class Data(Dict):
         self.update(data)
         self.dims = dims
         self.loop_dims = loop_dims
+        self.extra_data = extra_data
 
         self.__states_i0 = states_i0
         self.__chunki_states = chunki_states
