@@ -537,12 +537,23 @@ class Downwind(Algorithm):
             print(deco)
             print()
 
-    def init_states(self):
+    def init_states(self, force=False):
         """
         Initialize states, if needed.
+
+        Parameters
+        ----------
+        force: bool
+            Force initialization even if already initialized
+
         """
-        if not self.states.initialized:
-            self.states.initialize(self, self.verbosity)
+        if force or not self.states.initialized:
+            self.states.initialize(
+                self,
+                loaded_data=self.loaded_data,
+                force=force,
+                verbosity=self.verbosity,
+            )
         self.n_states = self.states.size()
 
     def sub_models(self):
@@ -732,8 +743,12 @@ class Downwind(Algorithm):
             outputs = sorted(list(set(outputs).intersection(self.farm_vars)))
 
         # get input model data:
-        model_data = self.get_models_data()
+        model_data, extra_data = self.get_model_data(pop=clear_mem)
         self.print("\nInput data:\n\n", model_data, "\n")
+        if len(extra_data) > 0:
+            self.print("Extra data:")
+            for v, d in extra_data.items():
+                self.print(f"  {v}: {type(d).__name__}")
         self.print("\nFarm variables:", ", ".join(self.farm_vars))
         self.print("\nOutput variables:", ", ".join(outputs))
 
@@ -741,6 +756,7 @@ class Downwind(Algorithm):
         farm_results = super().calc_farm(
             mlist,
             model_data,
+            extra_data=extra_data,
             parameters=calc_pars,
             outputs=outputs,
             clear_mem=clear_mem,
@@ -856,13 +872,13 @@ class Downwind(Algorithm):
         point_models=None,
         outputs=None,
         calc_parameters={},
-        persist_mdata=True,
         persist_pdata=False,
         finalize=True,
         ambient=False,
         chunked_results=False,
         states_sel=None,
         states_isel=None,
+        clear_mem=False,
         **kwargs,
     ):
         """
@@ -882,9 +898,6 @@ class Downwind(Algorithm):
         calc_parameters: dict
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        persist_mdata: bool
-            Switch for forcing dask to load all model data
-            into memory
         persist_fdata: bool
             Switch for forcing dask to load all farm data
             into memory
@@ -898,6 +911,8 @@ class Downwind(Algorithm):
             Reduce to selected states
         states_isel: list, optional
             Reduce to the selected states indices
+        clear_mem: bool
+            Clear idata memory after starting the run
         kwargs: dict, optional
             Additional parameters for run_calculation
 
@@ -926,7 +941,7 @@ class Downwind(Algorithm):
 
         # initialize models:
         if not mlist.initialized:
-            mlist.initialize(self, self.verbosity - 1)
+            mlist.initialize(self, self.loaded_data, verbosity=self.verbosity - 1)
 
         # subset selections:
         sel = {} if states_sel is None else {FC.STATE: states_sel}
@@ -938,10 +953,12 @@ class Downwind(Algorithm):
         n_states = farm_results.sizes[FC.STATE]
 
         # get input model data:
-        model_data = self.get_models_data(sel=sel, isel=isel)
-        if persist_mdata:
-            model_data = model_data.persist()
+        model_data, extra_data = self.get_model_data(pop=clear_mem)
         self.print("\nInput data:\n\n", model_data, "\n")
+        if len(extra_data) > 0:
+            self.print("\nExtra data:")
+            for v, d in extra_data.items():
+                self.print(f"  {v}: {type(d).__name__}")
         self.print("\nOutput farm variables:", ", ".join(self.farm_vars))
 
         # chunk farm results:
@@ -969,6 +986,7 @@ class Downwind(Algorithm):
             model_data,
             farm_results,
             point_data,
+            extra_data=extra_data,
             outputs=ovars,
             parameters=calc_pars,
             **kwargs,

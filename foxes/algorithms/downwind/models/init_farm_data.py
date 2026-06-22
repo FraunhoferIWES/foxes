@@ -64,6 +64,7 @@ class InitFarmData(FarmDataModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines

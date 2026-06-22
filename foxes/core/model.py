@@ -113,36 +113,33 @@ class Model(ABC):
         """
         return []
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
-        Load and/or create all model data that is subject to chunking.
+        Load and/or create all data required for model calculations.
 
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
+        The function adds to loaded_data.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         if self.initialized:
             raise ValueError(
                 f"Model '{self.name}': Cannot call load_data after initialization"
             )
-        return {"coords": {}, "data_vars": {}}
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -150,14 +147,31 @@ class Model(ABC):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
+
         if self.running:
             raise ValueError(f"Model '{self.name}': Cannot initialize while running")
+        if loaded_data is None:
+            loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+
         if not self.initialized:
             pr = False
             for m in self.sub_models():
@@ -165,17 +179,23 @@ class Model(ABC):
                     if verbosity > 1 and not pr:
                         print(f">> {self.name}: Starting sub-model initialization >> ")
                         pr = True
-                    m.initialize(algo, verbosity, force)
+                    m.initialize(
+                        algo=algo,
+                        loaded_data=loaded_data,
+                        force=force,
+                        verbosity=verbosity,
+                    )
             if pr:
                 print(f"<< {self.name}: Finished sub-model initialization << ")
 
             if verbosity > 0:
                 print(f"Initializing model '{self.name}'")
-            algo.store_model_data(
-                self, self.load_data(algo, verbosity=verbosity), force
-            )
+
+            self.load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
             self.__initialized = True
+
+        return loaded_data
 
     @property
     def running(self):
@@ -300,7 +320,6 @@ class Model(ABC):
 
             if verbosity > 0:
                 print(f"Finalizing model '{self.name}'")
-            algo.del_model_data(self)
 
             self.__initialized = False
 

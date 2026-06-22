@@ -74,6 +74,7 @@ def _mpi_create_worker_shared_cache(token, payload):
         "data": data,
         "dims": payload["dims"],
         "name": payload["name"],
+        "extra_data": payload.get("extra_data", {}),
         "shared_comm": shared_comm,
         "windows": windows,
         "debug": dbg,
@@ -159,7 +160,12 @@ class MPIEngineRunner(ProcessEngineRunner):
                     f"pid={os.getpid()} token={token} vars={len(cache['data'])} ptrs=[{ptrs}]"
                 )
 
-        shared_mdata = MData(data=cache["data"], dims=cache["dims"], name=cache["name"])
+        shared_mdata = MData(
+            data=cache["data"],
+            dims=cache["dims"],
+            extra_data=dict(cache.get("extra_data", {})),
+            name=cache["name"],
+        )
         mdata.recombine_with_shared(shared_mdata)
         return mdata
 
@@ -201,12 +207,16 @@ class MPIEngine(ProcessEngine):
         """
         return MPIEngineRunner()
 
-    def init_shared_memory(self, shared_mdata):
+    def init_shared_memory(self, shared_memory, mdata, shared_mdata):
         """
         Sets the shared memory for the chunk calculation
 
         Parameters
         ----------
+        shared_memory: list
+            The shared memory object for the chunk calculation
+        mdata: foxes.core.MData
+            The mdata to be used in the chunk calculation
         shared_mdata: foxes.core.MData
             The shared mdata to be used in the chunk calculation
 
@@ -216,7 +226,9 @@ class MPIEngine(ProcessEngine):
             The handle for accessing the shared data
 
         """
-        if shared_mdata is None:
+        if shared_mdata is None or (
+            len(shared_mdata) == 0 and len(shared_mdata.extra_data) == 0
+        ):
             return None
 
         dbg = self.verbosity >= 2
@@ -225,6 +237,7 @@ class MPIEngine(ProcessEngine):
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
             "data": {},
+            "extra_data": dict(shared_mdata.extra_data),
             "debug": dbg,
         }
         for v, d in shared_mdata.items():
@@ -259,26 +272,31 @@ class MPIEngine(ProcessEngine):
             "debug": dbg,
         }
 
-    def release_shared_memory(self, handle):
+    def release_shared_memory(self, shared_memory, shared_handle):
         """
         Releases the shared memory after the chunk calculation
 
         Parameters
         ----------
-        handle: object
+        shared_memory: list
+            The shared memory object for the chunk calculation
+        shared_handle: object
             The handle for accessing the shared data
 
         """
-        if handle is None or handle.get("type") != "mpi_shared_token":
+        if shared_handle is None or shared_handle.get("type") != "mpi_shared_token":
+            shared_memory.clear()
             return
 
-        token = handle["token"]
+        token = shared_handle["token"]
         futures = [
             self.submit(_mpi_release_worker_shared_cache, token)
             for _ in range(self.n_workers)
         ]
         for fut in futures:
             self.await_result(fut)
+
+        shared_memory.clear()
 
     def _create_pool(self):
         """Creates the pool"""

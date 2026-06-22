@@ -508,35 +508,6 @@ class Engine(ABC):
 
         return chunk_sizes_states, chunk_sizes_targets
 
-    def init_shared_memory(self, shared_mdata):
-        """
-        Sets the shared memory for the chunk calculation
-
-        Parameters
-        ----------
-        shared_mdata: foxes.core.MData
-            The shared mdata to be used in the chunk calculation
-
-        Returns
-        -------
-        handle: object
-            The handle for accessing the shared data
-
-        """
-        return shared_mdata
-
-    def release_shared_memory(self, handle):
-        """
-        Releases the shared memory after the chunk calculation
-
-        Parameters
-        ----------
-        handle: object
-            The handle for accessing the shared data
-
-        """
-        pass
-
     def get_chunk_input_data(
         self,
         algo,

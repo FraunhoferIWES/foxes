@@ -7,7 +7,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class Data(Dict):
+class Data(Dict[str, np.ndarray]):
     """
     Container for numpy array data and
     the associated meta data.
@@ -424,6 +424,8 @@ class Data(Dict):
                 )
             self[v] = shared[v]
             self.dims[v] = shared.dims[v]
+
+        self.extra_data.update(shared.extra_data)
 
     @classmethod
     def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):

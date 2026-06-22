@@ -339,7 +339,7 @@ class FarmController(FarmDataModel):
 
         return pars
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -349,14 +349,32 @@ class FarmController(FarmDataModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
 
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+
         """
         self.collect_models(algo)
-        super().initialize(algo, verbosity, force)
+        return super().initialize(
+            algo=algo,
+            loaded_data=loaded_data,
+            force=force,
+            verbosity=verbosity,
+        )
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -368,6 +386,13 @@ class FarmController(FarmDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -379,16 +404,18 @@ class FarmController(FarmDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        idata = super().load_data(algo, verbosity)
+        if force or (
+            FC.TMODELS not in loaded_data["coords"]
+            or FC.TMODEL_SELS not in loaded_data["data_vars"]
+        ):
+            super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
-        idata["coords"][FC.TMODELS] = self.turbine_model_names
-        idata["data_vars"][FC.TMODEL_SELS] = (
-            (FC.STATE, FC.TURBINE, FC.TMODELS),
-            self._tmsels,
-        )
-        self._tmsels = None
-
-        return idata
+            loaded_data["coords"][FC.TMODELS] = self.turbine_model_names
+            loaded_data["data_vars"][FC.TMODEL_SELS] = (
+                (FC.STATE, FC.TURBINE, FC.TMODELS),
+                self._tmsels,
+            )
+            self._tmsels = None
 
     def output_farm_vars(self, algo):
         """

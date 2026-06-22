@@ -50,7 +50,7 @@ class ThreadsEngine(ProcessEngine):
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
-        super().__init__(*args, share_cstore=True, **kwargs)
+        super().__init__(*args, share_cstore=True, supports_shared_data=False, **kwargs)
 
     def _create_pool(self):
         """Creates the pool"""

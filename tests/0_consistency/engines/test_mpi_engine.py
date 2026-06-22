@@ -17,6 +17,7 @@ def test_mpi_runner_recombine_uses_token_cache():
     mpi_mod._MPI_SHARED_CACHE[token] = {
         "data": {"A": arr},
         "dims": {"A": ("s", "t")},
+        "extra_data": {"source": "unit-test"},
         "name": "shared",
         "shared_comm": None,
         "windows": {},
@@ -32,6 +33,7 @@ def test_mpi_runner_recombine_uses_token_cache():
         assert out is mdata
         assert "A" in mdata
         assert np.array_equal(mdata["A"], arr)
+        assert mdata.extra_data["source"] == "unit-test"
     finally:
         mpi_mod._MPI_SHARED_CACHE.pop(token, None)
 
@@ -49,7 +51,12 @@ def test_mpi_runner_recombine_fails_for_missing_token():
 def test_mpi_init_shared_memory_submits_setup_once_per_worker():
     engine = MPIEngine(n_procs=4, verbosity=0)
     arr = np.arange(4, dtype=np.float64).reshape(2, 2)
-    shared = MData(data={"A": arr}, dims={"A": ("s", "t")}, name="shared")
+    shared = MData(
+        data={"A": arr},
+        dims={"A": ("s", "t")},
+        extra_data={"source": "unit-test"},
+        name="shared",
+    )
 
     calls = []
 
@@ -63,7 +70,12 @@ def test_mpi_init_shared_memory_submits_setup_once_per_worker():
     engine.submit = fake_submit
     engine.await_result = fake_await_result
 
-    handle = engine.init_shared_memory(shared)
+    shared_memory = []
+    handle = engine.init_shared_memory(
+        shared_memory=shared_memory,
+        mdata=MData(name="chunk"),
+        shared_mdata=shared,
+    )
 
     assert handle["type"] == "mpi_shared_token"
     assert "token" in handle
@@ -77,6 +89,7 @@ def test_mpi_init_shared_memory_submits_setup_once_per_worker():
     payload = calls[0][1][1]
     assert payload["name"] == "shared"
     assert "A" in payload["data"]
+    assert payload["extra_data"] == {"source": "unit-test"}
     assert payload["data"]["A"]["shape"] == arr.shape
     assert payload["data"]["A"]["dtype"] == arr.dtype.str
     assert np.array_equal(payload["data"]["A"]["arr"], arr)
@@ -85,6 +98,7 @@ def test_mpi_init_shared_memory_submits_setup_once_per_worker():
 def test_mpi_release_shared_memory_submits_release_once_per_worker():
     engine = MPIEngine(n_procs=5, verbosity=0)
     handle = {"type": "mpi_shared_token", "token": "tok-release"}
+    shared_memory = [{"kind": "placeholder", "obj": object()}]
 
     calls = []
 
@@ -98,11 +112,12 @@ def test_mpi_release_shared_memory_submits_release_once_per_worker():
     engine.submit = fake_submit
     engine.await_result = fake_await_result
 
-    engine.release_shared_memory(handle)
+    engine.release_shared_memory(shared_memory, handle)
 
     assert len(calls) == engine.n_workers
     assert all(c[0] is mpi_mod._mpi_release_worker_shared_cache for c in calls)
     assert all(c[1] == ("tok-release",) for c in calls)
+    assert shared_memory == []
 
 
 def test_worker_cache_uses_mpi_allocate_shared(monkeypatch):

@@ -138,7 +138,7 @@ class PCtFile(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -150,6 +150,13 @@ class PCtFile(TurbineType):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Flag to force reloading of data
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -161,33 +168,41 @@ class PCtFile(TurbineType):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if isinstance(self.source, pd.DataFrame):
-            data = self.source
-        else:
-            fpath = get_input_path(self.source)
-            if not fpath.is_file():
+        self.DATA = self.var("data")
+        if self.DATA not in loaded_data["data_vars"] or force:
+            super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+
+            if isinstance(self.source, pd.DataFrame):
+                data = self.source
+            else:
+                fpath = get_input_path(self.source)
+                if not fpath.is_file():
+                    if verbosity > 0:
+                        print(
+                            f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
+                        )
+                    fpath = algo.dbook.get_file_path(
+                        PCTCURVE, self.source, check_raw=False
+                    )
+                if verbosity > 0:
+                    print(f"Turbine type '{self.name}': Reading file", fpath)
+                data = PandasFileHelper.read_file(fpath, **self.rpars)
+
+            data = data.set_index(self.col_ws).sort_index()
+            data = data.reset_index()[[self.col_ws, self.col_P, self.col_ct]].to_numpy()
+
+            self.WS = self.var(FV.WS)
+            self.VARS = self.var("vars")
+            loaded_data["coords"][self.WS] = data[:, 0]
+            loaded_data["coords"][self.VARS] = [FV.P, FV.CT]
+            loaded_data["data_vars"][self.DATA] = ((self.WS, self.VARS), data[:, 1:])
+
+            if self.P_nominal is None:
+                self.P_nominal = np.max(data[:, 1]) / FC.P_UNITS[self.P_unit]
                 if verbosity > 0:
                     print(
-                        f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
+                        f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}"
                     )
-                fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=False)
-            if verbosity > 0:
-                print(f"Turbine type '{self.name}': Reading file", fpath)
-            data = PandasFileHelper.read_file(fpath, **self.rpars)
-
-        data = data.set_index(self.col_ws).sort_index()
-        self.data_ws = data.index.to_numpy()
-        self.data_P = data[self.col_P].to_numpy()
-        self.data_ct = data[self.col_ct].to_numpy()
-
-        if self.P_nominal is None:
-            self.P_nominal = np.max(self.data_P) / FC.P_UNITS[self.P_unit]
-            if verbosity > 0:
-                print(
-                    f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}"
-                )
-
-        return super().load_data(algo, verbosity)
 
     def modify_cutin(
         self,
@@ -312,28 +327,16 @@ class PCtFile(TurbineType):
             yawm=fdata[FV.YAWM][st_sel] if corrects_yawm else None,
         )
 
-        out = {FV.P: fdata[FV.P], FV.CT: fdata[FV.CT]}
+        data_ws = mdata[self.WS]
+        data_P = mdata[self.DATA][:, 0]
+        data_ct = mdata[self.DATA][:, 1]
 
+        out = {FV.P: fdata[FV.P], FV.CT: fdata[FV.CT]}
         out[FV.P][st_sel] = factor_P * np.interp(
-            rews3, self.data_ws, self.data_P, left=0.0, right=0.0
+            rews3, data_ws, data_P, left=0.0, right=0.0
         )
         out[FV.CT][st_sel] = factor_ct * np.interp(
-            rews2, self.data_ws, self.data_ct, left=0.0, right=0.0
+            rews2, data_ws, data_ct, left=0.0, right=0.0
         )
 
         return out
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level
-
-        """
-        super().finalize(algo, verbosity)
-        del self.data_ws, self.data_P, self.data_ct

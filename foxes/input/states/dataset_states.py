@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
 import xarray as xr
-from copy import copy, deepcopy
+import threading
+from copy import copy
 from scipy.interpolate import interpn
+from contextlib import nullcontext
 
 from foxes.core import States, map_with_engine
 from foxes.utils import import_module
@@ -11,6 +13,10 @@ from foxes.utils.wind_dir import uv2wd, wd2uv
 from foxes.config import config, get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
+
+
+# Serialize netcdf4 file opens to avoid HDF5 attribute access errors in threaded reads.
+_NETCDF4_OPEN_LOCK = threading.Lock()
 
 
 def _read_nc_file(
@@ -27,70 +33,72 @@ def _read_nc_file(
     preprocess=None,
 ):
     """Helper function for nc file reading"""
-    with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as data:
-        # Ensure deterministic ascending coordinate order for all dimensions.
-        if sort is not None:
-            if isinstance(sort, bool):
-                if sort:
-                    for d in data.dims:
-                        if d in data.coords:
-                            data = data.sortby(d)
-            elif isinstance(sort, list):
-                for d in sort:
-                    assert d in data.dims, (
-                        f"Cannot sort by dimension '{d}' in file {fpath}, not found among dimensions {list(data.dims)}"
+    open_lock = _NETCDF4_OPEN_LOCK if nc_engine == "netcdf4" else nullcontext()
+    with open_lock:
+        with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as data:
+            # Ensure deterministic ascending coordinate order for all dimensions.
+            if sort is not None:
+                if isinstance(sort, bool):
+                    if sort:
+                        for d in data.dims:
+                            if d in data.coords:
+                                data = data.sortby(d)
+                elif isinstance(sort, list):
+                    for d in sort:
+                        assert d in data.dims, (
+                            f"Cannot sort by dimension '{d}' in file {fpath}, not found among dimensions {list(data.dims)}"
+                        )
+                        data = data.sortby(d)
+                else:
+                    raise ValueError(
+                        f"Invalid sort argument of type {type(sort).__name__}, expected bool or list of str"
                     )
-                    data = data.sortby(d)
+
+            for c in coords:
+                if c is not None and c not in data.sizes:
+                    raise KeyError(
+                        f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
+                    )
+
+            if preprocess is not None:
+                data = preprocess(data)
+
+            if mode == "minimal":
+                c = coords[0]
+                try:
+                    if isel is not None and c in isel:
+                        data = data.isel({c: isel[c]})
+                    if sel is not None and c in sel:
+                        data = data.sel({c: sel[c]})
+                    data = data[c].to_numpy()
+                except KeyError:
+                    data = None
+
             else:
-                raise ValueError(
-                    f"Invalid sort argument of type {type(sort).__name__}, expected bool or list of str"
-                )
+                if vars is not None:
+                    data = data[vars]
+                data.attrs = {}
 
-        for c in coords:
-            if c is not None and c not in data.sizes:
-                raise KeyError(
-                    f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
-                )
+                try:
+                    if isel is not None and len(isel):
+                        isel = {c: s for c, s in isel.items() if c in data.sizes}
+                        data = data.isel(**isel)
+                    if sel is not None and len(sel):
+                        sel = {c: s for c, s in sel.items() if c in data.sizes}
+                        data = data.sel(**sel)
+                except KeyError:
+                    return None
 
-        if preprocess is not None:
-            data = preprocess(data)
-
-        if mode == "minimal":
-            c = coords[0]
-            try:
-                if isel is not None and c in isel:
-                    data = data.isel({c: isel[c]})
-                if sel is not None and c in sel:
-                    data = data.sel({c: sel[c]})
-                data = data[c].to_numpy()
-            except KeyError:
-                data = None
-
-        else:
-            if vars is not None:
-                data = data[vars]
-            data.attrs = {}
-
-            try:
-                if isel is not None and len(isel):
-                    isel = {c: s for c, s in isel.items() if c in data.sizes}
-                    data = data.isel(**isel)
-                if sel is not None and len(sel):
-                    sel = {c: s for c, s in sel.items() if c in data.sizes}
-                    data = data.sel(**sel)
-            except KeyError:
-                return None
-
-            if min(data.sizes.values()) == 0:
-                data = None
-            elif mode == "load":
-                data = data.load()
-            elif mode == "lazy":
-                pass
-            else:
-                raise NotImplementedError(
-                    f"Mode '{mode}' not implemented, choices: minimal, lazy, load"
-                )
+                if min(data.sizes.values()) == 0:
+                    data = None
+                elif mode == "load":
+                    data = data.load()
+                elif mode == "lazy":
+                    pass
+                else:
+                    raise NotImplementedError(
+                        f"Mode '{mode}' not implemented, choices: minimal, lazy, load"
+                    )
 
     if data is not None and mode != "minimal" and check_input_nans:
         for v, d in data.data_vars.items():
@@ -407,6 +415,7 @@ class DatasetStates(States):
             tuple(list(dims) + [f"vars{i}"]): d
             for i, (dims, d) in enumerate(data.items())
         }
+
         return coords, data, weights
 
     def _find_xy_bounds(self, algo, bounds_extra_space):
@@ -537,7 +546,7 @@ class DatasetStates(States):
                         f"States '{self.name}': Selected {self._cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
                     )
 
-    def __load_data(
+    def __load_ds(
         self,
         algo,
         bounds_extra_space,
@@ -666,9 +675,9 @@ class DatasetStates(States):
                 """Helper function to get the number of states"""
                 return ds.sizes[states_coord] if isinstance(ds, xr.Dataset) else len(ds)
 
-            files, data, self._input_sizes = zip(
+            files, data = zip(
                 *[
-                    (f, ds, _len_ds(ds))
+                    (f, ds)
                     for f, ds in zip(files, data)
                     if ds is not None and _len_ds(ds) > 0
                 ]
@@ -678,7 +687,7 @@ class DatasetStates(States):
             if self.load_mode in ["preload", "lazy"]:
                 if self.load_mode == "lazy":
                     try:
-                        self.__data_source = [ds.chunk() for ds in self.__data_source]
+                        data = [ds.chunk() for ds in data]
                     except (ModuleNotFoundError, ValueError) as e:
                         import_module("dask")
                         raise e
@@ -755,21 +764,28 @@ class DatasetStates(States):
     def load_data(
         self,
         algo,
+        loaded_data,
+        force=False,
         bounds_extra_space=None,
         height_bounds=None,
         verbosity=0,
     ):
         """
-        Load and/or create all model data that is subject to chunking.
+        Load and/or create all data required for model calculations.
 
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
+        The function adds to loaded_data.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         bounds_extra_space: float, optional
             The extra space in meters to add to the horizontal wind farm bounds
         height_bounds: tuple, optional
@@ -777,14 +793,15 @@ class DatasetStates(States):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+
+        # check if already loaded:
+        self.META = self.var("meta")
+        edata = loaded_data["extra_data"]
+        if not force and self.META in edata:
+            return
+        edata[self.META] = {}
+
         # preload data:
         bounds_extra_space = (
             bounds_extra_space
@@ -794,39 +811,35 @@ class DatasetStates(States):
         height_bounds = (
             height_bounds if height_bounds is not None else self.height_bounds
         )
-        self.__load_data(
+        data = self.__load_ds(
             algo,
             bounds_extra_space=bounds_extra_space,
             height_bounds=height_bounds,
             verbosity=verbosity,
         )
 
-        idata = super().load_data(algo, verbosity)
-
         if self.load_mode == "preload":
-            self._coords, data, w = self._get_data(
-                self.data_source,
+            coords, data, w = self._get_data(
+                data,
                 bounds_extra_space=bounds_extra_space,
                 height_bounds=height_bounds,
                 verbosity=verbosity,
             )
 
-            if FC.STATE in self._coords:
-                idata["coords"][FC.STATE] = self._coords.pop(FC.STATE)
+            if FC.STATE in coords:
+                loaded_data["coords"][FC.STATE] = coords.pop(FC.STATE)
             else:
-                del idata["coords"][FC.STATE]
+                del loaded_data["coords"][FC.STATE]
             if w is not None:
-                idata["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
+                loaded_data["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
 
             vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
+            edata[self.META]["data_keys"] = []
             for dims, d in data.items():
                 dms = tuple([vmap.get(c, self.var(c)) for c in dims])
-                idata["coords"][dms[-1]] = d[1]
-                idata["data_vars"][d[0]] = (dms, d[2])
-
-            del data
-
-        return idata
+                loaded_data["coords"][dms[-1]] = d[1]
+                loaded_data["data_vars"][d[0]] = (dms, d[2])
+                edata[self.META]["data_keys"].append(d[0])
 
     def load_chunk_data(self, algo, mdata, fdata, tdata):
         """
@@ -853,6 +866,7 @@ class DatasetStates(States):
         )
         states_coord = self._cmap[FC.STATE]
         n_states = mdata.n_states
+        edata = mdata.extra_data
 
         # preloading already done:
         if self.load_mode == "preload":
@@ -931,37 +945,25 @@ class DatasetStates(States):
                 f"States '{self.name}': load mode '{self.load_mode}' not implemented"
             )
 
-        coords, data, weights = self._get_data(data, verbosity=0)
-        data = {dims: (d[1], d[2]) for dims, d in data.items()}
+        # add data to mdata:
+        if self.load_mode != "preload":
+            __, data, weights = self._get_data(data, verbosity=0)
+            vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
+            edata[self.META]["data_keys"] = []
+            for dims, d in data.items():
+                dms = tuple([vmap.get(c, self.var(c)) for c in dims])
 
-        for dims, (vrs, __) in data.items():
-            assert FC.TURBINE not in dims, (
-                f"States '{self.name}': Turbine dimension not allowed for load_mode 'fly', but got {dims} for variables {vrs}"
-            )
+                mdata[dms[-1]] = d[1]
+                mdata.dims[dms[-1]] = (dms[-1],)
 
-        # adjust turbine order for purely turbine dependent data:
-        mvd = []
-        for dims in data.keys():
-            if FC.STATE not in dims and FC.TURBINE in dims:
-                assert dims[0] == FC.TURBINE, (
-                    f"States '{self.name}': Turbine dimension must be the first dimension if state independent, but got {dims}"
-                )
-                mvd.append(dims)
-        if len(mvd) > 0:
-            ssel = fdata[FV.ORDER_SSEL].astype(config.dtype_int)
-            order = fdata[FV.ORDER].astype(config.dtype_int)
-            for dims0 in mvd:
-                vrs, d0 = data.pop(dims0)
-                dims = (FC.STATE,) + dims0
-                d = np.zeros((n_states,) + d0.shape, dtype=d0.dtype)
-                d[:] = d0[None, ...]
-                d = d[ssel, order, ...]
-                del d0
+                mdata[d[0]] = d[2]
+                mdata.dims[d[0]] = dms
 
-                if dims in data:
-                    vrs = data[dims][0] + vrs
-                    d = np.concatenate((data[dims][1], d), axis=-1)
-                data[dims] = (vrs, d)
+                edata[self.META]["data_keys"].append(d[0])
+
+            if weights is not None:
+                mdata[FV.WEIGHT] = weights
+                mdata.dims[FV.WEIGHT] = (FC.STATE,)
 
     def set_running(
         self,
@@ -1117,112 +1119,27 @@ class DatasetStates(States):
         assert FC.STATE in self._cmap, (
             f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {self._cmap}"
         )
-        states_coord = self._cmap[FC.STATE]
         n_states = mdata.n_states
+        data_keys = mdata.extra_data[self.META]["data_keys"]
 
-        # case preload
-        if self.load_mode == "preload":
-            coords = self._coords
-            weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
-            data = deepcopy(self._data_nostate)
-            for DATA in self._vars:
-                dims = mdata.dims[DATA]
-                vrs = mdata[dims[-1]].tolist()
-                dms = tuple(
-                    [
-                        self.unvar(c) if c not in [FC.STATE, FC.TURBINE] else c
-                        for c in dims[:-1]
-                    ]
-                    + [dims[-1]]
-                )
-                data[dms] = (vrs, mdata[DATA].copy())
-
-        # case lazy
-        elif self.load_mode == "lazy":
-            i0 = mdata.states_i0(counter=True)
-            s = slice(i0, i0 + n_states)
-            ds = self.data_source.isel({states_coord: s}).load()
-            coords, data, weights = self._get_data(ds, verbosity=0)
-            data = {dims: (d[1], d[2]) for dims, d in data.items()}
-            for dims, (vrs, __) in data.items():
-                assert FC.TURBINE not in dims, (
-                    f"States '{self.name}': Turbine dimension not allowed for load_mode 'lazy', but got {dims} for variables {vrs}"
-                )
-            del ds
-
-        # case fly
-        elif self.load_mode == "fly":
-            data = []
-            i0 = mdata.states_i0(counter=True)
-            i1 = i0 + n_states
-            j0 = 0
-            for fpath, n in self._files_maxi.items():
-                if i0 < j0 or i0 == i1:
-                    break
-                else:
-                    j1 = j0 + n
-                    if i0 < j1:
-                        a = i0 - j0
-                        b = min(i1, j1) - j0
-                        assert b > a, (
-                            f"States '{self.name}': Invalid state indices for file {fpath}: (i0, i1, j0, j1, a, b) = {(i0, i1, j0, j1, a, b)}"
-                        )
-                        isel = copy(self.isel) if self.isel is not None else {}
-                        isel[states_coord] = slice(a, b)
-
-                        d = _read_nc_file(
-                            fpath,
-                            coords=list(self._cmap.values()),
-                            vars=list(self._vars.values()),
-                            nc_engine=config.nc_engine,
-                            isel=isel,
-                            sel=self.sel,
-                            load_mode="load",
-                            drop_vars=self.drop_vars,
-                            sort=self.sort,
-                            check_input_nans=self.check_input_nans,
-                            preprocess=self.preprocess_nc,
-                        )
-                        if d is not None:
-                            data.append(d)
-                        else:
-                            raise ValueError(
-                                f"States '{self.name}': Failed to read data for file {fpath}"
-                            )
-                        del d
-                        i0 += b - a
-                    j0 = j1
-
-            assert i0 == i1, (
-                f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
+        # extract data from mdata
+        weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
+        data = {}
+        for DATA in data_keys:
+            dims = mdata.dims[DATA]
+            vrs = (
+                mdata[dims[-1]]
+                if isinstance(mdata[dims[-1]], list)
+                else mdata[dims[-1]].tolist()
             )
-            assert len(data) > 0, (
-                f"States '{self.name}': No data read for load_mode '{self.load_mode}'"
+            dms = tuple(
+                [
+                    self.unvar(c) if c not in [FC.STATE, FC.TURBINE] else c
+                    for c in dims[:-1]
+                ]
+                + [dims[-1]]
             )
-            if len(data) == 1:
-                data = data[0]
-            else:
-                data = xr.concat(
-                    data,
-                    dim=states_coord,
-                    data_vars="minimal",
-                    coords="minimal",
-                    compat="override",
-                    join="exact",
-                    combine_attrs="drop",
-                )
-            coords, data, weights = self._get_data(data, verbosity=0)
-            data = {dims: (d[1], d[2]) for dims, d in data.items()}
-
-            for dims, (vrs, __) in data.items():
-                assert FC.TURBINE not in dims, (
-                    f"States '{self.name}': Turbine dimension not allowed for load_mode 'fly', but got {dims} for variables {vrs}"
-                )
-
-        else:
-            raise KeyError(
-                f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly"
-            )
+            data[dms] = (vrs, mdata[DATA].copy())
 
         # adjust turbine order for purely turbine dependent data:
         mvd = []
@@ -1342,6 +1259,9 @@ class DatasetStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
+        # load data on the fly, if necessary:
+        super().calculate(algo, mdata, fdata, tdata)
+
         # prepare
         self.ensure_output_vars(algo, tdata)
         n_states = tdata.n_states

@@ -27,7 +27,14 @@ class PoolEngine(Engine):
 
     """
 
-    def __init__(self, *args, share_cstore=False, pool_args={}, **kwargs):
+    def __init__(
+        self,
+        *args,
+        share_cstore=False,
+        pool_args={},
+        supports_shared_data=False,
+        **kwargs,
+    ):
         """
         Constructor.
 
@@ -46,6 +53,7 @@ class PoolEngine(Engine):
         super().__init__(*args, **kwargs)
         self.share_cstore = share_cstore
         self.pool_args = pool_args
+        self.supports_shared_data = supports_shared_data
 
     @abstractmethod
     def _create_pool(self):
@@ -55,14 +63,6 @@ class PoolEngine(Engine):
     @abstractmethod
     def _shutdown_pool(self):
         """Shuts down the pool"""
-        pass
-
-    def prepare_shared_data(self, runner, shared):
-        """Prepare shared input data before the first chunk submission."""
-        return shared
-
-    def release_shared_data(self, runner, shared):
-        """Release shared input data after all chunk submissions finished."""
         pass
 
     def __enter__(self):
@@ -122,6 +122,7 @@ class PoolEngine(Engine):
         model_data,
         farm_data=None,
         point_data=None,
+        extra_data={},
         out_vars=[],
         chunk_store={},
         sel=None,
@@ -147,6 +148,8 @@ class PoolEngine(Engine):
             The initial farm data
         point_data: xarray.Dataset, optional
             The initial point data
+        extra_data: dict
+            Additional non-array input data from the models
         out_vars: list of str, optional
             Names of the output variables
         chunk_store: foxes.utils.Dict
@@ -231,7 +234,8 @@ class PoolEngine(Engine):
 
         # start calculation:
         runner = self.new_runner()
-        shared = None
+        shared_memory = []
+        shared_handle = None
         try:
             with self.new_chunk_results_manager(
                 algo,
@@ -269,14 +273,26 @@ class PoolEngine(Engine):
                             n_chunks_states=n_chunks_states,
                             n_chunks_points=n_chunks_targets,
                         )
-                        if shared is None:
-                            if (self.verbosity > 0 or algo.verbosity > 0) and len(
-                                shrd
-                            ) > 0:
-                                print(f"\n{type(self).__name__} shared data:\n")
-                                print(shrd)
-                                print()
-                            shared = self.init_shared_memory(shrd)
+
+                        if self.supports_shared_data:
+                            if shared_handle is None:
+                                shrd.extra_data.update(extra_data)
+                                if (self.verbosity > 1 or algo.verbosity > 1) and (
+                                    len(shrd) > 0 or len(extra_data) > 0
+                                ):
+                                    print(f"\n{type(self).__name__} shared data:\n")
+                                    print(shrd)
+                                    print()
+
+                                shared_handle = self.init_shared_memory(
+                                    shared_memory,
+                                    mdata=data[0],
+                                    shared_mdata=shrd,
+                                )
+                        else:
+                            if len(extra_data):
+                                shrd.extra_data.update(extra_data)
+                            data[0].recombine_with_shared(shrd)
                         del shrd
 
                         """
@@ -299,7 +315,7 @@ class PoolEngine(Engine):
                             algo,
                             model,
                             *data,
-                            shared=shared,
+                            shared=shared_handle,
                             chunk_store=chunk_store,
                             chunk_key=key,
                             out_dims=out_dims,
@@ -325,10 +341,47 @@ class PoolEngine(Engine):
 
                 del calc_pars, farm_data, results, futures
         finally:
-            self.release_shared_memory(shared)
+            self.release_shared_memory(shared_memory, shared_handle)
+            del shared_memory, shared_handle
 
         # update chunk store:
         chunk_store.update(new_chunk_store)
         algo.reset_chunk_store(chunk_store)
 
         return results_mgr.results
+
+    def init_shared_memory(self, shared_memory, mdata, shared_mdata):
+        """
+        Sets the shared memory for the chunk calculation
+
+        Parameters
+        ----------
+        shared_memory: list
+            The shared memory object for the chunk calculation
+        mdata: foxes.core.MData
+            The mdata to be used in the chunk calculation
+        shared_mdata: foxes.core.MData
+            The shared mdata to be used in the chunk calculation
+
+        Returns
+        -------
+        handle: object
+            The handle for accessing the shared data
+
+        """
+        mdata.recombine_with_shared(shared_mdata)
+        return None
+
+    def release_shared_memory(self, shared_memory, shared_handle):
+        """
+        Releases the shared memory after the chunk calculation
+
+        Parameters
+        ----------
+        shared_memory: list
+            The shared memory object for the chunk calculation
+        shared_handle: object
+            The handle for accessing the shared data
+
+        """
+        pass

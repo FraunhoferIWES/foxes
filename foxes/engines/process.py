@@ -1,11 +1,69 @@
 import numpy as np
-from multiprocessing import shared_memory
+import atexit
+from multiprocessing import Manager, shared_memory as mp_shared_memory
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import resource_tracker
 
 from foxes.config import config
 from foxes.core import EngineRunner, MData
 
 from .pool import PoolEngine
+
+
+_resource_tracker_register = resource_tracker.register
+_resource_tracker_unregister = resource_tracker.unregister
+
+
+def _resource_tracker_register_no_shared(name, rtype):
+    if rtype == "shared_memory":
+        return
+    return _resource_tracker_register(name, rtype)
+
+
+def _resource_tracker_unregister_no_shared(name, rtype):
+    if rtype == "shared_memory":
+        return
+    return _resource_tracker_unregister(name, rtype)
+
+
+def _install_resource_tracker_shared_memory_bypass():
+    """Installs an idempotent bypass for resource_tracker shared-memory registration.
+
+    Shared memory ownership is managed explicitly by this engine (close/unlink in
+    the parent process), so worker-side resource_tracker registration for
+    ``shared_memory`` must be disabled to avoid duplicate tracking noise.
+    """
+    if getattr(resource_tracker, "_foxes_shm_bypass_installed", False):
+        return
+
+    resource_tracker.register = _resource_tracker_register_no_shared
+    resource_tracker.unregister = _resource_tracker_unregister_no_shared
+    resource_tracker._foxes_shm_bypass_installed = True
+
+
+_install_resource_tracker_shared_memory_bypass()
+
+
+_PROCESS_WORKER_SHM_CACHE = {}
+
+
+def _close_cached_shared_memory(shm_name):
+    """Closes and removes one cached worker shared-memory handle."""
+    shm = _PROCESS_WORKER_SHM_CACHE.pop(shm_name, None)
+    if shm is not None:
+        try:
+            shm.close()
+        except FileNotFoundError:
+            pass
+
+
+def _close_all_cached_shared_memory():
+    """Closes all cached worker shared-memory handles."""
+    for shm_name in list(_PROCESS_WORKER_SHM_CACHE):
+        _close_cached_shared_memory(shm_name)
+
+
+atexit.register(_close_all_cached_shared_memory)
 
 
 class ProcessEngineRunner(EngineRunner):
@@ -34,27 +92,35 @@ class ProcessEngineRunner(EngineRunner):
 
         """
         if handle is None:
-            return super()._recombine_mdata_with_shared(mdata, handle)
+            return mdata
+
+        active_shm_names = {value["name"] for value in handle["data"].values()}
+        for shm_name in list(_PROCESS_WORKER_SHM_CACHE):
+            if shm_name not in active_shm_names:
+                _close_cached_shared_memory(shm_name)
 
         data = {}
-        shm_handles = []
         for name, value in handle["data"].items():
-            shm = shared_memory.SharedMemory(name=value["name"])
-            shm_handles.append(shm)
+            shm_name = value["name"]
+            shm = _PROCESS_WORKER_SHM_CACHE.get(shm_name)
+            if shm is None:
+                shm = mp_shared_memory.SharedMemory(name=shm_name)
+                _PROCESS_WORKER_SHM_CACHE[shm_name] = shm
             data[name] = np.ndarray(
                 tuple(value["shape"]),
                 dtype=np.dtype(value["dtype"]),
                 buffer=shm.buf,
             )
 
-        shared_mdata = MData(data=data, dims=handle["dims"], name=handle["name"])
-        mdata.recombine_with_shared(shared_mdata)  # modifies mdata in-place
+        shared_extra_data = handle.get("extra_data")
+        shared_mdata = MData(
+            data=data,
+            dims=handle["dims"],
+            extra_data={} if shared_extra_data is None else dict(shared_extra_data),
+            name=handle["name"],
+        )
 
-        # Keep SharedMemory objects alive as long as mdata is used.
-        if len(shm_handles):
-            handles = getattr(mdata, "_shared_memory_handles", [])
-            handles += shm_handles
-            setattr(mdata, "_shared_memory_handles", handles)
+        mdata.recombine_with_shared(shared_mdata)  # modifies mdata in-place
 
         return mdata
 
@@ -78,7 +144,6 @@ class ProcessEngineRunner(EngineRunner):
         if utm_zone is not None:  # needed in some cases for mpi engine TODO investigate
             config.set_utm_zone(*utm_zone)
         algo.reset_chunk_store(chunk_store.copy())
-
         mdata = self._recombine_mdata_with_shared(mdata, shared)
 
         results = model.calculate(algo, mdata, *data, **cpars)
@@ -96,6 +161,10 @@ class ProcessEngine(PoolEngine):
     :group: engines
 
     """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("supports_shared_data", True)
+        super().__init__(*args, **kwargs)
 
     def new_runner(self):
         """
@@ -169,12 +238,16 @@ class ProcessEngine(PoolEngine):
         """
         return future.result()
 
-    def init_shared_memory(self, shared_mdata):
+    def init_shared_memory(self, shared_memory, mdata, shared_mdata):
         """
         Sets the shared memory for the chunk calculation
 
         Parameters
         ----------
+        shared_memory: list
+            The shared memory object for the chunk calculation
+        mdata: foxes.core.MData
+            The mdata to be used in the chunk calculation
         shared_mdata: foxes.core.MData
             The shared mdata to be used in the chunk calculation
 
@@ -184,54 +257,72 @@ class ProcessEngine(PoolEngine):
             The handle for accessing the shared data
 
         """
-        if shared_mdata is None:
+        if shared_mdata is None or (
+            len(shared_mdata) == 0 and len(shared_mdata.extra_data) == 0
+        ):
             return None
 
-        self._shared_mem = []
-        data = {}
-        for v, d in shared_mdata.items():
-            assert isinstance(d, np.ndarray) and d.dtype.kind != "O" and d.nbytes, (
-                f"Shared mdata entry '{v}' must be a non-object numpy array with non-zero size"
+        shared_data = {}
+        for name, data in shared_mdata.items():
+            assert (
+                isinstance(data, np.ndarray) and data.dtype.kind != "O" and data.nbytes
+            ), (
+                f"Shared mdata entry '{name}' must be a non-object numpy array with non-zero size"
             )
-            arr = np.ascontiguousarray(d)
-            shm = shared_memory.SharedMemory(create=True, size=arr.nbytes)
+            arr = np.ascontiguousarray(data)
+            shm = mp_shared_memory.SharedMemory(create=True, size=arr.nbytes)
+            shared_memory.append({"kind": "shm", "obj": shm})
+
             shm_arr = np.ndarray(arr.shape, dtype=arr.dtype, buffer=shm.buf)
             shm_arr[...] = arr
-            self._shared_mem.append(shm)
-            data[v] = {
+
+            shared_data[name] = {
                 "name": shm.name,
                 "shape": arr.shape,
                 "dtype": arr.dtype.str,
             }
 
+        extra_data = None
+        if len(shared_mdata.extra_data):
+            manager = Manager()
+            shared_memory.append({"kind": "manager", "obj": manager})
+            extra_data = manager.dict(shared_mdata.extra_data)
+
         return {
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
-            "data": data,
+            "data": shared_data,
+            "extra_data": extra_data,
         }
 
-    def release_shared_memory(self, handle):
+    def release_shared_memory(self, shared_memory, shared_handle):
         """
         Releases the shared memory after the chunk calculation
 
         Parameters
         ----------
-        handle: object
+        shared_memory: list
+            The shared memory object for the chunk calculation
+        shared_handle: object
             The handle for accessing the shared data
 
         """
-        if hasattr(self, "_shared_mem"):
-            while len(self._shared_mem):
-                shm = self._shared_mem.pop()
+        for entry in reversed(shared_memory):
+            kind = entry.get("kind")
+            obj = entry.get("obj")
+            if kind == "shm":
                 try:
-                    shm.close()
-                finally:
-                    try:
-                        shm.unlink()
-                    except FileNotFoundError:
-                        pass
+                    obj.close()
+                except FileNotFoundError:
+                    pass
+                try:
+                    obj.unlink()
+                except FileNotFoundError:
+                    pass
+            elif kind == "manager":
+                obj.shutdown()
+        shared_memory.clear()
 
     def _shutdown_pool(self):
         """Shuts down the pool"""
-        self.release_shared_memory(None)
         self._pool.shutdown()
