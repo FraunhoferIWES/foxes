@@ -546,14 +546,14 @@ class DatasetStates(States):
                         f"States '{self.name}': Selected {self._cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
                     )
 
-    def __load_ds(
+    def __load_files(
         self,
         algo,
         bounds_extra_space,
         height_bounds,
         verbosity=0,
     ):
-        """Helper function for preloading data."""
+        """Initial loading of all files, as needed by load mode"""
 
         assert FC.STATE in self._cmap, (
             f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {self._cmap}"
@@ -802,7 +802,7 @@ class DatasetStates(States):
             return
         edata[self.META] = {}
 
-        # preload data:
+        # load data from files or dataset:
         bounds_extra_space = (
             bounds_extra_space
             if bounds_extra_space is not None
@@ -811,13 +811,14 @@ class DatasetStates(States):
         height_bounds = (
             height_bounds if height_bounds is not None else self.height_bounds
         )
-        data = self.__load_ds(
+        data = self.__load_files(
             algo,
             bounds_extra_space=bounds_extra_space,
             height_bounds=height_bounds,
             verbosity=verbosity,
         )
 
+        # store data for preload mode:
         if self.load_mode == "preload":
             coords, data, w = self._get_data(
                 data,
@@ -826,10 +827,9 @@ class DatasetStates(States):
                 verbosity=verbosity,
             )
 
-            if FC.STATE in coords:
-                loaded_data["coords"][FC.STATE] = coords.pop(FC.STATE)
-            else:
-                del loaded_data["coords"][FC.STATE]
+            for c, d in coords.items():
+                c = self.var(c) if c not in [FC.STATE, FC.TURBINE] else c
+                loaded_data["coords"][c] = d
             if w is not None:
                 loaded_data["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
 
@@ -840,6 +840,10 @@ class DatasetStates(States):
                 loaded_data["coords"][dms[-1]] = d[1]
                 loaded_data["data_vars"][d[0]] = (dms, d[2])
                 edata[self.META]["data_keys"].append(d[0])
+
+        # store data for lazy mode:
+        elif self.load_mode == "lazy":
+            self.__lazy_data = data
 
     def load_chunk_data(self, algo, mdata, fdata, tdata):
         """
@@ -876,7 +880,7 @@ class DatasetStates(States):
         elif self.load_mode == "lazy":
             i0 = mdata.states_i0(counter=True)
             s = slice(i0, i0 + n_states)
-            data = self.data_source.isel({states_coord: s}).load()
+            data = self.__lazy_data.isel({states_coord: s}).load()
 
         # loading this chunk's data on the fly:
         elif self.load_mode == "fly":
@@ -947,7 +951,7 @@ class DatasetStates(States):
 
         # add data to mdata:
         if self.load_mode != "preload":
-            __, data, weights = self._get_data(data, verbosity=0)
+            coords, data, weights = self._get_data(data, verbosity=0)
             vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
             edata[self.META]["data_keys"] = []
             for dims, d in data.items():
@@ -964,6 +968,11 @@ class DatasetStates(States):
             if weights is not None:
                 mdata[FV.WEIGHT] = weights
                 mdata.dims[FV.WEIGHT] = (FC.STATE,)
+
+            for c, d in coords.items():
+                c = self.var(c) if c not in [FC.STATE, FC.TURBINE] else c
+                mdata[c] = d
+                mdata.dims[c] = (c,)
 
     def set_running(
         self,
@@ -1125,6 +1134,7 @@ class DatasetStates(States):
         # extract data from mdata
         weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
         data = {}
+        coords = {}
         for DATA in data_keys:
             dims = mdata.dims[DATA]
             vrs = (
@@ -1132,13 +1142,14 @@ class DatasetStates(States):
                 if isinstance(mdata[dims[-1]], list)
                 else mdata[dims[-1]].tolist()
             )
-            dms = tuple(
-                [
-                    self.unvar(c) if c not in [FC.STATE, FC.TURBINE] else c
-                    for c in dims[:-1]
-                ]
-                + [dims[-1]]
-            )
+            dms = []
+            for c in dims[:-1]:
+                c0 = self.unvar(c) if c not in [FC.STATE, FC.TURBINE] else c
+                dms.append(c0)
+                if c0 not in coords:
+                    coords[c0] = mdata[c]
+            dms = tuple(dms + [dims[-1]])
+            coords[dims[-1]] = vrs
             data[dms] = (vrs, mdata[DATA].copy())
 
         # adjust turbine order for purely turbine dependent data:
