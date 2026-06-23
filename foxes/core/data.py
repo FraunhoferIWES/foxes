@@ -2,6 +2,11 @@ import numpy as np
 from xarray import Dataset
 
 from foxes.utils import Dict
+from foxes.utils.memory_utils import (
+    deep_split_by_nbytes,
+    deep_update,
+    get_object_nbytes,
+)
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -109,10 +114,120 @@ class Data(Dict[str, np.ndarray]):
                 v: (self.dims[v], self[v]) for v in self.keys() if v not in self.sizes
             },
             coords={c: self[c] for c in self.sizes.keys()},
+            attrs=self.extra_data,
         )
 
     def __str__(self):
-        return self.to_dataset().__str__()
+        def _fmt_size(nbytes):
+            if nbytes >= 1024 * 1024:
+                return f"{nbytes / (1024 * 1024):.2f}MB"
+            return f"{nbytes / 1024:.2f}KB"
+
+        def _summary(value, level=0):
+            if isinstance(value, np.ndarray):
+                return f"array {value.dtype} {tuple(value.shape)}"
+            if isinstance(value, dict):
+                if level >= 1:
+                    return f"dict(len={len(value)})"
+                keys = sorted(value.keys(), key=lambda x: str(x))
+                items = []
+                max_items = 5
+                for k in keys[:max_items]:
+                    items.append(f"{k}: {_summary(value[k], level=level + 1)}")
+                if len(keys) > max_items:
+                    items.append("...")
+                return f"dict(len={len(value)}){{{', '.join(items)}}}"
+            if isinstance(value, (list, tuple, set)):
+                return f"{type(value).__name__}(len={len(value)})"
+            if isinstance(value, str):
+                return f"str(len={len(value)})"
+            if isinstance(value, np.generic):
+                return f"{type(value).__name__}({value.item()})"
+            return type(value).__name__
+
+        def _dims_text(dims):
+            if dims is None:
+                return ""
+            return f"({', '.join(dims)})"
+
+        def _edge_preview(value):
+            if isinstance(value, np.ndarray):
+                if value.size == 0:
+                    return "[]"
+                flat = value.reshape(-1)
+                first = flat[0].item() if isinstance(flat[0], np.generic) else flat[0]
+                if value.size == 1:
+                    return f"[{first}]"
+                last = flat[-1].item() if isinstance(flat[-1], np.generic) else flat[-1]
+                return f"[{first}...{last}]"
+
+            if isinstance(value, (list, tuple)):
+                if len(value) == 0:
+                    return "[]"
+                if len(value) == 1:
+                    return f"[{value[0]}]"
+                return f"[{value[0]}...{value[-1]}]"
+
+            return ""
+
+        def _iter_extra_entries(data, level=0):
+            for k in sorted(data.keys(), key=lambda x: str(x)):
+                key = str(k)
+                value = data[k]
+                yield level, key, value
+                if isinstance(value, dict):
+                    yield from _iter_extra_entries(value, level=level + 1)
+
+        total_nbytes = (
+            get_object_nbytes(self)
+            + get_object_nbytes(self.dims)
+            + get_object_nbytes(self.sizes)
+            + get_object_nbytes(self.extra_data)
+        )
+
+        lines = [
+            f"<foxes.core.{type(self).__name__}> {self.name} {_fmt_size(total_nbytes)}",
+        ]
+
+        if self.sizes:
+            dim_text = ", ".join([f"{k}: {v}" for k, v in sorted(self.sizes.items())])
+            lines.append(f"Dimensions: ({dim_text})")
+        else:
+            lines.append("Dimensions: ()")
+
+        coord_keys = sorted([k for k in self.keys() if k in self.sizes])
+        if coord_keys:
+            lines.append("Coordinates:")
+            for k in coord_keys:
+                vsize = _fmt_size(get_object_nbytes(self[k]))
+                vedges = _edge_preview(self[k])
+                vedges = f" {vedges}" if vedges else ""
+                lines.append(f"  * {k:<12} {_summary(self[k])}{vedges} {vsize}")
+
+        data_keys = sorted([k for k in self.keys() if k not in self.sizes])
+        if data_keys:
+            lines.append("Data variables:")
+            for k in data_keys:
+                vsize = _fmt_size(get_object_nbytes(self[k]))
+                vedges = _edge_preview(self[k])
+                vedges = f" {vedges}" if vedges else ""
+                lines.append(
+                    f"    {k:<12} {_dims_text(self.dims.get(k, None)):<16} {_summary(self[k])}{vedges} {vsize}"
+                )
+
+        lines.append("Extra data:")
+        if self.extra_data:
+            for level, k, v in _iter_extra_entries(self.extra_data):
+                vedges = _edge_preview(v)
+                vedges = f" {vedges}" if vedges else ""
+                vsize = _fmt_size(get_object_nbytes(v))
+                s = _summary(v, level=1) if isinstance(v, dict) else _summary(v)
+                indent = "    " + "  " * level
+                lines.append(f"{indent}{k}  {s}{vedges}  {vsize}")
+        else:
+            lines.append("    (none)")
+
+        return "\n".join(lines)
 
     @property
     def n_states(self):
@@ -373,9 +488,17 @@ class Data(Dict[str, np.ndarray]):
                 n_chunks_points=self.n_chunks_points,
             )
 
-    def pop_shared(self):
+    def pop_shared(self, min_shared_array_bytes=65536):
         """
         Pop the shared data, i.e. the data that is independent of the loop variables.
+
+        Parameters
+        ----------
+        min_shared_array_bytes: int
+            Minimum array size in bytes for moving loop-independent arrays into
+            the shared data container. Smaller arrays stay in the current data
+            object. The threshold is also applied recursively to ``extra_data``
+            values.
 
         Returns
         -------
@@ -385,25 +508,30 @@ class Data(Dict[str, np.ndarray]):
         """
         data = {}
         dims = {}
-        vrs = set(self.keys()) - set(self.sizes.keys())
+        vrs = set(self.keys())
         for v in vrs:
             d = self.dims[v]
-            if d is not None and all([dd not in self.loop_dims for dd in d]):
+            if (
+                d is not None
+                and all([dd not in self.loop_dims for dd in d])
+                and self[v].nbytes > min_shared_array_bytes
+            ):
                 data[v] = self.pop(v)
                 dims[v] = self.dims.pop(v)
 
-        crds = set()
-        for v in self.keys():
-            if v not in data and v not in self.sizes:
-                crds.update(self.dims[v])
+        # split extra data by size:
+        self.extra_data, extra_data = deep_split_by_nbytes(
+            self.extra_data,
+            max_nbytes=min_shared_array_bytes + 1,
+            fill_None=True,
+        )
 
-        vrs = set(self.sizes.keys()) - crds
-        for v in vrs:
-            data[v] = self.pop(v)
-            dims[v] = self.dims.pop(v)
-            del self.sizes[v]
-
-        shared = type(self)(data, dims, name=self.name + "_shared")
+        shared = type(self)(
+            data,
+            dims,
+            extra_data=extra_data,
+            name=self.name + "_shared",
+        )
 
         return shared
 
@@ -417,6 +545,7 @@ class Data(Dict[str, np.ndarray]):
             The shared data
 
         """
+
         for v in shared.keys():
             if v in self:
                 raise KeyError(
@@ -425,7 +554,7 @@ class Data(Dict[str, np.ndarray]):
             self[v] = shared[v]
             self.dims[v] = shared.dims[v]
 
-        self.extra_data.update(shared.extra_data)
+        self.extra_data = deep_update(self.extra_data, shared.extra_data)
 
     @classmethod
     def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):

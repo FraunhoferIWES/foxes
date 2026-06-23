@@ -9,7 +9,6 @@ from .default import DefaultEngine as DefaultEngine
 from .threads import ThreadsEngine as ThreadsEngine
 from .process import ProcessEngine as ProcessEngine
 
-from .dask import DaskBaseEngine as DaskBaseEngine
 from .dask import DaskEngine as DaskEngine
 from .dask import LocalClusterEngine as LocalClusterEngine
 from .dask import SlurmClusterEngine as SlurmClusterEngine

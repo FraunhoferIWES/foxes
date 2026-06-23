@@ -1,0 +1,119 @@
+import numpy as np
+import re
+
+from foxes.core import MData
+
+
+def test_pop_shared_extra_data_keeps_strict_threshold_for_arrays():
+    extra_small = np.arange(8, dtype=np.int32)  # 32 bytes
+    extra_equal = np.arange(16, dtype=np.int32)  # 64 bytes
+    extra_large = np.arange(24, dtype=np.int32)  # 96 bytes
+
+    mdata = MData(
+        data={},
+        dims={},
+        extra_data={
+            "extra_small": extra_small,
+            "extra_equal": extra_equal,
+            "extra_large": extra_large,
+        },
+        name="mdata",
+    )
+
+    shared = mdata.pop_shared(min_shared_array_bytes=64)
+
+    assert np.array_equal(mdata.extra_data["extra_small"], extra_small)
+    assert np.array_equal(mdata.extra_data["extra_equal"], extra_equal)
+    assert mdata.extra_data["extra_large"] is None
+
+    assert shared.extra_data["extra_small"] is None
+    assert shared.extra_data["extra_equal"] is None
+    assert np.array_equal(shared.extra_data["extra_large"], extra_large)
+
+
+def test_pop_shared_extra_data_splits_nested_payloads_by_size():
+    nested = {
+        "inner": [
+            np.arange(8, dtype=np.int32),  # 32 bytes
+            np.arange(24, dtype=np.int32),  # 96 bytes
+        ]
+    }
+    mdata = MData(data={}, dims={}, extra_data={"nested": nested}, name="mdata")
+
+    shared = mdata.pop_shared(min_shared_array_bytes=64)
+
+    assert "nested" in mdata.extra_data
+    assert "nested" in shared.extra_data
+
+    local_inner = mdata.extra_data["nested"]["inner"]
+    shared_inner = shared.extra_data["nested"]["inner"]
+
+    assert len(local_inner) == 2
+    assert len(shared_inner) == 2
+    assert local_inner[0].nbytes == 32
+    assert local_inner[1] is None
+    assert shared_inner[0] is None
+    assert shared_inner[1].nbytes == 96
+
+
+def test_recombine_with_shared_deep_updates_extra_data():
+    original = {
+        "nested": {
+            "inner": [
+                np.arange(8, dtype=np.int32),  # 32 bytes
+                np.arange(24, dtype=np.int32),  # 96 bytes
+            ],
+            "tag": "keep",
+        }
+    }
+    mdata = MData(data={}, dims={}, extra_data=original, name="mdata")
+
+    shared = mdata.pop_shared(min_shared_array_bytes=64)
+    mdata.recombine_with_shared(shared)
+
+    inner = mdata.extra_data["nested"]["inner"]
+    assert len(inner) == 2
+    assert inner[0].nbytes == 32
+    assert inner[1].nbytes == 96
+    assert mdata.extra_data["nested"]["tag"] == "keep"
+
+
+def test_data_str_summarizes_without_array_payload_dump():
+    arr = np.arange(6, dtype=np.int32).reshape(2, 3)
+    mdata = MData(
+        data={"A": arr},
+        dims={"A": ("x", "y")},
+        extra_data={
+            "meta": {"a": 1},
+            "vals": [1, 2, 3],
+            "arr": np.arange(4, dtype=np.float64),
+        },
+        name="demo",
+    )
+
+    out = str(mdata)
+
+    assert "<foxes.core.MData>" in out
+    assert "<foxes.core.MData> demo" in out
+    assert re.search(r"[0-9]+\.[0-9]{2}(KB|MB)", out)
+    assert "Dimensions: (x: 2, y: 3)" in out
+    assert "Coordinates:" in out
+    assert "Data variables:" in out
+    assert "A            (x, y)" in out
+    assert "array int32 (2, 3)" in out
+    assert "[0...5]" in out
+    assert "x            array int64 (2,)" in out
+    assert "[0...1]" in out
+    assert "y            array int64 (3,)" in out
+    assert "[0...2]" in out
+    assert re.search(r"A\s+\(x, y\).+[0-9]+\.[0-9]{2}(KB|MB)", out)
+    assert "Extra data:" in out
+    assert re.search(r"\n\s+meta\s+dict\(len=1\)", out)
+    assert re.search(r"\n\s+a\s+int\s+[0-9]+\.[0-9]{2}(KB|MB)", out)
+    assert "meta.a" not in out
+    assert "vals" in out
+    assert "list(len=3) [1...3]" in out
+    assert "arr" in out
+    assert "array float64 (4,) [0.0...3.0]" in out
+    assert "[[" not in out
+    assert "array([" not in out

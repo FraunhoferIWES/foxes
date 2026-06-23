@@ -2,8 +2,10 @@ import numpy as np
 import pytest
 from multiprocessing import shared_memory as mp_shared_memory
 from multiprocessing import resource_tracker
+from xarray import Dataset
 
 from foxes.core import MData
+import foxes.constants as FC
 from foxes.engines.process import (
     ProcessEngine,
     ProcessEngineRunner,
@@ -98,7 +100,7 @@ def test_process_engine_resource_tracker_bypass_install_is_idempotent():
 
 
 def test_process_engine_init_shared_memory_roundtrip_and_release():
-    engine = ProcessEngine(n_procs=2, verbosity=0)
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=0)
     arr = np.arange(12, dtype=np.float64).reshape(3, 4)
     shared = MData(
         data={"A": arr.copy()},
@@ -134,8 +136,204 @@ def test_process_engine_init_shared_memory_roundtrip_and_release():
     assert len(shared_memory) == 0
 
 
+def test_mdata_pop_shared_respects_min_size_threshold():
+    shared_small = np.arange(4, dtype=np.int32)
+    shared_large = np.arange(32, dtype=np.float64)
+    extra_small = np.arange(4, dtype=np.int32)
+    extra_large = np.arange(32, dtype=np.float64)
+    nested_extra_small = {"inner": [np.arange(2, dtype=np.int32)]}
+    nested_extra_large = {"inner": [np.arange(32, dtype=np.float64)]}
+    mdata = MData(
+        data={
+            FC.STATE: np.arange(3),
+            "shared_small": shared_small.copy(),
+            "shared_large": shared_large.copy(),
+            "chunked": np.arange(6, dtype=np.float64).reshape(3, 2),
+        },
+        dims={
+            FC.STATE: (FC.STATE,),
+            "shared_small": ("u",),
+            "shared_large": ("v",),
+            "chunked": (FC.STATE, "w"),
+        },
+        extra_data={
+            "extra_small": extra_small.copy(),
+            "extra_large": extra_large.copy(),
+            "nested_extra_small": nested_extra_small,
+            "nested_extra_large": nested_extra_large,
+            "meta": {"k": 1},
+        },
+        loop_dims=[FC.STATE],
+        name="mdata",
+    )
+
+    shared = mdata.pop_shared(min_shared_array_bytes=64)
+
+    assert "shared_large" in shared
+    assert "shared_small" not in shared
+    assert "shared_small" in mdata
+    assert "shared_large" not in mdata
+    assert "chunked" in mdata
+    assert "extra_large" in shared.extra_data
+    assert "extra_small" in shared.extra_data
+    assert shared.extra_data["extra_small"] is None
+    assert "nested_extra_large" in shared.extra_data
+    assert "nested_extra_small" in shared.extra_data
+    assert shared.extra_data["nested_extra_small"] == {"inner": [None]}
+    assert "extra_large" in mdata.extra_data
+    assert mdata.extra_data["extra_large"] is None
+    assert "extra_small" in mdata.extra_data
+    assert "nested_extra_large" in mdata.extra_data
+    assert mdata.extra_data["nested_extra_large"] == {"inner": [None]}
+    assert "nested_extra_small" in mdata.extra_data
+    assert "meta" in mdata.extra_data
+
+
+def test_process_engine_get_chunk_input_data_uses_min_size_threshold_for_split():
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=1024)
+    model_data = Dataset(
+        coords={FC.STATE: np.arange(3), FC.TURBINE: np.arange(1)},
+        data_vars={
+            "shared_small": (("u",), np.arange(4, dtype=np.int32)),
+            "chunked": ((FC.STATE,), np.arange(3, dtype=np.float64)),
+        },
+    )
+
+    class _Algo:
+        pass
+
+    mdata, fdata = engine.get_chunk_input_data(
+        algo=_Algo(),
+        model_data=model_data,
+        farm_data=None,
+        point_data=None,
+        states_i0_i1=(0, 3),
+        targets_i0_i1=(0, 0),
+        out_vars=[],
+        chunki_states=0,
+        chunki_points=0,
+        n_chunks_states=1,
+        n_chunks_points=1,
+    )
+
+    assert "shared_small" in mdata
+    assert "chunked" in mdata
+    assert FC.STATE in fdata
+
+
+def test_process_engine_init_shared_memory_respects_min_size_threshold():
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=64)
+    small = np.arange(4, dtype=np.int32)
+    large = np.arange(24, dtype=np.float64)
+    source = MData(
+        data={"small": small.copy(), "large": large.copy()},
+        dims={"small": ("s",), "large": ("t",)},
+        name="shared",
+    )
+    shared = source.pop_shared(min_shared_array_bytes=64)
+
+    shared_memory, handle = _init_shared(engine, shared)
+
+    assert handle is not None
+    assert "large" in handle["data"]
+    assert "small" not in handle["data"]
+    assert "local_data" not in handle
+
+    shm_entries = [entry for entry in shared_memory if entry["kind"] == "shm"]
+    assert len(shm_entries) >= 1
+
+    shm_name = handle["data"]["large"]["name"]
+    shm = mp_shared_memory.SharedMemory(name=shm_name)
+    try:
+        shm_arr = np.ndarray(large.shape, dtype=large.dtype, buffer=shm.buf)
+        assert np.array_equal(shm_arr, large)
+    finally:
+        shm.close()
+
+    engine.release_shared_memory(shared_memory, handle)
+
+    with pytest.raises(FileNotFoundError):
+        mp_shared_memory.SharedMemory(name=shm_name)
+
+
+def test_process_engine_runner_recombine_keeps_chunk_data_when_nothing_is_shared():
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=1024)
+    arr = np.arange(6, dtype=np.int32).reshape(2, 3)
+    source = MData(
+        data={"A": arr.copy()},
+        dims={"A": ("s", "t")},
+        name="shared",
+    )
+    shared = source.pop_shared(min_shared_array_bytes=1024)
+
+    shared_memory, handle = _init_shared(engine, shared)
+    mdata = _new_empty_chunk_mdata()
+    runner = ProcessEngineRunner()
+
+    try:
+        _PROCESS_WORKER_SHM_CACHE.clear()
+        out = runner._recombine_mdata_with_shared(mdata, handle)
+        assert out is mdata
+        assert "A" not in mdata
+        assert handle is None
+        assert len(_PROCESS_WORKER_SHM_CACHE) == 0
+        assert not any(entry["kind"] == "shm" for entry in shared_memory)
+    finally:
+        _PROCESS_WORKER_SHM_CACHE.clear()
+        engine.release_shared_memory(shared_memory, handle)
+
+
+def test_process_engine_prepare_chunk_mdata_for_shared_removes_shared_keys():
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=0)
+    mdata = MData(
+        data={
+            "A": np.array([1, 2], dtype=np.int32),
+            "B": np.array([3, 4], dtype=np.int32),
+        },
+        dims={"A": ("u",), "B": ("u",)},
+        name="chunk",
+    )
+    shared_handle = {
+        "data": {
+            "A": {"name": "unused", "shape": (2,), "dtype": np.dtype(np.int32).str}
+        }
+    }
+
+    engine.prepare_chunk_mdata_for_shared(mdata, shared_handle)
+
+    assert "A" not in mdata
+    assert "A" not in mdata.dims
+    assert "B" in mdata
+    assert "B" in mdata.dims
+
+
+def test_process_engine_does_not_print_shared_data_when_nothing_is_shared():
+    engine = ProcessEngine(n_procs=2, verbosity=2, min_shared_array_bytes=1024)
+    arr = np.arange(6, dtype=np.int32).reshape(2, 3)
+    source = MData(
+        data={"A": arr.copy()},
+        dims={"A": ("s", "t")},
+        name="shared",
+    )
+    shared = source.pop_shared(min_shared_array_bytes=1024)
+
+    calls = []
+
+    def fake_print(shared_mdata, verbosity):
+        calls.append((shared_mdata, verbosity))
+
+    engine._print_shared_data = fake_print
+
+    shared_memory, handle = _init_shared(engine, shared)
+    try:
+        assert handle is None
+        assert calls == []
+    finally:
+        engine.release_shared_memory(shared_memory, handle)
+
+
 def test_process_engine_runner_recombine_uses_shared_memory_buffer():
-    engine = ProcessEngine(n_procs=2, verbosity=0)
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=0)
     arr = np.arange(6, dtype=np.int32).reshape(2, 3)
     shared = MData(
         data={"A": arr.copy()},
@@ -175,7 +373,7 @@ def test_process_engine_runner_recombine_uses_shared_memory_buffer():
 
 
 def test_process_engine_runner_recombine_releases_stale_cache_handles():
-    engine = ProcessEngine(n_procs=2, verbosity=0)
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=0)
     first = MData(
         data={"A": np.arange(4, dtype=np.int32).reshape(2, 2)},
         dims={"A": ("s", "t")},
@@ -231,7 +429,7 @@ def test_process_engine_rejects_invalid_shared_entries():
 
 
 def test_process_engine_pool_run_shares_memory_but_keeps_extra_data_local():
-    engine = ProcessEngine(n_procs=2, verbosity=0)
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=0)
     arr = np.arange(6, dtype=np.int32).reshape(2, 3)
     shared = MData(
         data={"A": arr.copy()},

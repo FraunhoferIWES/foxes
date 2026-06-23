@@ -5,6 +5,10 @@
 - Engines
   - Updated `MPIEngine` to use worker-local MPI shared windows (`MPI.Win.Allocate_shared`) for shared input data.
   - Shared input is initialized once per calculation via a tokenized worker cache and reused across chunk tasks in each worker.
+- Core
+  - Updated `Data.pop_shared` to split `extra_data` via `deep_split_by_nbytes`, preserving strict shared-threshold behavior while supporting nested payload partitioning.
+- Utils
+  - Added `deep_split_by_nbytes`, a recursive helper that splits nested data into elements below vs. at-or-above a byte-size threshold using `get_object_nbytes`.
 
 ## v0.1.0-alpha
 

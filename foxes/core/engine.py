@@ -555,8 +555,6 @@ class Engine(ABC):
         data: tuple of foxes.core.Data
             The input data for the chunk calculation,
             either (mdata, fdata) or (mdata, fdata, tdata)
-        shared_mdata: foxes.core.MData
-            The shared mdata for the chunk calculation
 
         """
         # prepare:
@@ -613,14 +611,7 @@ class Engine(ABC):
             else None
         )
 
-        # extract shared data:
-        shared = mdata.pop_shared()
-
-        return (
-            ((mdata, fdata), shared)
-            if tdata is None
-            else ((mdata, fdata, tdata), shared)
-        )
+        return (mdata, fdata) if tdata is None else (mdata, fdata, tdata)
 
     def get_start_calc_message(
         self,

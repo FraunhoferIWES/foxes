@@ -94,13 +94,14 @@ class ProcessEngineRunner(EngineRunner):
         if handle is None:
             return mdata
 
-        active_shm_names = {value["name"] for value in handle["data"].values()}
+        shared_data = handle.get("data", {})
+        active_shm_names = {value["name"] for value in shared_data.values()}
         for shm_name in list(_PROCESS_WORKER_SHM_CACHE):
             if shm_name not in active_shm_names:
                 _close_cached_shared_memory(shm_name)
 
         data = {}
-        for name, value in handle["data"].items():
+        for name, value in shared_data.items():
             shm_name = value["name"]
             shm = _PROCESS_WORKER_SHM_CACHE.get(shm_name)
             if shm is None:
@@ -162,9 +163,28 @@ class ProcessEngine(PoolEngine):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("supports_shared_data", True)
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        *args,
+        supports_shared_data=True,
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Positional arguments forwarded to ``PoolEngine`` / base classes.
+        supports_shared_data: bool
+            Flag forwarded to ``PoolEngine`` indicating whether shared-data
+            preparation should be used. Defaults to ``True``.
+        kwargs: dict, optional
+            Additional keyword arguments forwarded to ``PoolEngine`` / base
+            classes.
+
+        """
+        super().__init__(*args, supports_shared_data=supports_shared_data, **kwargs)
 
     def new_runner(self):
         """
@@ -238,7 +258,7 @@ class ProcessEngine(PoolEngine):
         """
         return future.result()
 
-    def init_shared_memory(self, shared_memory, mdata, shared_mdata):
+    def init_shared_memory(self, shared_memory, mdata, shared_mdata, verbosity=0):
         """
         Sets the shared memory for the chunk calculation
 
@@ -250,6 +270,8 @@ class ProcessEngine(PoolEngine):
             The mdata to be used in the chunk calculation
         shared_mdata: foxes.core.MData
             The shared mdata to be used in the chunk calculation
+        verbosity: int
+            The verbosity level, 0=silent
 
         Returns
         -------
@@ -257,6 +279,7 @@ class ProcessEngine(PoolEngine):
             The handle for accessing the shared data
 
         """
+
         if shared_mdata is None or (
             len(shared_mdata) == 0 and len(shared_mdata.extra_data) == 0
         ):
@@ -264,10 +287,8 @@ class ProcessEngine(PoolEngine):
 
         shared_data = {}
         for name, data in shared_mdata.items():
-            assert (
-                isinstance(data, np.ndarray) and data.dtype.kind != "O" and data.nbytes
-            ), (
-                f"Shared mdata entry '{name}' must be a non-object numpy array with non-zero size"
+            assert isinstance(data, np.ndarray) and data.dtype.kind != "O", (
+                f"Shared mdata entry '{name}' must be a non-object numpy array"
             )
             arr = np.ascontiguousarray(data)
             shm = mp_shared_memory.SharedMemory(create=True, size=arr.nbytes)
@@ -288,12 +309,22 @@ class ProcessEngine(PoolEngine):
             shared_memory.append({"kind": "manager", "obj": manager})
             extra_data = manager.dict(shared_mdata.extra_data)
 
+        if len(shared_data) > 0 or extra_data is not None:
+            self._print_shared_data(shared_mdata, verbosity=verbosity)
+
         return {
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
             "data": shared_data,
             "extra_data": extra_data,
         }
+
+    def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
+        """Remove entries that will be restored from shared storage in workers."""
+        for v in shared_handle.get("data", {}).keys():
+            if v in mdata:
+                mdata.pop(v)
+                mdata.dims.pop(v)
 
     def release_shared_memory(self, shared_memory, shared_handle):
         """

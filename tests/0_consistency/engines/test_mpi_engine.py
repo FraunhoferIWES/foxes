@@ -48,8 +48,18 @@ def test_mpi_runner_recombine_fails_for_missing_token():
         MPIEngineRunner()._recombine_mdata_with_shared(mdata, handle)
 
 
+def test_mpi_runner_recombine_rejects_non_token_handle_type():
+    mdata = MData(
+        data={"B": np.array([1], dtype=np.int32)}, dims={"B": ("u",)}, name="chunk"
+    )
+    handle = {"type": "legacy", "token": "unused"}
+
+    with pytest.raises(ValueError, match="mpi_shared_token"):
+        MPIEngineRunner()._recombine_mdata_with_shared(mdata, handle)
+
+
 def test_mpi_init_shared_memory_submits_setup_once_per_worker():
-    engine = MPIEngine(n_procs=4, verbosity=0)
+    engine = MPIEngine(n_procs=4, verbosity=0, min_shared_array_bytes=0)
     arr = np.arange(4, dtype=np.float64).reshape(2, 2)
     shared = MData(
         data={"A": arr},
@@ -95,6 +105,167 @@ def test_mpi_init_shared_memory_submits_setup_once_per_worker():
     assert np.array_equal(payload["data"]["A"]["arr"], arr)
 
 
+def test_mpi_init_shared_memory_respects_min_size_threshold():
+    engine = MPIEngine(n_procs=4, verbosity=0, min_shared_array_bytes=64)
+    small = np.arange(4, dtype=np.int32)
+    large = np.arange(24, dtype=np.float64)
+    source = MData(
+        data={"small": small.copy(), "large": large.copy()},
+        dims={"small": ("s",), "large": ("t",)},
+        name="shared",
+    )
+    shared = source.pop_shared(min_shared_array_bytes=64)
+
+    calls = []
+
+    def fake_submit(fn, *args, **kwargs):
+        calls.append((fn, args, kwargs))
+        return (fn, args, kwargs)
+
+    def fake_await_result(fut):
+        return fut
+
+    engine.submit = fake_submit
+    engine.await_result = fake_await_result
+
+    handle = engine.init_shared_memory(
+        shared_memory=[],
+        mdata=MData(name="chunk"),
+        shared_mdata=shared,
+    )
+
+    assert handle["type"] == "mpi_shared_token"
+    assert "local_data" not in handle
+    assert len(calls) == engine.n_workers
+
+    payload = calls[0][1][1]
+    assert "large" in payload["data"]
+    assert "small" not in payload["data"]
+
+
+def test_mpi_init_shared_memory_returns_local_handle_when_below_threshold():
+    engine = MPIEngine(n_procs=4, verbosity=0, min_shared_array_bytes=1024)
+    arr = np.arange(6, dtype=np.int32).reshape(2, 3)
+    source = MData(
+        data={"A": arr.copy()},
+        dims={"A": ("s", "t")},
+        name="shared",
+    )
+    shared = source.pop_shared(min_shared_array_bytes=1024)
+
+    calls = []
+
+    def fake_submit(fn, *args, **kwargs):
+        calls.append((fn, args, kwargs))
+        return (fn, args, kwargs)
+
+    engine.submit = fake_submit
+
+    handle = engine.init_shared_memory(
+        shared_memory=[],
+        mdata=MData(name="chunk"),
+        shared_mdata=shared,
+    )
+
+    assert handle is None
+    assert calls == []
+
+
+def test_mpi_does_not_print_shared_data_when_nothing_is_shared():
+    engine = MPIEngine(n_procs=4, verbosity=2, min_shared_array_bytes=1024)
+    arr = np.arange(6, dtype=np.int32).reshape(2, 3)
+    source = MData(
+        data={"A": arr.copy()},
+        dims={"A": ("s", "t")},
+        name="shared",
+    )
+    shared = source.pop_shared(min_shared_array_bytes=1024)
+
+    print_calls = []
+    submit_calls = []
+
+    def fake_print(shared_mdata, verbosity):
+        print_calls.append((shared_mdata, verbosity))
+
+    def fake_submit(fn, *args, **kwargs):
+        submit_calls.append((fn, args, kwargs))
+        return (fn, args, kwargs)
+
+    engine._print_shared_data = fake_print
+    engine.submit = fake_submit
+
+    handle = engine.init_shared_memory(
+        shared_memory=[],
+        mdata=MData(name="chunk"),
+        shared_mdata=shared,
+        verbosity=2,
+    )
+
+    assert handle is None
+    assert print_calls == []
+    assert submit_calls == []
+
+
+def test_mpi_runner_recombine_uses_token_cache_data_only():
+    token = "tok-b"
+    large = np.arange(6, dtype=np.int32).reshape(2, 3)
+    mpi_mod._MPI_SHARED_CACHE[token] = {
+        "data": {"large": large},
+        "dims": {"large": ("s", "t")},
+        "extra_data": {"source": "unit-test"},
+        "name": "shared",
+        "shared_comm": None,
+        "windows": {},
+    }
+
+    mdata = MData(
+        data={"B": np.array([1, 2], dtype=np.int32)}, dims={"B": ("q",)}, name="chunk"
+    )
+    handle = {"type": "mpi_shared_token", "token": token}
+
+    try:
+        out = MPIEngineRunner()._recombine_mdata_with_shared(mdata, handle)
+        assert out is mdata
+        assert np.array_equal(mdata["large"], large)
+        assert mdata.extra_data["source"] == "unit-test"
+    finally:
+        mpi_mod._MPI_SHARED_CACHE.pop(token, None)
+
+
+def test_mpi_prepare_chunk_mdata_for_shared_removes_token_shared_keys():
+    engine = MPIEngine(n_procs=3, verbosity=0, min_shared_array_bytes=0)
+    mdata = MData(
+        data={
+            "A": np.array([1, 2], dtype=np.int32),
+            "B": np.array([3, 4], dtype=np.int32),
+        },
+        dims={"A": ("u",), "B": ("u",)},
+        name="chunk",
+    )
+    handle = {"type": "mpi_shared_token", "dims": {"A": ("u",)}}
+
+    engine.prepare_chunk_mdata_for_shared(mdata, handle)
+
+    assert "A" not in mdata
+    assert "A" not in mdata.dims
+    assert "B" in mdata
+    assert "B" in mdata.dims
+
+
+def test_mpi_prepare_chunk_mdata_for_shared_rejects_non_token_handle_type():
+    engine = MPIEngine(n_procs=3, verbosity=0, min_shared_array_bytes=0)
+    mdata = MData(
+        data={"A": np.array([1, 2], dtype=np.int32)},
+        dims={"A": ("u",)},
+        name="chunk",
+    )
+
+    with pytest.raises(ValueError, match="mpi_shared_token"):
+        engine.prepare_chunk_mdata_for_shared(
+            mdata, {"type": "legacy", "dims": {"A": ("u",)}}
+        )
+
+
 def test_mpi_release_shared_memory_submits_release_once_per_worker():
     engine = MPIEngine(n_procs=5, verbosity=0)
     handle = {"type": "mpi_shared_token", "token": "tok-release"}
@@ -118,6 +289,12 @@ def test_mpi_release_shared_memory_submits_release_once_per_worker():
     assert all(c[0] is mpi_mod._mpi_release_worker_shared_cache for c in calls)
     assert all(c[1] == ("tok-release",) for c in calls)
     assert shared_memory == []
+
+
+def test_mpi_release_shared_memory_rejects_non_token_handle_type():
+    engine = MPIEngine(n_procs=3, verbosity=0)
+    with pytest.raises(ValueError, match="mpi_shared_token"):
+        engine.release_shared_memory([], {"type": "legacy"})
 
 
 def test_worker_cache_uses_mpi_allocate_shared(monkeypatch):

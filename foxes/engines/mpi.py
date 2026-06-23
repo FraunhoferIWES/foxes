@@ -135,8 +135,12 @@ class MPIEngineRunner(ProcessEngineRunner):
 
     def _recombine_mdata_with_shared(self, mdata, handle):
         """Attach cached MPI shared arrays to chunk-local mdata inside worker processes."""
-        if handle is None or handle.get("type") != "mpi_shared_token":
-            return super()._recombine_mdata_with_shared(mdata, handle)
+        if handle is None:
+            return mdata
+        if handle.get("type") != "mpi_shared_token":
+            raise ValueError(
+                "MPIEngineRunner: unsupported shared handle type, expecting 'mpi_shared_token'"
+            )
 
         token = handle["token"]
         cache = _MPI_SHARED_CACHE.get(token)
@@ -160,18 +164,16 @@ class MPIEngineRunner(ProcessEngineRunner):
                     f"pid={os.getpid()} token={token} vars={len(cache['data'])} ptrs=[{ptrs}]"
                 )
 
+        data = dict(cache["data"])
+
         shared_mdata = MData(
-            data=cache["data"],
+            data=data,
             dims=cache["dims"],
             extra_data=dict(cache.get("extra_data", {})),
             name=cache["name"],
         )
         mdata.recombine_with_shared(shared_mdata)
         return mdata
-
-    # Backward-compatible alias for callers that used the old method name.
-    def recombine_mdata_with_shared(self, mdata, handle):
-        return self._recombine_mdata_with_shared(mdata, handle)
 
 
 class MPIEngine(ProcessEngine):
@@ -207,7 +209,7 @@ class MPIEngine(ProcessEngine):
         """
         return MPIEngineRunner()
 
-    def init_shared_memory(self, shared_memory, mdata, shared_mdata):
+    def init_shared_memory(self, shared_memory, mdata, shared_mdata, verbosity=0):
         """
         Sets the shared memory for the chunk calculation
 
@@ -219,6 +221,8 @@ class MPIEngine(ProcessEngine):
             The mdata to be used in the chunk calculation
         shared_mdata: foxes.core.MData
             The shared mdata to be used in the chunk calculation
+        verbosity: int
+            The verbosity level, 0=silent
 
         Returns
         -------
@@ -231,7 +235,7 @@ class MPIEngine(ProcessEngine):
         ):
             return None
 
-        dbg = self.verbosity >= 2
+        dbg = verbosity >= 2
         token = str(uuid.uuid4())
         payload = {
             "name": shared_mdata.name,
@@ -241,8 +245,8 @@ class MPIEngine(ProcessEngine):
             "debug": dbg,
         }
         for v, d in shared_mdata.items():
-            assert isinstance(d, np.ndarray) and d.dtype.kind != "O" and d.nbytes, (
-                f"Shared mdata entry '{v}' must be a non-object numpy array with non-zero size"
+            assert isinstance(d, np.ndarray) and d.dtype.kind != "O", (
+                f"Shared mdata entry '{v}' must be a non-object numpy array"
             )
             arr = np.ascontiguousarray(d)
             payload["data"][v] = {
@@ -250,6 +254,19 @@ class MPIEngine(ProcessEngine):
                 "shape": arr.shape,
                 "dtype": arr.dtype.str,
             }
+
+        if len(payload["data"]):
+            self._print_shared_data(
+                MData(
+                    data={name: shared_mdata[name] for name in payload["data"]},
+                    dims={name: shared_mdata.dims[name] for name in payload["data"]},
+                    name=shared_mdata.name,
+                ),
+                verbosity,
+            )
+
+        if len(payload["data"]) == 0:
+            return None
 
         futures = [
             self.submit(_mpi_create_worker_shared_cache, token, payload)
@@ -272,6 +289,25 @@ class MPIEngine(ProcessEngine):
             "debug": dbg,
         }
 
+    def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
+        """Remove entries that worker recombination restores from MPI shared cache."""
+        if shared_handle is None:
+            return
+
+        if shared_handle.get("type") != "mpi_shared_token":
+            raise ValueError(
+                "MPIEngine: unsupported shared handle type, expecting 'mpi_shared_token'"
+            )
+
+        # MPI token handles do not carry a ``data`` dict like ProcessEngine;
+        # shared variable names are available via the shared dims mapping.
+        shared_vars = shared_handle.get("dims", {}).keys()
+
+        for v in shared_vars:
+            if v in mdata:
+                mdata.pop(v)
+                mdata.dims.pop(v)
+
     def release_shared_memory(self, shared_memory, shared_handle):
         """
         Releases the shared memory after the chunk calculation
@@ -284,9 +320,13 @@ class MPIEngine(ProcessEngine):
             The handle for accessing the shared data
 
         """
-        if shared_handle is None or shared_handle.get("type") != "mpi_shared_token":
+        if shared_handle is None:
             shared_memory.clear()
             return
+        if shared_handle.get("type") != "mpi_shared_token":
+            raise ValueError(
+                "MPIEngine: unsupported shared handle type, expecting 'mpi_shared_token'"
+            )
 
         token = shared_handle["token"]
         futures = [

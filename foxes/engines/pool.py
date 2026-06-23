@@ -22,6 +22,12 @@ class PoolEngine(Engine):
         Whether to share the chunk store between chunks.
     pool_args: dict
         Arguments for the pool constructor
+    supports_shared_data: bool
+        Flag for whether this engine supports shared data for chunk calculations.
+    min_shared_array_bytes: int
+        Minimum array size in bytes for placing model data into process
+        shared memory. Arrays with ``nbytes`` less than or equal to this
+        threshold are transferred inline to workers.
 
     :group: engines
 
@@ -33,6 +39,7 @@ class PoolEngine(Engine):
         share_cstore=False,
         pool_args={},
         supports_shared_data=False,
+        min_shared_array_bytes=65536,
         **kwargs,
     ):
         """
@@ -46,6 +53,12 @@ class PoolEngine(Engine):
             Arguments for the pool constructor
         share_cstore: bool
             Whether to share the chunk store between chunks.
+        supports_shared_data: bool
+            Flag for whether this engine supports shared data for chunk calculations.
+        min_shared_array_bytes: int
+            Minimum array size in bytes for placing model data into process
+            shared memory. Arrays with ``nbytes`` less than or equal to this
+            threshold are transferred inline to workers.
         kwargs: dict, optional
             Additional arguments for the base class
 
@@ -54,6 +67,7 @@ class PoolEngine(Engine):
         self.share_cstore = share_cstore
         self.pool_args = pool_args
         self.supports_shared_data = supports_shared_data
+        self.min_shared_array_bytes = int(min_shared_array_bytes)
 
     @abstractmethod
     def _create_pool(self):
@@ -64,6 +78,17 @@ class PoolEngine(Engine):
     def _shutdown_pool(self):
         """Shuts down the pool"""
         pass
+
+    def _print_shared_data(self, shared_mdata, verbosity):
+        """Print diagnostics for data that is actually backed by shared storage."""
+        if (
+            verbosity > 1
+            and shared_mdata is not None
+            and (len(shared_mdata) > 0 or len(shared_mdata.extra_data) > 0)
+        ):
+            print(f"\n\n{type(self).__name__} shared data:\n")
+            print(shared_mdata)
+            print()
 
     def __enter__(self):
         self._create_pool()
@@ -260,7 +285,7 @@ class PoolEngine(Engine):
                         i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
                         # get this chunk's data:
-                        data, shrd = self.get_chunk_input_data(
+                        data = self.get_chunk_input_data(
                             algo=algo,
                             model_data=model_data,
                             farm_data=farm_data,
@@ -274,26 +299,27 @@ class PoolEngine(Engine):
                             n_chunks_points=n_chunks_targets,
                         )
 
-                        if self.supports_shared_data:
-                            if shared_handle is None:
-                                shrd.extra_data.update(extra_data)
-                                if (self.verbosity > 1 or algo.verbosity > 1) and (
-                                    len(shrd) > 0 or len(extra_data) > 0
-                                ):
-                                    print(f"\n{type(self).__name__} shared data:\n")
-                                    print(shrd)
-                                    print()
+                        if len(extra_data) > 0:
+                            data[0].extra_data.update(extra_data)
 
+                        if self.supports_shared_data:
+                            if shared_handle is None and (
+                                len(data[0]) > 0 or len(extra_data) > 0
+                            ):
+                                shared_mdata = data[0].pop_shared(
+                                    min_shared_array_bytes=self.min_shared_array_bytes
+                                )
                                 shared_handle = self.init_shared_memory(
                                     shared_memory,
                                     mdata=data[0],
-                                    shared_mdata=shrd,
+                                    shared_mdata=shared_mdata,
+                                    verbosity=max(self.verbosity, algo.verbosity),
                                 )
-                        else:
-                            if len(extra_data):
-                                shrd.extra_data.update(extra_data)
-                            data[0].recombine_with_shared(shrd)
-                        del shrd
+                                del shared_mdata
+                            elif shared_handle is not None:
+                                self.prepare_chunk_mdata_for_shared(
+                                    data[0], shared_handle
+                                )
 
                         """
                         # For debugging: Check memory usage of main process before submitting the chunk calculation
@@ -350,7 +376,7 @@ class PoolEngine(Engine):
 
         return results_mgr.results
 
-    def init_shared_memory(self, shared_memory, mdata, shared_mdata):
+    def init_shared_memory(self, shared_memory, mdata, shared_mdata, verbosity=0):
         """
         Sets the shared memory for the chunk calculation
 
@@ -362,6 +388,8 @@ class PoolEngine(Engine):
             The mdata to be used in the chunk calculation
         shared_mdata: foxes.core.MData
             The shared mdata to be used in the chunk calculation
+        verbosity: int
+            The verbosity level, 0=silent
 
         Returns
         -------
@@ -371,6 +399,19 @@ class PoolEngine(Engine):
         """
         mdata.recombine_with_shared(shared_mdata)
         return None
+
+    def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
+        """Hook for engine-specific mdata adjustments before worker submission.
+
+        Parameters
+        ----------
+        mdata: foxes.core.MData
+            The chunk model data that will be sent to workers.
+        shared_handle: object
+            The handle that describes shared data for worker recombination.
+
+        """
+        pass
 
     def release_shared_memory(self, shared_memory, shared_handle):
         """

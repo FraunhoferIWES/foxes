@@ -26,7 +26,8 @@ class SingleChunkEngineRunner(EngineRunner):
         **cpars,
     ):
         """Helper function for running in a single chunk."""
-        mdata.recombine_with_shared(shared)
+        if shared is not None:
+            mdata.recombine_with_shared(shared)
         results = model.calculate(algo, mdata, *data, **cpars)
         cstore = (
             {chunk_key: algo.chunk_store[chunk_key]}
@@ -185,6 +186,7 @@ class SingleChunkEngine(Engine):
         model_data,
         farm_data=None,
         point_data=None,
+        extra_data={},
         out_vars=[],
         chunk_store={},
         sel=None,
@@ -283,7 +285,7 @@ class SingleChunkEngine(Engine):
             write_nc=write_nc,
         ) as results_mgr:
             runner = self.new_runner()
-            data, shared = self.get_chunk_input_data(
+            data = self.get_chunk_input_data(
                 algo=algo,
                 model_data=model_data,
                 farm_data=farm_data,
@@ -296,6 +298,11 @@ class SingleChunkEngine(Engine):
                 n_chunks_states=1,
                 n_chunks_points=1,
             )
+
+            if len(extra_data) > 0:
+                data[0].extra_data.update(extra_data)
+
+            shared = None
 
             results, cstore = runner.run(
                 algo,

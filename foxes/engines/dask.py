@@ -1,11 +1,9 @@
 import numpy as np
-import xarray as xr
 from copy import deepcopy
-from tqdm.autonotebook import tqdm
 
-from foxes.core import Engine, MData, FData, TData
+from foxes.core import Engine, MData
 from foxes.utils import import_module
-import foxes.constants as FC
+from .process import ProcessEngine, ProcessEngineRunner
 
 
 dask = None
@@ -43,185 +41,82 @@ def _run_map(func, inputs, *args, **kwargs):
     return [func(x, *args, **kwargs) for x in inputs]
 
 
-class DaskBaseEngine(Engine):
-    """
-    Abstract base class for foxes calculations with dask.
-
-    Parameters
-    ----------
-    dask_config: dict
-        The dask configuration parameters
-
-    :group: engines
-
-    """
-
-    def __init__(
-        self,
-        *args,
-        dask_config={},
-        **kwargs,
-    ):
-        """
-        Constructor.
-
-        Parameters
-        ----------
-        args: tuple, optional
-            Additional parameters for the base class
-        dask_config: dict, optional
-            The dask configuration parameters
-        kwargs: dict, optional
-            Additional parameters for the base class
-
-        """
-        super().__init__(*args, **kwargs)
-
-        load_dask()
-
-        self.dask_config = dask_config
-        self._dask_progress_bar = False
-        self._pbar = None
-
-    def __enter__(self):
-        if self._dask_progress_bar:
-            self._pbar = ProgressBar(minimum=2)
-            self._pbar.__enter__()
-        dask.config.set(**self.dask_config)
-        return super().__enter__()
-
-    def __exit__(self, *args):
-        if self._dask_progress_bar and self._pbar is not None:
-            self._pbar.__exit__(*args)
-        dask.config.refresh()
-        super().__exit__(*args)
-
-    def submit(self, f, *args, **kwargs):
-        """
-        Submits a job to worker, obtaining a future
-
-        Parameters
-        ----------
-        f: Callable
-            The function f(*args, **kwargs) to be
-            submitted
-        args: tuple, optional
-            Arguments for the function
-        kwargs: dict, optional
-            Arguments for the function
-
-        Returns
-        -------
-        future: object
-            The future object
-
-        """
-        return delayed(f)(*args, **kwargs)
-
-    def future_is_done(self, future):
-        """
-        Checks if a future is done
-
-        Parameters
-        ----------
-        future: object
-            The future
-
-        Returns
-        -------
-        is_done: bool
-            True if the future is done
-
-        """
-        return False
-
-    def await_result(self, future):
-        """
-        Waits for result from a future
-
-        Parameters
-        ----------
-        future: object
-            The future
-
-        Returns
-        -------
-        result: object
-            The calculation result
-
-        """
-        return future.compute()
-
-    def map(
-        self,
-        func,
-        inputs,
-        *args,
-        **kwargs,
-    ):
-        """
-        Runs a function on a list of files
-
-        Parameters
-        ----------
-        func: Callable
-            Function to be called on each file,
-            func(input, *args, **kwargs) -> data
-        inputs: array-like
-            The input data list
-        args: tuple, optional
-            Arguments for func
-        kwargs: dict, optional
-            Keyword arguments for func
-
-        Returns
-        -------
-        results: list
-            The list of results
-
-        """
-        if len(inputs) == 0:
-            return []
-        elif len(inputs) == 1:
-            return [func(inputs[0], *args, **kwargs)]
-        else:
-            inptl = np.array_split(inputs, min(self.n_workers, len(inputs)))
-            futures = []
-            for subi in inptl:
-                futures.append(_run_map(func, subi, *args, **kwargs))
-            results = dask.compute(futures)[0]
-            out = []
-            for r in results:
-                out += r
-            return out
-
-    def chunk_data(self, data):
-        """
-        Applies the selected chunking
-
-        Parameters
-        ----------
-        data: xarray.Dataset
-            The data to be chunked
-
-        Returns
-        -------
-        data: xarray.Dataset
-            The chunked data
-
-        """
-        cks = {}
-        cks[FC.STATE] = min(data.sizes[FC.STATE], self.chunk_size_states)
-        if FC.TARGET in data.sizes:
-            cks[FC.TARGET] = min(data.sizes[FC.TARGET], self.chunk_size_points)
-
-        if len(set(cks.keys()).intersection(data.coords.keys())):
-            return data.chunk({v: d for v, d in cks.items() if v in data.coords})
-        else:
-            return data
+def _as_shared_local(arr):
+    """Identity helper for delayed local shared-array references."""
+    return arr
 
 
-class DaskEngine(DaskBaseEngine):
+def _recombine_mdata_with_shared(mdata, shared):
+    """Recombine chunk mdata with dask shared token data."""
+    if shared is None:
+        return mdata
+    if shared.get("type") != "dask_shared_token":
+        raise ValueError(
+            "DaskEngine: unsupported shared handle type, expecting 'dask_shared_token'"
+        )
+
+    shared_extra_data = shared.get("extra_data")
+    shared_mdata = MData(
+        data=shared.get("data", {}),
+        dims=shared["dims"],
+        extra_data={} if shared_extra_data is None else dict(shared_extra_data),
+        name=shared["name"],
+    )
+
+    for name in shared_mdata.keys():
+        if name in mdata:
+            mdata.pop(name)
+            mdata.dims.pop(name)
+
+    mdata.recombine_with_shared(shared_mdata)
+    return mdata
+
+
+class DaskProcessRunner(ProcessEngineRunner):
+    """Process runner variant that supports dask shared-token payloads."""
+
+    @staticmethod
+    def _resolve_shared_value(value):
+        """Resolve dask future/delayed values to concrete data."""
+        if hasattr(value, "result") and callable(value.result):
+            return value.result()
+        if hasattr(value, "compute") and callable(value.compute):
+            return value.compute()
+        return value
+
+    def _recombine_mdata_with_shared(self, mdata, handle):
+        """Recombine model data with either process-shm or dask token payload."""
+        if handle is None:
+            return mdata
+
+        if handle.get("type") != "dask_shared_token":
+            return super()._recombine_mdata_with_shared(mdata, handle)
+
+        shared_data = {}
+        for name, value in handle.get("data", {}).items():
+            shared_data[name] = self._resolve_shared_value(value)
+
+        shared_extra_data = handle.get("extra_data")
+        if shared_extra_data is not None:
+            shared_extra_data = self._resolve_shared_value(shared_extra_data)
+
+        shared_mdata = MData(
+            data=shared_data,
+            dims=handle["dims"],
+            extra_data={} if shared_extra_data is None else dict(shared_extra_data),
+            name=handle["name"],
+        )
+
+        for name in shared_mdata.keys():
+            if name in mdata:
+                mdata.pop(name)
+                mdata.dims.pop(name)
+
+        mdata.recombine_with_shared(shared_mdata)
+        return mdata
+
+
+class DaskEngine(ProcessEngine):
     """
     The dask engine for delayed foxes calculations.
 
@@ -232,6 +127,9 @@ class DaskEngine(DaskBaseEngine):
     def __init__(
         self,
         *args,
+        dask_config={},
+        supports_shared_data=True,
+        min_shared_array_bytes=0,
         progress_bar=True,
         **kwargs,
     ):
@@ -248,279 +146,132 @@ class DaskEngine(DaskBaseEngine):
             Additional parameters for the base class
 
         """
-        super().__init__(*args, progress_bar=None, **kwargs)
+        load_dask()
+        super().__init__(
+            *args,
+            supports_shared_data=supports_shared_data,
+            min_shared_array_bytes=min_shared_array_bytes,
+            progress_bar=None,
+            **kwargs,
+        )
+        self.dask_config = dask_config
         self._dask_progress_bar = progress_bar
+        self._pbar = None
 
-    def run_calculation(
+    def __enter__(self):
+        if self._dask_progress_bar:
+            self._pbar = ProgressBar(minimum=2)
+            self._pbar.__enter__()
+        dask.config.set(**self.dask_config)
+        return Engine.__enter__(self)
+
+    def __exit__(self, *args):
+        if self._dask_progress_bar and self._pbar is not None:
+            self._pbar.__exit__(*args)
+        dask.config.refresh()
+        Engine.__exit__(self, *args)
+
+    def submit(self, f, *args, **kwargs):
+        """Submits a job to worker, obtaining a future."""
+        return delayed(f)(*args, **kwargs)
+
+    def future_is_done(self, future):
+        """Checks if a future is done."""
+        return False
+
+    def await_result(self, future):
+        """Waits for result from a future."""
+        return future.compute()
+
+    def new_runner(self):
+        """Creates a dask-aware runner for ProcessEngine chunk execution."""
+        return DaskProcessRunner()
+
+    def _print_shared_data(self, shared_mdata, verbosity):
+        """Print diagnostics for data prepared as shared token payload."""
+        if (
+            verbosity > 1
+            and shared_mdata is not None
+            and (len(shared_mdata) > 0 or len(shared_mdata.extra_data) > 0)
+        ):
+            print(f"\n{type(self).__name__} shared data:\n")
+            print(shared_mdata)
+            print()
+
+    def init_shared_memory(self, shared_memory, mdata, shared_mdata, verbosity=0):
+        """Create dask shared-data token for chunk calculations."""
+        if shared_mdata is None or (
+            len(shared_mdata) == 0 and len(shared_mdata.extra_data) == 0
+        ):
+            return None
+
+        shared_data = {}
+        for name, data in shared_mdata.items():
+            arr = np.ascontiguousarray(data)
+            ref = delayed(_as_shared_local)(arr)
+            shared_data[name] = ref
+            shared_memory.append(ref)
+
+        if len(shared_data) > 0 or len(shared_mdata.extra_data) > 0:
+            self._print_shared_data(shared_mdata, verbosity=verbosity)
+
+        return {
+            "type": "dask_shared_token",
+            "name": shared_mdata.name,
+            "dims": shared_mdata.dims,
+            "data": shared_data,
+            "extra_data": dict(shared_mdata.extra_data),
+        }
+
+    def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
+        """Remove entries that are restored from dask shared token in workers."""
+        if shared_handle is None:
+            return
+        if shared_handle.get("type") != "dask_shared_token":
+            raise ValueError(
+                "DaskEngine: unsupported shared handle type, expecting 'dask_shared_token'"
+            )
+        for v in shared_handle.get("data", {}).keys():
+            if v in mdata:
+                mdata.pop(v)
+                mdata.dims.pop(v)
+
+    def release_shared_memory(self, shared_memory, shared_handle):
+        """Release dask shared-data references after chunk calculations."""
+        if shared_handle is None:
+            shared_memory.clear()
+            return
+        if shared_handle.get("type") != "dask_shared_token":
+            raise ValueError(
+                "DaskEngine: unsupported shared handle type, expecting 'dask_shared_token'"
+            )
+        shared_memory.clear()
+
+    def map(
         self,
-        algo,
-        model,
-        model_data=None,
-        farm_data=None,
-        point_data=None,
-        out_vars=[],
-        chunk_store={},
-        sel=None,
-        isel=None,
-        iterative=False,
-        write_nc=None,
-        write_chunk_ani=None,
-        **calc_pars,
+        func,
+        inputs,
+        *args,
+        **kwargs,
     ):
-        """
-        Runs the model calculation
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm object
-        model: foxes.core.DataCalcModel
-            The model that whose calculate function
-            should be run
-        model_data: xarray.Dataset
-            The initial model data
-        farm_data: xarray.Dataset
-            The initial farm data
-        point_data: xarray.Dataset
-            The initial point data
-        out_vars: list of str, optional
-            Names of the output variables
-        chunk_store: foxes.utils.Dict
-            The chunk store
-        sel: dict, optional
-            Selection of coordinate subsets
-        isel: dict, optional
-            Selection of coordinate subsets index values
-        iterative: bool
-            Flag for use within the iterative algorithm
-        write_nc: dict, optional
-            Parameters for writing results to netCDF files, e.g.
-            {'out_dir': 'results', 'base_name': 'calc_results',
-            'ret_data': False, 'split': 1000}.
-
-            The split parameter controls how the output is split:
-            - 'chunks': one file per chunk (fastest method),
-            - 'input': split according to sizes of multiple states input files,
-            - int: split with this many states per file,
-            - None: create a single output file.
-
-            Use ret_data = False together with non-single file writing
-            to avoid constructing the full Dataset in memory.
-        write_chunk_ani: dict, optional
-            Parameters for writing chunk animations, e.g.
-            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
-            'resolution': 100, 'chunk': 5}.'}
-            The chunk is either an integer that refers to a states chunk,
-            or a  tuple (states_chunk_index, points_chunk_index), or a list
-            of such entries.
-        calc_pars: dict, optional
-            Additional parameters for the model.calculate()
-
-        Returns
-        -------
-        results: xarray.Dataset
-            The model results
-
-        """
-
-        # subset selection:
-        model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel
-        )
-
-        # basic checks:
-        super().run_calculation(algo, model, model_data, farm_data, point_data)
-
-        # prepare:
-        n_states = model_data.sizes[FC.STATE]
-        out_dims = model.output_coords()
-        coords = {}
-        if FC.STATE in out_dims and FC.STATE in model_data.coords:
-            coords[FC.STATE] = model_data[FC.STATE].to_numpy()
-        if farm_data is None:
-            farm_data = xr.Dataset()
-        goal_data = farm_data if point_data is None else point_data
-        algo.reset_chunk_store(chunk_store)
-        new_chunk_store = {}
-
-        # calculate chunk sizes:
-        n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
-            n_states, n_targets
-        )
-        n_chunks_states = len(chunk_sizes_states)
-        n_chunks_targets = len(chunk_sizes_targets)
-        self.print(
-            f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
-            level=2,
-        )
-
-        # submit chunks:
-        n_chunks_all = n_chunks_states * n_chunks_targets
-        self.print(
-            f"Submitting {n_chunks_all} chunks to {self.n_workers} workers", level=2
-        )
-        pbar = (
-            tqdm(total=n_chunks_all)
-            if self.verbosity > 1 and self._dask_progress_bar
-            else None
-        )
-        with self.new_chunk_results_manager(
-            algo,
-            goal_data=goal_data,
-            chunk_store=new_chunk_store,
-            n_chunks_states=n_chunks_states,
-            n_chunks_targets=n_chunks_targets,
-            out_vars=out_vars,
-            out_dims=out_dims,
-            coords=coords,
-            iterative=iterative,
-            write_nc=write_nc,
-        ) as results_mgr:
-            futures = {}
-            i0_states = 0
-            counter = 0
-            pdone = -1
-            for chunki_states in range(n_chunks_states):
-                i1_states = i0_states + chunk_sizes_states[chunki_states]
-                i0_targets = 0
-                for chunki_points in range(n_chunks_targets):
-                    key = (chunki_states, chunki_points)
-                    i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-
-                    # get this chunk's data:
-                    data = self.get_chunk_input_data(
-                        algo=algo,
-                        model_data=model_data,
-                        farm_data=farm_data,
-                        point_data=point_data,
-                        states_i0_i1=(i0_states, i1_states),
-                        targets_i0_i1=(i0_targets, i1_targets),
-                        out_vars=out_vars,
-                        chunki_states=chunki_states,
-                        chunki_points=chunki_points,
-                        n_chunks_states=n_chunks_states,
-                        n_chunks_points=n_chunks_targets,
-                    )
-
-                    # submit model calculation:
-                    futures[(chunki_states, chunki_points)] = delayed(_run_shared)(
-                        algo,
-                        model,
-                        *data,
-                        chunk_key=key,
-                        out_dims=out_dims,
-                        write_nc=write_nc,
-                        write_chunk_ani=write_chunk_ani,
-                        **calc_pars,
-                    )
-                    del data
-
-                    i0_targets = i1_targets
-
-                    counter += 1
-                    if pbar is not None:
-                        pbar.update()
-                    elif self.verbosity > 1 and self.prints_progress:
-                        pr = int(100 * counter / n_chunks_states)
-                        if pr > pdone:
-                            pdone = pr
-                            print(
-                                f"{self.name}: Submitted {counter} of {n_chunks_states} chunks, {pdone}%"
-                            )
-                i0_states = i1_states
-
-            del farm_data, point_data, calc_pars
-            if pbar is not None:
-                pbar.close()
-
-            # wait for results:
-            if n_chunks_all > 1 or self.verbosity > 1:
-                self.print(
-                    f"Computing {n_chunks_all} chunks using {self.n_workers} workers"
-                )
+        """Runs a function on a list of files."""
+        if len(inputs) == 0:
+            return []
+        elif len(inputs) == 1:
+            return [func(inputs[0], *args, **kwargs)]
+        else:
+            inptl = np.array_split(inputs, min(self.n_workers, len(inputs)))
+            futures = []
+            for subi in inptl:
+                futures.append(_run_map(func, subi, *args, **kwargs))
             results = dask.compute(futures)[0]
-            results_mgr.update(results)
-
-        # update chunk store:
-        chunk_store.update(new_chunk_store)
-        algo.reset_chunk_store(chunk_store)
-
-        return results_mgr.results
+            out = []
+            for r in results:
+                out += r
+            return out
 
 
-def _run_on_cluster(
-    algo,
-    model,
-    *data,
-    names,
-    dims,
-    out_dims,
-    mdata_size,
-    fdata_size,
-    iterative,
-    chunk_store,
-    chunki_states,
-    chunki_points,
-    n_chunks_states,
-    n_chunks_points,
-    i0_states,
-    write_nc,
-    write_chunk_ani,
-    cpars,
-):
-    """Helper function for running on a cluster"""
-
-    algo.reset_chunk_store(chunk_store)
-
-    mdata = MData(
-        data={names[i]: data[i] for i in range(mdata_size)},
-        dims={names[i]: dims[i] for i in range(mdata_size)},
-        chunki_states=chunki_states,
-        chunki_points=chunki_points,
-        n_chunks_states=n_chunks_states,
-        n_chunks_points=n_chunks_points,
-        states_i0=i0_states,
-    )
-
-    fdata_end = mdata_size + fdata_size
-    fdata = FData(
-        data={names[i]: data[i].copy() for i in range(mdata_size, fdata_end)},
-        dims={names[i]: dims[i] for i in range(mdata_size, fdata_end)},
-        chunki_states=chunki_states,
-        chunki_points=chunki_points,
-        n_chunks_states=n_chunks_states,
-        n_chunks_points=n_chunks_points,
-        states_i0=i0_states,
-    )
-
-    tdata = None
-    if len(data) > fdata_end:
-        tdata = TData(
-            data={names[i]: data[i].copy() for i in range(fdata_end, len(data))},
-            dims={names[i]: dims[i] for i in range(fdata_end, len(data))},
-            chunki_states=chunki_states,
-            chunki_points=chunki_points,
-            n_chunks_states=n_chunks_states,
-            n_chunks_points=n_chunks_points,
-            states_i0=i0_states,
-        )
-
-    data = [d for d in [mdata, fdata, tdata] if d is not None]
-
-    results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store() if iterative else {}
-
-    k = (chunki_states, chunki_points)
-    cstore = {k: chunk_store[k]} if k in chunk_store else {}
-
-    _write_ani(algo, k, write_chunk_ani, *data)
-    results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
-
-    return results, cstore
-
-
-class LocalClusterEngine(DaskBaseEngine):
+class LocalClusterEngine(ProcessEngine):
     """
     The dask engine for foxes calculations on a local cluster.
 
@@ -538,6 +289,9 @@ class LocalClusterEngine(DaskBaseEngine):
     def __init__(
         self,
         *args,
+        dask_config={},
+        supports_shared_data=True,
+        min_shared_array_bytes=0,
         cluster_pars={},
         client_pars={},
         **kwargs,
@@ -548,7 +302,7 @@ class LocalClusterEngine(DaskBaseEngine):
         Parameters
         ----------
         args: tuple, optional
-            Additional parameters for the DaskBaseEngine class
+            Additional parameters for the ProcessEngine class
         cluster_pars: dict
             Parameters for the cluster
         client_pars: dict
@@ -557,12 +311,19 @@ class LocalClusterEngine(DaskBaseEngine):
             Additional parameters for the base class
 
         """
-        super().__init__(*args, **kwargs)
+        load_dask()
+        super().__init__(
+            *args,
+            supports_shared_data=supports_shared_data,
+            min_shared_array_bytes=min_shared_array_bytes,
+            **kwargs,
+        )
 
         load_distributed()
 
         self.cluster_pars = cluster_pars
         self.client_pars = client_pars
+        self.dask_config = dask_config
 
         self.dask_config["scheduler"] = "distributed"
         self.dask_config["distributed.scheduler.worker-ttl"] = None
@@ -578,7 +339,8 @@ class LocalClusterEngine(DaskBaseEngine):
         self._client = distributed.Client(self._cluster, **self.client_pars).__enter__()
         self.print(self._cluster)
         self.print(f"Dashboard: {self._client.dashboard_link}\n")
-        return super().__enter__()
+        dask.config.set(**self.dask_config)
+        return Engine.__enter__(self)
 
     def __exit__(self, *args):
         self.print(f"Shutting down {type(self._cluster).__name__}")
@@ -588,7 +350,59 @@ class LocalClusterEngine(DaskBaseEngine):
         # self._client.shutdown()
         self._client.__exit__(*args)
         self._cluster.__exit__(*args)
-        super().__exit__(*args)
+        dask.config.refresh()
+        Engine.__exit__(self, *args)
+
+    def init_shared_memory(self, shared_memory, mdata, shared_mdata, verbosity=0):
+        """Create dask shared-data token for chunk calculations."""
+        if shared_mdata is None or (
+            len(shared_mdata) == 0 and len(shared_mdata.extra_data) == 0
+        ):
+            return None
+
+        shared_data = {}
+        for name, data in shared_mdata.items():
+            arr = np.ascontiguousarray(data)
+            ref = self._client.scatter(arr, broadcast=True, hash=False)
+            shared_data[name] = ref
+            shared_memory.append(ref)
+
+        if len(shared_data) > 0 or len(shared_mdata.extra_data) > 0:
+            self._print_shared_data(shared_mdata, verbosity=verbosity)
+
+        return {
+            "type": "dask_shared_token",
+            "name": shared_mdata.name,
+            "dims": shared_mdata.dims,
+            "data": shared_data,
+            "extra_data": dict(shared_mdata.extra_data),
+        }
+
+    def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
+        """Remove entries that are restored from dask shared token in workers."""
+        if shared_handle is None:
+            return
+        if shared_handle.get("type") != "dask_shared_token":
+            raise ValueError(
+                "DaskEngine: unsupported shared handle type, expecting 'dask_shared_token'"
+            )
+        for v in shared_handle.get("data", {}).keys():
+            if v in mdata:
+                mdata.pop(v)
+                mdata.dims.pop(v)
+
+    def release_shared_memory(self, shared_memory, shared_handle):
+        """Release dask shared-data references after chunk calculations."""
+        if shared_handle is None:
+            shared_memory.clear()
+            return
+        if shared_handle.get("type") != "dask_shared_token":
+            raise ValueError(
+                "DaskEngine: unsupported shared handle type, expecting 'dask_shared_token'"
+            )
+        if len(shared_memory):
+            self._client.cancel(shared_memory)
+        shared_memory.clear()
 
     def __del__(self):
         if hasattr(self, "_client") and self._client is not None:
@@ -653,217 +467,9 @@ class LocalClusterEngine(DaskBaseEngine):
         """
         return future.result()
 
-    def run_calculation(
-        self,
-        algo,
-        model,
-        model_data=None,
-        farm_data=None,
-        point_data=None,
-        out_vars=[],
-        chunk_store={},
-        sel=None,
-        isel=None,
-        iterative=False,
-        write_nc=None,
-        write_chunk_ani=None,
-        **calc_pars,
-    ):
-        """
-        Runs the model calculation
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm object
-        model: foxes.core.DataCalcModel
-            The model that whose calculate function
-            should be run
-        model_data: xarray.Dataset
-            The initial model data
-        farm_data: xarray.Dataset
-            The initial farm data
-        point_data: xarray.Dataset
-            The initial point data
-        out_vars: list of str, optional
-            Names of the output variables
-        chunk_store: foxes.utils.Dict
-            The chunk store
-        sel: dict, optional
-            Selection of coordinate subsets
-        isel: dict, optional
-            Selection of coordinate subsets index values
-        iterative: bool
-            Flag for use within the iterative algorithm
-        write_nc: dict, optional
-            Parameters for writing results to netCDF files, e.g.
-            {'out_dir': 'results', 'base_name': 'calc_results',
-            'ret_data': False, 'split': 1000}.
-
-            The split parameter controls how the output is split:
-            - 'chunks': one file per chunk (fastest method),
-            - 'input': split according to sizes of multiple states input files,
-            - int: split with this many states per file,
-            - None: create a single output file.
-
-            Use ret_data = False together with non-single file writing
-            to avoid constructing the full Dataset in memory.
-        write_chunk_ani: dict, optional
-            Parameters for writing chunk animations, e.g.
-            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
-            'resolution': 100, 'chunk': 5}.'}
-            The chunk is either an integer that refers to a states chunk,
-            or a  tuple (states_chunk_index, points_chunk_index), or a list
-            of such entries.
-        calc_pars: dict, optional
-            Additional parameters for the model.calculate()
-
-        Returns
-        -------
-        results: xarray.Dataset
-            The model results
-
-        """
-        # subset selection:
-        model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel
-        )
-
-        # basic checks:
-        super().run_calculation(algo, model, model_data, farm_data, point_data)
-
-        # prepare:
-        n_states = model_data.sizes[FC.STATE]
-        out_dims = model.output_coords()
-        coords = {}
-        if FC.STATE in out_dims and FC.STATE in model_data.coords:
-            coords[FC.STATE] = model_data[FC.STATE].to_numpy()
-        if farm_data is None:
-            farm_data = xr.Dataset()
-        goal_data = farm_data if point_data is None else point_data
-        new_chunk_store = {}
-
-        # calculate chunk sizes:
-        n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
-            n_states, n_targets
-        )
-        n_chunks_states = len(chunk_sizes_states)
-        n_chunks_targets = len(chunk_sizes_targets)
-        self.print(
-            f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
-            level=2,
-        )
-
-        # scatter algo and model:
-        falgo = self._client.scatter(algo, broadcast=True)
-        fmodel = self._client.scatter(model, broadcast=True)
-        cpars = self._client.scatter(calc_pars, broadcast=True)
-        all_data = [falgo, fmodel, cpars]
-
-        # scatter chunk store data:
-        cstore = chunk_store
-        if len(cstore):
-            cstore = self._client.scatter(cstore, hash=False)
-            all_data.append(cstore)
-
-        # start calculation:
-        with self.new_chunk_results_manager(
-            algo,
-            chunk_store=new_chunk_store,
-            goal_data=goal_data,
-            n_chunks_states=n_chunks_states,
-            n_chunks_targets=n_chunks_targets,
-            out_vars=out_vars,
-            out_dims=out_dims,
-            coords=coords,
-            iterative=iterative,
-            write_nc=write_nc,
-        ) as results_mgr:
-            futures = {}
-            results = {}
-            i0_states = 0
-            for chunki_states in range(n_chunks_states):
-                i1_states = i0_states + chunk_sizes_states[chunki_states]
-                i0_targets = 0
-                for chunki_points in range(n_chunks_targets):
-                    i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-
-                    # get this chunk's data:
-                    data = self.get_chunk_input_data(
-                        algo=algo,
-                        model_data=model_data,
-                        farm_data=farm_data,
-                        point_data=point_data,
-                        states_i0_i1=(i0_states, i1_states),
-                        targets_i0_i1=(i0_targets, i1_targets),
-                        out_vars=out_vars,
-                        chunki_states=chunki_states,
-                        chunki_points=chunki_points,
-                        n_chunks_states=n_chunks_states,
-                        n_chunks_points=n_chunks_targets,
-                    )
-
-                    # scatter data:
-                    fut_data = []
-                    names = []
-                    dims = []
-                    ldims = [d.loop_dims for d in data]
-                    for dt in data:
-                        for k, d in dt.items():
-                            fut_data.append(self._client.scatter(d, hash=False))
-                            names.append(k)
-                            dims.append(dt.dims[k])
-                    names = self._client.scatter(names)
-                    dims = self._client.scatter(dims)
-                    ldims = self._client.scatter(ldims)
-                    all_data += [fut_data, names, dims, ldims]
-
-                    # submit model calculation:
-                    futures[(chunki_states, chunki_points)] = self.submit(
-                        _run_on_cluster,
-                        falgo,
-                        fmodel,
-                        *fut_data,
-                        names=names,
-                        dims=dims,
-                        out_dims=out_dims,
-                        mdata_size=len(data[0]),
-                        fdata_size=len(data[1]),
-                        iterative=iterative,
-                        chunk_store=cstore,
-                        chunki_states=chunki_states,
-                        chunki_points=chunki_points,
-                        n_chunks_states=n_chunks_states,
-                        n_chunks_points=n_chunks_targets,
-                        i0_states=i0_states,
-                        write_nc=write_nc,
-                        write_chunk_ani=write_chunk_ani,
-                        cpars=cpars,
-                        retries=10,
-                    )
-                    del fut_data
-
-                    i0_targets = i1_targets
-
-                    while len(futures) > self.n_workers * 2:
-                        k = next(iter(futures))
-                        results[k] = self.await_result(futures.pop(k))
-                        results_mgr.update(results, futures)
-
-                i0_states = i1_states
-
-            del falgo, fmodel, farm_data, point_data, calc_pars
-
-            for k in list(futures.keys()):
-                results[k] = self.await_result(futures.pop(k))
-                results_mgr.update(results, futures)
-
-        # update chunk store:
-        chunk_store.update(new_chunk_store)
-        algo.reset_chunk_store(chunk_store)
-
-        return results_mgr.results
+    def new_runner(self):
+        """Creates a dask-aware runner for ProcessEngine chunk execution."""
+        return DaskProcessRunner()
 
 
 class SlurmClusterEngine(LocalClusterEngine):
@@ -894,4 +500,4 @@ class SlurmClusterEngine(LocalClusterEngine):
         self.print(f"Dashboard: {self._client.dashboard_link}\n")
         print(self._cluster.job_script())
 
-        return DaskBaseEngine.__enter__(self)
+        return LocalClusterEngine.__enter__(self)
