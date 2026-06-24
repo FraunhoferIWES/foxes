@@ -118,6 +118,7 @@ class ProcessEngineRunner(EngineRunner):
             data=data,
             dims=handle["dims"],
             extra_data={} if shared_extra_data is None else dict(shared_extra_data),
+            raw=True,
             name=handle["name"],
         )
 

@@ -49,6 +49,7 @@ class Data(Dict[str, np.ndarray]):
         n_chunks_states=None,
         n_chunks_points=None,
         extra_data={},
+        raw=False,
         name="data",
     ):
         """
@@ -76,6 +77,8 @@ class Data(Dict[str, np.ndarray]):
             The number of points chunks
         extra_data: dict, optional
             Additional data that is not dimensioned
+        raw: bool
+            If True, skip the data checks and auto update
         name: str
             The data container name
 
@@ -94,10 +97,10 @@ class Data(Dict[str, np.ndarray]):
         self.__n_chunks_points = n_chunks_points
 
         self.sizes = {}
-        for v, d in data.items():
-            self._run_entry_checks(v, d, dims[v])
-
-        self._auto_update()
+        if not raw:
+            for v, d in data.items():
+                self._run_entry_checks(v, d, dims[v])
+            self._auto_update()
 
     def to_dataset(self):
         """
@@ -120,8 +123,8 @@ class Data(Dict[str, np.ndarray]):
     def __str__(self):
         def _fmt_size(nbytes):
             if nbytes >= 1024 * 1024:
-                return f"{nbytes / (1024 * 1024):.2f}MB"
-            return f"{nbytes / 1024:.2f}KB"
+                return f"{nbytes / (1024 * 1024):.0f}MB"
+            return f"{nbytes / 1024:.0f}kB"
 
         def _summary(value, level=0):
             if isinstance(value, np.ndarray):
@@ -530,6 +533,7 @@ class Data(Dict[str, np.ndarray]):
             data,
             dims,
             extra_data=extra_data,
+            raw=True,
             name=self.name + "_shared",
         )
 

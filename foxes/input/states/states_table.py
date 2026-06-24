@@ -140,7 +140,7 @@ class StatesTable(States):
         self.states_sel = states_sel
         self.states_loc = states_loc
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -148,10 +148,23 @@ class StatesTable(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
         self._profiles = {}
@@ -168,7 +181,7 @@ class StatesTable(States):
                     f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
                 )
 
-        super().initialize(algo, verbosity, force=force)
+        return super().initialize(algo, loaded_data, force=force, verbosity=verbosity)
 
     def sub_models(self):
         """
@@ -182,32 +195,33 @@ class StatesTable(States):
         """
         return list(self._profiles.values())
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
-        Load and/or create all model data that is subject to chunking.
+        Load and/or create all data required for model calculations.
 
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
+        The function adds to loaded_data.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
         self.WEIGHT = self.var(FV.WEIGHT)
+
+        if not force and self.DATA in loaded_data["data_vars"]:
+            return
 
         if isinstance(self.data_source, pd.DataFrame):
             data = self.data_source
@@ -235,6 +249,8 @@ class StatesTable(States):
         self._N = len(data.index)
         self.__inds = data.index.to_numpy()
 
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         weights = None
         if col_w in data:
@@ -261,13 +277,10 @@ class StatesTable(States):
                 )
         data = data[tcols]
 
-        idata = super().load_data(algo, verbosity)
-        idata["coords"][self.VARS] = self._tvars
-        idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
+        loaded_data["coords"][self.VARS] = self._tvars
+        loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
         if weights is not None:
-            idata["data_vars"][self.WEIGHT] = (FC.STATE, weights)
-
-        return idata
+            loaded_data["data_vars"][self.WEIGHT] = (FC.STATE, weights)
 
     def size(self):
         """
@@ -411,7 +424,7 @@ class StatesTable(States):
             (n_states, n_targets, n_tpoints)
 
         """
-        self.ensure_output_vars(algo, tdata)
+        super().calculate(algo, mdata, fdata, tdata)
 
         for i, v in enumerate(self._tvars):
             tdata[v][:] = mdata[self.DATA][:, i, None, None]
@@ -432,23 +445,6 @@ class StatesTable(States):
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level
-
-        """
-        self._N = None
-        self._tvars = None
-
-        super().finalize(algo, verbosity)
 
 
 class Timeseries(StatesTable):

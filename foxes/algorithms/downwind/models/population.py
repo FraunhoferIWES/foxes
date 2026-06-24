@@ -109,11 +109,7 @@ class PopulationStates(States):
         """
 
         # load sub model and memorize new entries:
-        ckeys0 = set(loaded_data["coords"].keys())
-        dkeys0 = set(loaded_data["data_vars"].keys())
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
-        new_ckeys = set(loaded_data["coords"].keys()) - ckeys0
-        new_dkeys = set(loaded_data["data_vars"].keys()) - dkeys0
 
         # prepare:
         self.STATE0 = self.var(FC.STATE + "0")
@@ -127,10 +123,10 @@ class PopulationStates(States):
             return
 
         # reset states dimension:
-        if FC.STATE in new_ckeys:
-            coords[self.STATE0] = coords.pop(FC.STATE)
+        coords[self.STATE0] = self.states.index()
         need_state0 = False
-        for dname in new_dkeys:
+        dkeys = list(data_vars.keys())
+        for dname in dkeys:
             if FC.STATE in data_vars[dname][0]:
                 dims, data = data_vars.pop(dname)
                 dims = tuple([self.STATE0 if d == FC.STATE else d for d in dims])
@@ -434,38 +430,45 @@ class PopulationModel(TurbineModel):
         """
         return self.variables
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
-        Load and/or create all model data that is subject to chunking.
+        Load and/or create all data required for model calculations.
 
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
+        The function adds to loaded_data.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+
+        self.DATA = self.var("DATA")
+        self.VARS = self.var("VARS")
+        if self.DATA in loaded_data["data_vars"]:
+            return
+
         assert isinstance(algo.states, PopulationStates), (
             f"Algorithm '{algo.name}': PopulationModel '{self.name}' requires PopulationStates, found '{type(algo.states).__name__}'"
         )
         algo.init_states()
 
-        n_states0 = algo.states.states.size()
+        self.n_states0 = algo.states.states.size()
+        self._inds0 = algo.states.states.index()
         n_vrs = len(self.variables)
         data = np.zeros(
-            (self.n_pop, n_states0, algo.n_turbines, n_vrs), dtype=config.dtype_double
+            (self.n_pop, self.n_states0, algo.n_turbines, n_vrs),
+            dtype=config.dtype_double,
         )
         for i, v in enumerate(self.variables):
             c = self.var2ncvar.get(v, v)
@@ -475,13 +478,8 @@ class PopulationModel(TurbineModel):
             data[..., i] = self._data.data_vars[c].values[:, None, :]
         data = data.reshape(algo.states.size(), algo.n_turbines, n_vrs)
 
-        self.DATA = self.var("DATA")
-        self.VARS = self.var("VARS")
-        idata = super().load_data(algo, verbosity)
-        idata["coords"][self.VARS] = self.variables
-        idata["data_vars"][self.DATA] = ((FC.STATE, FC.TURBINE, self.VARS), data)
-
-        return idata
+        loaded_data["coords"][self.VARS] = self.variables
+        loaded_data["data_vars"][self.DATA] = ((FC.STATE, FC.TURBINE, self.VARS), data)
 
     def set_running(
         self,
@@ -514,8 +512,8 @@ class PopulationModel(TurbineModel):
 
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
-        data_stash[self.name] = dict(data=self._data)
-        del self._data
+        data_stash[self.name] = dict(data=self._data, inds0=self._inds0)
+        del self._data, self._inds0
 
     def unset_running(
         self,
@@ -547,6 +545,7 @@ class PopulationModel(TurbineModel):
         super().unset_running(algo, data_stash, sel, isel, verbosity)
         data = data_stash[self.name]
         self._data = data.pop("data")
+        self._inds0 = data.pop("inds0")
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """
@@ -603,9 +602,7 @@ class PopulationModel(TurbineModel):
             f"Algorithm '{algo.name}': PopulationModel '{self.name}' requires PopulationStates, found '{type(algo.states).__name__}'"
         )
 
-        n_states0 = algo.states.states.size()
-        inds0 = algo.states.states.index()
-        coords = {FC.STATE: inds0} if inds0 is not None else {}
+        coords = {FC.STATE: self._inds0} if self._inds0 is not None else {}
         coords.update(
             {c: d.values for c, d in farm_results.coords.items() if c != FC.STATE}
         )
@@ -614,8 +611,12 @@ class PopulationModel(TurbineModel):
         for dname, d in farm_results.data_vars.items():
             if d.dims[0] == FC.STATE:
                 data[dname] = (
-                    (self.index_coord,) + d.dims,
-                    d.values.reshape((self.n_pop, n_states0) + d.shape[1:]),
+                    (FC.POP,) + d.dims,
+                    np.swapaxes(
+                        d.values.reshape((self.n_states0, self.n_pop) + d.shape[1:]),
+                        0,
+                        1,
+                    ),
                 )
             else:
                 data[dname] = (d.dims, d.values)

@@ -795,6 +795,8 @@ class DatasetStates(States):
 
         """
 
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+
         # check if already loaded:
         self.META = self.var("meta")
         edata = loaded_data["extra_data"]

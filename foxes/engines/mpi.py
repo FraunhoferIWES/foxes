@@ -171,6 +171,7 @@ class MPIEngineRunner(ProcessEngineRunner):
             dims=cache["dims"],
             extra_data=dict(cache.get("extra_data", {})),
             name=cache["name"],
+            raw=True,
         )
         mdata.recombine_with_shared(shared_mdata)
         return mdata

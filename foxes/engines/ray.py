@@ -45,6 +45,7 @@ class RayEngineRunner(ProcessEngineRunner):
             dims=handle["dims"],
             extra_data={} if shared_extra_data is None else dict(shared_extra_data),
             name=handle["name"],
+            raw=True,
         )
 
         mdata.recombine_with_shared(shared_mdata)

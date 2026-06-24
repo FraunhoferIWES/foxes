@@ -61,6 +61,7 @@ def _recombine_mdata_with_shared(mdata, shared):
         dims=shared["dims"],
         extra_data={} if shared_extra_data is None else dict(shared_extra_data),
         name=shared["name"],
+        raw=True,
     )
 
     for name in shared_mdata.keys():
@@ -105,6 +106,7 @@ class DaskProcessRunner(ProcessEngineRunner):
             dims=handle["dims"],
             extra_data={} if shared_extra_data is None else dict(shared_extra_data),
             name=handle["name"],
+            raw=True,
         )
 
         for name in shared_mdata.keys():
