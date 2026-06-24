@@ -63,6 +63,9 @@ class DataCalcModel(Model):
             for point data calculations
 
         """
+        for m in self.sub_models():
+            m.load_chunk_data(algo, *data)
+
         if self.load_mode != "preload":
             raise NotImplementedError(
                 f"States '{self.name}': load mode '{self.load_mode}' not implemented."

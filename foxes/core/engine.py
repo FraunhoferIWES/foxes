@@ -591,8 +591,8 @@ class Engine(ABC):
                 copy=True,
             )
         else:
-            fdata = FData.from_mdata(
-                mdata=mdata,
+            fdata = FData.from_data(
+                base_data=mdata,
                 states_i0=i0_states,
             )
 

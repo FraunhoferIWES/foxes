@@ -27,7 +27,7 @@ class PopulationStates(States):
 
     """
 
-    def __init__(self, states, n_pop):
+    def __init__(self, states, n_pop, **kwargs):
         """
         Constructor.
 
@@ -37,115 +37,25 @@ class PopulationStates(States):
             The original states
         n_pop: int
             The population size
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
-        super().__init__()
+        super().__init__(load_mode=states.load_mode, **kwargs)
         self.states = states
         self.n_pop = n_pop
 
-    def load_data(self, algo, verbosity=0):
+    def sub_models(self):
         """
-        Load and/or create all model data that is subject to chunking.
-
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        List of all sub-models.
 
         Returns
         -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
+        smdls: list of foxes.core.Model
+            Names of all sub models
 
         """
-        self.STATE0 = self.var(FC.STATE + "0")
-        self.SMAP = self.var("SMAP")
-
-        idata = super().load_data(algo, verbosity)
-        idata0 = algo.get_model_data(self.states)
-        n_states0 = self.states.size()
-        for cname, coord in idata0["coords"].items():
-            if cname != FC.STATE:
-                idata["coords"][cname] = coord
-            else:
-                idata["coords"][self.STATE0] = coord
-
-        for dname, (dims0, data0) in idata0["data_vars"].items():
-            hdims = tuple(
-                [d if d != FC.STATE else self.STATE0 for d in np.atleast_1d(dims0)]
-            )
-            idata["data_vars"][dname] = (hdims, data0)
-        if FV.WEIGHT not in idata["data_vars"]:
-            idata["data_vars"][FV.WEIGHT] = (
-                (self.STATE0,),
-                np.full(n_states0, 1 / n_states0, dtype=config.dtype_double),
-            )
-
-        smap = np.zeros((self.n_pop, self.states.size()), dtype=np.int32)
-        smap[:] = np.arange(self.states.size())[None, :]
-        smap = smap.reshape(self.size())
-        idata["data_vars"][self.SMAP] = ((FC.STATE,), smap)
-
-        found = False
-        for dname, (dims0, data0) in idata["data_vars"].items():
-            if self.STATE0 in dims0:
-                found = True
-                break
-        if not found:
-            del idata["coords"][self.STATE0]
-
-        return idata
-
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
-        """
-        Initializes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        loaded_data: dict, optional
-            Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force: bool
-            Overwrite existing data
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        loaded_data: dict
-            The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-
-        """
-        if not self.states.initialized:
-            self.states.initialize(algo, loaded_data, force, verbosity)
-        return super().initialize(algo, loaded_data, force, verbosity)
-
-    def size(self):
-        """
-        The total number of states.
-
-        Returns
-        -------
-        int:
-            The total number of states
-
-        """
-        return self.states.size() * self.n_pop
+        return [self.states]
 
     def output_point_vars(self, algo):
         """
@@ -163,6 +73,169 @@ class PopulationStates(States):
 
         """
         return self.states.output_point_vars(algo)
+
+    def size(self):
+        """
+        The total number of states.
+
+        Returns
+        -------
+        int:
+            The total number of states
+
+        """
+        return self.states.size() * self.n_pop
+
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+        """
+        Load and/or create all data required for model calculations.
+
+        The function adds to loaded_data.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+
+        # load sub model and memorize new entries:
+        ckeys0 = set(loaded_data["coords"].keys())
+        dkeys0 = set(loaded_data["data_vars"].keys())
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+        new_ckeys = set(loaded_data["coords"].keys()) - ckeys0
+        new_dkeys = set(loaded_data["data_vars"].keys()) - dkeys0
+
+        # prepare:
+        self.STATE0 = self.var(FC.STATE + "0")
+        self.SMAP = self.var("smap")
+        n_states0 = self.states.size()
+        coords = loaded_data["coords"]
+        data_vars = loaded_data["data_vars"]
+
+        # load only once:
+        if self.SMAP in data_vars:
+            return
+
+        # reset states dimension:
+        if FC.STATE in new_ckeys:
+            coords[self.STATE0] = coords.pop(FC.STATE)
+        need_state0 = False
+        for dname in new_dkeys:
+            if FC.STATE in data_vars[dname][0]:
+                dims, data = data_vars.pop(dname)
+                dims = tuple([self.STATE0 if d == FC.STATE else d for d in dims])
+                data_vars[dname] = (dims, data)
+                need_state0 = True
+
+        # make sure that the weight variable is present:
+        if FV.WEIGHT not in data_vars:
+            data_vars[FV.WEIGHT] = (
+                (self.STATE0,),
+                np.full(n_states0, 1 / n_states0, dtype=config.dtype_double),
+            )
+            need_state0 = True
+
+        # create mapping from new states to original states:
+        smap = np.zeros((self.states.size(), self.n_pop), dtype=config.dtype_int)
+        smap[:] = np.arange(self.states.size())[:, None]
+        smap = smap.reshape(self.size())
+        data_vars[self.SMAP] = ((FC.STATE,), smap)
+
+        # remove state0 from coords if not needed:
+        if self.STATE0 in coords and not need_state0:
+            coords.pop(self.STATE0)
+
+    def load_chunk_data(self, algo, mdata, fdata, tdata):
+        """
+        Load chunk data according to load mode.
+
+        This function adds data to mdata.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+
+        """
+        if self.load_mode == "preload":
+            return
+
+        # prepare mdata:
+        smap = mdata[self.SMAP]
+        i0 = np.min(smap)
+        i1 = np.max(smap) + 1
+        if self.STATE0 in mdata:
+            data = {FC.STATE: mdata[self.STATE0][i0:i1]}
+        else:
+            data = {FC.STATE: np.arange(i0, i1, dtype=config.dtype_int)}
+        dims = {FC.STATE: (FC.STATE,)}
+        for dname, data in mdata.items():
+            dms = mdata.dims[dname]
+            if dname == self.SMAP or dname == self.STATE0:
+                pass
+            elif dms[0] == self.STATE0:
+                data[dname] = data[smap]
+                dims[dname] = tuple([FC.STATE] + list(dms)[1:])
+            elif self.STATE0 in dms:
+                raise ValueError(
+                    f"States '{self.name}': Expecting {self.STATE0} at position 0 for {dname}, got {dms}"
+                )
+            else:
+                data[dname] = data
+                dims[dname] = dms
+        sub_mdata = MData(
+            data=data,
+            dims=dims,
+            chunki_states=mdata.chunki_states,
+            chunki_points=mdata.chunki_points,
+            n_chunks_states=mdata.n_chunks_states,
+            n_chunks_points=mdata.n_chunks_points,
+            extra_data=mdata.extra_data,
+            name=f"{mdata.name}_sub",
+        )
+
+        # load sub model chunk data:
+        keys0 = set(mdata.keys())
+        super().load_chunk_data(algo, sub_mdata, fdata=None, tdata=None)
+        new_keys = set(mdata.keys()) - keys0
+
+        # add new data to mdata:
+        if FC.STATE in new_keys:
+            mdata[self.STATE0] = mdata.pop(FC.STATE)
+            mdata.dims[self.STATE0] = mdata.dims.pop(FC.STATE)
+            new_keys.remove(FC.STATE)
+        else:
+            mdata[self.STATE0] = sub_mdata[FC.STATE]
+            mdata.dims[self.STATE0] = (self.STATE0,)
+        for dname in new_keys:
+            data = sub_mdata[dname]
+            dms = sub_mdata.dims[dname]
+            if dms[0] == FC.STATE:
+                mdata[dname] = data
+                mdata.dims[dname] = tuple([self.STATE0] + list(dms)[1:])
+            elif FC.STATE in dms:
+                raise ValueError(
+                    f"States '{self.name}': Expecting {FC.STATE} at position 0 for {dname}, got {dms} from states '{self.states.name}'"
+                )
+            else:
+                mdata[dname] = data
+                mdata.dims[dname] = dms
 
     def calculate(self, algo, mdata, fdata, tdata):
         """ "
@@ -189,6 +262,8 @@ class PopulationStates(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
+        super().calculate(algo, mdata, fdata, tdata)
+
         smap = mdata[self.SMAP]
 
         def _map(in_data, DClass):
@@ -211,7 +286,9 @@ class PopulationStates(States):
                 else:
                     hdata[dname] = data
                     hdims[dname] = dms
-            return DClass(hdata, hdims, name=in_data.name + "_pop")
+            return DClass.from_data(
+                in_data, data=hdata, dims=hdims, name=in_data.name + "_pop"
+            )
 
         hmdata = _map(mdata, MData)
         hfdata = _map(fdata, FData)

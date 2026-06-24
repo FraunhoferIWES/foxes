@@ -1,7 +1,8 @@
 import numpy as np
 import re
 
-from foxes.core import MData
+import foxes.constants as FC
+from foxes.core import FData, MData
 
 
 def test_pop_shared_extra_data_keeps_strict_threshold_for_arrays():
@@ -117,3 +118,36 @@ def test_data_str_summarizes_without_array_payload_dump():
     assert "array float64 (4,) [0.0...3.0]" in out
     assert "[[" not in out
     assert "array([" not in out
+
+
+def test_from_data_copies_loop_dimensions_and_chunk_meta():
+    mdata = MData(
+        data={
+            FC.STATE: np.array([5, 6], dtype=np.int64),
+            FC.TURBINE: np.array([0, 1, 2], dtype=np.int64),
+        },
+        dims={
+            FC.STATE: (FC.STATE,),
+            FC.TURBINE: (FC.TURBINE,),
+        },
+        loop_dims=[FC.STATE, FC.TURBINE],
+        chunki_states=2,
+        chunki_points=3,
+        n_chunks_states=7,
+        n_chunks_points=11,
+        name="mdata",
+    )
+
+    fdata = FData.from_data(base_data=mdata, states_i0=5)
+
+    assert np.array_equal(fdata[FC.STATE], mdata[FC.STATE])
+    assert np.array_equal(fdata[FC.TURBINE], mdata[FC.TURBINE])
+    assert fdata.dims[FC.STATE] == mdata.dims[FC.STATE]
+    assert fdata.dims[FC.TURBINE] == mdata.dims[FC.TURBINE]
+    assert fdata.sizes[FC.STATE] == mdata.sizes[FC.STATE]
+    assert fdata.sizes[FC.TURBINE] == mdata.sizes[FC.TURBINE]
+    assert fdata.chunki_states == mdata.chunki_states
+    assert fdata.chunki_points == mdata.chunki_points
+    assert fdata.n_chunks_states == mdata.n_chunks_states
+    assert fdata.n_chunks_points == mdata.n_chunks_points
+    assert fdata.states_i0(counter=True) == 5

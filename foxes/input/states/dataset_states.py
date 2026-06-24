@@ -864,6 +864,9 @@ class DatasetStates(States):
 
         """
 
+        # load sub model chunk data:
+        super().load_chunk_data(algo, mdata, fdata, tdata)
+
         # prepare:
         assert FC.STATE in self._cmap, (
             f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {self._cmap}"

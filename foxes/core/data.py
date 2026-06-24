@@ -621,6 +621,49 @@ class Data(Dict[str, np.ndarray]):
 
         return cls(*args, data=data, dims=dims, **kwargs)
 
+    @classmethod
+    def from_data(cls, base_data, *args, callback=None, **kwargs):
+        """
+        Create Data object from another data object.
+
+        Parameters
+        ----------
+        base_data: Data
+            The source data
+        args: tuple, optional
+            Additional parameters for the constructor
+        callback: Function, optional
+            Function f(data, dims) that manipulates
+            the data and dims dicts before construction
+        kwargs: dict, optional
+            Additional parameters for the constructor
+
+        Returns
+        -------
+        data: Data
+            The data object
+
+        """
+        out = cls(
+            *args,
+            states_i0=base_data.states_i0,
+            chunki_states=base_data.chunki_states,
+            chunki_points=base_data.chunki_points,
+            n_chunks_states=base_data.n_chunks_states,
+            n_chunks_points=base_data.n_chunks_points,
+            **kwargs,
+        )
+
+        for v in base_data.loop_dims:
+            out[v] = base_data[v]
+            out.dims[v] = base_data.dims[v]
+            out.sizes[v] = base_data.sizes[v]
+
+        if callback is not None:
+            callback(out, out.dims)
+
+        return out
+
 
 class MData(Data):
     """
@@ -729,48 +772,6 @@ class FData(Data):
         data = cls(*args, **kwargs)
         data.sizes[FC.STATE] = n_states
         data.sizes[FC.TURBINE] = n_turbines
-
-        if callback is not None:
-            callback(data, data.dims)
-
-        return data
-
-    @classmethod
-    def from_mdata(cls, mdata, *args, callback=None, **kwargs):
-        """
-        Create Data object from model data
-
-        Parameters
-        ----------
-        mdata: MData
-            The model data
-        args: tuple, optional
-            Additional parameters for the constructor
-        callback: Function, optional
-            Function f(data, dims) that manipulates
-            the data and dims dicts before construction
-        kwargs: dict, optional
-            Additional parameters for the constructor
-
-        Returns
-        -------
-        data: Data
-            The data object
-
-        """
-        data = cls(
-            *args,
-            chunki_states=mdata.chunki_states,
-            chunki_points=mdata.chunki_points,
-            n_chunks_states=mdata.n_chunks_states,
-            n_chunks_points=mdata.n_chunks_points,
-            **kwargs,
-        )
-
-        for v in [FC.STATE, FC.TURBINE]:
-            data[v] = mdata[v]
-            data.dims[v] = mdata.dims[v]
-            data.sizes[v] = mdata.sizes[v]
 
         if callback is not None:
             callback(data, data.dims)
