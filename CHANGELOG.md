@@ -985,5 +985,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.8.2
 
+- Bugs:
+  - Fixing a crash in `SeqDynamicWakes`, `DynamicWakes`, and `Timelines` when `dt_min` was provided in minutes
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.2](https://github.com/FraunhoferIWES/foxes/commits/v1.8.2)
