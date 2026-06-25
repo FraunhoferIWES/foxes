@@ -227,15 +227,42 @@ class DefaultEngine(Engine):
 
         self.print(f"{type(self).__name__}: Selecting engine '{ename}'", level=1)
 
-        with Engine.new(
-            ename,
-            n_procs=self.n_procs,
-            chunk_size_states=self.chunk_size_states,
-            chunk_size_points=self.chunk_size_points,
-            verbosity=self.verbosity,
-        ) as e:
-            results = e.run_calculation(
-                algo, model, model_data, farm_data, point_data=point_data, **kwargs
-            )
+        # Reuse the delegated process engine directly to avoid nested engine
+        # context entry while DefaultEngine itself is active.
+        if ename == "process":
+            e, temporary = self._get_delegate_process_engine()
+            try:
+                return e.run_calculation(
+                    algo,
+                    model,
+                    model_data,
+                    farm_data,
+                    point_data=point_data,
+                    **kwargs,
+                )
+            finally:
+                self._release_delegate_process_engine(e, temporary)
+
+        suspended_delegate = (
+            hasattr(self, "_delegate_process_engine")
+            and self._delegate_process_engine is not None
+        )
+        if suspended_delegate:
+            self._delegate_process_engine.__exit__(None, None, None)
+
+        try:
+            with Engine.new(
+                ename,
+                n_procs=self.n_procs,
+                chunk_size_states=self.chunk_size_states,
+                chunk_size_points=self.chunk_size_points,
+                verbosity=self.verbosity,
+            ) as e:
+                results = e.run_calculation(
+                    algo, model, model_data, farm_data, point_data=point_data, **kwargs
+                )
+        finally:
+            if suspended_delegate:
+                self._delegate_process_engine.__enter__()
 
         return results

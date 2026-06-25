@@ -119,7 +119,7 @@ class PopulationStates(States):
         data_vars = loaded_data["data_vars"]
 
         # load only once:
-        if self.SMAP in data_vars:
+        if not force and self.SMAP in data_vars:
             return
 
         # reset states dimension:

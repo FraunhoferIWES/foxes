@@ -280,7 +280,7 @@ class StatesTable(States):
         loaded_data["coords"][self.VARS] = self._tvars
         loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
         if weights is not None:
-            loaded_data["data_vars"][self.WEIGHT] = (FC.STATE, weights)
+            loaded_data["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
 
     def size(self):
         """

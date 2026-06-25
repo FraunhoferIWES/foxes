@@ -48,6 +48,25 @@ class _FakeDelegatedEngine:
         return self.engine_type
 
 
+class _GuardedFakeDelegatedEngine(_FakeDelegatedEngine):
+    def __init__(self, engine_type, state):
+        super().__init__(engine_type)
+        self.state = state
+
+    def __enter__(self):
+        if self.state["current"] is not None:
+            raise ValueError(
+                f"Cannot enter engine '{self.engine_type}', "
+                f"since engine already set to '{self.state['current']}'"
+            )
+        self.state["current"] = self.engine_type
+        return super().__enter__()
+
+    def __exit__(self, *args):
+        super().__exit__(*args)
+        self.state["current"] = None
+
+
 def test_default_engine_selects_single_vs_process_by_condition():
     eng = DefaultEngine(n_procs=2, verbosity=0)
 
@@ -100,3 +119,28 @@ def test_default_engine_non_calc_methods_fallback_to_process(monkeypatch):
     assert eng.new_runner() == "process"
 
     assert selected == ["process", "process", "process", "process", "process"]
+
+
+def test_default_engine_run_single_with_active_delegate_process(monkeypatch):
+    selected = []
+    state = {"current": None}
+
+    def _fake_new(engine_type, *args, **kwargs):
+        selected.append(engine_type)
+        return _GuardedFakeDelegatedEngine(engine_type, state)
+
+    monkeypatch.setattr("foxes.engines.default.Engine.new", _fake_new)
+
+    eng = DefaultEngine(n_procs=2, verbosity=0)
+    monkeypatch.setattr(eng, "_select_engine_name", lambda **kwargs: "single")
+
+    algo = _Algo(n_states=10, n_turbines=10)
+
+    with eng:
+        assert state["current"] == "process"
+        result = eng.run_calculation(algo, object(), object(), point_data=None)
+        assert result == "single"
+        assert state["current"] == "process"
+
+    assert state["current"] is None
+    assert selected == ["process", "single"]

@@ -140,6 +140,17 @@ class Algorithm(Model):
             self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
         return self.__loaded_data
 
+    def clear_loaded_data(self):
+        """
+        Clear the loaded data
+
+        Returns
+        -------
+        None
+
+        """
+        self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+
     def get_model_data(self, pop=False):
         """
         Get the model data.
