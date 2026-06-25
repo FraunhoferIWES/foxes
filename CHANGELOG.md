@@ -1007,5 +1007,6 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Added consistency coverage for engines, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
 - Bugs:
   - Fixed `Downwind.calc_points` state-subset handling for point calculations by propagating `states_sel`/`states_isel` to engine-level dataset subsetting, preventing shape mismatch crashes for multi-height states
+  - Reduced farm-controller model-selection memory by storing turbine-model selection masks only for models that need filtering, and as per-model arrays instead of one stacked 3D mask
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)

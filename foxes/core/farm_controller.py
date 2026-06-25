@@ -49,6 +49,8 @@ class FarmController(FarmDataModel):
         self.pre_rotor_models = None
         self.post_rotor_models = None
         self.pars = pars
+        self._tmall = None
+        self._tmsels = None
 
     def sub_models(self):
         """
@@ -175,6 +177,23 @@ class FarmController(FarmDataModel):
                 )
 
         return [m.name for m in tmodels], tmsels
+
+    def _tmodel_sels_var(self, mi):
+        """
+        Gets the mdata variable name of turbine model selections.
+
+        Parameters
+        ----------
+        mi: int
+            The turbine model index
+
+        Returns
+        -------
+        str:
+            The per-model selection variable name
+
+        """
+        return f"{FC.TMODEL_SELS}_{mi}"
 
     @property
     def has_pre_rotor_models(self):
@@ -313,7 +332,7 @@ class FarmController(FarmDataModel):
         self._tmall = [np.all(t) for t in tmsels]
         self.turbine_model_names = mnames_pre + mnames_post
         if len(self.turbine_model_names):
-            self._tmsels = np.stack(tmsels, axis=2)
+            self._tmsels = {mi: t for mi, t in enumerate(tmsels) if not self._tmall[mi]}
         else:
             raise ValueError(f"Controller '{self.name}': No turbine model found.")
 
@@ -327,12 +346,11 @@ class FarmController(FarmDataModel):
             if self._tmall[mi]:
                 s = np.s_[:, :] if downwind_index is None else np.s_[:, downwind_index]
             else:
+                vsel = self._tmodel_sels_var(mi)
                 if downwind_index is None:
-                    s = mdata[FC.TMODEL_SELS][:, :, mi]
+                    s = mdata[vsel]
                 else:
-                    s = np.s_[
-                        mdata[FC.TMODEL_SELS][:, downwind_index, mi], downwind_index
-                    ]
+                    s = np.s_[mdata[vsel][:, downwind_index], downwind_index]
             pars.append({"st_sel": s})
             if m.name in self.pars:
                 pars[-1].update(self.pars[m.name][ptype])
@@ -397,17 +415,16 @@ class FarmController(FarmDataModel):
             The verbosity level, 0 = silent
 
         """
-        if force or (
-            FC.TMODELS not in loaded_data["coords"]
-            or FC.TMODEL_SELS not in loaded_data["data_vars"]
-        ):
+        if force or FC.TMODELS not in loaded_data["coords"]:
             super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
             loaded_data["coords"][FC.TMODELS] = self.turbine_model_names
-            loaded_data["data_vars"][FC.TMODEL_SELS] = (
-                (FC.STATE, FC.TURBINE, FC.TMODELS),
-                self._tmsels,
-            )
+            for mi, tsel in self._tmsels.items():
+                loaded_data["data_vars"][self._tmodel_sels_var(mi)] = (
+                    (FC.STATE, FC.TURBINE),
+                    tsel,
+                )
+            loaded_data["data_vars"].pop(FC.TMODEL_SELS, None)
             self._tmsels = None
 
     def output_farm_vars(self, algo):

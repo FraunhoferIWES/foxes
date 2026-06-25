@@ -578,6 +578,7 @@ class Engine(ABC):
             chunki_points=chunki_points,
             n_chunks_states=n_chunks_states,
             n_chunks_points=n_chunks_points,
+            n_turbines=algo.n_turbines,
         )
 
         # create fdata:
@@ -588,6 +589,7 @@ class Engine(ABC):
                 s_states=s_states,
                 callback=None,
                 states_i0=i0_states,
+                n_turbines=algo.n_turbines,
                 copy=True,
             )
         else:
@@ -605,6 +607,7 @@ class Engine(ABC):
                 s_targets=s_targets,
                 callback=None,
                 states_i0=i0_states,
+                n_turbines=algo.n_turbines,
                 copy=True,
             )
             if point_data is not None

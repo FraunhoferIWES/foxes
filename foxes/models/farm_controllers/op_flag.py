@@ -130,14 +130,22 @@ class OpFlagController(FarmController):
         op_flags = self._op_flags.astype(bool)
 
         off = np.where(~op_flags)
-        tmsels = loaded_data["data_vars"][FC.TMODEL_SELS][1]
-        tmsels[off[0], off[1], :] = False
-        self._tmall = [np.all(t) for t in tmsels]
+        for mi in range(len(self.turbine_model_names)):
+            vsel = self._tmodel_sels_var(mi)
+            if vsel in loaded_data["data_vars"]:
+                tsel = loaded_data["data_vars"][vsel][1]
+            else:
+                tsel = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
+            tsel[off[0], off[1]] = False
 
-        loaded_data["data_vars"][FC.TMODEL_SELS] = (
-            (FC.STATE, FC.TURBINE, FC.TMODELS),
-            tmsels,
-        )
+            if np.all(tsel):
+                loaded_data["data_vars"].pop(vsel, None)
+                self._tmall[mi] = True
+            else:
+                loaded_data["data_vars"][vsel] = ((FC.STATE, FC.TURBINE), tsel)
+                self._tmall[mi] = False
+
+        loaded_data["data_vars"].pop(FC.TMODEL_SELS, None)
         loaded_data["data_vars"][FV.OPERATING] = (
             (FC.STATE, FC.TURBINE),
             op_flags,
