@@ -106,9 +106,8 @@ class DynamicWakes(WakeFrame):
             )
         else:
             n = max(len(times) - 1, 1)
-            self._dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(
-                config.dtype_int
-            )
+            dt = np.timedelta64(int(round(self.dt_min * 60)), "s")
+            self._dt = np.full(n, dt, dtype="timedelta64[s]").astype(config.dtype_int)
         self._dt = np.append(self._dt, self._dt[-1, None], axis=0)
 
         # find max age if not given:

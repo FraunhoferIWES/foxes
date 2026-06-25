@@ -113,9 +113,8 @@ class SeqDynamicWakes(FarmOrder):
             )
         else:
             n = max(len(times) - 1, 1)
-            self._dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(
-                config.dtype_int
-            )
+            dt = np.timedelta64(int(round(self.dt_min * 60)), "s")
+            self._dt = np.full(n, dt, dtype="timedelta64[s]").astype(config.dtype_int)
 
         # init wake traces data:
         self._traces_p = np.zeros(

@@ -73,9 +73,8 @@ class Timelines(WakeFrame):
             )
         else:
             n = max(len(times) - 1, 1)
-            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(
-                config.dtype_int
-            )
+            dt = np.timedelta64(int(round(self.dt_min * 60)), "s")
+            dt = np.full(n, dt, dtype="timedelta64[s]").astype(config.dtype_int)
 
         # prepare mdata:
         data = algo.get_model_data(states)["coords"]

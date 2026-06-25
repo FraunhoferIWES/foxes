@@ -94,12 +94,14 @@ The following optional dependencies are available:
 | Option | Usage                              |
 |--------|------------------------------------|
 | opt    | Installs [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt)  |
-| dask   | Installs dependencies for `dask` engine |
 | icon_dream | Dependencies for `iconDream2foxes` |
 | era5   | Dependencies for `era52foxes`       |
-| test   | Dependencies for running the tests  |
 | doc    | Dependencies for creating the docs  |
 | dev    | Handy packages for work on code dev |
+| test   | Dependencies for running the tests  |
+| dask   | Installs dependencies for `dask` engine |
+| mpi    | Installs dependencies for `mpi` engine |
+| ray    | Installs dependencies for `ray` engine |
 
 As an example, the optional dependencies `test` are installed by
 
