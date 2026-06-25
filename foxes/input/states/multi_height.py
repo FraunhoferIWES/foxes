@@ -196,6 +196,14 @@ class MultiHeightStates(States):
             The verbosity level, 0 = silent
 
         """
+        self.H = self.var(FV.H)
+        self.VARS = self.var("vars")
+        self.DATA = self.var("data")
+        self.WEIGHT = self.var(FV.WEIGHT)
+
+        if self.DATA in loaded_data["data_vars"] and not force:
+            return
+
         if not isinstance(self.data_source, pd.DataFrame):
             self._data_source = get_input_path(self.data_source)
             if not self.data_source.is_file():
@@ -245,11 +253,6 @@ class MultiHeightStates(States):
                     cols += vcols
         data = data[cols]
 
-        self.H = self.var(FV.H)
-        self.VARS = self.var("vars")
-        self.DATA = self.var("data")
-        self.WEIGHT = self.var(FV.WEIGHT)
-
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
         loaded_data["coords"][self.H] = self.heights
@@ -267,6 +270,9 @@ class MultiHeightStates(States):
         for v, d in self._solo.items():
             loaded_data["data_vars"][self.var(v)] = ((FC.STATE,), d)
         self._solo = list(self._solo.keys())
+
+        if not np.all(np.arange(self._N) == self._inds):
+            loaded_data["coords"][FC.STATE] = self._inds
 
     def set_running(
         self,
@@ -410,7 +416,7 @@ class MultiHeightStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
-        self.ensure_output_vars(algo, tdata)
+        super().calculate(algo, mdata, fdata, tdata)
 
         n_states = tdata.n_states
         n_targets = tdata.n_targets
@@ -496,22 +502,6 @@ class MultiHeightStates(States):
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return results
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level
-
-        """
-        super().finalize(algo, verbosity)
-        self._solo = None
-        self._N = None
 
 
 class MultiHeightNCStates(MultiHeightStates):
@@ -620,6 +610,15 @@ class MultiHeightNCStates(MultiHeightStates):
             The verbosity level, 0 = silent
 
         """
+
+        self.H = self.var(FV.H)
+        self.VARS = self.var("vars")
+        self.DATA = self.var("data")
+        self.WEIGHT = self.var(FV.WEIGHT)
+
+        if self.DATA in loaded_data["data_vars"] and not force:
+            return
+
         if not isinstance(self.data_source, Dataset):
             self._data_source = get_input_path(self.data_source)
             if not self.data_source.is_file():
@@ -656,6 +655,8 @@ class MultiHeightNCStates(MultiHeightStates):
             format_times_func = self._format_times_func
         if format_times_func is not None:
             self._inds = format_times_func(self._inds)
+
+        loaded_data["coords"][FC.STATE] = self._inds
 
         w_name = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         weights = None
@@ -696,11 +697,6 @@ class MultiHeightNCStates(MultiHeightStates):
             data = data.sel({self.h_coord: self.heights})
         else:
             self.heights = data[self.h_coord].to_numpy()
-
-        self.H = self.var(FV.H)
-        self.VARS = self.var("vars")
-        self.DATA = self.var("data")
-        self.WEIGHT = self.var(FV.WEIGHT)
 
         States.load_data(self, algo, loaded_data, force=force, verbosity=verbosity)
         loaded_data["coords"][self.H] = self.heights

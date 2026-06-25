@@ -1005,5 +1005,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Reworked `PopulationStates` chunk-loading behavior and recovery paths
 - Tests:
   - Added consistency coverage for engines, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
+- Bugs:
+  - Fixed `Downwind.calc_points` state-subset handling for point calculations by propagating `states_sel`/`states_isel` to engine-level dataset subsetting, preventing shape mismatch crashes for multi-height states
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
