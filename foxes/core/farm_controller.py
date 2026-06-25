@@ -193,7 +193,7 @@ class FarmController(FarmDataModel):
             The per-model selection variable name
 
         """
-        return f"{FC.TMODEL_SELS}_{mi}"
+        return self.var("tsel_" + self.turbine_model_names[mi])
 
     @property
     def has_pre_rotor_models(self):

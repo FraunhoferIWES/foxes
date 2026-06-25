@@ -200,7 +200,7 @@ def test_process_engine_get_chunk_input_data_uses_min_size_threshold_for_split()
     )
 
     class _Algo:
-        pass
+        n_turbines = 1
 
     mdata, fdata = engine.get_chunk_input_data(
         algo=_Algo(),

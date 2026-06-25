@@ -70,12 +70,20 @@ def test_tmodel_sels_constant_is_no_longer_written_to_data_vars():
 
     loaded_data = {
         "coords": {FC.TMODELS: np.array(["old"])},
-        "data_vars": {FC.TMODEL_SELS: ((FC.STATE, FC.TURBINE, FC.TMODELS), np.ones((1, 1, 1), dtype=bool))},
+        "data_vars": {
+            FC.TMODEL_SELS: (
+                (FC.STATE, FC.TURBINE, FC.TMODELS),
+                np.ones((1, 1, 1), dtype=bool),
+            )
+        },
         "extra_data": {},
     }
 
     # emulate post-load cleanup logic without invoking full model stack
-    loaded_data["data_vars"][c._tmodel_sels_var(0)] = ((FC.STATE, FC.TURBINE), c._tmsels[0])
+    loaded_data["data_vars"][c._tmodel_sels_var(0)] = (
+        (FC.STATE, FC.TURBINE),
+        c._tmsels[0],
+    )
     loaded_data["data_vars"].pop(FC.TMODEL_SELS, None)
 
     assert FC.TMODEL_SELS not in loaded_data["data_vars"]

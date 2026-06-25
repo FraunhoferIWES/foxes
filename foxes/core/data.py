@@ -567,7 +567,16 @@ class Data(Dict[str, np.ndarray]):
         self.extra_data = deep_update(self.extra_data, shared.extra_data)
 
     @classmethod
-    def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, n_turbines=None, **kwargs):
+    def from_dataset(
+        cls,
+        ds,
+        *args,
+        callback=None,
+        s_states=None,
+        copy=True,
+        n_turbines=None,
+        **kwargs,
+    ):
         """
         Create Data object from a dataset
 
@@ -598,8 +607,6 @@ class Data(Dict[str, np.ndarray]):
         data = {}
         dims = {}
 
-        TODO NTURBINES
-
         for c, d in ds.coords.items():
             if c == FC.STATE:
                 s = np.s_[:] if s_states is None else s_states
@@ -625,6 +632,10 @@ class Data(Dict[str, np.ndarray]):
             else:
                 data[v] = d.to_numpy().copy() if copy else d.to_numpy()
                 dims[v] = d.dims
+
+        if FC.TURBINE not in data and n_turbines is not None:
+            data[FC.TURBINE] = np.arange(n_turbines)
+            dims[FC.TURBINE] = (FC.TURBINE,)
 
         if callback is not None:
             callback(data, dims)
@@ -796,7 +807,9 @@ class FData(Data):
         return data
 
     @classmethod
-    def from_dataset(cls, ds, *args, mdata=None, callback=None, n_turbines=None, **kwargs):
+    def from_dataset(
+        cls, ds, *args, mdata=None, callback=None, n_turbines=None, **kwargs
+    ):
         """
         Create Data object from a dataset
 
@@ -835,7 +848,9 @@ class FData(Data):
                         data[FC.TURBINE] = mdata[FC.TURBINE]
                         dims[FC.TURBINE] = mdata.dims[FC.TURBINE]
                     else:
-                        assert n_turbines is not None, "n_turbines must be provided if not found in mdata"
+                        assert n_turbines is not None, (
+                            "n_turbines must be provided if not found in mdata"
+                        )
                         data[FC.TURBINE] = np.arange(n_turbines)
                         dims[FC.TURBINE] = (FC.TURBINE,)
                 if callback is not None:
@@ -1201,6 +1216,7 @@ class TData(Data):
         s_targets=None,
         mdata=None,
         callback=None,
+        n_turbines=None,
         **kwargs,
     ):
         """
@@ -1219,6 +1235,8 @@ class TData(Data):
         callback: Function, optional
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
+        n_turbines: int, optional
+            The number of turbines, if not found in the dataset
         kwargs: dict, optional
             Additional parameters for the constructor
 
@@ -1272,4 +1290,6 @@ class TData(Data):
 
             cb1 = cb_targets
 
-        return super().from_dataset(ds, *args, callback=cb1, **kwargs)
+        return super().from_dataset(
+            ds, *args, callback=cb1, n_turbines=n_turbines, **kwargs
+        )
