@@ -66,11 +66,6 @@ class DataCalcModel(Model):
         for m in self.sub_models():
             m.load_chunk_data(algo, *data)
 
-        if self.load_mode != "preload":
-            raise NotImplementedError(
-                f"States '{self.name}': load mode '{self.load_mode}' not implemented."
-            )
-
     @abstractmethod
     def calculate(self, algo, *data, **parameters):
         """
