@@ -997,5 +997,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bugs:
   - Made example-suite tests explicit about skipping when the packaged test environment does not include the `examples` tree, avoiding ambiguous conda-forge behavior
 
-
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.3](https://github.com/FraunhoferIWES/foxes/commits/v1.8.3)
+
+## v1.9.0
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
