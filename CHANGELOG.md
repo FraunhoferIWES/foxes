@@ -309,6 +309,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Bug fixes:
   - Fix of bug that slowed down `TurbOParkIX` by considering all TI wakes instead of only source turbine wake during integration
+  - Raising minimum `netcdf4` version to `1.7.4` for better install consistency in modern environments
   - Fix of bug that prevented plotly wind roses to be shown in the documentation
   - Fix in docu that excluded the algorithm models from the API
 - Output:
@@ -987,5 +988,6 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Bugs:
   - Fixing a crash in `SeqDynamicWakes`, `DynamicWakes`, and `Timelines` when `dt_min` was provided in minutes
+  - Raising minimum versions of optional dependencies (`cdo`, `mpi4py`, `ray`, `ipykernel`, `m2r2`) to installable floors for better dependency resolution consistency
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.2](https://github.com/FraunhoferIWES/foxes/commits/v1.8.2)
