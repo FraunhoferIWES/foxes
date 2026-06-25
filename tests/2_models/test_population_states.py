@@ -32,8 +32,8 @@ class _FlyStatesMock(States):
 def test_population_states_load_chunk_data_fly():
     states = _FlyStatesMock(5)
     pstates = PopulationStates(states, n_pop=2)
-
-    pstates.SMAP = pstates.var("SMAP")
+    loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+    pstates.load_data(None, loaded_data)
 
     mdata = MData(
         data={
@@ -50,16 +50,18 @@ def test_population_states_load_chunk_data_fly():
 
     pstates.load_chunk_data(None, mdata, None, None)
 
-    assert states.calls == [(3, 2), (0, 2)]
-    assert np.all(mdata["mock_var"] == np.array([3, 4, 0, 1], dtype=np.int32))
-    assert mdata.dims["mock_var"] == (FC.STATE,)
+    assert states.calls == [(0, 4)]
+    assert pstates.STATE0 in mdata
+    assert mdata.dims[pstates.STATE0] == (pstates.STATE0,)
+    assert "mock_var" not in mdata
 
 
 def test_population_states_load_chunk_data_preload_is_noop():
     states = _FlyStatesMock(5)
     pstates = PopulationStates(states, n_pop=2)
     pstates.load_mode = "preload"
-    pstates.SMAP = pstates.var("SMAP")
+    loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+    pstates.load_data(None, loaded_data)
 
     mdata = MData(
         data={

@@ -150,7 +150,7 @@ class SingleStateField(States):
         """
         return self._data
 
-    def load_data(self, algo=None, verbosity=1):
+    def load_data(self, algo, loaded_data, force=False, verbosity=1):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -162,15 +162,15 @@ class SingleStateField(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         if self._data is None:
@@ -254,7 +254,7 @@ class SingleStateField(States):
                 print(self._data)
                 print()
 
-        return super().load_data(algo, verbosity=verbosity)
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
     def size(self):
         """

@@ -1,15 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Engines
-  - Updated `MPIEngine` to use worker-local MPI shared windows (`MPI.Win.Allocate_shared`) for shared input data.
-  - Shared input is initialized once per calculation via a tokenized worker cache and reused across chunk tasks in each worker.
-- Core
-  - Updated `Data.pop_shared` to split `extra_data` via `deep_split_by_nbytes`, preserving strict shared-threshold behavior while supporting nested payload partitioning.
-- Utils
-  - Added `deep_split_by_nbytes`, a recursive helper that splits nested data into elements below vs. at-or-above a byte-size threshold using `get_object_nbytes`.
-
 ## v0.1.0-alpha
 
 This is the initial release of **foxes** - ready for testing.
@@ -1001,3 +991,19 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Raising minimum versions of optional dependencies (`cdo`, `mpi4py`, `ray`, `ipykernel`, `m2r2`) to installable floors for better dependency resolution consistency
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.2](https://github.com/FraunhoferIWES/foxes/commits/v1.8.2)
+
+## v1.9.0
+
+- Engines:
+  - Refactored shared-memory handling across `DaskEngine`, `DefaultEngine`, `NumpyEngine`, and pool-based execution
+  - Added and stabilized `ProcessEngine`, `RayEngine`, and `ThreadsEngine` execution paths
+- Core:
+  - Extended chunk/state metadata propagation in data containers and algorithm data construction
+- Input:
+  - Generalized `DatasetStates` on-the-fly/lazy loading behavior and hardened threaded NetCDF reading
+- Algorithms:
+  - Reworked `PopulationStates` chunk-loading behavior and recovery paths
+- Tests:
+  - Added consistency coverage for engines, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)

@@ -57,7 +57,7 @@ class GridRotor(RotorModel):
         r = "" if self.reduce else ", reduce=False"
         return f"{type(self).__name__}(n={self.n}){r}"
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -65,13 +65,28 @@ class GridRotor(RotorModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
-        super().initialize(algo, verbosity, force=force)
+        loaded_data = super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
         N = self.n * self.n
         delta = 2.0 / self.n
@@ -109,6 +124,8 @@ class GridRotor(RotorModel):
             self.__dpoints[:, 1] = x.reshape(N)
             self.__dpoints[:, 2] = y.reshape(N)
             self.__weights = np.ones(N, dtype=config.dtype_double) / N
+
+        return loaded_data
 
     def input_variables(self):
         """

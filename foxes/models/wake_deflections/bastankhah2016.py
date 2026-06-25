@@ -95,7 +95,7 @@ class Bastankhah2016Deflection(WakeDeflection):
         """
         return [self.wake_k, self.model]
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -103,17 +103,35 @@ class Bastankhah2016Deflection(WakeDeflection):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
         if not self.initialized:
             for w in algo.wake_models.values():
                 if isinstance(w, Bastankhah2016):
                     if not w.initialized:
-                        w.initialize(algo, verbosity, force)
+                        w.initialize(
+                            algo=algo,
+                            loaded_data=loaded_data,
+                            force=force,
+                            verbosity=verbosity,
+                        )
                     self.model = w.model
                     self.wake_k = w.wake_k
                     break
@@ -131,7 +149,9 @@ class Bastankhah2016Deflection(WakeDeflection):
                             self.wake_k = w.wake_k
                             break
 
-        super().initialize(algo, verbosity, force)
+        return super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
     def _update_y(self, algo, mdata, fdata, tdata, downwind_index, x, y):
         """

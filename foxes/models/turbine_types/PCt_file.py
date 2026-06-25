@@ -160,13 +160,6 @@ class PCtFile(TurbineType):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
         self.DATA = self.var("data")
         if self.DATA not in loaded_data["data_vars"] or force:
@@ -191,14 +184,21 @@ class PCtFile(TurbineType):
             data = data.set_index(self.col_ws).sort_index()
             data = data.reset_index()[[self.col_ws, self.col_P, self.col_ct]].to_numpy()
 
+            self.data_ws = data[:, 0]
+            self.data_P = data[:, 1]
+            self.data_ct = data[:, 2]
+
             self.WS = self.var(FV.WS)
             self.VARS = self.var("vars")
-            loaded_data["coords"][self.WS] = data[:, 0]
+            loaded_data["coords"][self.WS] = self.data_ws
             loaded_data["coords"][self.VARS] = [FV.P, FV.CT]
-            loaded_data["data_vars"][self.DATA] = ((self.WS, self.VARS), data[:, 1:])
+            loaded_data["data_vars"][self.DATA] = (
+                (self.WS, self.VARS),
+                np.stack([self.data_P, self.data_ct], axis=1),
+            )
 
             if self.P_nominal is None:
-                self.P_nominal = np.max(data[:, 1]) / FC.P_UNITS[self.P_unit]
+                self.P_nominal = np.max(self.data_P) / FC.P_UNITS[self.P_unit]
                 if verbosity > 0:
                     print(
                         f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}"
@@ -327,9 +327,14 @@ class PCtFile(TurbineType):
             yawm=fdata[FV.YAWM][st_sel] if corrects_yawm else None,
         )
 
-        data_ws = mdata[self.WS]
-        data_P = mdata[self.DATA][:, 0]
-        data_ct = mdata[self.DATA][:, 1]
+        if self.WS in mdata and self.DATA in mdata:
+            data_ws = mdata[self.WS]
+            data_P = mdata[self.DATA][:, 0]
+            data_ct = mdata[self.DATA][:, 1]
+        else:
+            data_ws = self.data_ws
+            data_P = self.data_P
+            data_ct = self.data_ct
 
         out = {FV.P: fdata[FV.P], FV.CT: fdata[FV.CT]}
         out[FV.P][st_sel] = factor_P * np.interp(

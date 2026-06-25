@@ -101,7 +101,7 @@ class OnePointFlowStates(States):
         """
         return [self.base_states]
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -113,15 +113,15 @@ class OnePointFlowStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
 
@@ -138,12 +138,10 @@ class OnePointFlowStates(States):
 
         # pre-calc data:
         self.WEIGHT = self.var(FV.WEIGHT)
-        idata = super().load_data(algo, verbosity)
-        idata["data_vars"][self.WEIGHT] = Timelines._precalc_data(
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+        loaded_data["data_vars"][self.WEIGHT] = Timelines._precalc_data(
             self, algo, self.base_states, self.heights, verbosity, needs_res=True
         )
-
-        return idata
 
     def size(self):
         """

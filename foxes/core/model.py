@@ -197,6 +197,23 @@ class Model(ABC):
 
         return loaded_data
 
+    def load_chunk_data(self, algo, *data):
+        """
+        Load chunk-local data required for calculations.
+
+        The default implementation is a no-op for models that do not
+        contribute chunk-dependent data.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data: tuple of foxes.core.Data, optional
+            Chunk-local data containers
+
+        """
+        return None
+
     @property
     def running(self):
         """

@@ -181,23 +181,24 @@ class PopulationStates(States):
         else:
             data = {FC.STATE: np.arange(i0, i1, dtype=config.dtype_int)}
         dims = {FC.STATE: (FC.STATE,)}
-        for dname, data in mdata.items():
+        for dname, ddata in mdata.items():
             dms = mdata.dims[dname]
             if dname == self.SMAP or dname == self.STATE0:
                 pass
             elif dms[0] == self.STATE0:
-                data[dname] = data[smap]
+                data[dname] = ddata[smap]
                 dims[dname] = tuple([FC.STATE] + list(dms)[1:])
             elif self.STATE0 in dms:
                 raise ValueError(
                     f"States '{self.name}': Expecting {self.STATE0} at position 0 for {dname}, got {dms}"
                 )
             else:
-                data[dname] = data
+                data[dname] = ddata
                 dims[dname] = dms
         sub_mdata = MData(
             data=data,
             dims=dims,
+            states_i0=i0,
             chunki_states=mdata.chunki_states,
             chunki_points=mdata.chunki_points,
             n_chunks_states=mdata.n_chunks_states,
@@ -208,7 +209,7 @@ class PopulationStates(States):
 
         # load sub model chunk data:
         keys0 = set(mdata.keys())
-        super().load_chunk_data(algo, sub_mdata, fdata=None, tdata=None)
+        super().load_chunk_data(algo, sub_mdata, None, None)
         new_keys = set(mdata.keys()) - keys0
 
         # add new data to mdata:

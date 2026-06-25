@@ -725,10 +725,28 @@ class DatasetStates(States):
 
         # given data is already Dataset:
         else:
-            self._inds = self.data_source[states_coord].to_numpy()
+            data = self.data_source
+            if self.preprocess_nc is not None:
+                data = self.preprocess_nc(data)
+            if self.isel is not None and len(self.isel):
+                hisel = {c: s for c, s in self.isel.items() if c in data.sizes}
+                if len(hisel):
+                    data = data.isel(**hisel)
+            if self.sel is not None and len(self.sel):
+                hsel = {c: s for c, s in self.sel.items() if c in data.sizes}
+                if len(hsel):
+                    data = data.sel(**hsel)
+            self.preproc_first(
+                algo,
+                data=data,
+                bounds_extra_space=bounds_extra_space,
+                height_bounds=height_bounds,
+                verbosity=verbosity,
+            )
+            self._inds = data[states_coord].to_numpy()
             self._N = len(self._inds)
             self._vars = {v: self.var2ncvar.get(v, v) for v in self.variables}
-            self._vars = _update_vars(self.data_source, self._vars)
+            self._vars = _update_vars(data, self._vars)
 
         # make sure state indices are sorted ascending:
         def _is_sorted(a):
@@ -829,13 +847,19 @@ class DatasetStates(States):
                 verbosity=verbosity,
             )
 
+            vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
+
             for c, d in coords.items():
                 c = self.var(c) if c not in [FC.STATE, FC.TURBINE] else c
-                loaded_data["coords"][c] = d
+                if isinstance(d, tuple):
+                    dims, values = d
+                    dms = tuple([vmap.get(v, self.var(v)) for v in dims])
+                    loaded_data["coords"][c] = (dms, values)
+                else:
+                    loaded_data["coords"][c] = d
             if w is not None:
                 loaded_data["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
 
-            vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
             edata[self.META]["data_keys"] = []
             for dims, d in data.items():
                 dms = tuple([vmap.get(c, self.var(c)) for c in dims])

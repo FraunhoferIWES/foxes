@@ -123,7 +123,7 @@ class ICONStates(LatLonFieldData):
             ds = ds.assign_coords({self._cmap[self.H_TKE]: self.__icon_heights_TKE[c]})
         return self._prepr0(ds) if self._prepr0 is not None else ds
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -135,15 +135,15 @@ class ICONStates(LatLonFieldData):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         # read mapping from height levels to heights from static csv files:
@@ -157,8 +157,10 @@ class ICONStates(LatLonFieldData):
         self.__icon_heights_TKE = hdata["A1"]
         self.__icon_heights_default = hdata["A2"]
 
-        return super().load_data(
+        super().load_data(
             algo,
+            loaded_data,
+            force=force,
             bounds_extra_space=self.bounds_extra_space,
             height_bounds=self.height_bounds,
             verbosity=verbosity,

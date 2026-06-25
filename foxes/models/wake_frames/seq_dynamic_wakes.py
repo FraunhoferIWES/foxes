@@ -71,7 +71,7 @@ class SeqDynamicWakes(FarmOrder):
         """
         return [self.induction]
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -79,16 +79,31 @@ class SeqDynamicWakes(FarmOrder):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
         if isinstance(self.induction, str):
             self.induction = algo.mbook.axial_induction[self.induction]
 
-        super().initialize(algo, verbosity, force=force)
+        loaded_data = super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
         if not isinstance(algo, Sequential):
             raise TypeError(
@@ -126,6 +141,7 @@ class SeqDynamicWakes(FarmOrder):
         self._traces_l = np.full(
             (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
         )
+        return loaded_data
 
     def calc_order(self, algo, mdata, fdata):
         """
@@ -188,7 +204,7 @@ class SeqDynamicWakes(FarmOrder):
         n_targets = tdata.n_targets
         n_tpoints = tdata.n_tpoints
         n_points = n_targets * n_tpoints
-        points = tdata[FC.TARGETS].reshape(n_states, n_points, 3)
+        points = tdata[FC.TARGETS][:1].reshape(n_states, n_points, 3)
         counter = algo.states.counter
         N = counter + 1
 

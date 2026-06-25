@@ -288,7 +288,7 @@ class WeibullSectors(StatesTable):
 
         return data
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -300,15 +300,15 @@ class WeibullSectors(StatesTable):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         self._read_data(algo, verbosity=0)
@@ -327,4 +327,4 @@ class WeibullSectors(StatesTable):
         self._data = pd.DataFrame(data=self._data, index=np.arange(self._N))
         self._data.index.name = FC.STATE
 
-        return super().load_data(algo, verbosity)
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)

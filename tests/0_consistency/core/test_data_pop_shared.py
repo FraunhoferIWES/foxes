@@ -5,6 +5,9 @@ import foxes.constants as FC
 from foxes.core import FData, MData
 
 
+SIZE_RE = r"[0-9]+(?:\.[0-9]{2})?(?:B|KB|MB|GB|TB|PB)"
+
+
 def test_pop_shared_extra_data_keeps_strict_threshold_for_arrays():
     extra_small = np.arange(8, dtype=np.int32)  # 32 bytes
     extra_equal = np.arange(16, dtype=np.int32)  # 64 bytes
@@ -96,7 +99,7 @@ def test_data_str_summarizes_without_array_payload_dump():
 
     assert "<foxes.core.MData>" in out
     assert "<foxes.core.MData> demo" in out
-    assert re.search(r"[0-9]+\.[0-9]{2}(KB|MB)", out)
+    assert re.search(SIZE_RE, out)
     assert "Dimensions: (x: 2, y: 3)" in out
     assert "Coordinates:" in out
     assert "Data variables:" in out
@@ -107,10 +110,10 @@ def test_data_str_summarizes_without_array_payload_dump():
     assert "[0...1]" in out
     assert "y            array int64 (3,)" in out
     assert "[0...2]" in out
-    assert re.search(r"A\s+\(x, y\).+[0-9]+\.[0-9]{2}(KB|MB)", out)
+    assert re.search(rf"A\s+\(x, y\).+{SIZE_RE}", out)
     assert "Extra data:" in out
     assert re.search(r"\n\s+meta\s+dict\(len=1\)", out)
-    assert re.search(r"\n\s+a\s+int\s+[0-9]+\.[0-9]{2}(KB|MB)", out)
+    assert re.search(rf"\n\s+a\s+int\s+{SIZE_RE}", out)
     assert "meta.a" not in out
     assert "vals" in out
     assert "list(len=3) [1...3]" in out

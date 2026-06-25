@@ -158,14 +158,6 @@ class StatesTable(States):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        loaded_data: dict
-            The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-
         """
         self._profiles = {}
         for v, d in self.profdicts.items():
@@ -496,7 +488,7 @@ class TabStates(StatesTable):
 
         super().__init__(data_source=None, *args, **kwargs)
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -508,15 +500,15 @@ class TabStates(StatesTable):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         if self.data_source is None:
@@ -572,7 +564,7 @@ class TabStates(StatesTable):
             )
             self._data.index.name = FC.STATE
 
-        return super().load_data(algo, verbosity)
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
     def set_running(
         self,

@@ -101,7 +101,7 @@ class LookupTable(TurbineModel):
         """
         return self.output_vars
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -113,15 +113,15 @@ class LookupTable(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         if self._data is None:
@@ -160,7 +160,7 @@ class LookupTable(TurbineModel):
                 print(self._data)
                 print()
 
-        return super().load_data(algo, verbosity)
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """

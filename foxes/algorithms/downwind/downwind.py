@@ -775,8 +775,6 @@ class Downwind(Algorithm):
             self.print("\n")
             mlist.finalize(self, self.verbosity - 1)
             self.finalize(clear_mem=clear_mem)
-        else:
-            self.del_model_data(mlist)
 
         if ambient and farm_results:
             dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]

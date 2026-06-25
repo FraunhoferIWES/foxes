@@ -173,7 +173,7 @@ class MultiHeightStates(States):
                     )
             return cls
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -185,15 +185,15 @@ class MultiHeightStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         if not isinstance(self.data_source, pd.DataFrame):
@@ -250,25 +250,23 @@ class MultiHeightStates(States):
         self.DATA = self.var("data")
         self.WEIGHT = self.var(FV.WEIGHT)
 
-        idata = super().load_data(algo, verbosity)
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
-        idata["coords"][self.H] = self.heights
-        idata["coords"][self.VARS] = list(cmap.keys())
+        loaded_data["coords"][self.H] = self.heights
+        loaded_data["coords"][self.VARS] = list(cmap.keys())
 
         n_hts = len(self.heights)
         n_vrs = int(len(data.columns) / n_hts)
         dims = (FC.STATE, self.VARS, self.H)
-        idata["data_vars"][self.DATA] = (
+        loaded_data["data_vars"][self.DATA] = (
             dims,
             data.to_numpy().reshape(self._N, n_vrs, n_hts),
         )
         if weights is not None:
-            idata["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
+            loaded_data["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
         for v, d in self._solo.items():
-            idata["data_vars"][self.var(v)] = ((FC.STATE,), d)
+            loaded_data["data_vars"][self.var(v)] = ((FC.STATE,), d)
         self._solo = list(self._solo.keys())
-
-        return idata
 
     def set_running(
         self,
@@ -599,7 +597,7 @@ class MultiHeightNCStates(MultiHeightStates):
         self.xr_read_pars = xr_read_pars
         self._format_times_func = format_times_func
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -611,15 +609,15 @@ class MultiHeightNCStates(MultiHeightStates):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         if not isinstance(self.data_source, Dataset):
@@ -704,27 +702,25 @@ class MultiHeightNCStates(MultiHeightStates):
         self.DATA = self.var("data")
         self.WEIGHT = self.var(FV.WEIGHT)
 
-        idata = States.load_data(self, algo, verbosity)
-        idata["coords"][self.H] = self.heights
-        idata["coords"][self.VARS] = list(cols.keys())
+        States.load_data(self, algo, loaded_data, force=force, verbosity=verbosity)
+        loaded_data["coords"][self.H] = self.heights
+        loaded_data["coords"][self.VARS] = list(cols.keys())
 
         dims = (FC.STATE, self.VARS, self.H)
-        idata["data_vars"][self.DATA] = (
+        loaded_data["data_vars"][self.DATA] = (
             dims,
             np.stack(
                 [data.data_vars[c].to_numpy() for c in cols.values()], axis=1
             ).astype(config.dtype_double),
         )
         if weights is not None:
-            idata["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
+            loaded_data["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
         for v, d in self._solo.items():
-            idata["data_vars"][self.var(v)] = (
+            loaded_data["data_vars"][self.var(v)] = (
                 (FC.STATE,),
                 d.astype(config.dtype_double),
             )
         self._solo = list(self._solo.keys())
-
-        return idata
 
 
 class MultiHeightTimeseries(MultiHeightStates):

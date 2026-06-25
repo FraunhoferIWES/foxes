@@ -122,9 +122,15 @@ class Data(Dict[str, np.ndarray]):
 
     def __str__(self):
         def _fmt_size(nbytes):
-            if nbytes >= 1024 * 1024:
-                return f"{nbytes / (1024 * 1024):.0f}MB"
-            return f"{nbytes / 1024:.0f}kB"
+            units = ("B", "KB", "MB", "GB", "TB", "PB")
+            size = float(nbytes)
+            ui = 0
+            while size >= 1024.0 and ui < len(units) - 1:
+                size /= 1024.0
+                ui += 1
+            if ui == 0:
+                return f"{int(size)}{units[ui]}"
+            return f"{size:.2f}{units[ui]}"
 
         def _summary(value, level=0):
             if isinstance(value, np.ndarray):
@@ -648,15 +654,18 @@ class Data(Dict[str, np.ndarray]):
             The data object
 
         """
-        out = cls(
-            *args,
-            states_i0=base_data.states_i0,
-            chunki_states=base_data.chunki_states,
-            chunki_points=base_data.chunki_points,
-            n_chunks_states=base_data.n_chunks_states,
-            n_chunks_points=base_data.n_chunks_points,
-            **kwargs,
-        )
+        ctor_kwargs = dict(kwargs)
+        if "states_i0" not in ctor_kwargs:
+            try:
+                ctor_kwargs["states_i0"] = base_data.states_i0(counter=True)
+            except KeyError:
+                ctor_kwargs["states_i0"] = None
+        ctor_kwargs.setdefault("chunki_states", base_data.chunki_states)
+        ctor_kwargs.setdefault("chunki_points", base_data.chunki_points)
+        ctor_kwargs.setdefault("n_chunks_states", base_data.n_chunks_states)
+        ctor_kwargs.setdefault("n_chunks_points", base_data.n_chunks_points)
+
+        out = cls(*args, **ctor_kwargs)
 
         for v in base_data.loop_dims:
             out[v] = base_data[v]

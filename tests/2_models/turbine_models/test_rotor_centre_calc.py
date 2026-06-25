@@ -12,8 +12,9 @@ class DummyWakeCalc:
     initialized = False
     running = False
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         self.initialized = True
+        return loaded_data
 
     def calculate(self, algo, mdata, fdata, tdata):
         vals = np.array([[[10.0], [20.0]], [[30.0], [40.0]]], dtype=float)
