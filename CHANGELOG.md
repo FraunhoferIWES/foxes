@@ -991,3 +991,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Raising minimum versions of optional dependencies (`cdo`, `mpi4py`, `ray`, `ipykernel`, `m2r2`) to installable floors for better dependency resolution consistency
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.2](https://github.com/FraunhoferIWES/foxes/commits/v1.8.2)
+
+## v1.8.3
+
+- Bugs:
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.3](https://github.com/FraunhoferIWES/foxes/commits/v1.8.3)
