@@ -162,14 +162,14 @@ class Sequential(Iterative):
                 print("\nOutput farm variables:", ", ".join(self.farm_vars))
                 print()
 
-            sts = self._model_data[FC.STATE].to_numpy()
             self._farm_results = Dataset(
-                coords={FC.STATE: sts},
+                coords={FC.STATE: self._inds},
                 data_vars={
                     v: (
                         (FC.STATE, FC.TURBINE),
                         np.zeros(
-                            (len(sts), self.n_turbines), dtype=config.dtype_double
+                            (len(self._inds), self.n_turbines),
+                            dtype=config.dtype_double,
                         ),
                     )
                     for v in self.farm_vars
@@ -197,6 +197,7 @@ class Sequential(Iterative):
             self.states._counter = self._i
             self.states._size = 1
             self.states._indx = self._inds[self._i]
+            self.n_states = 1
 
             if self._verbo0 > 0:
                 print(f"{self.name}: Running state {self.states.index()[0]}")
@@ -211,8 +212,8 @@ class Sequential(Iterative):
 
             for v in self._farm_results.data_vars.keys():
                 if FC.STATE in self._farm_results[v].dims:
-                    self._farm_results[v].loc[{FC.STATE: [self.counter]}] = fres[v]
-                    self._farm_results_dwnd[v].loc[{FC.STATE: [self.counter]}] = (
+                    self._farm_results[v].loc[{FC.STATE: [self.states._indx]}] = fres[v]
+                    self._farm_results_dwnd[v].loc[{FC.STATE: [self.states._indx]}] = (
                         fres_dnwnd[v]
                     )
 
@@ -263,6 +264,7 @@ class Sequential(Iterative):
             self.states._counter = None
             self.states._size = len(self._inds)
             self.states._indx = self._inds
+            self.n_states = len(self._inds)
 
             for p in self.plugins:
                 p.finalize(self)

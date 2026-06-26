@@ -46,3 +46,7 @@ def test_downwind_calc_points_respects_states_sel_subset():
 
     assert point_results.sizes[FC.STATE] == 1
     assert point_results.sizes[FC.POINT] == 2
+
+
+if __name__ == "__main__":
+    test_downwind_calc_points_respects_states_sel_subset()

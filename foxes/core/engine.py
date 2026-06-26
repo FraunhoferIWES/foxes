@@ -562,6 +562,7 @@ class Engine(ABC):
         i0_targets, i1_targets = targets_i0_i1
         s_states = np.s_[i0_states:i1_states]
         s_targets = np.s_[i0_targets:i1_targets]
+        n_states = i1_states - i0_states
 
         # special case for sequential algo:
         if hasattr(algo, "states_i0"):
@@ -578,7 +579,7 @@ class Engine(ABC):
             chunki_points=chunki_points,
             n_chunks_states=n_chunks_states,
             n_chunks_points=n_chunks_points,
-            n_states=i1_states - i0_states,
+            n_states=n_states,
             n_turbines=algo.n_turbines,
         )
 
@@ -590,7 +591,7 @@ class Engine(ABC):
                 s_states=s_states,
                 callback=None,
                 states_i0=i0_states,
-                n_states=i1_states - i0_states,
+                n_states=n_states,
                 n_turbines=algo.n_turbines,
                 copy=True,
             )
@@ -609,7 +610,7 @@ class Engine(ABC):
                 s_targets=s_targets,
                 callback=None,
                 states_i0=i0_states,
-                n_states=i1_states - i0_states,
+                n_states=n_states,
                 n_turbines=algo.n_turbines,
                 copy=True,
             )

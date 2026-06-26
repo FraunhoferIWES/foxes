@@ -609,6 +609,8 @@ class Data(Dict[str, np.ndarray]):
         """
         data = {}
         dims = {}
+        if n_states == 0:
+            raise ValueError("Cannot create Data object with n_states=0")
 
         for c, d in ds.coords.items():
             if c == FC.STATE:
