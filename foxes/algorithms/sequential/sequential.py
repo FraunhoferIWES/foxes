@@ -197,7 +197,6 @@ class Sequential(Iterative):
             self.states._counter = self._i
             self.states._size = 1
             self.states._indx = self._inds[self._i]
-            self.n_states = 1
 
             if self._verbo0 > 0:
                 print(f"{self.name}: Running state {self.states.index()[0]}")
@@ -264,7 +263,6 @@ class Sequential(Iterative):
             self.states._counter = None
             self.states._size = len(self._inds)
             self.states._indx = self._inds
-            self.n_states = len(self._inds)
 
             for p in self.plugins:
                 p.finalize(self)
