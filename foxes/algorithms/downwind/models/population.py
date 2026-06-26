@@ -108,8 +108,9 @@ class PopulationStates(States):
 
         """
 
-        # load sub model and memorize new entries:
-        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+        # reload states data, if forced:
+        if force:
+            super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
         # prepare:
         self.STATE0 = self.var(FC.STATE + "0")
@@ -123,7 +124,8 @@ class PopulationStates(States):
             return
 
         # reset states dimension:
-        coords[self.STATE0] = self.states.index()
+        if FC.STATE in coords:
+            coords[self.STATE0] = coords.pop(FC.STATE)
         need_state0 = False
         dkeys = list(data_vars.keys())
         for dname in dkeys:
@@ -284,7 +286,11 @@ class PopulationStates(States):
                     hdata[dname] = data
                     hdims[dname] = dms
             return DClass.from_data(
-                in_data, data=hdata, dims=hdims, name=in_data.name + "_pop"
+                in_data,
+                data=hdata,
+                dims=hdims,
+                extra_data=in_data.extra_data,
+                name=in_data.name + "_pop",
             )
 
         hmdata = _map(mdata, MData)
