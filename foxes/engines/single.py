@@ -261,7 +261,7 @@ class SingleChunkEngine(Engine):
 
         # prepare:
         algo.reset_chunk_store(chunk_store)
-        n_states = model_data.sizes[FC.STATE]
+        n_states = algo.n_states
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         out_dims = model.output_coords()
         coords = {}
