@@ -1,5 +1,4 @@
 import uuid
-import os
 
 import numpy as np
 
@@ -10,17 +9,11 @@ from .process import ProcessEngine, ProcessEngineRunner
 
 
 _MPI_SHARED_CACHE = {}
-_MPI_DEBUG_ATTACH_PRINTED = set()
 
 
 def _mpi_create_worker_shared_cache(token, payload):
     """Creates or reuses a worker-local MPI shared cache for a token."""
     if token in _MPI_SHARED_CACHE:
-        if payload.get("debug", False):
-            cache = _MPI_SHARED_CACHE[token]
-            print(
-                f"MPIEngine SHM cache-hit: pid={os.getpid()} token={token} vars={len(cache['data'])}"
-            )
         return token
 
     mpi4py = import_module(
@@ -39,8 +32,6 @@ def _mpi_create_worker_shared_cache(token, payload):
     base_comm = MPI.COMM_WORLD if workers_comm is None else workers_comm
     shared_comm = base_comm.Split_type(MPI.COMM_TYPE_SHARED, 0, MPI.INFO_NULL)
     rank = shared_comm.rank
-    dbg = payload.get("debug", False)
-    dbg_rows = []
 
     data = {}
     windows = {}
@@ -61,12 +52,6 @@ def _mpi_create_worker_shared_cache(token, payload):
             shm_arr[...] = arr
         shared_comm.Barrier()
 
-        if dbg:
-            src_ptr = int(arr.__array_interface__["data"][0])
-            shm_ptr = int(shm_arr.__array_interface__["data"][0])
-            copied = bool(np.shares_memory(arr, shm_arr))
-            dbg_rows.append((name, src_ptr, shm_ptr, copied))
-
         data[name] = shm_arr
         windows[name] = win
 
@@ -77,23 +62,7 @@ def _mpi_create_worker_shared_cache(token, payload):
         "extra_data": payload.get("extra_data", {}),
         "shared_comm": shared_comm,
         "windows": windows,
-        "debug": dbg,
     }
-
-    if dbg:
-        world_rank = MPI.COMM_WORLD.Get_rank()
-        base_rank = base_comm.Get_rank()
-        ptrs = ",".join(
-            [
-                f"{name}:{src_ptr}->{shm_ptr}:{copied}"
-                for name, src_ptr, shm_ptr, copied in dbg_rows
-            ]
-        )
-        print(
-            "MPIEngine SHM create: "
-            f"pid={os.getpid()} token={token} world_rank={world_rank} "
-            f"base_rank={base_rank} shared_rank={rank} vars={len(dbg_rows)} ptrs=[{ptrs}]"
-        )
 
     return token
 
@@ -104,23 +73,10 @@ def _mpi_release_worker_shared_cache(token):
     if entry is None:
         return token
 
-    dbg = entry.get("debug", False)
-    if dbg:
-        print(
-            f"MPIEngine SHM release-start: pid={os.getpid()} token={token} vars={len(entry['windows'])}"
-        )
-
-    _MPI_DEBUG_ATTACH_PRINTED.difference_update(
-        [k for k in _MPI_DEBUG_ATTACH_PRINTED if k[1] == token]
-    )
-
     shared_comm = entry["shared_comm"]
     for win in entry["windows"].values():
         win.Free()
     shared_comm.Free()
-
-    if dbg:
-        print(f"MPIEngine SHM release-done: pid={os.getpid()} token={token}")
 
     return token
 
@@ -148,21 +104,6 @@ class MPIEngineRunner(ProcessEngineRunner):
             raise KeyError(
                 f"MPIEngineRunner: shared token '{token}' not found in worker cache"
             )
-
-        if handle.get("debug", False):
-            akey = (os.getpid(), token)
-            if akey not in _MPI_DEBUG_ATTACH_PRINTED:
-                _MPI_DEBUG_ATTACH_PRINTED.add(akey)
-                ptrs = ",".join(
-                    [
-                        f"{name}:{int(arr.__array_interface__['data'][0])}"
-                        for name, arr in cache["data"].items()
-                    ]
-                )
-                print(
-                    "MPIEngine SHM attach: "
-                    f"pid={os.getpid()} token={token} vars={len(cache['data'])} ptrs=[{ptrs}]"
-                )
 
         data = dict(cache["data"])
 
@@ -236,14 +177,12 @@ class MPIEngine(ProcessEngine):
         ):
             return None
 
-        dbg = verbosity >= 2
         token = str(uuid.uuid4())
         payload = {
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
             "data": {},
             "extra_data": dict(shared_mdata.extra_data),
-            "debug": dbg,
         }
         for v, d in shared_mdata.items():
             assert isinstance(d, np.ndarray) and d.dtype.kind != "O", (
@@ -276,18 +215,11 @@ class MPIEngine(ProcessEngine):
         for fut in futures:
             self.await_result(fut)
 
-        if dbg:
-            self.print(
-                f"MPIEngine SHM init-done: pid={os.getpid()} token={token} workers={self.n_workers} vars={len(payload['data'])}",
-                level=2,
-            )
-
         return {
             "type": "mpi_shared_token",
             "token": token,
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
-            "debug": dbg,
         }
 
     def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
