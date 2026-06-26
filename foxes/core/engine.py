@@ -395,7 +395,7 @@ class Engine(ABC):
         else:
             return [FC.STATE, FC.TARGET]
 
-    def select_subsets(self, *datasets, sel=None, isel=None):
+    def select_subsets(self, *datasets, sel=None, isel=None, default_n_states=None):
         """
         Takes subsets of datasets
 
@@ -407,11 +407,17 @@ class Engine(ABC):
             The selection dictionary
         isel: dict, optional
             The index selection dictionary
+        default_n_states: int, optional
+            Fallback number of states if no dataset has
+            state dimension
 
         Returns
         -------
         subsets: list
             The subsets of the input data
+        n_states: int or None
+            The number of states after subset selection,
+            or fallback value
 
         """
         if sel is not None:
@@ -434,7 +440,13 @@ class Engine(ABC):
                     new_datasets.append(data)
             datasets = new_datasets
 
-        return datasets
+        n_states = default_n_states
+        for data in datasets:
+            if data is not None and FC.STATE in data.sizes:
+                n_states = data.sizes[FC.STATE]
+                break
+
+        return datasets, n_states
 
     def calc_chunk_sizes(self, n_states, n_targets=1):
         """

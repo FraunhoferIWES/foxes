@@ -252,8 +252,13 @@ class SingleChunkEngine(Engine):
 
         """
         # subset selection:
-        model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel
+        (model_data, farm_data, point_data), n_states = self.select_subsets(
+            model_data,
+            farm_data,
+            point_data,
+            sel=sel,
+            isel=isel,
+            default_n_states=algo.n_states,
         )
 
         # basic checks:
@@ -261,7 +266,6 @@ class SingleChunkEngine(Engine):
 
         # prepare:
         algo.reset_chunk_store(chunk_store)
-        n_states = algo.n_states
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         out_dims = model.output_coords()
         coords = {}

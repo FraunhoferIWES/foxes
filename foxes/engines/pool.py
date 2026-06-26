@@ -223,15 +223,19 @@ class PoolEngine(Engine):
             new_chunk_store = {}
 
         # subset selection:
-        model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel
+        (model_data, farm_data, point_data), n_states = self.select_subsets(
+            model_data,
+            farm_data,
+            point_data,
+            sel=sel,
+            isel=isel,
+            default_n_states=algo.n_states,
         )
 
         # basic checks:
         super().run_calculation(algo, model, model_data, farm_data, point_data)
 
         # prepare:
-        n_states = algo.n_states
         out_dims = model.output_coords()
         coords = {}
         if FC.STATE in out_dims and FC.STATE in model_data.coords:
