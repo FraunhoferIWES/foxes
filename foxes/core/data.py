@@ -574,6 +574,7 @@ class Data(Dict[str, np.ndarray]):
         callback=None,
         s_states=None,
         copy=True,
+        n_states=None,
         n_turbines=None,
         **kwargs,
     ):
@@ -593,6 +594,8 @@ class Data(Dict[str, np.ndarray]):
             Slice object for states
         copy: bool
             Flag for copying data
+        n_states: int, optional
+            The number of states, if not found in the dataset
         n_turbines: int, optional
             The number of turbines, if not found in the dataset
         kwargs: dict, optional
@@ -615,17 +618,21 @@ class Data(Dict[str, np.ndarray]):
                 data[c] = d.to_numpy().copy() if copy else d.to_numpy()
             dims[c] = d.dims
 
-        n_states = None
         for v, d in ds.data_vars.items():
             if FC.STATE in d.dims:
                 if d.dims[0] != FC.STATE:
                     raise ValueError(
                         f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v}', got {d.dims}"
                     )
-                n_states = d.shape[0]
                 s = np.s_[:] if s_states is None else s_states
                 data[v] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
                 dims[v] = d.dims
+                if n_states is None:
+                    n_states = data[v].shape[0]
+                else:
+                    assert n_states == data[v].shape[0], (
+                        f"Expecting {n_states} states, got {data[v].shape[0]} in data variable '{v}'"
+                    )
                 if v == FV.WEIGHT and d.dims == (FC.STATE,):
                     data[v] = data[v][:, None]
                     dims[v] = (FC.STATE, FC.TURBINE)
@@ -640,8 +647,8 @@ class Data(Dict[str, np.ndarray]):
         if callback is not None:
             callback(data, dims)
 
-        if FC.STATE not in data and s_states is not None and n_states is not None:
-            data[FC.STATE] = np.arange(n_states)[s_states]
+        if FC.STATE not in data and n_states is not None:
+            data[FC.STATE] = np.arange(n_states)
             dims[FC.STATE] = (FC.STATE,)
 
         return cls(*args, data=data, dims=dims, **kwargs)
@@ -808,7 +815,14 @@ class FData(Data):
 
     @classmethod
     def from_dataset(
-        cls, ds, *args, mdata=None, callback=None, n_turbines=None, **kwargs
+        cls,
+        ds,
+        *args,
+        mdata=None,
+        callback=None,
+        n_states=None,
+        n_turbines=None,
+        **kwargs,
     ):
         """
         Create Data object from a dataset
@@ -824,6 +838,8 @@ class FData(Data):
         callback: Function, optional
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
+        n_states: int, optional
+            The number of states, if not found in the dataset
         n_turbines: int, optional
             The number of turbines, if not found in the dataset
         kwargs: dict, optional
@@ -841,8 +857,16 @@ class FData(Data):
 
             def cb(data, dims):
                 if FC.STATE not in data:
-                    data[FC.STATE] = mdata[FC.STATE]
-                    dims[FC.STATE] = mdata.dims[FC.STATE]
+                    if FC.STATE in mdata:
+                        data[FC.STATE] = mdata[FC.STATE]
+                        dims[FC.STATE] = mdata.dims[FC.STATE]
+                    else:
+                        assert n_states is not None, (
+                            "n_states must be provided if not found in mdata"
+                        )
+                        i0 = mdata.states_i0(counter=True)
+                        data[FC.STATE] = np.arange(i0, i0 + n_states)
+                        dims[FC.STATE] = (FC.STATE,)
                 if FC.TURBINE not in data:
                     if FC.TURBINE in mdata:
                         data[FC.TURBINE] = mdata[FC.TURBINE]
@@ -1216,7 +1240,6 @@ class TData(Data):
         s_targets=None,
         mdata=None,
         callback=None,
-        n_turbines=None,
         **kwargs,
     ):
         """
@@ -1235,8 +1258,6 @@ class TData(Data):
         callback: Function, optional
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
-        n_turbines: int, optional
-            The number of turbines, if not found in the dataset
         kwargs: dict, optional
             Additional parameters for the constructor
 
@@ -1290,6 +1311,4 @@ class TData(Data):
 
             cb1 = cb_targets
 
-        return super().from_dataset(
-            ds, *args, callback=cb1, n_turbines=n_turbines, **kwargs
-        )
+        return super().from_dataset(ds, *args, callback=cb1, **kwargs)
