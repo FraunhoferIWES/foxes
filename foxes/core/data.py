@@ -629,8 +629,10 @@ class Data(Dict[str, np.ndarray]):
                 s = np.s_[:] if s_states is None else s_states
                 data[v] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
                 dims[v] = d.dims
-                if n_states is None:
+                if n_states is None or n_states == 1:
                     n_states = data[v].shape[0]
+                elif data[v].shape[0] == 1:
+                    pass
                 else:
                     assert n_states == data[v].shape[0], (
                         f"Expecting {n_states} states, got {data[v].shape[0]} in data variable '{v}'"
