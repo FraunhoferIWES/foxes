@@ -51,6 +51,9 @@ icon_dream = [
 era5 = [
     "metpy>=1.6",
 ]
+shp = [
+    "geopandas>=0.14.4",
+]
 mpi = [
     "mpi4py>=4.0",
 ]

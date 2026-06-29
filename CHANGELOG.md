@@ -59,6 +59,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved `Downwind`: Now with option for ambient runs (no wakes)
 - Utils
   - New utility: `show_plotly_fig`, opens a window that shows a plotly figure (instead of browser)
+- Dependencies:
   - New runners: `DefaultRunner`, `DaskRunner`. The latter features parallel runs via dask
 - Examples
   - Introducing two sub-folders of examples: `foxes` and `foxes.opt`
@@ -182,6 +183,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Algorithms:
   - New: `Iterative`, iterative wind farm calculation until convergence has been reached
 - Input:
+  - Added `AreaGeometry.from_shp(...)` as a direct geom2d entry point for reading `.shp` polygon data into an `AreaGeometry`
+  - New utility: `show_plotly_fig`, opens a window that shows a plotly figure (instead of browser)
+
   - Improved: `FieldDataNC` now accepts xarray Dataset or file pattern str as input
   - New: `ShearedProfile`, Vertical WS profile can be determined with shear exponent
 - Output:
@@ -1011,6 +1015,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Generalized `DatasetStates` on-the-fly/lazy loading behavior and hardened threaded NetCDF reading
 - Algorithms:
   - Reworked `PopulationStates` chunk-loading behavior and recovery paths
+- Utils:
+  - Added `AreaGeometry.from_shp(...)` as a direct geom2d entry point for reading `.shp` polygon data into an `AreaGeometry`
+- Dependencies:
+  - Added optional dependency group `shp` with `geopandas>=0.14.4` for shapefile workflows
 - Tests:
   - Added consistency coverage for engines, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
 - Bugs:

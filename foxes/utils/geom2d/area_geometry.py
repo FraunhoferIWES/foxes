@@ -216,6 +216,62 @@ class AreaGeometry(metaclass=ABCMeta):
         """
         return InvertedAreaGeometry(self)
 
+    @staticmethod
+    def from_shp(
+        fname,
+        names=None,
+        name_col="Name",
+        geom_col="geometry",
+        to_utm=True,
+        ret_utm_zone=False,
+        **kwargs,
+    ):
+        """
+        Read a shapefile into an ``AreaGeometry``.
+
+        This is a convenience wrapper around
+        :func:`foxes.utils.shp2geom2d`.
+
+        Parameters
+        ----------
+        fname: str
+            Path to the ``.shp`` file
+        names: list of str, optional
+            Names of polygons to extract. If None, all are used
+        name_col: str
+            Column containing polygon names
+        geom_col: str
+            Name of the geometry column
+        to_utm: bool or str
+            Convert to UTM coordinates. If str, use the given
+            zone+letter (e.g. ``"32U"``)
+        ret_utm_zone: bool
+            Return UTM zone plus letter as str in addition to geometry
+        kwargs: dict, optional
+            Additional parameters forwarded to ``geopandas.read_file``
+
+        Returns
+        -------
+        geom: foxes.utils.geom2d.AreaGeometry
+            The loaded geometry
+        utm_zone_str: str, optional
+            Returned only if ``ret_utm_zone`` is True
+
+        :group: utils.geom2d
+
+        """
+        from ..geopandas_utils import shp2geom2d
+
+        return shp2geom2d(
+            fname,
+            names=names,
+            name_col=name_col,
+            geom_col=geom_col,
+            to_utm=to_utm,
+            ret_utm_zone=ret_utm_zone,
+            **kwargs,
+        )
+
     def __add__(self, g):
         if isinstance(g, list):
             return AreaUnion([self] + g)
@@ -701,3 +757,29 @@ class AreaIntersection(AreaGeometry):
 
         """
         return AreaUnion([g.inverse() for g in geometries]).inverse()
+
+
+def from_shp(*args, **kwargs):
+    """
+    Read a shapefile into an ``AreaGeometry``.
+
+    This is a convenience wrapper for :meth:`AreaGeometry.from_shp`.
+
+    Parameters
+    ----------
+    args: tuple
+        Positional arguments forwarded to :meth:`AreaGeometry.from_shp`
+    kwargs: dict
+        Keyword arguments forwarded to :meth:`AreaGeometry.from_shp`
+
+    Returns
+    -------
+    geom: foxes.utils.geom2d.AreaGeometry
+        The loaded geometry
+    utm_zone_str: str, optional
+        Returned only if ``ret_utm_zone`` is True
+
+    :group: utils.geom2d
+
+    """
+    return AreaGeometry.from_shp(*args, **kwargs)
