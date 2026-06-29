@@ -24,6 +24,16 @@ Convert to UTM with `-u` / `--to_utm` (the figure title includes the UTM zone):
 python3 run.py -u -o my_area_utm.png
 ```
 
+Set a custom title string:
+```
+python3 run.py -t "Buildable Areas" -o my_area.png
+```
+
+Combine multiple shapefiles by intersection (instead of default union):
+```
+python3 run.py -s "/path/to/areas/*.shp" -i -o my_area_intersection.png
+```
+
 If your shapefile uses another name column (e.g. `TYPE`):
 ```
 python3 run.py --shp_path /path/to/example.shp --name_col TYPE

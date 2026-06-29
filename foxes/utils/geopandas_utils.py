@@ -268,29 +268,51 @@ def shp2geom2d(*args, combine_mode="union", ret_utm_zone=False, **kwargs):
         return AreaUnion(gs) if mode == "union" else AreaIntersection(gs)
 
     if len(args) and isinstance(args[0], str) and has_magic(args[0]):
-        if ret_utm_zone:
-            raise ValueError("ret_utm_zone=True is not supported for glob patterns")
-
         fnames = sorted(glob(args[0]))
         if not len(fnames):
             raise FileNotFoundError(f"No files matched glob pattern '{args[0]}'")
 
+        local_kwargs = dict(kwargs)
+        common_zone = None
+        if local_kwargs.get("to_utm", True):
+            if isinstance(local_kwargs.get("to_utm"), str):
+                common_zone = local_kwargs["to_utm"]
+            else:
+                zone_counts = {}
+                for f in fnames:
+                    _, _, z = read_shp_polygons(
+                        f,
+                        *args[1:],
+                        ret_utm_zone=True,
+                        **local_kwargs,
+                    )
+                    zone_counts[z] = zone_counts.get(z, 0) + 1
+                common_zone = sorted(
+                    zone_counts.items(),
+                    key=lambda kv: (-kv[1], kv[0]),
+                )[0][0]
+            local_kwargs["to_utm"] = common_zone
+
         geoms = []
         for f in fnames:
-            g = shp2geom2d(
+            res = shp2geom2d(
                 f,
                 *args[1:],
                 combine_mode=combine_mode,
                 ret_utm_zone=False,
-                **kwargs,
+                **local_kwargs,
             )
+            g = res
             if g is not None:
                 geoms.append(g)
 
         if not len(geoms):
             raise ValueError(f"No geometries created for glob pattern '{args[0]}'")
 
-        return _combine(geoms, combine_mode)
+        geom = _combine(geoms, combine_mode)
+        if ret_utm_zone:
+            return geom, common_zone
+        return geom
 
     exint = read_shp_polygons(*args, ret_utm_zone=ret_utm_zone, **kwargs)
 

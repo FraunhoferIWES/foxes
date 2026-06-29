@@ -99,6 +99,8 @@ def test_area_geometry_from_shp_glob_builds_union(tmp_path, monkeypatch):
             ex = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
         else:
             ex = np.array([[2.0, 0.0], [2.0, 1.0], [3.0, 0.0]])
+        if kwargs.get("ret_utm_zone"):
+            return ex, {}, "32U"
         return ex, {}
 
     monkeypatch.setattr(geopandas_utils, "read_shp_polygons", _fake_read_shp_polygons)
@@ -165,11 +167,47 @@ def test_area_geometry_from_shp_glob_forwards_to_loader(monkeypatch):
     assert calls[0][0] == ("glob_*.shp",)
 
 
-def test_area_geometry_from_shp_glob_rejects_ret_utm_zone(tmp_path):
+def test_area_geometry_from_shp_glob_supports_ret_utm_zone(tmp_path, monkeypatch):
     from foxes.utils import geopandas_utils
 
-    with pytest.raises(ValueError, match="ret_utm_zone"):
-        geopandas_utils.shp2geom2d(str(tmp_path / "*.shp"), ret_utm_zone=True)
+    shp_a = tmp_path / "a.shp"
+    shp_b = tmp_path / "b.shp"
+    shp_a.write_text("", encoding="utf-8")
+    shp_b.write_text("", encoding="utf-8")
+
+    calls = []
+
+    def _fake_read_shp_polygons(*args, **kwargs):
+        calls.append((args, kwargs))
+        if args[0].endswith("a.shp"):
+            ex = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
+            zone = "32U"
+        else:
+            ex = np.array([[2.0, 0.0], [2.0, 1.0], [3.0, 0.0]])
+            zone = "33U"
+
+        # Return mixed zones during scouting, and accept forced common zone later.
+        if kwargs.get("ret_utm_zone"):
+            return ex, {}, zone
+        if kwargs.get("to_utm") in ["32U", "33U"]:
+            return ex, {}
+        return ex, {}
+
+    monkeypatch.setattr(geopandas_utils, "read_shp_polygons", _fake_read_shp_polygons)
+
+    out, zone = geopandas_utils.shp2geom2d(
+        str(tmp_path / "*.shp"),
+        to_utm=True,
+        ret_utm_zone=True,
+    )
+
+    assert isinstance(out, AreaUnion)
+    assert zone == "32U"
+
+    # After scouting mixed zones, conversion should be forced to the chosen common zone.
+    forced = [kw.get("to_utm") for a, kw in calls if not kw.get("ret_utm_zone", False)]
+    assert forced
+    assert all(z == "32U" for z in forced)
 
 
 def test_area_geometry_from_shp_glob_no_match(tmp_path):
