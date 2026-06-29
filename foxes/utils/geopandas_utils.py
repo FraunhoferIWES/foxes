@@ -1,8 +1,9 @@
 import numpy as np
 import argparse
+from glob import glob, has_magic
 
 from .dict import Dict
-from .geom2d import AreaUnion, ClosedPolygon
+from .geom2d import AreaUnion, AreaIntersection, ClosedPolygon
 
 try:
     import geopandas as gpd
@@ -224,14 +225,19 @@ def read_shp_polygons(
         return exterior, interior
 
 
-def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
+def shp2geom2d(*args, combine_mode="union", ret_utm_zone=False, **kwargs):
     """
     Read shapefile into geom2d geometry
 
     Parameters
     ----------
     args: tuple, optional
-        Arguments for read_shp_polygons()
+        Arguments for read_shp_polygons(). If the first argument is
+        a glob pattern, all matched ``.shp`` files are read and
+        combined into a union geometry
+    combine_mode: str
+        The combination mode for multiple areas. Options:
+        ``"union"`` (default), ``"intersection"``
     ret_utm_zone: bool
         Return UTM zone plus letter as str
     kwargs: dict, optional
@@ -248,23 +254,60 @@ def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
 
     """
 
+    if combine_mode not in ["union", "intersection"]:
+        raise ValueError(
+            f"Invalid combine_mode '{combine_mode}', expected 'union' or 'intersection'"
+        )
+
+    def _combine(gs, mode):
+        gs = [g for g in gs if g is not None]
+        if not len(gs):
+            return None
+        if len(gs) == 1:
+            return gs[0]
+        return AreaUnion(gs) if mode == "union" else AreaIntersection(gs)
+
+    if len(args) and isinstance(args[0], str) and has_magic(args[0]):
+        if ret_utm_zone:
+            raise ValueError("ret_utm_zone=True is not supported for glob patterns")
+
+        fnames = sorted(glob(args[0]))
+        if not len(fnames):
+            raise FileNotFoundError(f"No files matched glob pattern '{args[0]}'")
+
+        geoms = []
+        for f in fnames:
+            g = shp2geom2d(
+                f,
+                *args[1:],
+                combine_mode=combine_mode,
+                ret_utm_zone=False,
+                **kwargs,
+            )
+            if g is not None:
+                geoms.append(g)
+
+        if not len(geoms):
+            raise ValueError(f"No geometries created for glob pattern '{args[0]}'")
+
+        return _combine(geoms, combine_mode)
+
     exint = read_shp_polygons(*args, ret_utm_zone=ret_utm_zone, **kwargs)
 
-    def _create_geom(data):
+    def _create_geom(data, mode):
         if not len(data):
             return None
         if isinstance(data, dict):
-            gs = [_create_geom(g) for g in data.values()]
-            gs = [g for g in gs if g is not None]
-            return AreaUnion(gs) if len(gs) else None
+            gs = [_create_geom(g, mode) for g in data.values()]
+            return _combine(gs, mode)
         if isinstance(data, np.ndarray) and len(data.shape) == 2:
             return ClosedPolygon(data)
-        gs = [_create_geom(g) for g in data]
-        gs = [g for g in gs if g is not None]
-        return AreaUnion(gs) if len(gs) else None
+        gs = [_create_geom(g, mode) for g in data]
+        return _combine(gs, mode)
 
-    gext = _create_geom(exint[0])
-    gint = _create_geom(exint[1])
+    gext = _create_geom(exint[0], combine_mode)
+    # Keep interior rings combined as union before subtraction.
+    gint = _create_geom(exint[1], "union")
     geom = gext - gint if gint is not None else gext
 
     if ret_utm_zone:

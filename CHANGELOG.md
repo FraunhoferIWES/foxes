@@ -1017,6 +1017,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Reworked `PopulationStates` chunk-loading behavior and recovery paths
 - Utils:
   - Added `AreaGeometry.from_shp(...)` as a direct geom2d entry point for reading `.shp` polygon data into an `AreaGeometry`
+  - Extended `shp2geom2d` (and therefore `AreaGeometry.from_shp(...)`) to accept glob patterns and return a union geometry of all matched shapefiles
+  - Added `combine_mode` (`"union"` or `"intersection"`) to `shp2geom2d`/`AreaGeometry.from_shp(...)` for combining multiple areas
 - Dependencies:
   - Added optional dependency group `shp` with `geopandas>=0.14.4` for shapefile workflows
 - Tests:

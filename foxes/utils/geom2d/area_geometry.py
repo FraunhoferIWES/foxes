@@ -223,6 +223,7 @@ class AreaGeometry(metaclass=ABCMeta):
         name_col="Name",
         geom_col="geometry",
         to_utm=True,
+        combine_mode="union",
         ret_utm_zone=False,
         **kwargs,
     ):
@@ -235,7 +236,9 @@ class AreaGeometry(metaclass=ABCMeta):
         Parameters
         ----------
         fname: str
-            Path to the ``.shp`` file
+            Path to the ``.shp`` file, or a glob pattern matching
+            multiple ``.shp`` files. For glob patterns, the result is
+            returned as a union of all matched geometries
         names: list of str, optional
             Names of polygons to extract. If None, all are used
         name_col: str
@@ -245,6 +248,9 @@ class AreaGeometry(metaclass=ABCMeta):
         to_utm: bool or str
             Convert to UTM coordinates. If str, use the given
             zone+letter (e.g. ``"32U"``)
+        combine_mode: str
+            The combination mode for multiple areas. Options:
+            ``"union"`` (default), ``"intersection"``
         ret_utm_zone: bool
             Return UTM zone plus letter as str in addition to geometry
         kwargs: dict, optional
@@ -268,6 +274,7 @@ class AreaGeometry(metaclass=ABCMeta):
             name_col=name_col,
             geom_col=geom_col,
             to_utm=to_utm,
+            combine_mode=combine_mode,
             ret_utm_zone=ret_utm_zone,
             **kwargs,
         )

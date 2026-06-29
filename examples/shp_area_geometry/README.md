@@ -19,6 +19,11 @@ Run with an explicit shapefile path:
 python3 run.py --shp_path /path/to/example.shp --output my_area.png
 ```
 
+Convert to UTM with `-u` / `--to_utm` (the figure title includes the UTM zone):
+```
+python3 run.py -u -o my_area_utm.png
+```
+
 If your shapefile uses another name column (e.g. `TYPE`):
 ```
 python3 run.py --shp_path /path/to/example.shp --name_col TYPE

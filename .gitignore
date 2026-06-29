@@ -147,6 +147,7 @@ scratch/
 submodules/
 results/
 result*.*
+area.png
 
 # AI
 Agents.md
