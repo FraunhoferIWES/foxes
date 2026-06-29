@@ -164,29 +164,6 @@ class ProcessEngine(PoolEngine):
 
     """
 
-    def __init__(
-        self,
-        *args,
-        supports_shared_data=True,
-        **kwargs,
-    ):
-        """
-        Constructor.
-
-        Parameters
-        ----------
-        args: tuple, optional
-            Positional arguments forwarded to ``PoolEngine`` / base classes.
-        supports_shared_data: bool
-            Flag forwarded to ``PoolEngine`` indicating whether shared-data
-            preparation should be used. Defaults to ``True``.
-        kwargs: dict, optional
-            Additional keyword arguments forwarded to ``PoolEngine`` / base
-            classes.
-
-        """
-        super().__init__(*args, supports_shared_data=supports_shared_data, **kwargs)
-
     def new_runner(self):
         """
         Creates a new EngineRunner for running calculations in this engine

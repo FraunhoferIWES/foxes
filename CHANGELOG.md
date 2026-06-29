@@ -1004,6 +1004,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Engines:
   - Refactored shared-memory handling across `DaskEngine`, `DefaultEngine`, `NumpyEngine`, and pool-based execution
   - Added and stabilized `ProcessEngine`, `RayEngine`, and `ThreadsEngine` execution paths
+  - Updated `LocalClusterEngine`/`SlurmClusterEngine` to futureize large ndarray payloads before distributed task submission, reducing per-task graph transfer pressure for large chunk payloads
 - Core:
   - Extended chunk/state metadata propagation in data containers and algorithm data construction
 - Input:
