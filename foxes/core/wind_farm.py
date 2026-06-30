@@ -63,6 +63,7 @@ class WindFarm:
         self.__utm_zone = utm_zone
         self.__locked = False
         self.__cluster_areas = None
+        self.__lonlat = None
 
     @property
     def data_is_lonlat(self):
@@ -104,6 +105,11 @@ class WindFarm:
         if not self.__locked:
             self.__locked = True
             if self.__data_is_lonlat:
+                self.__lonlat = np.zeros(
+                    (self.n_turbines, 2), dtype=config.dtype_double
+                )
+                for i, t in enumerate(self.__turbines):
+                    self.__lonlat[i, :] = t.xy
                 if not config.utm_zone_set and self.__utm_zone is None:
                     raise ValueError(
                         f"WindFarm '{self.name}': input_is_lonlat is True, but config.utm_zone and utm_zone are None"
@@ -111,7 +117,7 @@ class WindFarm:
                 if self.__utm_zone is None:
                     zone = config.utm_zone
                 elif self.__utm_zone == "from_farm":
-                    lonlat = np.mean([t.xy for t in self.__turbines], axis=0)
+                    lonlat = np.mean(self.__lonlat, axis=0)
                     zone = get_utm_zone(lonlat[None, :])
                 elif (
                     isinstance(self.__utm_zone, str)
@@ -240,6 +246,32 @@ class WindFarm:
                 print(
                     f"Turbine {turbine.index}, {turbine.name}: xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
                 )
+
+    @property
+    def lonlat(self):
+        """
+        The lon, lat coordinates of the turbines, if input_is_lonlat was True.
+
+        Returns
+        -------
+        lonlat: numpy.ndarray or None
+            The lon, lat coordinates of the turbines, shape: (n_turbines, 2), or None if input_is_lonlat was False
+
+        """
+        self.turbines
+        return self.__lonlat
+
+    def has_lonlat(self):
+        """
+        Check if lon-lat coordinates are available
+
+        Returns
+        -------
+        has_lonlat: bool
+            True if lon-lat coordinates are available, False otherwise
+
+        """
+        return self.__lonlat is not None
 
     def map_turbines_to_areas(
         self,

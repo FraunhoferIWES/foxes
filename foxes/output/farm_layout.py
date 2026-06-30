@@ -72,9 +72,14 @@ class FarmLayoutOutput(Output):
         if from_results and results_state is None:
             raise ValueError("Please specify results_state for switch from_results.")
 
-    def get_layout_data(self):
+    def get_layout_data(self, lonlat=False):
         """
         Returns wind farm layout.
+
+        Parameters
+        ----------
+        lonlat: bool, optional
+            Flag for lonlat coordinates, if available
 
         Returns
         -------
@@ -87,7 +92,15 @@ class FarmLayoutOutput(Output):
 
         data = np.zeros([self.farm.n_turbines, 3], dtype=config.dtype_double)
 
-        if self.from_res:
+        if lonlat:
+            if not self.farm.has_lonlat():
+                raise ValueError(
+                    f"WindFarm '{self.farm.name}': lonlat coordinates not available"
+                )
+            data[:, :2] = self.farm.lonlat
+            data[:, 2] = [t.H for t in self.farm.turbines]
+
+        elif self.from_res:
             data[:, 0] = self.fres[FV.X][self.rstate]
             data[:, 1] = self.fres[FV.Y][self.rstate]
             data[:, 2] = self.fres[FV.H][self.rstate]
@@ -139,6 +152,7 @@ class FarmLayoutOutput(Output):
         bargs={},
         anno_delx=0,
         anno_dely=0,
+        lonlat=False,
         **kwargs,
     ):
         """
@@ -176,6 +190,8 @@ class FarmLayoutOutput(Output):
             The annotation delta x
         anno_dely: float
             The annotation delta y
+        lonlat: bool
+            Flag for lonlat coordinates, if available
         kwargs: dict, optional
             Parameters forwarded to `matplotlib.pyplot.scatter`
 
@@ -221,9 +237,9 @@ class FarmLayoutOutput(Output):
                             f"Variable '{FV.D}' not found in turbines. Maybe set explicitely, or try from_results?"
                         )
 
-            data = self.get_layout_data()
-            x = data[:, 0] / D if normalize_D else data[:, 0]
-            y = data[:, 1] / D if normalize_D else data[:, 1]
+            data = self.get_layout_data(lonlat=lonlat)
+            x = data[:, 0] / D if normalize_D and not lonlat else data[:, 0]
+            y = data[:, 1] / D if normalize_D and not lonlat else data[:, 1]
             n = range(len(x))
 
             kw = {"c": "orange"}
@@ -311,8 +327,12 @@ class FarmLayoutOutput(Output):
             )
             ax.set_title(ti)
 
-        ax.set_xlabel("x [m]" if not normalize_D else "x [D]")
-        ax.set_ylabel("y [m]" if not normalize_D else "y [D]")
+        if lonlat:
+            ax.set_xlabel("Longitude [deg]")
+            ax.set_ylabel("Latitude [deg]")
+        else:
+            ax.set_xlabel("x [m]" if not normalize_D else "x [D]")
+            ax.set_ylabel("y [m]" if not normalize_D else "y [D]")
         ax.grid()
 
         # if len(self.farm.boundary_geometry) \
@@ -368,11 +388,13 @@ class FarmLayoutOutput(Output):
             for default
 
         """
-
-        data = self.get_layout_data()
-
         fname = file_path if file_path is not None else self.farm.name + ".xyh"
-        np.savetxt(fname, data, header="x y h")
+        data = self.get_layout_data(lonlat=False)
+        if not self.farm.has_lonlat():
+            np.savetxt(fname, data, header="x y h")
+        else:
+            data = np.concatenate((self.get_layout_data(lonlat=True), data), axis=1)
+            np.savetxt(fname, data, header="lon lat x y h")
 
     def get_dataframe(
         self,
@@ -401,10 +423,12 @@ class FarmLayoutOutput(Output):
             The layout data
 
         """
+        lonlat = self.farm.has_lonlat()
+        if lonlat:
+            cols = ["name", "lon", "lat", "x", "y", "h", "D"]
+        else:
+            cols = ["name", "x", "y", "h", "D"]
 
-        data = self.get_layout_data()
-
-        cols = ["name", "x", "y", "h", "D"]
         if self.farm.wind_farm_names is not None:
             cols.append(col_farm)
             wfarms = [t.wind_farm_name for t in self.farm.turbines]
@@ -416,9 +440,14 @@ class FarmLayoutOutput(Output):
         else:
             clusters = None
 
-        lyt = pd.DataFrame(index=range(len(data)), columns=cols)
+        lyt = pd.DataFrame(index=range(self.farm.n_turbines), columns=cols)
         lyt.index.name = "index"
         lyt["name"] = [t.name for t in self.farm.turbines]
+        if lonlat:
+            data = self.get_layout_data(lonlat=True)
+            lyt["lon"] = np.round(data[:, 0], 6)
+            lyt["lat"] = np.round(data[:, 1], 6)
+        data = self.get_layout_data(lonlat=False)
         lyt["x"] = np.round(data[:, 0], 4)
         lyt["y"] = np.round(data[:, 1], 4)
         lyt["h"] = np.round(data[:, 2], 4)
