@@ -222,3 +222,44 @@ def test_shp2geom2d_rejects_invalid_combine_mode(monkeypatch):
 
     with pytest.raises(ValueError, match="Invalid combine_mode"):
         geopandas_utils.shp2geom2d("areas.shp", combine_mode="sum")
+
+
+def test_shp2geom2d_accepts_path_object(tmp_path, monkeypatch):
+    from foxes.utils import geopandas_utils
+
+    shp = tmp_path / "a.shp"
+    shp.write_text("", encoding="utf-8")
+
+    def _fake_read_shp_polygons(*args, **kwargs):
+        ex = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
+        return ex, {}
+
+    monkeypatch.setattr(geopandas_utils, "read_shp_polygons", _fake_read_shp_polygons)
+
+    out = geopandas_utils.shp2geom2d(shp, to_utm=False)
+
+    assert isinstance(out, ClosedPolygon)
+
+
+def test_shp2geom2d_accepts_pathlike_glob(tmp_path, monkeypatch):
+    from foxes.utils import geopandas_utils
+    from pathlib import Path
+
+    shp_a = tmp_path / "a.shp"
+    shp_b = tmp_path / "b.shp"
+    shp_a.write_text("", encoding="utf-8")
+    shp_b.write_text("", encoding="utf-8")
+
+    def _fake_read_shp_polygons(*args, **kwargs):
+        if args[0].endswith("a.shp"):
+            ex = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
+        else:
+            ex = np.array([[2.0, 0.0], [2.0, 1.0], [3.0, 0.0]])
+        return ex, {}
+
+    monkeypatch.setattr(geopandas_utils, "read_shp_polygons", _fake_read_shp_polygons)
+
+    out = geopandas_utils.shp2geom2d(Path(str(tmp_path / "*.shp")), to_utm=False)
+
+    assert isinstance(out, AreaUnion)
+    assert len(out.geometries) == 2

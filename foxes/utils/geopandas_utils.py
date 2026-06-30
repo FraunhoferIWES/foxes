@@ -126,6 +126,27 @@ def _extract_poly_coords(geom):
     return exterior_coords, interior_coords
 
 
+def _extract_utm(to_utm):
+    """
+    Helper function for UTM zone parsing
+    """
+    utmz = None
+    utml = None
+    apply_utm = False
+    if isinstance(to_utm, str) or to_utm:
+        utmz = int(to_utm[:-1]) if isinstance(to_utm, str) else None
+        utml = to_utm[-1] if isinstance(to_utm, str) else None
+        apply_utm = True
+    if apply_utm:
+        if (utmz is not None and utml is None) or (utmz is None and utml is not None):
+            raise ValueError(
+                f"Invalid UTM zone specification '{to_utm}', "
+                "must be either both zone number and letter or neither, "
+                f"got: zone number = {utmz}, zone letter = {utml}"
+            )
+    return apply_utm, utmz, utml
+
+
 def read_shp_polygons(
     fname,
     names=None,
@@ -142,7 +163,7 @@ def read_shp_polygons(
     ----------
     fname: str
         Path to the .shp file
-    names: list: of str, optinal
+    names: list of str, optional
         The names of the polygons to be extracted. All by
         default
     name_col: int
@@ -166,7 +187,7 @@ def read_shp_polygons(
         Dict with list of array of points. Key: area name,
         Value: list:np.ndarray, shape of latter: (n_points, 2)
     utm_zone_str: str, optional
-        The utem zone plus letter as str, e.g. "32U"
+        The UTM zone plus letter as str, e.g. "32U"
 
     :group: utils
 
@@ -174,15 +195,9 @@ def read_shp_polygons(
 
     pdf = read_shp(fname, **kwargs)
     pnames = list(pdf[name_col])
-
-    utmz = None
-    utml = None
-    apply_utm = False
-    if isinstance(to_utm, str) or to_utm:
-        apply_utm = True
+    apply_utm, utmz, utml = _extract_utm(to_utm)
+    if apply_utm:
         check_import_utm()
-        utmz = int(to_utm[:-1]) if isinstance(to_utm, str) else None
-        utml = to_utm[-1] if isinstance(to_utm, str) else None
 
     exterior = Dict()
     interior = Dict()
@@ -220,24 +235,36 @@ def read_shp_polygons(
             interior[name] = _to_numpy(epi)
 
     if ret_utm_zone:
-        return exterior, interior, f"{utmz}{utml}"
+        utm_zone = f"{utmz}{utml}" if utmz is not None and utml is not None else None
+        return exterior, interior, utm_zone
     else:
         return exterior, interior
 
 
-def shp2geom2d(*args, combine_mode="union", ret_utm_zone=False, **kwargs):
+def shp2geom2d(
+    shp_files,
+    *args,
+    combine_mode="union",
+    to_utm=True,
+    ret_utm_zone=False,
+    **kwargs,
+):
     """
     Read shapefile into geom2d geometry
 
     Parameters
     ----------
+    shp_files: str
+        Path to a ``.shp`` file or glob pattern matching multiple
+        ``.shp`` files
     args: tuple, optional
-        Arguments for read_shp_polygons(). If the first argument is
-        a glob pattern, all matched ``.shp`` files are read and
-        combined into a union geometry
+        Additional positional arguments for read_shp_polygons()
     combine_mode: str
         The combination mode for multiple areas. Options:
         ``"union"`` (default), ``"intersection"``
+    to_utm: bool or str, optional
+        Convert to UTM coordinates. If str, then UTM zone
+        plus letter, e.g. "32U"
     ret_utm_zone: bool
         Return UTM zone plus letter as str
     kwargs: dict, optional
@@ -248,7 +275,7 @@ def shp2geom2d(*args, combine_mode="union", ret_utm_zone=False, **kwargs):
     geom: foxes.tools.geom2D.AreaGeometry
         The geometry object
     utm_zone_str: str, optional
-        The utem zone plus letter as str, e.g. "32U"
+        The UTM zone plus letter as str, e.g. "32U"
 
     :group: utils
 
@@ -267,54 +294,95 @@ def shp2geom2d(*args, combine_mode="union", ret_utm_zone=False, **kwargs):
             return gs[0]
         return AreaUnion(gs) if mode == "union" else AreaIntersection(gs)
 
-    if len(args) and isinstance(args[0], str) and has_magic(args[0]):
-        fnames = sorted(glob(args[0]))
-        if not len(fnames):
-            raise FileNotFoundError(f"No files matched glob pattern '{args[0]}'")
+    def _expand_files(path_spec):
+        s = str(path_spec)
+        return glob(s) if has_magic(s) else [s]
 
-        local_kwargs = dict(kwargs)
-        common_zone = None
-        if local_kwargs.get("to_utm", True):
-            if isinstance(local_kwargs.get("to_utm"), str):
-                common_zone = local_kwargs["to_utm"]
-            else:
-                zone_counts = {}
-                for f in fnames:
-                    _, _, z = read_shp_polygons(
-                        f,
-                        *args[1:],
-                        ret_utm_zone=True,
-                        **local_kwargs,
-                    )
-                    zone_counts[z] = zone_counts.get(z, 0) + 1
-                common_zone = sorted(
-                    zone_counts.items(),
-                    key=lambda kv: (-kv[1], kv[0]),
-                )[0][0]
-            local_kwargs["to_utm"] = common_zone
+    if isinstance(shp_files, (list, tuple)):
+        fnames = []
+        for f in shp_files:
+            fnames.extend(_expand_files(f))
+    else:
+        fnames = _expand_files(shp_files)
 
-        geoms = []
-        for f in fnames:
-            res = shp2geom2d(
-                f,
-                *args[1:],
-                combine_mode=combine_mode,
-                ret_utm_zone=False,
-                **local_kwargs,
-            )
-            g = res
-            if g is not None:
-                geoms.append(g)
+    if not len(fnames):
+        raise FileNotFoundError(f"No files matched '{shp_files}'")
 
-        if not len(geoms):
-            raise ValueError(f"No geometries created for glob pattern '{args[0]}'")
-
-        geom = _combine(geoms, combine_mode)
+    # case one area only:
+    if len(fnames) == 1:
         if ret_utm_zone:
-            return geom, common_zone
-        return geom
+            data, utm_zone = read_shp_polygons(
+                fnames[0], *args, to_utm=to_utm, ret_utm_zone=True, **kwargs
+            )
+            data = [data]
+        else:
+            data = [
+                read_shp_polygons(
+                    fnames[0], *args, to_utm=to_utm, ret_utm_zone=False, **kwargs
+                )
+            ]
+            utm_zone = None
 
-    exint = read_shp_polygons(*args, ret_utm_zone=ret_utm_zone, **kwargs)
+    # case multiple areas:
+    else:
+        apply_utm, utmz, utml = _extract_utm(to_utm)
+        utm_zone = False
+        if apply_utm and utmz is not None and utml is not None:
+            utm_zone = f"{utmz}{utml}"
+
+        data = []
+        for f in fnames:
+            data.append(
+                read_shp_polygons(
+                    f, *args, to_utm=utm_zone, ret_utm_zone=False, **kwargs
+                )
+            )
+
+        # auto determine UTM zone and apply:
+        if to_utm == True and utm_zone == False:
+            pts = []
+            for d in data:
+                if d[0] is not None:
+                    pts += list(d[0].values())
+                if d[1] is not None:
+                    pts += list(d[1].values())
+            pts = [p for p in pts if len(p) > 0]
+            assert len(pts) > 0, "No points found for UTM zone scouting"
+            pts = np.concatenate(pts, axis=0)
+
+            check_import_utm()
+            __, __, utmz, utml = utm.from_latlon(
+                pts[:, 1],
+                pts[:, 0],
+                force_zone_number=utmz,
+                force_zone_letter=utml,
+            )
+            utm_zone = f"{utmz}{utml}"
+            del pts
+
+            for d in data:
+                if d[0] is not None:
+                    for k in d[0].keys():
+                        if len(d[0][k]) > 0:
+                            d[0][k] = np.array(
+                                utm.from_latlon(
+                                    d[0][k][:, 1],
+                                    d[0][k][:, 0],
+                                    force_zone_number=utmz,
+                                    force_zone_letter=utml,
+                                )[:2]
+                            ).T
+                if d[1] is not None:
+                    for k in d[1].keys():
+                        if len(d[1][k]) > 0:
+                            d[1][k] = np.array(
+                                utm.from_latlon(
+                                    d[1][k][:, 1],
+                                    d[1][k][:, 0],
+                                    force_zone_number=utmz,
+                                    force_zone_letter=utml,
+                                )[:2]
+                            ).T
 
     def _create_geom(data, mode):
         if not len(data):
@@ -327,13 +395,13 @@ def shp2geom2d(*args, combine_mode="union", ret_utm_zone=False, **kwargs):
         gs = [_create_geom(g, mode) for g in data]
         return _combine(gs, mode)
 
-    gext = _create_geom(exint[0], combine_mode)
+    gext = _create_geom([d[0] for d in data], combine_mode)
     # Keep interior rings combined as union before subtraction.
-    gint = _create_geom(exint[1], "union")
+    gint = _create_geom([d[1] for d in data], "union")
     geom = gext - gint if gint is not None else gext
 
     if ret_utm_zone:
-        return geom, exint[2]
+        return geom, utm_zone
     else:
         return geom
 

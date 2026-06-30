@@ -237,8 +237,8 @@ class AreaGeometry(metaclass=ABCMeta):
         ----------
         fname: str
             Path to the ``.shp`` file, or a glob pattern matching
-            multiple ``.shp`` files. For glob patterns, the result is
-            returned as a union of all matched geometries
+            multiple ``.shp`` files. For glob patterns, matched
+            geometries are combined according to `combine_mode`
         names: list of str, optional
             Names of polygons to extract. If None, all are used
         name_col: str

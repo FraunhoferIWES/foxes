@@ -111,7 +111,7 @@ def get_grid_xy(
         farm_results = farm_results.isel({FC.STATE: states_isel})
     if states_sel is not None:
         farm_results = farm_results.sel({FC.STATE: states_sel})
-    n_states = farm_results[FV.H].shape[0]
+    n_states = farm_results.sizes[FC.STATE]
 
     # get base rectangle:
     x_min = xmin if xmin is not None else farm_results[FV.X].min().to_numpy() - xspace
