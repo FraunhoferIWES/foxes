@@ -56,20 +56,20 @@ def _read_wind_deficit(
         print("      Contents:", [k for k in wind_deficit.keys()])
     wind_def_dict = Dict(wmodel_type=wind_def_map[wname], induction=induction)
     kcoef = Dict(wind_deficit["wake_expansion_coefficient"], _name="kcoef")
-    ka = kcoef["k_a"]
+    ka = kcoef.get_item("k_a", 0.0)
     kb = kcoef.get_item("k_b", 0.0)
     amb_ti = kcoef.get_item("free_stream_ti", False)
-    if ka is None or ka == 0.0:
-        wind_def_dict["k"] = kb
+    if kb is None or kb == 0.0:
+        wind_def_dict["k"] = ka
         if verbosity > 2:
-            print("        Using k =", kb)
+            print("        Using k =", ka)
     else:
         ti_var = FV.AMB_TI if amb_ti else FV.TI
         if verbosity > 2:
-            print(f"      Using k = {ka} * {ti_var} + {kb}")
+            print(f"      Using k = {ka} + {kb} * {ti_var}")
         wind_def_dict["k"] = None
-        wind_def_dict["ka"] = ka
-        wind_def_dict["kb"] = kb
+        wind_def_dict["ka"] = kb  # Note: Definition in foxes is k = ka * ti + kb
+        wind_def_dict["kb"] = ka  # Note: Definition in foxes is k = ka * ti + kb
         wind_def_dict["ti_var"] = ti_var
     if "ceps" in wind_deficit:
         sbf = wind_deficit["ceps"]
@@ -146,20 +146,20 @@ def _read_turbulence(
             tiwake_dict["c2"] = turbulence_model.pop_item("c2", None)
         if "wake_expansion_coefficient" in turbulence_model:
             kcoef = Dict(turbulence_model["wake_expansion_coefficient"], _name="kcoef")
-            ka = kcoef["k_a"]
+            ka = kcoef.get_item("k_a", 0.0)
             kb = kcoef.get_item("k_b", 0.0)
             amb_ti = kcoef.get_item("free_stream_ti", False)
-        if ka is None or ka == 0.0:
-            tiwake_dict["k"] = kb
+        if kb is None or kb == 0.0:
+            tiwake_dict["k"] = ka
             if verbosity > 2:
-                print("        Using k =", kb)
+                print("        Using k =", ka)
         else:
             ti_var = FV.AMB_TI if amb_ti else FV.TI
             if verbosity > 2:
-                print(f"      Using k = {ka} * {ti_var} + {kb}")
+                print(f"      Using k = {ka} + {kb} * {ti_var}")
             tiwake_dict["k"] = None
-            tiwake_dict["ka"] = ka
-            tiwake_dict["kb"] = kb
+            tiwake_dict["ka"] = kb  # Note: Definition in foxes is k = ka * ti + kb
+            tiwake_dict["kb"] = ka  # Note: Definition in foxes is k = ka * ti + kb
             tiwake_dict["ti_var"] = ti_var
         tiwake_dict["superposition"] = ti_sup_dict[superposition["ti_superposition"]]
 
