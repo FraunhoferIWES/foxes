@@ -1001,5 +1001,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.0
 
+- Inputs:
+  - Fix for bug with ka, kb in `windio` interpretation
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
