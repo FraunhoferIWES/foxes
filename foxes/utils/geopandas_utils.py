@@ -339,7 +339,12 @@ def shp2geom2d(
             )
 
         # auto determine UTM zone and apply:
-        if to_utm == True and utm_zone == False:
+        if (
+            isinstance(to_utm, bool)
+            and to_utm
+            and isinstance(utm_zone, bool)
+            and not utm_zone
+        ):
             pts = []
             for d in data:
                 if d[0] is not None:

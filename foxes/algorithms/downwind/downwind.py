@@ -580,14 +580,23 @@ class Downwind(Algorithm):
 
         return mdls
 
-    def initialize(self):
+    def initialize(self, force=False):
         """
         Initializes the algorithm.
+
+        Parameters
+        ----------
+        force: bool
+            Overwrite existing data
+
         """
-        self.init_states()
+        if force:
+            self.clear_loaded_data()
+
+        self.init_states(force=force)
 
         self.print(f"\nInitializing algorithm '{self.name}'")
-        super().initialize()
+        super().initialize(force=force)
 
     def _collect_farm_models(
         self,

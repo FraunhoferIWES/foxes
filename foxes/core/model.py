@@ -172,10 +172,13 @@ class Model(ABC):
         if loaded_data is None:
             loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
 
+        if force:
+            self.__initialized = False
+
         if not self.initialized:
             pr = False
             for m in self.sub_models():
-                if not m.initialized:
+                if force or not m.initialized:
                     if verbosity > 1 and not pr:
                         print(f">> {self.name}: Starting sub-model initialization >> ")
                         pr = True
