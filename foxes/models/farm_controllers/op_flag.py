@@ -2,6 +2,7 @@ import numpy as np
 from xarray import open_dataset, Dataset
 
 from foxes.core import FarmController
+from foxes.config import config
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -118,7 +119,7 @@ class OpFlagController(FarmController):
         else:
             if verbosity > 0:
                 print(f"OpFlagController: Reading data from {self.data_source}")
-            ds = open_dataset(self.data_source)
+            ds = open_dataset(self.data_source, engine=config.nc_engine)
             cop = self.var2ncvar.get(FV.OPERATING, FV.OPERATING)
             self._op_flags = ds[cop].to_numpy()
             del ds

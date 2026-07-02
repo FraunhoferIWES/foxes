@@ -269,6 +269,7 @@ def read_farm(wio_dict, mbook, verbosity):
     if operating is None:
         mbook.farm_controllers["farm_cntrl"] = BasicFarmController()
     else:
+        operating = np.concatenate(operating, axis=1)
         mbook.farm_controllers["farm_cntrl"] = OpFlagController(operating)
     if verbosity > 1:
         print(
