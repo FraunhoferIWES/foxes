@@ -145,7 +145,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
     return ttypes
 
 
-def read_layout(lname, ldict, farm, ttypes, verbosity=1):
+def read_layout(lname, ldict, farm, ttypes, fname=None, verbosity=1):
     """
     Read wind farm layout from windio input
 
@@ -160,6 +160,8 @@ def read_layout(lname, ldict, farm, ttypes, verbosity=1):
     ttypes: dict
         Mapping from turbine type key to turbine
         type name in the model book
+    fname: str, optional
+        Name of the sub-farm, if any
     verbosity: int
         The verbosity level, 0=silent
 
@@ -175,11 +177,15 @@ def read_layout(lname, ldict, farm, ttypes, verbosity=1):
     for i, xy in enumerate(zip(cdict["x"], cdict["y"])):
         tt = ttypes[tmap[i] if tmap is not None else 0]
         farm.add_turbine(
-            Turbine(xy=np.array(xy), turbine_models=[tt]),
+            Turbine(
+                xy=np.array(xy),
+                turbine_models=[tt],
+                wind_farm_name=fname,
+            ),
             verbosity=verbosity - 3,
         )
     if verbosity > 2:
-        print(f"          Added {farm.n_turbines} turbines")
+        print(f"          Total number of turbines: {farm.n_turbines}")
 
 
 def read_farm(wio_dict, mbook, verbosity):
@@ -201,55 +207,73 @@ def read_farm(wio_dict, mbook, verbosity):
     :group: input.yaml.windio
 
     """
-    wio_farm = wio_dict["wind_farm"]
-    if verbosity > 1:
-        print("Reading wind farm")
-        print("  Name:", wio_farm.pop_item("name", None))
-        print("  Contents:", [k for k in wio_farm.keys()])
-
-    # find REWS exponents:
-    try:
-        rotor_averaging = wio_dict["attributes"]["analysis"]["rotor_averaging"]
-        ws_exp_P = rotor_averaging["wind_speed_exponent_for_power"]
-        ws_exp_ct = rotor_averaging["wind_speed_exponent_for_ct"]
-    except KeyError:
-        ws_exp_P = 1
-        ws_exp_ct = 1
-
-    # create farm controller:
-    if FV.OPERATING in wio_farm:
-        op_dims, operating = wio_farm.pop_item(FV.OPERATING)
-        assert (
-            len(op_dims) == 2
-            and op_dims[1] == FC.TURBINE
-            and op_dims[0] in [FC.STATE, FC.TIME]
-        ), f"Expecting operating field to have dims (state, turbine), got {op_dims}"
-        mbook.farm_controllers["farm_cntrl"] = OpFlagController(operating)
+    if not isinstance(wio_dict["wind_farm"], list):
+        wio_farms = [wio_dict["wind_farm"]]
     else:
+        wio_farms = wio_dict["wind_farm"]
+
+    farm = WindFarm()
+    ws_exp_P = None
+    operating = None
+    for index, wio_farm in enumerate(wio_farms):
+        fname = wio_farm.pop_item("name", None)
+        if verbosity > 1:
+            indx_str = f" [{index}]" if len(wio_farms) > 1 else ""
+            print(f"Reading wind farm{indx_str}")
+            print("  Name:", fname)
+            print("  Contents:", [k for k in wio_farm.keys()])
+
+        # find REWS exponents:
+        if ws_exp_P is None:
+            try:
+                rotor_averaging = wio_dict["attributes"]["analysis"]["rotor_averaging"]
+                ws_exp_P = rotor_averaging["wind_speed_exponent_for_power"]
+                ws_exp_ct = rotor_averaging["wind_speed_exponent_for_ct"]
+            except KeyError:
+                ws_exp_P = 1
+                ws_exp_ct = 1
+
+        # create farm controller:
+        if FV.OPERATING in wio_farm:
+            op_dims, optg = wio_farm.pop_item(FV.OPERATING)
+            assert (
+                len(op_dims) == 2
+                and op_dims[1] == FC.TURBINE
+                and op_dims[0] in [FC.STATE, FC.TIME]
+            ), f"Expecting operating field to have dims (state, turbine), got {op_dims}"
+            if operating is None:
+                if index > 0:
+                    operating = [np.ones((optg.shape[0], farm.n_turbines), dtype=bool)]
+                else:
+                    operating = []
+            operating.append(optg)
+
+        # read turbine type:
+        ttypes = read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity)
+
+        # read layouts and create wind farm:
+        wfarm = wio_farm["layouts"]
+        if isinstance(wfarm, dict):
+            if "coordinates" in wfarm:
+                wfarm = {"0": wfarm}
+            layouts = Dict(wfarm, _name=wio_farm.name + ".layouts")
+        else:
+            layouts = {str(i): lf for i, lf in enumerate(wfarm)}
+            layouts = Dict(layouts, _name=wio_farm.name + ".layouts")
+        if verbosity > 2:
+            print("    Reading layouts")
+            print("      Contents:", [k for k in layouts.keys()])
+        for lname, ldict in layouts.items():
+            read_layout(lname, ldict, farm, ttypes, fname=fname, verbosity=verbosity)
+
+    if operating is None:
         mbook.farm_controllers["farm_cntrl"] = BasicFarmController()
+    else:
+        mbook.farm_controllers["farm_cntrl"] = OpFlagController(operating)
     if verbosity > 1:
         print(
-            f"  Farm controller type: {type(mbook.farm_controllers['farm_cntrl']).__name__}"
+            f"Farm controller type: {type(mbook.farm_controllers['farm_cntrl']).__name__}"
         )
-
-    # read turbine type:
-    ttypes = read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity)
-
-    # read layouts and create wind farm:
-    farm = WindFarm()
-    wfarm = wio_farm["layouts"]
-    if isinstance(wfarm, dict):
-        if "coordinates" in wfarm:
-            wfarm = {"0": wfarm}
-        layouts = Dict(wfarm, _name=wio_farm.name + ".layouts")
-    else:
-        layouts = {str(i): lf for i, lf in enumerate(wfarm)}
-        layouts = Dict(layouts, _name=wio_farm.name + ".layouts")
-    if verbosity > 2:
-        print("    Reading layouts")
-        print("      Contents:", [k for k in layouts.keys()])
-    for lname, ldict in layouts.items():
-        read_layout(lname, ldict, farm, ttypes, verbosity)
 
     return farm
 

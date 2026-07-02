@@ -227,18 +227,26 @@ class WindFarm:
             turbine.name = f"T{turbine.index}"
         self.__turbines.append(turbine)
         if verbosity > 0:
+            wf_cl_str = (
+                f", {turbine.wind_farm_name}"
+                if turbine.wind_farm_name is not None
+                else ""
+            )
+            wf_cl_str += (
+                f", {turbine.cluster_name}" if turbine.cluster_name is not None else ""
+            )
             if self.data_is_lonlat:
                 print(
-                    f"Turbine {turbine.index}, {turbine.name}: lonlat=({turbine.xy[0]:.6f}, {turbine.xy[1]:.6f}), {', '.join(turbine.models)}"
+                    f"Turbine {turbine.index}, {turbine.name}{wf_cl_str}: lonlat=({turbine.xy[0]:.6f}, {turbine.xy[1]:.6f}), {', '.join(turbine.models)}"
                 )
             elif config.utm_zone_set:
                 utmn, utml = config.utm_zone
                 print(
-                    f"Turbine {turbine.index}, {turbine.name}: UTM {utmn}{utml}, xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
+                    f"Turbine {turbine.index}, {turbine.name}{wf_cl_str}: UTM {utmn}{utml}, xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
                 )
             else:
                 print(
-                    f"Turbine {turbine.index}, {turbine.name}: xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
+                    f"Turbine {turbine.index}, {turbine.name}{wf_cl_str}: xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
                 )
 
     def map_turbines_to_areas(
