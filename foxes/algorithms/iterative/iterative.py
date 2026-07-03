@@ -164,6 +164,20 @@ class Iterative(Downwind):
         """
         return self._it
 
+    def init_states(self, force=False):
+        """
+        Initialize states, if needed.
+
+        Parameters
+        ----------
+        force: bool
+            Force initialization even if already initialized
+
+        """
+        super().init_states(force=force)
+        if FC.STATE not in self.loaded_data["coords"]:
+            self.loaded_data["coords"][FC.STATE] = self.states.index()
+
     def _collect_farm_models(
         self,
         outputs,
