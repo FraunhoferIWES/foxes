@@ -75,9 +75,7 @@ class WakeMirror(GroundModel):
         # assert(np.all(fdata[FV.H]==fdata[FV.TXYH[..., 2]]))
 
         # contribution from main wake:
-        wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, tdata, downwind_index, wmodel
-        )
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
         # contribution from mirrors:

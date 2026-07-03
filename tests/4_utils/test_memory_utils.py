@@ -2,6 +2,7 @@ from collections import UserDict, deque
 
 import numpy as np
 import pytest
+import xarray as xr
 
 from foxes.utils.memory_utils import (
     deep_split_by_nbytes,
@@ -32,6 +33,15 @@ def test_get_object_nbytes_supports_generic_collection_fallback():
     size = get_object_nbytes(payload)
 
     assert size >= a.nbytes + b.nbytes
+
+
+def test_get_object_nbytes_non_recursive_collection_uses_shallow_size():
+    payload = {"a": np.arange(4, dtype=np.float64), "b": [1, 2, 3]}
+
+    size = get_object_nbytes(payload, recursive=False)
+
+    assert isinstance(size, int)
+    assert size > 0
 
 
 def test_get_object_nbytes_handles_recursive_collections():
@@ -133,3 +143,13 @@ def test_deep_update_accepts_equal_numpy_arrays():
     arr = np.arange(5, dtype=np.int32)
     out = deep_update(arr, arr.copy())
     assert np.array_equal(out, arr)
+
+
+def test_deep_split_and_update_preserve_non_dict_mapping_payloads():
+    payload = {"dataset": xr.Dataset({"a": ("x", np.array([1.0, 2.0]))})}
+
+    small, large = deep_split_by_nbytes(payload, max_nbytes=1, fill_None=True)
+    merged = deep_update(small, large)
+
+    assert isinstance(merged["dataset"], xr.Dataset)
+    assert np.array_equal(merged["dataset"]["a"].to_numpy(), np.array([1.0, 2.0]))

@@ -49,6 +49,8 @@ class SetUniformData(PointDataModel):
             pandas file reading parameters
 
         """
+        super().__init__()
+
         self.data_source = data_source
         self.ovars = output_vars
         self.var2col = var2col
@@ -86,7 +88,7 @@ class SetUniformData(PointDataModel):
                 [self.var2col.get(v, v) for v in self.ovars]
             ].to_numpy(config.dtype_double)
         elif isinstance(self.data_source, dict):
-            pass
+            data = None
         else:
             if verbosity:
                 print(f"States '{self.name}': Reading file {self.data_source}")
@@ -98,8 +100,9 @@ class SetUniformData(PointDataModel):
             )
 
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
-        loaded_data["coords"][self.VARS] = self.ovars
-        loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
+        if data is not None:
+            loaded_data["coords"][self.VARS] = self.ovars
+            loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
     def output_point_vars(self, algo):
         """
@@ -145,8 +148,13 @@ class SetUniformData(PointDataModel):
         """
         for v in self.ovars:
             if self.DATA in mdata:
-                pdata[v][:] = mdata[v][None, self.ovars.index(v)]
+                values = mdata[self.DATA][:, self.ovars.index(v)]
+                pdata[v][:] = values[:, None]
             else:
-                pdata[v][:] = self.data_source[v]
+                values = self.data_source[v]
+                if hasattr(values, "ndim") and values.ndim == 1:
+                    pdata[v][:] = values[:, None]
+                else:
+                    pdata[v][:] = values
 
         return {v: pdata[v] for v in self.ovars}

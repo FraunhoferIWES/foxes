@@ -266,7 +266,6 @@ class FromLookupTable(TurbineType):
         fdata_lookup = FData(
             data={v: fdata[v] for v in input_vars},
             dims={v: fdata.dims[v] for v in input_vars},
-            loop_dims=fdata.loop_dims,
         )
         for v in self.output_farm_vars(algo):
             fdata_lookup.add(v, fdata[v], fdata.dims[v])

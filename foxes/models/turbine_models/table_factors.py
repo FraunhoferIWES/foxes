@@ -163,10 +163,10 @@ class TableFactors(TurbineModel):
         """
         self.ensure_output_vars(algo, fdata)
 
-        n_sel = np.sum(st_sel)
+        n_sel = np.size(fdata[self.row_var][st_sel])
         qts = np.zeros((n_sel, 2), dtype=config.dtype_double)
-        qts[:, 0] = fdata[self.row_var][st_sel]
-        qts[:, 1] = fdata[self.col_var][st_sel]
+        qts[:, 0] = np.asarray(fdata[self.row_var][st_sel]).reshape(n_sel)
+        qts[:, 1] = np.asarray(fdata[self.col_var][st_sel]).reshape(n_sel)
 
         try:
             factors = interpn(

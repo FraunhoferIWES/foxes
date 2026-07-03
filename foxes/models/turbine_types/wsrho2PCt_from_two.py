@@ -260,6 +260,10 @@ class WsRho2PCtFromTwo(TurbineType):
         """
         # prepare:
         self.ensure_output_vars(algo, fdata)
+        if not isinstance(st_sel, np.ndarray):
+            stmp = np.zeros_like(fdata[self.WSP], dtype=bool)
+            stmp[st_sel] = True
+            st_sel = stmp
 
         # calculate P:
         st_sel_P = (

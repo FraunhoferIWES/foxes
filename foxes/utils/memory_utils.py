@@ -43,7 +43,13 @@ def get_object_nbytes(value, recursive=True, seen=None, allow_shallow_fallback=T
     if isinstance(value, (bytes, bytearray, memoryview, str)):
         return len(value)
     if isinstance(value, Mapping):
-        assert recursive, "Recursive estimation is required for Mapping types."
+        if not recursive:
+            if not allow_shallow_fallback:
+                return 0
+            try:
+                return int(sys.getsizeof(value))
+            except (TypeError, ValueError):
+                return 0
         return sum(
             get_object_nbytes(
                 k,
@@ -60,7 +66,13 @@ def get_object_nbytes(value, recursive=True, seen=None, allow_shallow_fallback=T
             for k, v in value.items()
         )
     if isinstance(value, AbstractSet):
-        assert recursive, "Recursive estimation is required for AbstractSet types."
+        if not recursive:
+            if not allow_shallow_fallback:
+                return 0
+            try:
+                return int(sys.getsizeof(value))
+            except (TypeError, ValueError):
+                return 0
         return sum(
             get_object_nbytes(
                 v,
@@ -73,7 +85,13 @@ def get_object_nbytes(value, recursive=True, seen=None, allow_shallow_fallback=T
     if isinstance(value, Sequence) and not isinstance(
         value, (bytes, bytearray, memoryview, str)
     ):
-        assert recursive, "Recursive estimation is required for Sequence types."
+        if not recursive:
+            if not allow_shallow_fallback:
+                return 0
+            try:
+                return int(sys.getsizeof(value))
+            except (TypeError, ValueError):
+                return 0
         return sum(
             get_object_nbytes(
                 v,
@@ -86,7 +104,13 @@ def get_object_nbytes(value, recursive=True, seen=None, allow_shallow_fallback=T
     if isinstance(value, Collection) and not isinstance(
         value, (bytes, bytearray, memoryview, str)
     ):
-        assert recursive, "Recursive estimation is required for Collection types."
+        if not recursive:
+            if not allow_shallow_fallback:
+                return 0
+            try:
+                return int(sys.getsizeof(value))
+            except (TypeError, ValueError):
+                return 0
         return sum(
             get_object_nbytes(
                 v,
@@ -177,6 +201,11 @@ def deep_split(condition, data, fill_None=True):
     """
 
     if isinstance(data, Mapping):
+        if type(data) is not dict:
+            try:
+                return (None, data) if condition(data) else (data, None)
+            except TypeError:
+                return (data, data)
         data_0 = {}
         data_1 = {}
         for k, v in data.items():

@@ -1029,5 +1029,6 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Reduced farm-controller model-selection memory by storing turbine-model selection masks only for models that need filtering, and as per-model arrays instead of one stacked 3D mask
   - Fixed `Sequential` state-count handling during per-step evaluation, which could flatten `OnePointFlowTimeseries`-driven ambient signals and lead to incorrect `YawController` behavior in `sequential_yawcontroller`
   - Improved rotor rendering in `FlowPlots2D` vertical slice plots (`xz`/`yz`) by drawing explicit edge-on rotor lines for near-zero projected disk width and ellipse/circle otherwise
+  - Fixed non-recursive payload-size estimation for collection-valued `extra_data` in memory splitting utilities, preventing `ProcessEngine` chunk execution failures with `SetFarmVars`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
