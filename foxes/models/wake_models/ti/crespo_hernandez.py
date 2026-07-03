@@ -298,6 +298,9 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             selection=st_sel,
         )
 
+        # avoid zero ti values:
+        ti = np.maximum(ti, 1e-10)
+
         # calculate induction factor:
         twoa = 2 * self.induction.ct2a(ct)
 
