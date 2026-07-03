@@ -353,9 +353,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5
 
-- Dependencies:
   - Dropping support for Python 3.7, due to `netcdf4` dependency
-- Core:
   - Simplified model initialization/finalization. Removing the `keep_models` idea, instead all models are now kept in the algorithm's idata memory until finalization. Adding a new model now mostly requires that the `sub_models` and the `load_data` functions are overloaded, if applicable. The `initialize` and `finalize` only need to be addressed explicitly in non-standard cases.
 - Algorithms:
   - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
@@ -1026,6 +1024,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Tests:
   - Added consistency coverage for engines, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
 - Bugs:
+  - Fixed `TurbinePointCloud` initialization for turbine-indexed data by disabling XY bounds filtering, preventing `Downwind.calc_farm` assertion failures about missing `X`/`Y` in coordinate mapping
   - Fixed `Downwind.calc_points` state-subset handling for point calculations by propagating `states_sel`/`states_isel` to engine-level dataset subsetting, preventing shape mismatch crashes for multi-height states
   - Reduced farm-controller model-selection memory by storing turbine-model selection masks only for models that need filtering, and as per-model arrays instead of one stacked 3D mask
   - Fixed `Sequential` state-count handling during per-step evaluation, which could flatten `OnePointFlowTimeseries`-driven ambient signals and lead to incorrect `YawController` behavior in `sequential_yawcontroller`

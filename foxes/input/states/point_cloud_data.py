@@ -571,7 +571,14 @@ class TurbinePointCloud(DatasetStates):
             Keyword arguments for the base class
 
         """
-        super().__init__(*args, load_mode="preload", **kwargs)
+        # Turbine-point-cloud data is indexed by turbine, not by global X/Y grids.
+        # Disable XY-bound filtering from DatasetStates to avoid requiring X/Y cmap.
+        super().__init__(
+            *args,
+            load_mode="preload",
+            bounds_extra_space=None,
+            **kwargs,
+        )
 
         self.states_coord = states_coord
         self.turbine_coord = turbine_coord
