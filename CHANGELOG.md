@@ -1022,11 +1022,13 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Added `combine_mode` (`"union"` or `"intersection"`) to `shp2geom2d`/`AreaGeometry.from_shp(...)` for combining multiple areas
 - Dependencies:
   - Added optional dependency group `shp` with `geopandas>=0.14.4` for shapefile workflows
+  - Raised optional dependency lower bound to `multiprocess>=0.70.17` to align with Python 3.13 support in this release line
 - Tests:
   - Added consistency coverage for engines, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
 - Bugs:
   - Fixed `Downwind.calc_points` state-subset handling for point calculations by propagating `states_sel`/`states_isel` to engine-level dataset subsetting, preventing shape mismatch crashes for multi-height states
   - Reduced farm-controller model-selection memory by storing turbine-model selection masks only for models that need filtering, and as per-model arrays instead of one stacked 3D mask
   - Fixed `Sequential` state-count handling during per-step evaluation, which could flatten `OnePointFlowTimeseries`-driven ambient signals and lead to incorrect `YawController` behavior in `sequential_yawcontroller`
+  - Improved rotor rendering in `FlowPlots2D` vertical slice plots (`xz`/`yz`) by drawing explicit edge-on rotor lines for near-zero projected disk width and ellipse/circle otherwise
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)

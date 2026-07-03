@@ -434,8 +434,8 @@ class Engine(ABC):
             new_datasets = []
             for data in datasets:
                 if data is not None:
-                    s = {c: u for c, u in isel.items() if c in data.coords}
-                    new_datasets.append(data.isel(s) if len(s) else data)
+                    s = {c: u for c, u in isel.items() if c in data.dims}
+                    new_datasets.append(data.isel(s) if len(s) > 0 else data)
                 else:
                     new_datasets.append(data)
             datasets = new_datasets

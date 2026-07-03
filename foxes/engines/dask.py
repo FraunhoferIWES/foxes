@@ -356,7 +356,7 @@ class LocalClusterEngine(ProcessEngine):
         dask_config={},
         supports_shared_data=True,
         min_shared_array_bytes=0,
-        min_submit_array_bytes=1048576,
+        min_submit_array_bytes=0,  # 1048576,
         cluster_pars={},
         client_pars={},
         **kwargs,

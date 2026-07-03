@@ -815,23 +815,12 @@ class FlowPlots2D(SliceData):
     def gen_states_fig_xy(
         self,
         states_data_xy,
-        xlabel="x [m]",
-        ylabel="y [m]",
-        levels=None,
-        figsize=None,
         title=None,
-        vlabel=None,
-        fig=None,
-        ax=None,
         add_bar=True,
-        cmap=None,
         quiver_n=None,
         quiver_pars={},
-        ret_state=False,
-        ret_im=False,
         animated=False,
         rotor_color=None,
-        precalc=False,
         **kwargs,
     ):
         """
@@ -842,38 +831,22 @@ class FlowPlots2D(SliceData):
         states_data_xy: tuple
             The pre-calculated data from get_states_data_xy,
             (parameters, data, states, grid_data)
-        xlabel: str, optional
-            The x axis label
-        ylabel: str, optional
-            The y axis label
-        levels: int, optional
-            The number of levels for the contourf plot, or None for pure image
-        figsize: tuple, optional
-            The figsize for plt.Figure
         title: str, optional
             The title
-        vlabel: str, optional
-            The variable label
-        fig: plt.Figure, optional
-            The figure object
-        ax: plt.Axes, optional
-            The figure axes
         add_bar: bool
             Add a color bar
-        cmap: str, optional
-            The colormap
         quiver_n: int, optional
             Place a vector at each `n`th point
         quiver_pars: dict, optional
             Parameters for plt.quiver
-        ret_state: bool
-            Flag for state index return
-        ret_im: bool
-            Flag for image return
         animated: bool
             Switch for usage for an animation
         rotor_color: str, optional
             Indicate the rotor orientation by a colored line
+        kwargs: dict, optional
+            Additional parameters for get_fig(), e.g.
+            xlabel, ylabel, levels, figsize, vlabel,
+            fig, ax, cmap, ret_state, ret_im
 
         Yields
         ------
@@ -939,9 +912,12 @@ class FlowPlots2D(SliceData):
             # get data for show_turbines
             if rotor_color is not None:
                 try:
-                    turb_angle = self.fres[FV.AMB_WD][si] + self.fres[FV.YAWM][si]
+                    turb_angle = self.fres[FV.YAW][si]
                 except KeyError:
-                    turb_angle = self.fres[FV.AMB_WD][si]
+                    try:
+                        turb_angle = self.fres[FV.AMB_WD][si] + self.fres[FV.YAWM][si]
+                    except KeyError:
+                        turb_angle = self.fres[FV.AMB_WD][si]
 
                 show_rotor_dict = {
                     "color": rotor_color,
@@ -957,28 +933,20 @@ class FlowPlots2D(SliceData):
 
             out = get_fig(
                 var=var,
-                fig=fig,
-                figsize=figsize,
-                ax=ax,
                 data=data[..., vi],
                 si=si,
                 s=s,
-                levels=levels,
                 x_pos=x_pos,
                 y_pos=y_pos,
-                cmap=cmap,
-                xlabel=xlabel,
-                ylabel=ylabel,
                 title=ttl,
                 add_bar=add_bar,
-                vlabel=vlabel,
                 vmin=vmin,
                 vmax=vmax,
                 quiv=quiv,
-                ret_state=ret_state,
-                ret_im=ret_im,
                 animated=animated,
                 show_rotor_dict=show_rotor_dict,
+                rotor_plane="xy",
+                **kwargs,
             )
 
             yield out
@@ -986,20 +954,10 @@ class FlowPlots2D(SliceData):
     def gen_states_fig_xz(
         self,
         states_data_xz,
-        xlabel="x [m]",
-        zlabel="z [m]",
-        levels=None,
-        figsize=None,
         title=None,
-        vlabel=None,
-        fig=None,
-        ax=None,
         add_bar=True,
-        cmap=None,
         quiver_n=None,
         quiver_pars={},
-        ret_state=False,
-        ret_im=False,
         animated=False,
         rotor_color=None,
         **kwargs,
@@ -1012,40 +970,22 @@ class FlowPlots2D(SliceData):
         states_data_xz: tuple
             The pre-calculated data from get_states_data_xz,
             (parameters, data, states, grid_data)
-        xlabel: str, optional
-            The x axis label
-        zlabel: str, optional
-            The z axis label
-        levels: int, optional
-            The number of levels for the contourf plot, or None for pure image
-        figsize: tuple, optional
-            The figsize for plt.Figure
         title: str, optional
             The title
-        vlabel: str, optional
-            The variable label
-        fig: plt.Figure, optional
-            The figure object
-        ax: plt.Axes, optional
-            The figure axes
         add_bar: bool
             Add a color bar
-        cmap: str, optional
-            The colormap
         quiver_n: int, optional
             Place a vector at ech `n`th point
         quiver_pars: dict, optional
             Parameters for plt.quiver
-        ret_state: bool
-            Flag for state index return
-        ret_im: bool
-            Flag for image return
         animated: bool
             Switch for usage for an animation
         rotor_color: str, optional
             Indicate the rotor orientation by a colored line
         kwargs: dict, optional
-            Additional parameters for SliceData.get_states_data_xz
+            Additional parameters for get_fig(), e.g.
+            xlabel, ylabel, levels, figsize, vlabel,
+            fig, ax, cmap, ret_state, ret_im
 
         Yields
         ------
@@ -1109,9 +1049,12 @@ class FlowPlots2D(SliceData):
             # get data for show_turbines
             if rotor_color is not None:
                 try:
-                    turb_angle = self.fres[FV.AMB_WD][si] + self.fres[FV.YAWM][si]
+                    turb_angle = self.fres[FV.YAW][si]
                 except KeyError:
-                    turb_angle = self.fres[FV.AMB_WD][si]
+                    try:
+                        turb_angle = self.fres[FV.AMB_WD][si] + self.fres[FV.YAWM][si]
+                    except KeyError:
+                        turb_angle = self.fres[FV.AMB_WD][si]
 
                 show_rotor_dict = {
                     "color": rotor_color,
@@ -1127,28 +1070,21 @@ class FlowPlots2D(SliceData):
 
             out = get_fig(
                 var=var,
-                fig=fig,
-                figsize=figsize,
-                ax=ax,
                 data=data[..., vi],
                 si=si,
                 s=s,
-                levels=levels,
                 x_pos=x_pos,
                 y_pos=z_pos,
-                cmap=cmap,
-                xlabel=xlabel,
-                ylabel=zlabel,
                 title=ttl,
                 add_bar=add_bar,
-                vlabel=vlabel,
                 quiv=quiv,
                 vmin=vmin,
                 vmax=vmax,
-                ret_state=ret_state,
-                ret_im=ret_im,
                 animated=animated,
                 show_rotor_dict=show_rotor_dict,
+                rotor_plane="xz",
+                rotor_slice={"axis": "y", "value": y_pos, "tol": 0.0},
+                **kwargs,
             )
 
             yield out
@@ -1156,20 +1092,10 @@ class FlowPlots2D(SliceData):
     def gen_states_fig_yz(
         self,
         states_data_yz,
-        ylabel="y [m]",
-        zlabel="z [m]",
-        levels=None,
-        figsize=None,
         title=None,
-        vlabel=None,
-        fig=None,
-        ax=None,
         add_bar=True,
-        cmap=None,
         quiver_n=None,
         quiver_pars={},
-        ret_state=False,
-        ret_im=False,
         animated=False,
         rotor_color=None,
         **kwargs,
@@ -1182,40 +1108,22 @@ class FlowPlots2D(SliceData):
         states_data_yz: tuple
             The pre-calculated data from get_states_data_yz,
             (parameters, data, states, grid_data)
-        ylabel: str, optional
-            The y axis label
-        zlabel: str, optional
-            The z axis label
-        levels: int, optional
-            The number of levels for the contourf plot, or None for pure image
-        figsize: tuple, optional
-            The figsize for plt.Figure
         title: str, optional
             The title
-        vlabel: str, optional
-            The variable label
-        fig: plt.Figure, optional
-            The figure object
-        ax: plt.Axes, optional
-            The figure axes
         add_bar: bool
             Add a color bar
-        cmap: str, optional
-            The colormap
         quiver_n: int, optional
             Place a vector at ech `n`th point
         quiver_pars: dict, optional
             Parameters for plt.quiver
-        ret_state: bool
-            Flag for state index return
-        ret_im: bool
-            Flag for image return
         animated: bool
             Switch for usage for an animation
         rotor_color: str, optional
             Indicate the rotor orientation by a colored line
         kwargs: dict, optional
-            Additional parameters for SliceData.get_states_data_yz
+            Additional parameters for get_fig(), e.g.
+            xlabel, ylabel, levels, figsize, vlabel,
+            fig, ax, cmap, ret_state, ret_im
 
         Yields
         ------
@@ -1279,9 +1187,12 @@ class FlowPlots2D(SliceData):
             # get data for show_turbines
             if rotor_color is not None:
                 try:
-                    turb_angle = self.fres[FV.AMB_WD][si] + self.fres[FV.YAWM][si]
+                    turb_angle = self.fres[FV.YAW][si]
                 except KeyError:
-                    turb_angle = self.fres[FV.AMB_WD][si]
+                    try:
+                        turb_angle = self.fres[FV.AMB_WD][si] + self.fres[FV.YAWM][si]
+                    except KeyError:
+                        turb_angle = self.fres[FV.AMB_WD][si]
 
                 show_rotor_dict = {
                     "color": rotor_color,
@@ -1297,29 +1208,22 @@ class FlowPlots2D(SliceData):
 
             out = get_fig(
                 var=var,
-                fig=fig,
-                figsize=figsize,
-                ax=ax,
                 data=data[..., vi],
                 si=si,
                 s=s,
-                levels=levels,
                 x_pos=y_pos,
                 y_pos=z_pos,
-                cmap=cmap,
-                xlabel=ylabel,
-                ylabel=zlabel,
                 title=ttl,
                 add_bar=add_bar,
-                vlabel=vlabel,
                 vmin=vmin,
                 vmax=vmax,
                 quiv=quiv,
-                ret_state=ret_state,
-                ret_im=ret_im,
                 invert_axis="x",
                 animated=animated,
                 show_rotor_dict=show_rotor_dict,
+                rotor_plane="yz",
+                rotor_slice={"axis": "x", "value": x_pos, "tol": 0.0},
+                **kwargs,
             )
 
             yield out

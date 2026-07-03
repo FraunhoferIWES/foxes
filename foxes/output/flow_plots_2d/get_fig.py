@@ -1,35 +1,155 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.patches import Ellipse
 
 from foxes.utils import wd2uv
 
 
+def _draw_rotor_overlay(
+    hax,
+    show_rotor_dict,
+    xlabel,
+    ylabel,
+    rotor_plane,
+    rotor_slice,
+    animated,
+):
+    """
+    Draw rotor overlay markers and return created matplotlib artists.
+    """
+    imr = []
+    data_dict = show_rotor_dict
+
+    # Optionally filter turbines to the currently plotted x/y slice.
+    if rotor_slice is not None:
+        sax = rotor_slice.get("axis", None)
+        sval = rotor_slice.get("value", None)
+        stol = rotor_slice.get("tol", 0.0)
+
+        if sax in ["x", "y"] and sval is not None:
+            src = data_dict["X"] if sax == "x" else data_dict["Y"]
+            mask = np.isclose(src, sval, atol=stol, rtol=0.0)
+            if np.any(mask):
+                data_dict = {
+                    k: (v[mask] if hasattr(v, "__len__") and len(v) == len(src) else v)
+                    for k, v in data_dict.items()
+                }
+            else:
+                return imr
+
+    D = data_dict["D"]
+    if len(D) == 0:
+        return imr
+
+    if rotor_plane is None:
+        if (xlabel == "x [m]") and (ylabel == "y [m]"):
+            rotor_plane = "xy"
+        elif (xlabel == "x [m]") and (ylabel == "z [m]"):
+            rotor_plane = "xz"
+        elif (xlabel == "y [m]") and (ylabel == "z [m]"):
+            rotor_plane = "yz"
+
+    c = data_dict["color"]
+
+    if rotor_plane == "xy":
+        x = data_dict["X"]
+        y = data_dict["Y"]
+        turb_angle = data_dict["turb_angle"]
+        theta = np.deg2rad(np.mod(turb_angle + 90, 360))
+        coords = np.zeros(shape=(2, len(D)))
+        coords[0, :] = (D / 2) * np.sin(theta)
+        coords[1, :] = (D / 2) * np.cos(theta)
+
+        for t in np.arange(len(D)):
+            turb_x1 = x[t] + coords[0, t]
+            turb_x2 = x[t] - coords[0, t]
+            turb_y1 = y[t] + coords[1, t]
+            turb_y2 = y[t] - coords[1, t]
+            imr += hax.plot(
+                [turb_x1, turb_x2],
+                [turb_y1, turb_y2],
+                color=c,
+                linestyle="-",
+                linewidth=1,
+                animated=animated,
+            )
+
+        return imr
+
+    for t in np.arange(len(D)):
+        turb_angle = data_dict["turb_angle"][t]
+        theta = np.deg2rad(np.mod(turb_angle + 90.0, 360.0))
+        n_x = np.cos(theta)
+        n_y = -np.sin(theta)
+        R = D[t] / 2.0
+
+        if rotor_plane == "yz":
+            xc = data_dict["Y"][t]
+            yc = data_dict["H"][t]
+            width = 2.0 * R * abs(n_x)
+            height = 2.0 * R
+        elif rotor_plane == "xz":
+            xc = data_dict["X"][t]
+            yc = data_dict["H"][t]
+            width = 2.0 * R * abs(n_y)
+            height = 2.0 * R
+        else:
+            continue
+
+        if np.isclose(width, 0.0, atol=1.0e-9 * max(2.0 * R, 1.0), rtol=0.0):
+            imr += hax.plot(
+                [xc, xc],
+                [yc - R, yc + R],
+                color=c,
+                linestyle="-",
+                linewidth=1,
+                animated=animated,
+            )
+        else:
+            ep = Ellipse(
+                (xc, yc),
+                width=width,
+                height=height,
+                angle=0.0,
+                fill=False,
+                color=c,
+                linewidth=1,
+                animated=animated,
+            )
+            hax.add_patch(ep)
+            imr.append(ep)
+
+    return imr
+
+
 def get_fig(
     var,
-    fig,
-    figsize,
-    ax,
     data,
     si,
     s,
-    levels,
     x_pos,
     y_pos,
-    cmap,
-    xlabel,
-    ylabel,
-    title,
-    add_bar,
-    vlabel,
-    ret_state,
-    ret_im,
+    fig=None,
+    figsize=None,
+    ax=None,
+    levels=None,
+    cmap=None,
+    xlabel=None,
+    ylabel=None,
+    title=None,
+    add_bar=True,
+    vlabel=None,
+    ret_state=False,
+    ret_im=False,
     vmin=None,
     vmax=None,
     quiv=None,
     invert_axis=None,
     animated=False,
     show_rotor_dict=None,
+    rotor_plane=None,
+    rotor_slice=None,
 ):
     """
     Helper function that creates the flow image plot.
@@ -57,9 +177,9 @@ def get_fig(
         The grid x positions, shape: (n_x, 3)
     y_pos: numpy.ndarray
         The grid y positions, shape: (n_y, 3)
-    xlabel: str
+    xlabel: str, optional
         The x axis label
-    ylabel: str
+    ylabel: str, optional
         The y axis label
     title: str, optional
         The title
@@ -83,7 +203,13 @@ def get_fig(
         Switch for usage for an animation
     show_rotor_dict: dict, optional
         Parameters for indicating the rotor plane
-        by a line
+        by a line in xy or by projected disk markers
+        (ellipse/circle, and line for edge-on) in xz/yz
+    rotor_plane: str, optional
+        The rotor plotting plane, one of xy, xz, yz
+    rotor_slice: dict, optional
+        Optional slice filter for rotor plotting, with keys:
+        axis (x or y), value (float), tol (float)
 
     Yields
     ------
@@ -147,6 +273,17 @@ def get_fig(
         qv = hax.quiver(x_pos[::n], y_pos[::n], u, v, animated=animated, **pars)
         del n, pars, u, v, uv
 
+    if xlabel is None or ylabel is None:
+        if rotor_plane == "xz":
+            xlabel = "x [m]" if xlabel is None else xlabel
+            ylabel = "z [m]" if ylabel is None else ylabel
+        elif rotor_plane == "yz":
+            xlabel = "y [m]" if xlabel is None else xlabel
+            ylabel = "z [m]" if ylabel is None else ylabel
+        else:
+            xlabel = "x [m]" if xlabel is None else xlabel
+            ylabel = "y [m]" if ylabel is None else ylabel
+
     hax.autoscale_view()
     hax.set_xlabel(xlabel)
     hax.set_ylabel(ylabel)
@@ -184,43 +321,15 @@ def get_fig(
     # add rotor position:
     imr = []
     if show_rotor_dict is not None:
-        D = show_rotor_dict["D"]
-        coords = np.zeros(shape=(2, len(D)))  # array to hold change to turbine coords
-
-        if (xlabel == "x [m]") & (ylabel == "y [m]"):
-            x = show_rotor_dict["X"]
-            y = show_rotor_dict["Y"]
-            turb_angle = show_rotor_dict["turb_angle"]
-            theta = np.deg2rad(np.mod(turb_angle + 90, 360))
-            coords[0, :] = (D / 2) * np.sin(theta)
-            coords[1, :] = (D / 2) * np.cos(theta)
-
-        if (xlabel == "x [m]") & (ylabel == "z [m]"):
-            # get hub heights for use as y coords in plot
-            x = show_rotor_dict["X"]
-            y = show_rotor_dict["H"]
-            coords[1, :] = D / 2  # don't show yaw in xz plot
-
-        if (xlabel == "y [m]") & (ylabel == "z [m]"):
-            x = show_rotor_dict["Y"]
-            y = show_rotor_dict["H"]
-            coords[1, :] = D / 2
-
-        # plot each rotor
-        c = show_rotor_dict["color"]
-        for t in np.arange(len(D)):
-            turb_x1 = x[t] + coords[0, t]
-            turb_x2 = x[t] - coords[0, t]
-            turb_y1 = y[t] + coords[1, t]
-            turb_y2 = y[t] - coords[1, t]
-            imr += hax.plot(
-                [turb_x1, turb_x2],
-                [turb_y1, turb_y2],
-                color=c,
-                linestyle="-",
-                linewidth=1,
-                animated=animated,
-            )
+        imr = _draw_rotor_overlay(
+            hax=hax,
+            show_rotor_dict=show_rotor_dict,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            rotor_plane=rotor_plane,
+            rotor_slice=rotor_slice,
+            animated=animated,
+        )
 
     if add_bar:
         divider = make_axes_locatable(hax)

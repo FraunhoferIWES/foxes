@@ -38,7 +38,7 @@ class PoolEngine(Engine):
         *args,
         share_cstore=False,
         pool_args={},
-        supports_shared_data=False,
+        supports_shared_data=True,
         min_shared_array_bytes=65536,
         **kwargs,
     ):

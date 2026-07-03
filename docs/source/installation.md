@@ -101,6 +101,7 @@ The following optional dependencies are available:
 | test   | Dependencies for running the tests  |
 | dask   | Installs dependencies for `dask` engine |
 | mpi    | Installs dependencies for `mpi` engine |
+| multiprocess | Installs dependencies for `multiprocess` engine |
 | ray    | Installs dependencies for `ray` engine |
 
 As an example, the optional dependencies `test` are installed by

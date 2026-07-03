@@ -60,6 +60,9 @@ mpi = [
 ray = [
     "ray>=1.13",
 ]
+multiprocess = [
+    "multiprocess>=0.70.17",
+]
 dask = [
     "dask>=2022.0",
     "distributed>=2022.0",
@@ -81,8 +84,7 @@ doc = [
 test = [
     "pytest>=7.0",
     "nbmake>=1.0",
-    "dask>=2022.0",
-    "distributed>=2022.0",
+    "multiprocess>=0.70.17"
 ]
 dev = [
     "pre-commit>=3.0",
