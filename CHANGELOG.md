@@ -999,10 +999,10 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.3](https://github.com/FraunhoferIWES/foxes/commits/v1.8.3)
 
-## v1.9.0
+## v1.8.4
 
 - Inputs:
   - Fix for bug with ka, kb in `windio` interpretation
   - Extending `windio` support to multiple wind farms
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.4](https://github.com/FraunhoferIWES/foxes/commits/v1.8.4)
