@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.interpolate import griddata
+from scipy.spatial import QhullError
 
 from foxes.config import config
 from foxes.utils import weibull_weights
@@ -727,7 +728,16 @@ class TurbinePointCloud(DatasetStates):
         gpts = gpts.reshape(n_states * n_turbines, gpts.shape[-1])
         epts = epts.reshape(n_states * n_turbines, epts.shape[-1])
         d = d.reshape(n_states * n_turbines, d.shape[-1])
-        results = griddata(gpts, d, epts, **ipars)
+        try:
+            results = griddata(gpts, d, epts, **ipars)
+        except QhullError:
+            # Small/degenerate per-chunk geometries can fail linear Delaunay interpolation.
+            # Fall back to nearest-neighbour interpolation to keep point calculations robust.
+            if ipars.get("method", "linear") == "nearest":
+                raise
+            fpars = dict(ipars)
+            fpars["method"] = "nearest"
+            results = griddata(gpts, d, epts, **fpars)
 
         # check for NaN results:
         PointCloudData._check_nan(self, ipars, gpts, d, epts, idims, vrs, results)

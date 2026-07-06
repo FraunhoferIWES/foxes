@@ -252,10 +252,11 @@ class TurbineType(TurbineModel):
         if yawm is None or self.yawm_corr_P is None:
             pass
         elif self.yawm_corr_P == "factor":
-            cosm = np.cos(yawm / 180 * np.pi)
+            # Cosine-based yaw correction is only physically meaningful for positive inflow projection.
+            cosm = np.clip(np.cos(yawm / 180 * np.pi), 0.0, None)
             factor_P *= cosm**self.yawm_corr_p_P
         elif self.yawm_corr_P == "wind_speed":
-            cosm = np.cos(yawm / 180 * np.pi)
+            cosm = np.clip(np.cos(yawm / 180 * np.pi), 0.0, None)
             rews_P *= (cosm**self.yawm_corr_p_P) ** (1.0 / 3.0)
         else:
             raise KeyError(
@@ -266,10 +267,10 @@ class TurbineType(TurbineModel):
         if yawm is None or self.yawm_corr_ct is None:
             pass
         elif self.yawm_corr_ct == "factor":
-            cosm = np.cos(yawm / 180 * np.pi)
+            cosm = np.clip(np.cos(yawm / 180 * np.pi), 0.0, None)
             factor_ct *= cosm**self.yawm_corr_p_ct
         elif self.yawm_corr_ct == "wind_speed":
-            cosm = np.cos(yawm / 180 * np.pi)
+            cosm = np.clip(np.cos(yawm / 180 * np.pi), 0.0, None)
             rews_ct *= (cosm**self.yawm_corr_p_ct) ** 0.5
         else:
             raise KeyError(

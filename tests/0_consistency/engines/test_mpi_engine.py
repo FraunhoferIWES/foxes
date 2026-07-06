@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -382,6 +383,10 @@ def test_worker_cache_uses_mpi_allocate_shared(monkeypatch):
 
 
 def test_mpi_shared_cache_smoke_subprocess(tmp_path):
+    run_mpi_subprocess = os.environ.get("FOXES_RUN_MPI_TESTS", "0")
+    if run_mpi_subprocess.lower() not in {"1", "true", "yes", "on"}:
+        pytest.skip("Set FOXES_RUN_MPI_TESTS=1 to run MPI subprocess smoke")
+
     pytest.importorskip("mpi4py.futures")
 
     mpiexec = shutil.which("mpiexec") or shutil.which("mpirun")

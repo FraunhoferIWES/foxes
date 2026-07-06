@@ -275,12 +275,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.0
 
-- Models:
   - Improved: New option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
   - New turbine model: `LookupTable`, interpolates data based on a multi-dimensional lookup table
-- Utils:
   - Improved `DaskRunner`: Now supports clusters that run the Slurm queueing system
-- Examples:
   - New: `timeseries_slurm`, shows how to run foxes on a HPC with Slurm queueing system
 - Optimization:
   - Improved: `foxes.opt` is now able to optimize for flow variables (at selected points in space) in addition to turbine variables
@@ -1019,12 +1016,21 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Enabled `ret_utm_zone=True` for glob-based shapefile loading in `shp2geom2d`/`AreaGeometry.from_shp(...)`
   - Added `combine_mode` (`"union"` or `"intersection"`) to `shp2geom2d`/`AreaGeometry.from_shp(...)` for combining multiple areas
 - Dependencies:
+  - Dropped Python 3.9 support; project now requires Python >=3.10
   - Added optional dependency group `shp` with `geopandas>=0.14.4` for shapefile workflows
   - Raised optional dependency lower bound to `multiprocess>=0.70.17` to align with Python 3.13 support in this release line
+  - Raised core dependency lower bounds to `h5netcdf>=1.8.1` and `h5py>=3.11.0` for stable Python 3.13 NetCDF backend behavior
 - Tests:
   - Added consistency coverage for engines, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
 - Bugs:
+  - Removed Python 3.9 from GitHub CI test matrix to align workflow runners with project support policy (`requires-python >=3.10`) and avoid unsupported-job noise
+  - Gated MPI subprocess smoke coverage behind explicit `FOXES_RUN_MPI_TESTS=1` opt-in so constrained CI targets (e.g. conda-forge feedstock) remain deterministic
   - Fixed `TurbinePointCloud` initialization for turbine-indexed data by disabling XY bounds filtering, preventing `Downwind.calc_farm` assertion failures about missing `X`/`Y` in coordinate mapping
+  - Fixed `TurbinePointCloud` point interpolation for single-state/two-turbine chunks by falling back from linear to nearest interpolation when Qhull cannot construct a simplex, preventing `calc_points` smoke failures under Python 3.13 thread chunking
+  - Fixed `SingleStateField` interpolation for NaN-only target points by skipping invalid points before calling xarray interpolation, preventing `All-NaN slice encountered` runtime warnings in `Streamlines2D` smoke runs
+  - Updated `SingleStateField` and `MultiHeightNCStates` NetCDF reads to use configured backend defaults, avoiding implicit `netCDF4` fallback imports in smoke tests
+  - Fixed yaw-correction power/ct scaling in `TurbineType` for >90 degree misalignment by clipping negative cosine projection before fractional exponentiation, preventing `invalid value encountered` runtime warnings
+  - Switched default NetCDF backend configuration to `h5netcdf` and added `h5netcdf` as a core dependency, avoiding `netCDF4` import-time ABI/runtime warnings and backend deprecation warnings in Python 3.13 smoke environments
   - Fixed `Downwind.calc_points` state-subset handling for point calculations by propagating `states_sel`/`states_isel` to engine-level dataset subsetting, preventing shape mismatch crashes for multi-height states
   - Reduced farm-controller model-selection memory by storing turbine-model selection masks only for models that need filtering, and as per-model arrays instead of one stacked 3D mask
   - Fixed `Sequential` state-count handling during per-step evaluation, which could flatten `OnePointFlowTimeseries`-driven ambient signals and lead to incorrect `YawController` behavior in `sequential_yawcontroller`

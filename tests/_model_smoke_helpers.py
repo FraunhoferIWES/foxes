@@ -134,7 +134,7 @@ def _write_newa_dataset(tmp_path: Path) -> Path:
             "south_north": south_north,
         },
     )
-    data.to_netcdf(fpath)
+    data.to_netcdf(fpath, engine=foxes.config.nc_engine)
     return fpath
 
 
@@ -165,7 +165,7 @@ def _write_icon_dataset(tmp_path: Path) -> Path:
             "lon": lons,
         },
     )
-    data.to_netcdf(fpath)
+    data.to_netcdf(fpath, engine=foxes.config.nc_engine)
     return fpath
 
 
@@ -278,7 +278,9 @@ def _multi_height_states(cls):
 
 def _point_cloud_states(cls):
     if cls.__name__ == "PointCloudData":
-        dataset = xr.open_dataset(POINT_CLOUD).assign_coords(
+        dataset = xr.open_dataset(
+            POINT_CLOUD, engine=foxes.config.nc_engine
+        ).assign_coords(
             state=np.arange(100, dtype=np.int32),
             point=np.arange(30, dtype=np.int32),
         )
@@ -293,7 +295,7 @@ def _point_cloud_states(cls):
             var2ncvar={FV.WS: "ws", FV.WD: "wd"},
         )
     if cls.__name__ == "WeibullPointCloud":
-        dataset = xr.open_dataset(WEIBULL_CLOUD)
+        dataset = xr.open_dataset(WEIBULL_CLOUD, engine=foxes.config.nc_engine)
         return cls(
             dataset,
             output_vars=[FV.WS, FV.WD, FV.TI],
@@ -313,7 +315,7 @@ def _point_cloud_states(cls):
         )
     if cls.__name__ == "TurbinePointCloud":
         dataset = (
-            xr.open_dataset(POINT_CLOUD)
+            xr.open_dataset(POINT_CLOUD, engine=foxes.config.nc_engine)
             .isel(point=slice(0, 2))
             .rename({"point": "turbine"})
             .assign_coords(
@@ -333,7 +335,9 @@ def _point_cloud_states(cls):
 
 def _field_states(cls):
     if cls.__name__ == "SingleStateField":
-        dataset = xr.open_dataset(WIND_ROTATION).isel(state=0, drop=True)
+        dataset = xr.open_dataset(WIND_ROTATION, engine=foxes.config.nc_engine).isel(
+            state=0, drop=True
+        )
         return cls(
             data_source=dataset,
             output_vars=[FV.WS, FV.WD],
