@@ -34,7 +34,7 @@ wio2foxes = {
 foxes2wio = {d: k for k, d in wio2foxes.items()}
 
 
-def _read_nondimensional_coordinate(name, wio_data, coords):
+def _read_nondimensional_coordinate(name: str, wio_data, coords: dict) -> bool:
     """read nondimensional coordinate
     :group: input.yaml.windio
     """
@@ -44,7 +44,7 @@ def _read_nondimensional_coordinate(name, wio_data, coords):
     return False
 
 
-def _read_dimensional_coordinate(name, wio_data, coords):
+def _read_dimensional_coordinate(name: str, wio_data, coords: dict) -> bool:
     """read dimensional coordinate
     :group: input.yaml.windio
     """
@@ -56,7 +56,7 @@ def _read_dimensional_coordinate(name, wio_data, coords):
     return False
 
 
-def _read_multi_dimensional_coordinate(name, wio_data, coords):
+def _read_multi_dimensional_coordinate(name: str, wio_data, coords: dict) -> bool:
     """Read multi dimensional coordinate
     :group: input.yaml.windio
     """
@@ -65,7 +65,7 @@ def _read_multi_dimensional_coordinate(name, wio_data, coords):
     ) or _read_dimensional_coordinate(name, wio_data, coords)
 
 
-def _read_nondimensional_data(name, wio_data, fields, dims):
+def _read_nondimensional_data(name: str, wio_data, fields: dict, dims: dict) -> bool:
     """read nondimensional data
     :group: input.yaml.windio
     """
@@ -77,7 +77,7 @@ def _read_nondimensional_data(name, wio_data, fields, dims):
     return False
 
 
-def _read_dimensional_data(name, wio_data, fields, dims):
+def _read_dimensional_data(name: str, wio_data, fields: dict, dims: dict) -> bool:
     """read dimensional data
     :group: input.yaml.windio
     """
@@ -94,7 +94,7 @@ def _read_dimensional_data(name, wio_data, fields, dims):
     return False
 
 
-def _read_multi_dimensional_data(name, wio_data, fields, dims):
+def _read_multi_dimensional_data(name: str, wio_data, fields: dict, dims: dict) -> bool:
     """Read multi dimensional data
     :group: input.yaml.windio
     """

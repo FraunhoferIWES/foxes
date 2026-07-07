@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import matplotlib.animation as animation
+from typing import Any
 
 
 class Animator:
@@ -15,7 +18,7 @@ class Animator:
 
     """
 
-    def __init__(self, fig=None):
+    def __init__(self, fig: Any = None) -> None:
         """
         Constructor.
 
@@ -26,9 +29,9 @@ class Animator:
 
         """
         self.fig = fig
-        self._gens = []
+        self._gens: list[Any] = []
 
-    def add_generator(self, gen):
+    def add_generator(self, gen: Any) -> None:
         """
         Add a generator.
 
@@ -41,7 +44,7 @@ class Animator:
         self._gens.append(gen)
 
     @property
-    def generators(self):
+    def generators(self) -> list[Any]:
         """
         The artist generators
 
@@ -53,7 +56,7 @@ class Animator:
         """
         return self._gens
 
-    def animate(self, verbosity=1, **kwargs):
+    def animate(self, verbosity: int = 1, **kwargs: Any) -> Any:
         """
         Create the animation
 

@@ -1,5 +1,9 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import xarray as xr
+from typing import TYPE_CHECKING, Any
 
 from foxes.data import StaticData
 from foxes.utils import Dict, new_instance
@@ -8,6 +12,11 @@ import foxes.constants as FC
 
 from .engine import launch_parallel_calc
 from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.data import MData
+    from foxes.core.model import LoadedData
+    from foxes.core.wind_farm import WindFarm
 
 
 class Algorithm(Model):
@@ -29,11 +38,11 @@ class Algorithm(Model):
 
     def __init__(
         self,
-        mbook,
-        farm,
-        verbosity=1,
-        dbook=None,
-    ):
+        mbook: Any,
+        farm: WindFarm,
+        verbosity: int = 1,
+        dbook: Any = None,
+    ) -> None:
         """
         Constructor.
 
@@ -53,17 +62,18 @@ class Algorithm(Model):
 
         self.name = type(self).__name__
         self.verbosity = verbosity
-        self.n_states = None
+        self.n_states: int | None = None
         self.n_turbines = farm.n_turbines
 
         self.__farm = farm
         self.__mbook = mbook
         self.__dbook = StaticData() if dbook is None else dbook
-        self.__chunk_store = Dict(_name="chunk_store")
-        self.__loaded_data = None
+        self.__chunk_store: Dict[Any, Any] = Dict(_name="chunk_store")
+        self.__loaded_data: LoadedData | None = None
+        self.__farm_vars: list[str] = []
 
     @property
-    def farm(self):
+    def farm(self) -> WindFarm:
         """
         The wind farm
 
@@ -76,7 +86,7 @@ class Algorithm(Model):
         return self.__farm
 
     @property
-    def mbook(self):
+    def mbook(self) -> Any:
         """
         The model book
 
@@ -93,7 +103,7 @@ class Algorithm(Model):
         return self.__mbook
 
     @property
-    def dbook(self):
+    def dbook(self) -> Any:
         """
         The data book
 
@@ -110,7 +120,7 @@ class Algorithm(Model):
         return self.__dbook
 
     @property
-    def chunk_store(self):
+    def chunk_store(self) -> Dict:
         """
         The current chunk store
 
@@ -123,7 +133,92 @@ class Algorithm(Model):
         return self.__chunk_store
 
     @property
-    def loaded_data(self):
+    def states(self) -> Any:
+        """Ambient states model, provided by concrete algorithms."""
+        raise ValueError(f"Algorithm '{self.name}': states model not available")
+
+    @property
+    def rotor_model(self) -> Any:
+        """Rotor model, provided by concrete algorithms."""
+        raise ValueError(f"Algorithm '{self.name}': rotor_model not available")
+
+    @property
+    def wake_frame(self) -> Any:
+        """Wake frame model, provided by concrete algorithms."""
+        raise ValueError(f"Algorithm '{self.name}': wake_frame not available")
+
+    @property
+    def wake_deflection(self) -> Any | None:
+        """Wake deflection model, optional for algorithms without wake calculations."""
+        return None
+
+    @property
+    def wake_models(self) -> dict[str, Any]:
+        """Wake model mapping by name."""
+        return {}
+
+    @property
+    def partial_wakes(self) -> dict[str, Any]:
+        """Partial wakes model mapping by wake-model name."""
+        return {}
+
+    @property
+    def ground_models(self) -> dict[str, Any]:
+        """Ground model mapping by wake-model name."""
+        return {}
+
+    @property
+    def farm_controller(self) -> Any:
+        """Farm controller, provided by concrete algorithms."""
+        raise ValueError(f"Algorithm '{self.name}': farm_controller not available")
+
+    @property
+    def max_wake_length_km(self) -> float:
+        """Maximum wake length in km."""
+        raise KeyError(f"Algorithm '{self.name}': No maximum wake length set")
+
+    @property
+    def has_max_wake_length(self) -> bool:
+        """Whether a maximum wake length is configured."""
+        return False
+
+    @property
+    def farm_vars(self) -> list[str]:
+        """Farm output variable names produced by the algorithm."""
+        return self.__farm_vars
+
+    @farm_vars.setter
+    def farm_vars(self, values: list[str]) -> None:
+        self.__farm_vars = list(values)
+
+    def chunked(self, data: xr.Dataset) -> xr.Dataset:
+        """Optional hook for returning chunked results datasets."""
+        return data
+
+    @classmethod
+    def get_model(cls, name: str) -> Any:
+        """Return algorithm-specific helper model class by name."""
+        raise NotImplementedError(
+            f"Algorithm '{cls.__name__}': get_model is not implemented"
+        )
+
+    @property
+    def farm_results_downwind(self) -> xr.Dataset | None:
+        """Previous-iteration farm results in downwind turbine order, if available."""
+        return None
+
+    @property
+    def prev_farm_results(self) -> xr.Dataset | None:
+        """Farm results from the previous iteration, if available."""
+        return None
+
+    @property
+    def final_iteration(self) -> bool:
+        """Whether the algorithm currently performs a final iteration pass."""
+        return False
+
+    @property
+    def loaded_data(self) -> LoadedData:
         """
         The data loaded during initialization
 
@@ -137,10 +232,13 @@ class Algorithm(Model):
 
         """
         if self.__loaded_data is None:
-            self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+            self.__loaded_data = self._empty_loaded_data()
         return self.__loaded_data
 
-    def clear_loaded_data(self):
+    def _empty_loaded_data(self) -> LoadedData:
+        return {"coords": {}, "data_vars": {}, "extra_data": {}}
+
+    def clear_loaded_data(self) -> None:
         """
         Clear the loaded data
 
@@ -149,9 +247,9 @@ class Algorithm(Model):
         None
 
         """
-        self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+        self.__loaded_data = self._empty_loaded_data()
 
-    def get_model_data(self, pop=False):
+    def get_model_data(self, pop: bool = False) -> tuple[xr.Dataset, dict[str, Any]]:
         """
         Get the model data.
 
@@ -171,10 +269,10 @@ class Algorithm(Model):
         ld = self.loaded_data
         ed = ld["extra_data"]
         if pop:
-            self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+            self.__loaded_data = self._empty_loaded_data()
         return xr.Dataset(coords=ld["coords"], data_vars=ld["data_vars"]), ed
 
-    def print(self, *args, vlim=1, **kwargs):
+    def print(self, *args: Any, vlim: int = 1, **kwargs: Any) -> None:
         """
         Print function, based on verbosity.
 
@@ -191,7 +289,11 @@ class Algorithm(Model):
         if self.verbosity >= vlim:
             print(*args, **kwargs)
 
-    def print_deco(self, func_name=None, n_points=None):
+    def print_deco(
+        self,
+        func_name: str | None = None,
+        n_points: int | None = None,
+    ) -> None:
         """
         Helper function for printing model names
 
@@ -213,7 +315,7 @@ class Algorithm(Model):
             print(f"  n_states : {self.n_states}")
             print(f"  n_turbines: {self.n_turbines}")
 
-    def initialize(self, force=False):
+    def initialize(self, force: bool = False) -> None:
         """
         Initializes the algorithm.
 
@@ -235,7 +337,7 @@ class Algorithm(Model):
             verbosity=self.verbosity - 1,
         )
 
-    def update_n_turbines(self):
+    def update_n_turbines(self) -> None:
         """
         Reset the number of turbines,
         according to self.farm
@@ -293,7 +395,12 @@ class Algorithm(Model):
             self.idata_mem.update(newk)
             """
 
-    def new_point_data(self, points, states_indices=None, n_states=None):
+    def new_point_data(
+        self,
+        points: np.ndarray,
+        states_indices: Any = None,
+        n_states: int | None = None,
+    ) -> xr.Dataset:
         """
         Creates a point data xarray object, containing only points.
 
@@ -314,10 +421,14 @@ class Algorithm(Model):
         """
         if n_states is None:
             n_states = self.n_states
+        assert n_states is not None
         if states_indices is None:
-            idata = {"coords": {}, "data_vars": {}}
+            idata: dict[str, Any] = {"coords": {}, "data_vars": {}}
         else:
-            idata = {"coords": {FC.STATE: states_indices}, "data_vars": {}}
+            idata = {
+                "coords": {FC.STATE: states_indices},
+                "data_vars": {},
+            }
 
         if len(points.shape) == 2 and points.shape[1] == 3:
             pts = np.zeros((n_states,) + points.shape, dtype=config.dtype_double)
@@ -346,14 +457,14 @@ class Algorithm(Model):
 
     def add_to_chunk_store(
         self,
-        name,
-        data,
-        dims,
-        mdata,
-        tdata=None,
-        copy=True,
-        subset=None,
-    ):
+        name: str,
+        data: Any,
+        dims: tuple[Any, ...],
+        mdata: MData,
+        tdata: Any = None,
+        copy: bool = True,
+        subset: Any = None,
+    ) -> None:
         """
         Add data to the chunk store
 
@@ -385,6 +496,7 @@ class Algorithm(Model):
 
         key = (mdata.chunki_states, mdata.chunki_points)
         if key not in self.chunk_store:
+            assert mdata.n_states is not None
             n_states = int(mdata.n_states)
             n_targets = int(tdata.n_targets if tdata is not None else 0)
             self.chunk_store[key] = Dict(
@@ -418,13 +530,13 @@ class Algorithm(Model):
 
     def get_from_chunk_store(
         self,
-        name,
-        mdata,
-        prev_s=0,
-        prev_t=0,
-        ret_inds=False,
-        error=True,
-    ):
+        name: str,
+        mdata: MData,
+        prev_s: int = 0,
+        prev_t: int = 0,
+        ret_inds: bool = False,
+        error: bool = True,
+    ) -> Any:
         """
         Get data from the chunk store
 
@@ -530,7 +642,7 @@ class Algorithm(Model):
         else:
             return data
 
-    def reset_chunk_store(self, new_chunk_store=None):
+    def reset_chunk_store(self, new_chunk_store: Any = None) -> Dict:
         """
         Resets the chunk store
 
@@ -555,7 +667,7 @@ class Algorithm(Model):
             self.__chunk_store.update(new_chunk_store)
         return chunk_store
 
-    def block_convergence(self, **kwargs):
+    def block_convergence(self, **kwargs: Any) -> None:
         """
         Switch on convergence block during iterative run
 
@@ -569,7 +681,7 @@ class Algorithm(Model):
             name=FC.BLOCK_CONVERGENCE, data=True, dims=(), copy=False, **kwargs
         )
 
-    def eval_conv_block(self):
+    def eval_conv_block(self) -> bool:
         """
         Evaluate convergence block, removing blocks on the fly
 
@@ -586,12 +698,12 @@ class Algorithm(Model):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -630,12 +742,12 @@ class Algorithm(Model):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -667,7 +779,7 @@ class Algorithm(Model):
         else:
             self.reset_chunk_store()
 
-    def _launch_parallel_farm_calc(self, *args, **kwargs):
+    def _launch_parallel_farm_calc(self, *args: Any, **kwargs: Any) -> xr.Dataset:
         """
         Runs the farm calculation in parallel
 
@@ -687,7 +799,12 @@ class Algorithm(Model):
         """
         return launch_parallel_calc(self, *args, **kwargs)
 
-    def calc_farm(self, *args, clear_mem=False, **kwargs):
+    def calc_farm(
+        self,
+        *args: Any,
+        clear_mem: bool = False,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Calculate farm data.
 
@@ -713,7 +830,7 @@ class Algorithm(Model):
             )
 
         # set to running:
-        data_stash = {} if not clear_mem else None
+        data_stash: dict[str, Any] | None = {} if not clear_mem else None
         chunk_store = self.reset_chunk_store()
         mdls = [
             m
@@ -740,7 +857,7 @@ class Algorithm(Model):
 
         return farm_results
 
-    def _launch_parallel_points_calc(self, *args, **kwargs):
+    def _launch_parallel_points_calc(self, *args: Any, **kwargs: Any) -> xr.Dataset:
         """
         Runs the main points calculation in parallel
 
@@ -760,7 +877,13 @@ class Algorithm(Model):
         """
         return launch_parallel_calc(self, *args, **kwargs)
 
-    def calc_points(self, *args, sel=None, isel=None, **kwargs):
+    def calc_points(
+        self,
+        *args: Any,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Calculate points data.
 
@@ -788,7 +911,7 @@ class Algorithm(Model):
             )
 
         # set to running:
-        data_stash = {}
+        data_stash: dict[str, Any] = {}
         self.set_running(
             self, data_stash, sel=sel, isel=isel, verbosity=self.verbosity - 2
         )
@@ -811,7 +934,7 @@ class Algorithm(Model):
 
         return point_results
 
-    def finalize(self, clear_mem=False):
+    def finalize(self, clear_mem: bool = False) -> None:
         """
         Finalizes the algorithm.
 
@@ -829,7 +952,7 @@ class Algorithm(Model):
             # self.reset_chunk_store()
 
     @classmethod
-    def new(cls, algo_type, *args, **kwargs):
+    def new(cls, algo_type: str, *args: Any, **kwargs: Any) -> Algorithm:
         """
         Run-time algorithm factory.
 

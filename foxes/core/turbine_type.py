@@ -1,5 +1,9 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from abc import abstractmethod
 import numpy as np
+from typing import Any
 
 from foxes.utils import new_instance
 import foxes.constants as FC
@@ -57,18 +61,18 @@ class TurbineType(TurbineModel):
 
     def __init__(
         self,
-        name=None,
-        D=None,
-        H=None,
-        P_nominal=None,
+        name: str | None = None,
+        D: float | None = None,
+        H: float | None = None,
+        P_nominal: float | None = None,
         P_unit="kW",
-        rho_corr_P="wind_speed",
-        rho_corr_ct=None,
-        yawm_corr_P="wind_speed",
-        yawm_corr_ct="wind_speed",
-        yawm_corr_p_P=1.88,
-        yawm_corr_p_ct=1.0,
-    ):
+        rho_corr_P: str | None = "wind_speed",
+        rho_corr_ct: str | None = None,
+        yawm_corr_P: str | None = "wind_speed",
+        yawm_corr_ct: str | None = "wind_speed",
+        yawm_corr_p_P: float = 1.88,
+        yawm_corr_p_ct: float = 1.0,
+    ) -> None:
         """
         Constructor.
 
@@ -131,12 +135,12 @@ class TurbineType(TurbineModel):
                 f"Turbine type '{self.name}': Unkown P_unit '{P_unit}', expecting {list(FC.P_UNITS.keys())}"
             )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}"
         return f"{type(self).__name__}({a})"
 
     @abstractmethod
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
@@ -149,7 +153,7 @@ class TurbineType(TurbineModel):
         pass
 
     @abstractmethod
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
@@ -161,7 +165,7 @@ class TurbineType(TurbineModel):
         """
         pass
 
-    def modify_cutin(self, modify_ct, modify_P):
+    def modify_cutin(self, modify_ct: bool, modify_P: bool) -> None:
         """
         Modify the data such that a discontinuity
         at cutin wind speed is avoided
@@ -183,12 +187,12 @@ class TurbineType(TurbineModel):
 
     def get_rho_yawm_corrections(
         self,
-        rews_P,
-        rews_ct,
-        rho=None,
-        rho_ref=None,
-        yawm=None,
-    ):
+        rews_P: np.ndarray,
+        rews_ct: np.ndarray,
+        rho: np.ndarray | None = None,
+        rho_ref: np.ndarray | float | None = None,
+        yawm: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray, float | np.ndarray, float | np.ndarray]:
         """
         Compute air density and yaw corrections.
 
@@ -280,7 +284,12 @@ class TurbineType(TurbineModel):
         return rews_P, rews_ct, factor_P, factor_ct
 
     @classmethod
-    def new(cls, ttype_type, *args, **kwargs):
+    def new(
+        cls,
+        ttype_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> TurbineType:
         """
         Run-time turbine type factory.
 

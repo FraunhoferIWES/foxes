@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 import numpy as np
 from scipy.interpolate import interpn
+from typing import TYPE_CHECKING, Any
 
 from foxes.utils import new_instance
 from foxes.config import config
@@ -9,6 +12,10 @@ import foxes.constants as FC
 
 from .data import TData
 from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class WakeFrame(Model):
@@ -27,7 +34,7 @@ class WakeFrame(Model):
     """
 
     @abstractmethod
-    def calc_order(self, algo, mdata, fdata):
+    def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -54,12 +61,12 @@ class WakeFrame(Model):
     @abstractmethod
     def get_wake_coos(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+    ) -> np.ndarray:
         """
         Calculate wake coordinates of rotor points.
 
@@ -88,14 +95,14 @@ class WakeFrame(Model):
 
     def get_wake_modelling_data(
         self,
-        algo,
-        variable,
-        downwind_index,
-        fdata,
-        tdata,
-        target,
-        states0=None,
-    ):
+        algo: Algorithm,
+        variable: str,
+        downwind_index: int,
+        fdata: FData,
+        tdata: TData,
+        target: str,
+        states0: np.ndarray | None = None,
+    ) -> np.ndarray:
         """
         Return data that is required for computing the
         wake from source turbines to evaluation points.
@@ -139,7 +146,14 @@ class WakeFrame(Model):
 
         return out
 
-    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
+    def get_centreline_points(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Gets the points along the centreline for given
         values of x.
@@ -169,17 +183,17 @@ class WakeFrame(Model):
 
     def calc_centreline_integral(
         self,
-        algo,
-        mdata,
-        fdata,
-        downwind_index,
-        variables,
-        x,
-        dx,
-        wake_models=None,
-        self_wake=True,
-        **ipars,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        downwind_index: int,
+        variables: list[str],
+        x: np.ndarray,
+        dx: float,
+        wake_models: list[Any] | None = None,
+        self_wake: bool = True,
+        **ipars: Any,
+    ) -> np.ndarray:
         """
         Integrates variables along the centreline.
 
@@ -220,7 +234,8 @@ class WakeFrame(Model):
 
         # calc evaluation points:
         xmin = 0.0
-        xmax = min(np.nanmax(x), algo.max_wake_length_km * 1e3)
+        max_wake_length_km = algo.max_wake_length_km
+        xmax = min(np.nanmax(x), max_wake_length_km * 1e3)
         n_steps = int((xmax - xmin) / dx)
         if xmin + n_steps * dx < xmax:
             n_steps += 1
@@ -239,7 +254,8 @@ class WakeFrame(Model):
             },
             dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in vrs},
         )
-        res = algo.states.calculate(algo, mdata, fdata, tdata)
+        states = algo.states
+        res = states.calculate(algo, mdata, fdata, tdata)
         tdata.update(res)
         amb2var = algo.get_model("SetAmbPointResults")()
         amb2var.initialize(algo, verbosity=0, force=True)
@@ -286,7 +302,7 @@ class WakeFrame(Model):
         return results.reshape(n_states, n_points, n_vars)
 
     @classmethod
-    def new(cls, wframe_type, *args, **kwargs):
+    def new(cls, wframe_type: str, *args: Any, **kwargs: Any) -> WakeFrame:
         """
         Run-time wake frame factory.
 

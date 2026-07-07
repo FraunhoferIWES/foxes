@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import WindVectorWakeSuperposition
 from foxes.utils import wd2uv, uv2wd, delta_wd
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WindVectorLinear(WindVectorWakeSuperposition):
@@ -20,7 +27,7 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
     """
 
-    def __init__(self, scale_amb=False):
+    def __init__(self, scale_amb: bool = False) -> None:
         """
         Constructor.
 
@@ -34,11 +41,11 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         super().__init__()
         self.scale_amb = scale_amb
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"scale_amb={self.scale_amb}"
         return f"{type(self).__name__}({a})"
 
-    def input_farm_vars(self, algo):
+    def input_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are needed for running
         the model.
@@ -56,7 +63,15 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         """
         return [FV.AMB_REWS] if self.scale_amb else [FV.REWS]
 
-    def wdeltas_ws2uv(self, algo, fdata, tdata, downwind_index, wdeltas, st_sel):
+    def wdeltas_ws2uv(
+        self,
+        algo: Algorithm,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wdeltas: dict[str, np.ndarray],
+        st_sel: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Transform results from wind speed to wind vector data
 
@@ -110,7 +125,15 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
         return wdeltas
 
-    def wdeltas_uv2ws(self, algo, fdata, tdata, downwind_index, wdeltas, st_sel):
+    def wdeltas_uv2ws(
+        self,
+        algo: Algorithm,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wdeltas: dict[str, np.ndarray],
+        st_sel: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Transform results from wind vector to wind speed data
 
@@ -161,15 +184,15 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
     def add_wake_vector(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        wake_delta_uv,
-        wake_model_result_uv,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        wake_delta_uv: np.ndarray,
+        wake_model_result_uv: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta vector to previous wake deltas,
         at rotor points.
@@ -211,12 +234,12 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
     def calc_final_wake_delta_uv(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wake_delta_uv,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wake_delta_uv: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Calculate the final wind vector wake delta after adding all
         contributions.

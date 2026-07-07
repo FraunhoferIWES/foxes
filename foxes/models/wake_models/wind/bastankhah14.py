@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeK
 from foxes.models.wake_models.gaussian import GaussianWakeModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.model import LoadedData, Model
 
 
 class Bastankhah2014(GaussianWakeModel):
@@ -36,12 +43,12 @@ class Bastankhah2014(GaussianWakeModel):
 
     def __init__(
         self,
-        superposition,
-        sbeta_factor=0.2,
-        sbeta=None,
-        induction="Madsen",
-        **wake_k,
-    ):
+        superposition: str,
+        sbeta_factor: float = 0.2,
+        sbeta: float | None = None,
+        induction: str = "Madsen",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -66,7 +73,7 @@ class Bastankhah2014(GaussianWakeModel):
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -76,7 +83,7 @@ class Bastankhah2014(GaussianWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
@@ -88,7 +95,7 @@ class Bastankhah2014(GaussianWakeModel):
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -98,9 +105,18 @@ class Bastankhah2014(GaussianWakeModel):
             All sub models
 
         """
-        return super().sub_models() + [self.wake_k, self.induction]
+        smdls = super().sub_models() + [self.wake_k]
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 

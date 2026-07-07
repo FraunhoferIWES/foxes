@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
@@ -17,7 +21,9 @@ class JensenWake(TopHatWakeModel):
 
     """
 
-    def __init__(self, superposition, induction="Betz", **wake_k):
+    def __init__(
+        self, superposition: str, induction: str = "Betz", **wake_k: Any
+    ) -> None:
         """
         Constructor.
 
@@ -34,7 +40,7 @@ class JensenWake(TopHatWakeModel):
         super().__init__(wind_superposition=superposition, induction=induction)
         self.wake_k = WakeK(**wake_k)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -44,7 +50,7 @@ class JensenWake(TopHatWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 

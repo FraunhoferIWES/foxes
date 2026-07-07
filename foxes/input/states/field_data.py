@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import Any
 
 from foxes.utils import weibull_weights, get_utm_zone, to_lonlat, from_lonlat
 from foxes.config import config, get_output_path
@@ -282,7 +283,7 @@ class LatLonFieldData(DatasetStates):
         if self.h_coord is not None:
             self._cmap[FV.H] = self.h_coord
 
-    def _find_xy_bounds(self, algo, bounds_extra_space):
+    def _find_xy_bounds(self, algo, bounds_extra_space) -> Any:
         """Helper function to determine x/y bounds with extra space."""
         return algo.farm.get_xy_bounds(
             extra_space=bounds_extra_space, algo=algo, lonlat=True
@@ -397,7 +398,7 @@ class LatLonFieldData(DatasetStates):
                 fig.savefig(fpath, bbox_inches="tight")
                 plt.close()
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+    def interpolate_data(self, idims, icrds, d, pts, vrs, times) -> np.ndarray:
         """
         Interpolates data to points.
 
@@ -522,10 +523,12 @@ class WeibullField(FieldData):
         self._n_wd = None
         self._n_ws = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, cmap=None, verbosity=0):
+    def _read_ds(
+        self, ds, cmap=None, verbosity: int = 0
+    ) -> tuple[dict[str, np.ndarray], dict[str, tuple[tuple[str, ...], np.ndarray]]]:
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -607,19 +610,19 @@ class WeibullField(FieldData):
                     dms.append(c)
                     shp.append(data0[v][1].shape[data0[v][0].index(c)])
                     break
-        dms = tuple(dms)
-        shp = tuple(shp)
-        if data0[FV.WEIGHT][0] == dms:
+        dms_t = tuple(dms)
+        shp_t = tuple(shp)
+        if data0[FV.WEIGHT][0] == dms_t:
             w = data0.pop(FV.WEIGHT)[1]
         else:
-            s_w = tuple([np.s_[:] if c in data0[FV.WEIGHT][0] else None for c in dms])
-            w = np.zeros(shp, dtype=config.dtype_double)
+            s_w = tuple([np.s_[:] if c in data0[FV.WEIGHT][0] else None for c in dms_t])
+            w = np.zeros(shp_t, dtype=config.dtype_double)
             w[:] = data0.pop(FV.WEIGHT)[1][s_w]
-        s_ws = tuple([np.s_[:], None] + [None] * (len(dms) - 2))
-        s_A = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
-        s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
+        s_ws = tuple([np.s_[:], None] + [None] * (len(dms_t) - 2))
+        s_A = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms_t])
+        s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms_t])
         data0[FV.WEIGHT] = (
-            dms,
+            dms_t,
             w
             * weibull_weights(
                 ws=wss[s_ws],
@@ -644,15 +647,15 @@ class WeibullField(FieldData):
         for v in list(data0.keys()):
             dims, d = data0.pop(v)
             if dims[0] == FV.WD:
-                dms = tuple([FC.STATE] + list(dims[1:]))
+                dms_out = tuple([FC.STATE] + list(dims[1:]))
                 shp = [n_ws] + list(d.shape)
                 data[v] = np.zeros(shp, dtype=config.dtype_double)
                 data[v][:] = d[None, ...]
-                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
+                data[v] = (dms_out, data[v].reshape([self._N] + shp[2:]))
             elif len(dims) >= 2 and dims[:2] == (FV.WS, FV.WD):
-                dms = tuple([FC.STATE] + list(dims[2:]))
+                dms_out = tuple([FC.STATE] + list(dims[2:]))
                 shp = [self._N] + list(d.shape[2:])
-                data[v] = (dms, d.reshape(shp))
+                data[v] = (dms_out, d.reshape(shp))
             else:
                 data[v] = (dims, d)
         data0 = data

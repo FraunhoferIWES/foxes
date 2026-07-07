@@ -1,9 +1,17 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import FarmDataModel, TData
 import foxes.variables as FV
 import foxes.constants as FC
 from foxes.config import config
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class InitFarmData(FarmDataModel):
@@ -14,7 +22,7 @@ class InitFarmData(FarmDataModel):
 
     """
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -41,7 +49,9 @@ class InitFarmData(FarmDataModel):
             FV.ORDER_INV,
         ]
 
-    def calculate(self, algo, mdata, fdata):
+    def calculate(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -106,6 +116,8 @@ class InitFarmData(FarmDataModel):
                 fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
             else:
                 i0 = fdata.states_i0(counter=True)
+                assert i0 is not None
+                assert fdata.n_states is not None
                 s = np.s_[i0 : i0 + fdata.n_states]
                 fdata[FV.TXYH][:, ti, :2] = t.xy[s]
 

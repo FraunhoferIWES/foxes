@@ -1,6 +1,16 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import FarmModel
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import Model
+    from foxes.core.turbine_model import TurbineModel
 
 
 class Turbine2FarmModel(FarmModel):
@@ -18,7 +28,7 @@ class Turbine2FarmModel(FarmModel):
 
     """
 
-    def __init__(self, turbine_model):
+    def __init__(self, turbine_model: TurbineModel) -> None:
         """
         Constructor.
 
@@ -32,10 +42,10 @@ class Turbine2FarmModel(FarmModel):
         self.turbine_model = turbine_model
         self.name = turbine_model.name + "_t2f"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({self.turbine_model})"
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -47,7 +57,7 @@ class Turbine2FarmModel(FarmModel):
         """
         return [self.turbine_model]
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -64,7 +74,13 @@ class Turbine2FarmModel(FarmModel):
         """
         return self.turbine_model.output_farm_vars(algo)
 
-    def calculate(self, algo, mdata, fdata, **parameters):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        **parameters: Any,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

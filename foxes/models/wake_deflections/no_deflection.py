@@ -1,4 +1,12 @@
+from __future__ import annotations
+
 from foxes.core.wake_deflection import WakeDeflection
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class NoDeflection(WakeDeflection):
@@ -11,13 +19,13 @@ class NoDeflection(WakeDeflection):
 
     def calc_deflection(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        coos,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        coos: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculates the wake deflection.
 
@@ -52,13 +60,13 @@ class NoDeflection(WakeDeflection):
 
     def get_yaw_alpha_seq(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> None:
         """
         Computes sequential wind vector rotation angles.
 

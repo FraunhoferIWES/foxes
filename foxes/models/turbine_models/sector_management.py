@@ -1,11 +1,20 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
 from foxes.config import get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class SectorManagement(TurbineModel):
@@ -23,15 +32,15 @@ class SectorManagement(TurbineModel):
 
     def __init__(
         self,
-        data_source,
-        range_vars,
-        target_vars,
-        col_tinds=None,
-        col_tnames=None,
-        colmap={},
-        var_periods={FV.WD: 360.0, FV.AMB_WD: 360.0},
-        pd_file_read_pars={},
-    ):
+        data_source: str | pd.DataFrame,
+        range_vars: list[str],
+        target_vars: list[str],
+        col_tinds: str | None = None,
+        col_tnames: str | None = None,
+        colmap: dict[str, str] = {},
+        var_periods: dict[str, float] = {FV.WD: 360.0, FV.AMB_WD: 360.0},
+        pd_file_read_pars: dict[str, Any] = {},
+    ) -> None:
         """
         Constructor.
 
@@ -74,7 +83,13 @@ class SectorManagement(TurbineModel):
         self._tdata = None
         self._trbs = None
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -125,7 +140,9 @@ class SectorManagement(TurbineModel):
                 raise KeyError(
                     f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"
                 )
+            assert self._col_i is not None
             self._trbs = data[self._col_i].to_numpy()
+        assert self._trbs is not None
         n_trbs = len(self._trbs)
 
         self._rcols = []
@@ -165,7 +182,7 @@ class SectorManagement(TurbineModel):
 
         return loaded_data
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -182,7 +199,13 @@ class SectorManagement(TurbineModel):
         """
         return self._tvars
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -210,13 +233,15 @@ class SectorManagement(TurbineModel):
         """
         # prepare:
         self.ensure_output_vars(algo, fdata)
-        n_trbs = len(self._trbs)
-        if n_trbs == fdata.n_turbines and np.all(
-            self._trbs == np.arange(fdata.n_turbines)
-        ):
+        trbs = self._trbs
+        rdata = self._rdata
+        tdata = self._tdata
+        assert trbs is not None and rdata is not None and tdata is not None
+        n_trbs = len(trbs)
+        if n_trbs == fdata.n_turbines and np.all(trbs == np.arange(fdata.n_turbines)):
             tsel = np.s_[:]
         else:
-            tsel = self._trbs
+            tsel = trbs
 
         # find state-turbine data that matches ranges:
         rsel = np.ones((fdata.n_states, n_trbs), dtype=bool)
@@ -224,8 +249,8 @@ class SectorManagement(TurbineModel):
             d = fdata[v][:, tsel]
             if v in self._perds:
                 d = np.mod(d, self._perds[v])
-                mi = self._rdata[:, vi, 0]
-                ma = self._rdata[:, vi, 1]
+                mi = rdata[:, vi, 0]
+                ma = rdata[:, vi, 1]
                 sel = ma < mi
                 if np.any(sel):
                     rsel[:, sel] = rsel[:, sel] & (
@@ -238,17 +263,13 @@ class SectorManagement(TurbineModel):
                         & (d[:, ~sel] < ma[~sel])
                     )
             else:
-                rsel = (
-                    rsel
-                    & (d >= self._rdata[None, :, vi, 0])
-                    & (d < self._rdata[None, :, vi, 1])
-                )
+                rsel = rsel & (d >= rdata[None, :, vi, 0]) & (d < rdata[None, :, vi, 1])
 
         # set target data:
         if np.any(rsel):
             sel = np.where(rsel)
-            selt = self._trbs[sel[1]]
+            selt = trbs[sel[1]]
             for vi, v in enumerate(self._tvars):
-                fdata[v][sel[0], selt] = self._tdata[None, sel[1], vi]
+                fdata[v][sel[0], selt] = tdata[None, sel[1], vi]
 
         return {v: fdata[v] for v in self._tvars}

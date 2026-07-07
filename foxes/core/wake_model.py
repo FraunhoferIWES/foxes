@@ -1,10 +1,21 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any, cast
+
+import numpy as np
 
 from foxes.utils import new_instance
 import foxes.variables as FV
 
 from .model import Model
 from .wake_superposition import WindVectorWakeSuperposition
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData
 
 
 class WakeModel(Model):
@@ -15,7 +26,7 @@ class WakeModel(Model):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """
@@ -23,7 +34,7 @@ class WakeModel(Model):
         self._has_uv = False
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
@@ -36,7 +47,7 @@ class WakeModel(Model):
         return False
 
     @property
-    def affects_downwind(self):
+    def affects_downwind(self) -> bool:
         """
         Flag for downwind or upwind effects
         on other turbines
@@ -50,7 +61,7 @@ class WakeModel(Model):
         return True
 
     @property
-    def has_uv(self):
+    def has_uv(self) -> bool:
         """
         This model uses wind vector data
 
@@ -62,7 +73,13 @@ class WakeModel(Model):
         """
         return self._has_uv
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -89,7 +106,8 @@ class WakeModel(Model):
             and "extra_data", a dict with non-array additional data.
 
         """
-        if self.affects_ws and algo.wake_deflection.has_uv:
+        wake_deflection = algo.wake_deflection
+        if wake_deflection is not None and self.affects_ws and wake_deflection.has_uv:
             self._has_uv = True
         return super().initialize(
             algo=algo,
@@ -99,7 +117,13 @@ class WakeModel(Model):
         )
 
     @abstractmethod
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
@@ -126,14 +150,14 @@ class WakeModel(Model):
     @abstractmethod
     def contribute(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_coos,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_coos: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
@@ -164,12 +188,12 @@ class WakeModel(Model):
 
     def finalize_wake_deltas(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
         Finalize the wake calculation.
 
@@ -194,7 +218,7 @@ class WakeModel(Model):
         pass
 
     @classmethod
-    def new(cls, wmodel_type, *args, **kwargs):
+    def new(cls, wmodel_type: str, *args: Any, **kwargs: Any) -> WakeModel:
         """
         Run-time wake model factory.
 
@@ -237,7 +261,11 @@ class SingleTurbineWakeModel(WakeModel):
 
     """
 
-    def __init__(self, wind_superposition=None, other_superpositions={}):
+    def __init__(
+        self,
+        wind_superposition: str | None = None,
+        other_superpositions: dict[str, str] = {},
+    ) -> None:
         """
         Constructor.
 
@@ -255,8 +283,8 @@ class SingleTurbineWakeModel(WakeModel):
         super().__init__()
         self.wind_superposition = wind_superposition
         self.other_superpositions = other_superpositions
-        self.vec_superp = None
-        self.superp = {}
+        self.vec_superp: Any | None = None
+        self.superp: dict[str, Any] = {}
 
         for v in [FV.WS, FV.WD]:
             assert v not in other_superpositions, (
@@ -266,7 +294,7 @@ class SingleTurbineWakeModel(WakeModel):
         self.__has_vector_superp = False
 
     @property
-    def has_vector_wind_superp(self):
+    def has_vector_wind_superp(self) -> bool:
         """
         This model uses a wind vector superposition
 
@@ -278,7 +306,7 @@ class SingleTurbineWakeModel(WakeModel):
         """
         return self.__has_vector_superp
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -288,10 +316,18 @@ class SingleTurbineWakeModel(WakeModel):
             Names of all sub models
 
         """
-        w = [self.vec_superp] if self.vec_superp is not None else []
+        w: list[Model] = (
+            [cast(Model, self.vec_superp)] if self.vec_superp is not None else []
+        )
         return w + list(self.superp.values())
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -343,12 +379,12 @@ class SingleTurbineWakeModel(WakeModel):
 
     def finalize_wake_deltas(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
         Finalize the wake calculation.
 
@@ -385,7 +421,9 @@ class SingleTurbineWakeModel(WakeModel):
             assert self.has_vector_wind_superp, (
                 f"{self.name}: Expecting wind vector superposition, got '{self.wind_superposition}'"
             )
-            dws, dwd = self.vec_superp.calc_final_wake_delta_uv(
+            vec_superp = self.vec_superp
+            assert vec_superp is not None
+            dws, dwd = vec_superp.calc_final_wake_delta_uv(
                 algo, mdata, fdata, tdata, wake_deltas.pop(FV.UV)
             )
 
@@ -402,7 +440,7 @@ class TurbineInductionModel(SingleTurbineWakeModel):
     """
 
     @property
-    def affects_downwind(self):
+    def affects_downwind(self) -> bool:
         """
         Flag for downwind or upwind effects
         on other turbines
@@ -416,7 +454,12 @@ class TurbineInductionModel(SingleTurbineWakeModel):
         return False
 
     @classmethod
-    def new(cls, induction_type, *args, **kwargs):
+    def new(
+        cls,
+        induction_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> TurbineInductionModel:
         """
         Run-time turbine induction model factory.
 
@@ -450,12 +493,12 @@ class WakeK(Model):
 
     def __init__(
         self,
-        k=None,
-        ka=None,
-        kb=None,
-        k_var=FV.K,
-        ti_var=FV.TI,
-    ):
+        k: float | None = None,
+        ka: float | None = None,
+        kb: float | None = None,
+        k_var: str = FV.K,
+        ti_var: str = FV.TI,
+    ) -> None:
         """
         Constructor.
 
@@ -487,7 +530,7 @@ class WakeK(Model):
 
         setattr(self, self.k_var, None)
 
-    def repr(self):
+    def repr(self) -> str:
         """
         Provides the representative string
 
@@ -508,29 +551,30 @@ class WakeK(Model):
         return s
 
     @property
-    def is_kTI(self):
+    def is_kTI(self) -> bool:
         """Flag for ka != 0"""
         return self._ka is not None and self._ka != 0
 
     @property
-    def all_none(self):
+    def all_none(self) -> bool:
         """Flag for k=ka=kb=None"""
         return self._k is None and self._ka is None and self._kb is None
 
     @property
-    def use_amb_ti(self):
+    def use_amb_ti(self) -> bool:
         """Flag for using ambient ti"""
         return self.ti_var in FV.amb2var
 
     def __call__(
         self,
-        *args,
-        lookup_ti="w",
-        lookup_k="sw",
-        ti=None,
-        amb_ti=None,
-        **kwargs,
-    ):
+        *args: Any,
+        lookup_ti: str = "w",
+        lookup_k: str = "sw",
+        ti: np.ndarray | None = None,
+        amb_ti: np.ndarray | None = None,
+        selection: np.ndarray | tuple[slice] | None = None,
+        **kwargs: Any,
+    ) -> np.ndarray:
         """
         Gets the k value
 
@@ -548,6 +592,8 @@ class WakeK(Model):
         amb_ti: numpy.ndarray, optional
             Ambient ti data in the requested target shape,
             if known
+        selection: array_like, optional
+            Optional data selection for get_data
         kwargs: dict, optional
             Arguments for get_data
 
@@ -557,18 +603,35 @@ class WakeK(Model):
             The k array as returned by get_data
 
         """
-        sel = kwargs.pop("selection", None)
         setattr(self, self.k_var, self._k)
+        assert len(args) > 0, f"{self.name}: Missing target argument for K call"
+        target = cast(str, args[0])
+        data_args = args[1:]
         if self._ka is not None or self._kb is not None:
             if self.ti_var == FV.TI and ti is not None:
                 pass
             elif self.ti_var == FV.AMB_TI and amb_ti is not None:
                 ti = amb_ti
             else:
-                ti = self.get_data(self.ti_var, *args, lookup=lookup_ti, **kwargs)
+                ti = cast(
+                    np.ndarray,
+                    self.get_data(  # type: ignore[call-overload]
+                        self.ti_var, target, *data_args, lookup=lookup_ti, **kwargs
+                    ),
+                )
             kb = 0 if self._kb is None else self._kb
             setattr(self, self.k_var, self._ka * ti + kb)
 
-        k = self.get_data(self.k_var, *args, lookup=lookup_k, selection=sel, **kwargs)
+        k = cast(
+            np.ndarray,
+            self.get_data(  # type: ignore[call-overload]
+                self.k_var,
+                target,
+                *data_args,
+                lookup=lookup_k,
+                selection=selection,
+                **kwargs,
+            ),
+        )
         setattr(self, self.k_var, None)
         return k

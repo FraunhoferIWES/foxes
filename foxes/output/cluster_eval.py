@@ -1,4 +1,7 @@
-from xarray import DataArray, merge
+from __future__ import annotations
+
+from xarray import DataArray, Dataset, merge
+from typing import Any
 
 import foxes.constants as FC
 
@@ -13,7 +16,7 @@ class ClusterEval(WindFarmsEval):
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -40,7 +43,7 @@ class ClusterEval(WindFarmsEval):
         self._LEVEL = FC.CLUSTER
 
     @property
-    def results(self):
+    def results(self) -> Dataset:
         """
         Get the aggregated cluster results.
 
@@ -55,7 +58,7 @@ class ClusterEval(WindFarmsEval):
             self._results = self._aggregate(mapping)
         return self._results
 
-    def get_mapping(self):
+    def get_mapping(self) -> dict:
         """
         Get the mapping from cluster to turbine indices.
 
@@ -67,7 +70,7 @@ class ClusterEval(WindFarmsEval):
         """
         return self.farm.get_cluster_mapping()
 
-    def split(self):
+    def split(self) -> dict:
         """
         Split the results by cluster.
 

@@ -1,4 +1,9 @@
-def calc_ws(height, height0, WS0, shear):
+def calc_ws(
+    height: float,
+    height0: float,
+    WS0: float,
+    shear: float,
+) -> float:
     """
     Calculate wind speeds at given height
 

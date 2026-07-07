@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from xarray import DataArray, merge
+from xarray import DataArray, Dataset, merge
+from typing import Any
 
 from foxes.utils import write_nc
 import foxes.constants as FC
@@ -25,7 +28,7 @@ class WindFarmsEval(FarmResultsEval):
 
     """
 
-    def __init__(self, farm, farm_results=None, results=None, **kwargs):
+    def __init__(self, farm, farm_results=None, results=None, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -63,7 +66,7 @@ class WindFarmsEval(FarmResultsEval):
         self._LEVEL = FC.FARM
         self._results = results
 
-    def get_power_units(self):
+    def get_power_units(self) -> np.ndarray:
         """
         Gets the power units in Watts for all elements
 
@@ -92,7 +95,7 @@ class WindFarmsEval(FarmResultsEval):
 
         return P_unit_W
 
-    def _aggregate(self, mapping=None):
+    def _aggregate(self, mapping=None) -> Dataset:
         assert self.farm_results is not None, (
             "farm_results are required for aggregation"
         )
@@ -181,7 +184,7 @@ class WindFarmsEval(FarmResultsEval):
         return merge(results, join="exact")
 
     @property
-    def results(self):
+    def results(self) -> Dataset:
         """
         Get the aggregated farm results.
 
@@ -201,7 +204,7 @@ class WindFarmsEval(FarmResultsEval):
             self._results = self._aggregate(mapping)
         return self._results
 
-    def get_mapping(self):
+    def get_mapping(self) -> dict:
         """
         Get the mapping from farm to turbine indices.
 
@@ -213,7 +216,7 @@ class WindFarmsEval(FarmResultsEval):
         """
         return self.farm.get_wind_farm_mapping()
 
-    def get_capacity(self):
+    def get_capacity(self) -> np.ndarray:
         """
         Gets the capacity values for each turbine, equals nominal power
 
@@ -230,7 +233,7 @@ class WindFarmsEval(FarmResultsEval):
         )
         return cap
 
-    def split(self):
+    def split(self) -> dict:
         """
         Split the results by wind farm.
 
@@ -246,7 +249,7 @@ class WindFarmsEval(FarmResultsEval):
             for farm in self.farm.wind_farm_names
         }
 
-    def write_split_nc_files(self, base_name, **kwargs):
+    def write_split_nc_files(self, base_name: str, **kwargs: Any) -> dict:
         """
         Write the results for each sub element to separate netCDF files.
 
@@ -272,7 +275,9 @@ class WindFarmsEval(FarmResultsEval):
 
         return fdict
 
-    def get_area_mapping_plot_layout(self, area_by_name, n_areas):
+    def get_area_mapping_plot_layout(
+        self, area_by_name: dict, n_areas: int
+    ) -> tuple[tuple[float, float], float]:
         """
         Compute an extent-aware figure size and marker size for area mapping plots.
 

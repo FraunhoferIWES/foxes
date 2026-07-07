@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from pandas import read_csv
+from typing import Any
 
 from foxes.data import MODEL_DATA
 import foxes.variables as FV
@@ -17,16 +20,16 @@ class ICONStates(LatLonFieldData):
     def __init__(
         self,
         data_source,
-        height_coord_default="height",
-        height_coord_tke="height_2",
-        time_coord="time",
-        lat_coord="lat",
-        lon_coord="lon",
+        height_coord_default: str = "height",
+        height_coord_tke: str = "height_2",
+        time_coord: str = "time",
+        lat_coord: str = "lat",
+        lon_coord: str = "lon",
         output_vars=None,
         var2ncvar=None,
-        load_mode="fly",
-        **kwargs,
-    ):
+        load_mode: str = "fly",
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -113,7 +116,7 @@ class ICONStates(LatLonFieldData):
             self.H_TKE = FV.H + "_tke"
             self._cmap[self.H_TKE] = height_coord_tke
 
-    def _preproc_icon_nc(self, ds):
+    def _preproc_icon_nc(self, ds) -> Any:
         """Preprocess ICON netcdf dataset."""
         if FV.H in self._cmap and self._cmap[FV.H] in ds.sizes:
             c = ds[self._cmap[FV.H]].values.astype(int)
@@ -123,7 +126,14 @@ class ICONStates(LatLonFieldData):
             ds = ds.assign_coords({self._cmap[self.H_TKE]: self.__icon_heights_TKE[c]})
         return self._prepr0(ds) if self._prepr0 is not None else ds
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo,
+        loaded_data,
+        force: bool = False,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -160,13 +170,12 @@ class ICONStates(LatLonFieldData):
         super().load_data(
             algo,
             loaded_data,
-            force=force,
-            bounds_extra_space=self.bounds_extra_space,
-            height_bounds=self.height_bounds,
-            verbosity=verbosity,
+            force,
+            *args,
+            **kwargs,
         )
 
-    def _update_dims(self, dims, coords, vrs, d, fdata):
+    def _update_dims(self, dims, coords, vrs, d, fdata) -> tuple[Any, Any]:
         """Helper function for dimension adjustment, if needed"""
         if self.H_TKE in dims:
             assert FV.H not in dims, (

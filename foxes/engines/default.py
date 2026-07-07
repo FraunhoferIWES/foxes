@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import Any
 
 from foxes.core import Engine
 import foxes.constants as FC
@@ -12,7 +15,10 @@ class DefaultEngine(Engine):
 
     """
 
-    def __enter__(self):
+    _delegate_process_engine: Engine | None
+    _entered: bool
+
+    def __enter__(self) -> DefaultEngine:
         self._delegate_process_engine = Engine.new(
             "process",
             n_procs=self.n_procs,
@@ -24,17 +30,18 @@ class DefaultEngine(Engine):
         self._entered = True
         return self
 
-    def __exit__(self, *exit_args):
+    def __exit__(self, *exit_args: Any) -> None:
         if not hasattr(self, "_entered") or not self._entered:
             raise ValueError(
                 f"Engine '{self.name}': Exit called for not entered engine"
             )
-        if hasattr(self, "_delegate_process_engine"):
-            self._delegate_process_engine.__exit__(*exit_args)
+        delegate = getattr(self, "_delegate_process_engine", None)
+        if delegate is not None:
+            delegate.__exit__(*exit_args)
             self._delegate_process_engine = None
         self._entered = False
 
-    def _get_delegate_process_engine(self):
+    def _get_delegate_process_engine(self) -> tuple[Engine, bool]:
         """Returns the delegated process engine, creating a temporary one if needed."""
         if (
             hasattr(self, "_delegate_process_engine")
@@ -51,7 +58,7 @@ class DefaultEngine(Engine):
         e.__enter__()
         return e, True
 
-    def _select_engine_name(self, algo=None, point_data=None):
+    def _select_engine_name(self, algo: Any = None, point_data: Any = None) -> str:
         """Selects SingleChunkEngine vs ProcessEngine where possible."""
         if algo is None:
             return "process"
@@ -65,12 +72,12 @@ class DefaultEngine(Engine):
 
         return "single"
 
-    def _release_delegate_process_engine(self, engine, temporary):
+    def _release_delegate_process_engine(self, engine: Engine, temporary: bool) -> None:
         """Releases temporary delegated process engine instances."""
         if temporary:
             engine.__exit__(None, None, None)
 
-    def new_runner(self):
+    def new_runner(self) -> Any:
         """
         Creates a new EngineRunner for running calculations in this engine.
 
@@ -89,7 +96,7 @@ class DefaultEngine(Engine):
         finally:
             self._release_delegate_process_engine(e, temporary)
 
-    def submit(self, f, *args, **kwargs):
+    def submit(self, f: Any, *args: Any, **kwargs: Any) -> Any:
         """
         Submits a job to worker, obtaining a future
 
@@ -115,7 +122,7 @@ class DefaultEngine(Engine):
         finally:
             self._release_delegate_process_engine(e, temporary)
 
-    def future_is_done(self, future):
+    def future_is_done(self, future: Any) -> bool:
         """
         Checks if a future is done
 
@@ -136,7 +143,7 @@ class DefaultEngine(Engine):
         finally:
             self._release_delegate_process_engine(e, temporary)
 
-    def await_result(self, future):
+    def await_result(self, future: Any) -> Any:
         """
         Waits for result from a future
 
@@ -159,11 +166,11 @@ class DefaultEngine(Engine):
 
     def map(
         self,
-        func,
-        inputs,
-        *args,
-        **kwargs,
-    ):
+        func: Any,
+        inputs: Any,
+        *args: Any,
+        **kwargs: Any,
+    ) -> list[Any]:
         """
         Runs a function on a list of files
 
@@ -193,13 +200,13 @@ class DefaultEngine(Engine):
 
     def run_calculation(
         self,
-        algo,
-        model,
-        model_data,
-        farm_data=None,
-        point_data=None,
-        **kwargs,
-    ):
+        algo: Any,
+        model: Any,
+        model_data: Any = None,
+        farm_data: Any = None,
+        point_data: Any = None,
+        **kwargs: Any,
+    ) -> Any:
         """
         Runs the model calculation
 
@@ -223,6 +230,9 @@ class DefaultEngine(Engine):
             The model results
 
         """
+        if model_data is None:
+            raise ValueError(f"Engine '{self.name}': Missing model_data")
+
         ename = self._select_engine_name(algo=algo, point_data=point_data)
 
         self.print(f"{type(self).__name__}: Selecting engine '{ename}'", level=1)
@@ -247,8 +257,10 @@ class DefaultEngine(Engine):
             hasattr(self, "_delegate_process_engine")
             and self._delegate_process_engine is not None
         )
+        delegate = self._delegate_process_engine if suspended_delegate else None
         if suspended_delegate:
-            self._delegate_process_engine.__exit__(None, None, None)
+            assert delegate is not None
+            delegate.__exit__(None, None, None)
 
         try:
             with Engine.new(
@@ -263,6 +275,7 @@ class DefaultEngine(Engine):
                 )
         finally:
             if suspended_delegate:
-                self._delegate_process_engine.__enter__()
+                assert delegate is not None
+                delegate.__enter__()
 
         return results

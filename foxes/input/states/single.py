@@ -1,6 +1,9 @@
-import numpy as np
+from __future__ import annotations
 
-from foxes.core import States, VerticalProfile
+import numpy as np
+from typing import Any
+
+from foxes.core import Model, States, VerticalProfile
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -32,13 +35,13 @@ class SingleStateStates(States):
 
     def __init__(
         self,
-        ws=None,
-        wd=None,
-        ti=None,
-        rho=None,
-        profiles={},
-        **profdata,
-    ):
+        ws: float | None = None,
+        wd: float | None = None,
+        ti: float | None = None,
+        rho: float | None = None,
+        profiles: dict[str, str | dict[str, Any] | VerticalProfile] | None = None,
+        **profdata: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -64,7 +67,7 @@ class SingleStateStates(States):
         self.wd = wd
         self.ti = ti
         self.rho = rho
-        self.profdicts = profiles
+        self.profdicts = {} if profiles is None else profiles
         self.profdata = profdata
 
         if (
@@ -72,13 +75,13 @@ class SingleStateStates(States):
             and wd is None
             and ti is None
             and rho is None
-            and not len(profiles)
+            and not len(self.profdicts)
         ):
             raise KeyError(
                 "Expecting at least one parameter: ws, wd, ti, rho, profiles"
             )
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -90,7 +93,9 @@ class SingleStateStates(States):
         """
         return list(self._profiles.values())
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self, algo, loaded_data=None, force: bool = False, verbosity: int = 0
+    ):
         """
         Initializes the model.
 
@@ -134,7 +139,7 @@ class SingleStateStates(States):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -146,7 +151,7 @@ class SingleStateStates(States):
         """
         return 1
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -174,7 +179,7 @@ class SingleStateStates(States):
 
         return list(out)
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
         """
         The main model calculation.
 

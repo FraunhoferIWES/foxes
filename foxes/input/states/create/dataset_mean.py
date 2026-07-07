@@ -249,7 +249,7 @@ def create_dataset_mean(
         for fpath in files
     ]
 
-    def _eval_result(hcrds, hdvrs, hcounts, hwd_histo, hwd_bin_wd):
+    def _eval_result(hcrds, hdvrs, hcounts, hwd_histo, hwd_bin_wd) -> None:
         """Helper function that evaluates single result"""
         nonlocal wd_histo, wd_bin_wd, crds, dvrs, counts
 
@@ -368,7 +368,7 @@ def create_dataset_mean(
     return data
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "nc_files",

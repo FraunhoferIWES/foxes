@@ -1,6 +1,15 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from foxes.core import TurbineModel
 import foxes.variables as FV
 from foxes.utils import delta_wd
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class YAW2YAWM(TurbineModel):
@@ -12,7 +21,7 @@ class YAW2YAWM(TurbineModel):
 
     """
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -29,7 +38,13 @@ class YAW2YAWM(TurbineModel):
         """
         return [FV.YAWM]
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

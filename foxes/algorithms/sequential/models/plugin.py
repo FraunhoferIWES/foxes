@@ -1,3 +1,12 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from xarray import Dataset
+    from foxes.algorithms.sequential.sequential import Sequential
+
+
 class SequentialPlugin:
     """
     Base class for plugins that are
@@ -12,13 +21,13 @@ class SequentialPlugin:
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """
-        self.algo = None
+        self.algo: Sequential | None = None
 
-    def initialize(self, algo):
+    def initialize(self, algo: Sequential) -> None:
         """
         Initialize data based on the intial iterator
 
@@ -30,7 +39,9 @@ class SequentialPlugin:
         """
         self.algo = algo
 
-    def update(self, algo, fres, pres=None):
+    def update(
+        self, algo: Sequential, fres: Dataset, pres: Dataset | None = None
+    ) -> None:
         """
         Updates data based on current iteration
 
@@ -46,7 +57,7 @@ class SequentialPlugin:
         """
         self.algo = algo
 
-    def finalize(self, algo):
+    def finalize(self, algo: Sequential) -> None:
         """
         Finalize data based on the final iterator
 

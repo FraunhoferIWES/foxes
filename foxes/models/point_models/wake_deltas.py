@@ -1,5 +1,15 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from foxes.core import PointDataModel
 import foxes.variables as FV
+from typing import TYPE_CHECKING
+
+import numpy as np
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WakeDeltas(PointDataModel):
@@ -18,7 +28,7 @@ class WakeDeltas(PointDataModel):
 
     """
 
-    def __init__(self, vars, normalize=False):
+    def __init__(self, vars: list[str], normalize: bool = False) -> None:
         """
         Constructor.
 
@@ -34,7 +44,7 @@ class WakeDeltas(PointDataModel):
         self.vars = vars
         self.normalize = normalize
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -51,7 +61,13 @@ class WakeDeltas(PointDataModel):
         """
         return [f"DELTA_{v}" for v in self.vars]
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        pdata: TData,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from foxes.algorithms.sequential import SequentialPlugin
 from foxes.models.wake_frames.seq_dynamic_wakes import SeqDynamicWakes
+from typing import Any, Iterator
 
 
 class SeqWakeDebugPlugin(SequentialPlugin):
@@ -21,7 +24,13 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
     """
 
-    def __init__(self, show_p=True, show_v=True, vpars={}, **ppars):
+    def __init__(
+        self,
+        show_p: bool = True,
+        show_v: bool = True,
+        vpars: dict[str, Any] | None = None,
+        **ppars: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -42,12 +51,12 @@ class SeqWakeDebugPlugin(SequentialPlugin):
         self.show_v = show_v
 
         self.vpars = dict(color="blue")
-        self.vpars.update(vpars)
+        self.vpars.update({} if vpars is None else vpars)
 
         self.ppars = dict(color="blue")
         self.ppars.update(ppars)
 
-    def initialize(self, algo):
+    def initialize(self, algo) -> None:
         """
         Initialize data based on the intial iterator
 
@@ -58,9 +67,9 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
         """
         super().initialize(algo)
-        self._data = []
+        self._data: list[tuple[Any, Any, Any]] = []
 
-    def update(self, algo, fres, pres=None):
+    def update(self, algo, fres, pres=None) -> None:
         """
         Updates data based on current iteration
 
@@ -94,7 +103,7 @@ class SeqWakeDebugPlugin(SequentialPlugin):
             )
         )
 
-    def gen_images(self, ax):
+    def gen_images(self, ax) -> Iterator[tuple[Any, list[Any]]]:
         """
 
         Parameters
@@ -112,7 +121,8 @@ class SeqWakeDebugPlugin(SequentialPlugin):
             dt, pts, v = self._data.pop(0)
 
             N = len(pts)
-            artists = []
+            artists: list[Any] = []
+            assert self.algo is not None
             if self.show_p:
                 artists += [
                     ax.scatter(

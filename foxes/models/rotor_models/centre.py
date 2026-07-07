@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import RotorModel
 from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 from foxes.config import config
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class CentreRotor(RotorModel):
@@ -17,7 +24,7 @@ class CentreRotor(RotorModel):
 
     """
 
-    def input_variables(self):
+    def input_variables(self) -> list[str]:
         """
         The input variables which are required by the model.
 
@@ -29,7 +36,7 @@ class CentreRotor(RotorModel):
         """
         return [FV.TXYH]
 
-    def n_rotor_points(self):
+    def n_rotor_points(self) -> int:
         """
         The number of rotor points
 
@@ -41,7 +48,7 @@ class CentreRotor(RotorModel):
         """
         return 1
 
-    def design_points(self):
+    def design_points(self) -> np.ndarray:
         """
         The rotor model design points.
 
@@ -60,7 +67,7 @@ class CentreRotor(RotorModel):
         """
         return np.array([[0.0, 0.0, 0.0]])
 
-    def rotor_point_weights(self):
+    def rotor_point_weights(self) -> np.ndarray:
         """
         The weights of the rotor points
 
@@ -73,7 +80,9 @@ class CentreRotor(RotorModel):
         """
         return np.array([1.0])
 
-    def get_rotor_points(self, algo, mdata, fdata):
+    def get_rotor_points(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> np.ndarray:
         """
         Calculates rotor points from design points.
 
@@ -97,15 +106,15 @@ class CentreRotor(RotorModel):
 
     def eval_rpoint_results(
         self,
-        algo,
-        mdata,
-        fdata,
-        rpoint_results,
-        rpoint_weights,
-        downwind_index=None,
-        copy_to_ambient=False,
-        set_wd=False,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        rpoint_weights: np.ndarray,
+        downwind_index: int | None = None,
+        copy_to_ambient: bool = False,
+        set_wd: bool = False,
+    ) -> None:
         """
         Evaluate rotor point results.
 
@@ -139,9 +148,13 @@ class CentreRotor(RotorModel):
             If `True`, the wind direction is updated
 
         """
+        if self.calc_vars is None:
+            self.output_farm_vars(algo)
+        assert self.calc_vars is not None
+
         if len(rpoint_weights) > 1:
             return super().eval_rpoint_results(
-                algo, mdata, fdata, rpoint_results, rpoint_weights, downwind_index
+                algo, mdata, fdata, tdata, rpoint_weights, downwind_index
             )
 
         n_states = mdata.n_states
@@ -161,8 +174,8 @@ class CentreRotor(RotorModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-            wd = rpoint_results[FV.WD]
-            ws = rpoint_results[FV.WS]
+            wd = tdata[FV.WD]
+            ws = tdata[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
             uv = uvp[:, :, 0]
 
@@ -213,7 +226,7 @@ class CentreRotor(RotorModel):
                     or downwind_index is None
                     or downwind_index == 0
                 ):
-                    res = rpoint_results[v][:, :, 0]
+                    res = tdata[v][:, :, 0]
                     self._set_res(fdata, v, res, downwind_index)
                     del res
                 if copy_to_ambient and v in FV.var2amb:

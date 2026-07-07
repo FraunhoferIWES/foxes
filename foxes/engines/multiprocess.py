@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 from foxes.utils import import_module
 
 from .process import ProcessEngineRunner
@@ -12,7 +16,7 @@ class MultiprocessEngine(PoolEngine):
 
     """
 
-    def new_runner(self):
+    def new_runner(self) -> ProcessEngineRunner:
         """
         Creates a new EngineRunner for running calculations in this engine
 
@@ -24,12 +28,12 @@ class MultiprocessEngine(PoolEngine):
         """
         return ProcessEngineRunner()
 
-    def _create_pool(self):
+    def _create_pool(self) -> None:
         """Creates the pool"""
         Pool = import_module("multiprocess").Pool
         self._pool = Pool(processes=self.n_workers, **self.pool_args)
 
-    def submit(self, f, *args, **kwargs):
+    def submit(self, f: Any, *args: Any, **kwargs: Any) -> Any:
         """
         Submits a job to worker, obtaining a future
 
@@ -51,7 +55,7 @@ class MultiprocessEngine(PoolEngine):
         """
         return self._pool.apply_async(f, args=args, kwds=kwargs)
 
-    def future_is_done(self, future):
+    def future_is_done(self, future: Any) -> bool:
         """
         Checks if a future is done
 
@@ -68,7 +72,7 @@ class MultiprocessEngine(PoolEngine):
         """
         return future.ready()
 
-    def await_result(self, future):
+    def await_result(self, future: Any) -> Any:
         """
         Waits for result from a future
 
@@ -85,7 +89,7 @@ class MultiprocessEngine(PoolEngine):
         """
         return future.get()
 
-    def _shutdown_pool(self):
+    def _shutdown_pool(self) -> None:
         """Shuts down the pool"""
         self._pool.close()
         self._pool.terminate()

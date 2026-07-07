@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from xarray import Dataset
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeFrame, MData, FData, TData
 from foxes.utils import wd2uv
@@ -7,6 +10,10 @@ from foxes.algorithms.iterative import Iterative
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.model import LoadedData
 
 
 class Timelines(WakeFrame):
@@ -26,7 +33,12 @@ class Timelines(WakeFrame):
 
     """
 
-    def __init__(self, cl_ipars={}, dt_min=None, **kwargs):
+    def __init__(
+        self,
+        cl_ipars: dict[str, Any] | None = None,
+        dt_min: float | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -43,13 +55,21 @@ class Timelines(WakeFrame):
 
         """
         super().__init__(**kwargs)
-        self.cl_ipars = cl_ipars
+        self.cl_ipars = {} if cl_ipars is None else cl_ipars
         self.dt_min = dt_min
+        self.timelines_data: Dataset | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(dt_min={self.dt_min})"
 
-    def _precalc_data(self, algo, states, heights, verbosity, needs_res=False):
+    def _precalc_data(
+        self,
+        algo: Algorithm,
+        states,
+        heights: np.ndarray,
+        verbosity: int,
+        needs_res: bool = False,
+    ) -> tuple[tuple[str, ...], np.ndarray] | None:
         """Helper function for pre-calculation of ambient wind vectors"""
 
         if verbosity > 0:
@@ -79,7 +99,7 @@ class Timelines(WakeFrame):
         # prepare mdata:
         data = algo.loaded_data["coords"]
         mdict = {v: np.array(d) for v, d in data.items()}
-        mdims = {v: (v,) for v in data.keys()}
+        mdims: dict[str, tuple[str, ...]] = {v: (v,) for v in data.keys()}
         data = algo.loaded_data["data_vars"]
         mdict.update({v: d[1] for v, d in data.items()})
         mdims.update({v: d[0] for v, d in data.items()})
@@ -95,12 +115,16 @@ class Timelines(WakeFrame):
             v: np.zeros((n_states, 1, 1), dtype=config.dtype_double)
             for v in states.output_point_vars(algo)
         }
-        pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in data.keys()}
+        pdims: dict[str, tuple[str, ...]] = {
+            v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in data.keys()
+        }
         points = np.zeros((n_states, 1, 3), dtype=config.dtype_double)
 
         # calculate all heights:
-        self.timelines_data = {"dxy": (("height", FC.STATE, "dir"), [])}
-        weight_data = None
+        timelines_data: dict[str, tuple[tuple[str, ...], list[np.ndarray]]] = {
+            "dxy": (("height", FC.STATE, "dir"), [])
+        }
+        weight_data: tuple[tuple[str, ...], np.ndarray] | None = None
         for h in heights:
             if verbosity > 0:
                 print(f"  Height: {h} m")
@@ -128,7 +152,7 @@ class Timelines(WakeFrame):
             else:
                 dxy = uv[:-1] * dt[:, None]
                 dxy = np.append(dxy, uv[-1, None, :] * dt[-1], axis=0)
-            self.timelines_data["dxy"][1].append(dxy)
+            timelines_data["dxy"][1].append(dxy)
             """ DEBUG
             import matplotlib.pyplot as plt
             xy = np.array([np.sum(self.timelines_data[h][:n], axis=0) for n in range(len(self.timelines_data[h]))])
@@ -140,17 +164,17 @@ class Timelines(WakeFrame):
             """
 
             if needs_res:
-                if "U" not in self.timelines_data:
-                    self.timelines_data["U"] = (("height", FC.STATE), [])
-                    self.timelines_data["V"] = (("height", FC.STATE), [])
-                self.timelines_data["U"][1].append(uv[:, 0])
-                self.timelines_data["V"][1].append(uv[:, 1])
+                if "U" not in timelines_data:
+                    timelines_data["U"] = (("height", FC.STATE), [])
+                    timelines_data["V"] = (("height", FC.STATE), [])
+                timelines_data["U"][1].append(uv[:, 0])
+                timelines_data["V"][1].append(uv[:, 1])
 
                 for v in states.output_point_vars(algo):
                     if v not in [FV.WS, FV.WD]:
-                        if v not in self.timelines_data:
-                            self.timelines_data[v] = (("height", FC.STATE), [])
-                        self.timelines_data[v][1].append(res[v][:, 0, 0])
+                        if v not in timelines_data:
+                            timelines_data[v] = (("height", FC.STATE), [])
+                        timelines_data[v][1].append(res[v][:, 0, 0])
 
             del res, uv, dxy
 
@@ -160,14 +184,19 @@ class Timelines(WakeFrame):
                 "height": heights,
             },
             data_vars={
-                v: (d[0], np.stack(d[1], axis=0))
-                for v, d in self.timelines_data.items()
+                v: (d[0], np.stack(d[1], axis=0)) for v, d in timelines_data.items()
             },
         )
 
         return weight_data
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -207,10 +236,10 @@ class Timelines(WakeFrame):
 
         # find turbine hub heights:
         t2h = np.zeros(algo.n_turbines, dtype=config.dtype_double)
+        ttypes = algo.farm_controller.turbine_types
+        assert ttypes is not None, "Turbine types not initialized"
         for ti, t in enumerate(algo.farm.turbines):
-            t2h[ti] = (
-                t.H if t.H is not None else algo.farm_controller.turbine_types[ti].H
-            )
+            t2h[ti] = t.H if t.H is not None else ttypes[ti].H
         heights = np.unique(t2h)
 
         # pre-calc data:
@@ -255,12 +284,15 @@ class Timelines(WakeFrame):
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
         if data_stash is not None and (sel is not None or isel is not None):
-            data_stash[self.name]["data"] = self.timelines_data
+            tldata = self.timelines_data
+            assert tldata is not None, "Timeline data not initialized"
+            data_stash[self.name]["data"] = tldata
 
             if isel is not None:
-                self.timelines_data = self.timelines_data.isel(isel)
+                tldata = tldata.isel(isel)
             if sel is not None:
-                self.timelines_data = self.timelines_data.sel(sel)
+                tldata = tldata.sel(sel)
+            self.timelines_data = tldata
 
     def unset_running(
         self,
@@ -296,7 +328,7 @@ class Timelines(WakeFrame):
             if "data" in data:
                 self.timelines_data = data.pop("data")
 
-    def calc_order(self, algo, mdata, fdata):
+    def calc_order(self, algo, mdata, fdata) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -328,8 +360,8 @@ class Timelines(WakeFrame):
         mdata,
         fdata,
         tdata,
-        downwind_index,
-    ):
+        downwind_index: int,
+    ) -> np.ndarray:
         """
         Calculate wake coordinates of rotor points.
 
@@ -355,14 +387,18 @@ class Timelines(WakeFrame):
 
         """
         # prepare:
+        tldata = self.timelines_data
+        assert tldata is not None, "Timeline data not initialized"
         targets = tdata[FC.TARGETS]
         n_states, n_targets, n_tpoints = targets.shape[:3]
         n_points = n_targets * n_tpoints
         points = targets.reshape(n_states, n_points, 3)
         rxyz = fdata[FV.TXYH][:, downwind_index]
         theights = fdata[FV.H][:, downwind_index]
-        heights = self.timelines_data["height"].to_numpy()
-        data_dxy = self.timelines_data["dxy"].to_numpy()
+        heights = tldata["height"].to_numpy()
+        data_dxy = tldata["dxy"].to_numpy()
+        max_wake_length_km = algo.max_wake_length_km
+        assert max_wake_length_km is not None, "Missing max_wake_length_km"
 
         D = np.zeros((n_states, n_points), dtype=config.dtype_double)
         D[:] = fdata[FV.D][:, downwind_index, None]
@@ -387,7 +423,7 @@ class Timelines(WakeFrame):
             h_trace_si = trace_si.copy()
 
             # flake8: noqa: F821
-            def _update_wcoos(sel):
+            def _update_wcoos(sel: np.ndarray) -> None:
                 """Local function that updates coordinates and source times"""
                 nonlocal wcoosx, wcoosy, trace_si
                 d = np.linalg.norm(trace_p, axis=-1)
@@ -415,11 +451,7 @@ class Timelines(WakeFrame):
             # step backwards in time, until wake source turbine is hit:
             _update_wcoos(precond)
             while True:
-                sel = (
-                    precond
-                    & (h_trace_si > 0)
-                    & (trace_l < algo.max_wake_length_km * 1e3)
-                )
+                sel = precond & (h_trace_si > 0) & (trace_l < max_wake_length_km * 1e3)
                 if np.any(sel):
                     h_trace_si[sel] -= 1
 
@@ -450,7 +482,9 @@ class Timelines(WakeFrame):
             (FC.STATE, FC.TARGET, FC.TPOINT),
         )
 
-        return algo.wake_deflection.calc_deflection(
+        wdfl = algo.wake_deflection
+        assert wdfl is not None, "Wake deflection model not initialized"
+        return wdfl.calc_deflection(
             algo,
             mdata,
             fdata,
@@ -459,7 +493,9 @@ class Timelines(WakeFrame):
             wcoos.reshape(n_states, n_targets, n_tpoints, 3),
         )
 
-    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
+    def get_centreline_points(
+        self, algo, mdata, fdata, downwind_index: int, x: np.ndarray
+    ) -> np.ndarray:
         """
         Gets the points along the centreline for given
         values of x.
@@ -484,11 +520,13 @@ class Timelines(WakeFrame):
 
         """
         # prepare:
+        tldata = self.timelines_data
+        assert tldata is not None, "Timeline data not initialized"
         n_states, n_points = x.shape
         rxyz = fdata[FV.TXYH][:, downwind_index]
         theights = fdata[FV.H][:, downwind_index]
-        heights = self.timelines_data["height"].to_numpy()
-        data_dxy = self.timelines_data["dxy"].to_numpy()
+        heights = tldata["height"].to_numpy()
+        data_dxy = tldata["dxy"].to_numpy()
 
         points = np.zeros((n_states, n_points, 3), dtype=config.dtype_double)
         points[:] = rxyz[:, None, :]
@@ -533,7 +571,7 @@ class Timelines(WakeFrame):
 
         return points
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 

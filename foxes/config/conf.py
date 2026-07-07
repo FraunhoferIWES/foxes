@@ -1,6 +1,7 @@
 import numpy as np
 from pathlib import Path
 from sys import version_info
+from typing import Optional
 
 from foxes.utils.dict import Dict
 from foxes.utils.load import import_module
@@ -14,7 +15,7 @@ class Config(Dict):
     :group: foxes.config
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Constructor"""
         super().__init__(
             {
@@ -27,14 +28,14 @@ class Config(Dict):
             },
             name="config",
         )
-        self.__utmn = None
-        self.__utml = None
+        self.__utmn: Optional[int] = None
+        self.__utml: Optional[str] = None
 
         # special treat for Python 3.8:
         if version_info[0] == 3 and version_info[1] == 8:
             self["nc_engine"] = None
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value) -> None:
         if key == FC.UTM_ZONE:
             raise KeyError(
                 "Direct setting of UTM zone is not allowed. "
@@ -43,7 +44,7 @@ class Config(Dict):
         super().__setitem__(key, value)
 
     @property
-    def dtype_double(self):
+    def dtype_double(self) -> type:
         """
         The default double data type
 
@@ -56,7 +57,7 @@ class Config(Dict):
         return self.get_item(FC.DTYPE)
 
     @property
-    def dtype_int(self):
+    def dtype_int(self) -> type:
         """
         The default int data type
 
@@ -69,7 +70,7 @@ class Config(Dict):
         return self.get_item(FC.ITYPE)
 
     @property
-    def work_dir(self):
+    def work_dir(self) -> Path:
         """
         The foxes working directory
 
@@ -87,7 +88,7 @@ class Config(Dict):
         return self[FC.WORK_DIR]
 
     @property
-    def input_dir(self):
+    def input_dir(self) -> Path:
         """
         The input base directory
 
@@ -106,7 +107,7 @@ class Config(Dict):
             return self[FC.INPUT_DIR]
 
     @property
-    def output_dir(self):
+    def output_dir(self) -> Path:
         """
         The default output directory
 
@@ -125,7 +126,7 @@ class Config(Dict):
             return self[FC.OUTPUT_DIR]
 
     @property
-    def nc_engine(self):
+    def nc_engine(self) -> str | None:
         """
         The NetCDF engine
 
@@ -143,7 +144,7 @@ class Config(Dict):
         return nce
 
     @property
-    def utm_zone_set(self):
+    def utm_zone_set(self) -> bool:
         """
         Whether the UTM zone is set
 
@@ -156,7 +157,7 @@ class Config(Dict):
         return self.__utmn is not None and self.__utml is not None
 
     @property
-    def utm_zone(self):
+    def utm_zone(self) -> tuple[int, str]:
         """
         The UTM zone (number, letter) tuple
 
@@ -169,9 +170,11 @@ class Config(Dict):
 
         """
         assert self.utm_zone_set, "UTM zone has not been set"
+        assert self.__utmn is not None
+        assert self.__utml is not None
         return self.__utmn, self.__utml
 
-    def set_utm_zone(self, number, letter):
+    def set_utm_zone(self, number: int, letter: str) -> None:
         """
         Set the UTM zone
 
@@ -203,7 +206,7 @@ config = Config()
 """
 
 
-def get_path(pth, base):
+def get_path(pth: str | Path, base: Path) -> Path:
     """
     Gets path object, respecting the base directory
 
@@ -230,7 +233,7 @@ def get_path(pth, base):
         return (base / pth).expanduser()
 
 
-def get_input_path(pth):
+def get_input_path(pth: str | Path) -> Path:
     """
     Gets path object, respecting the configurations
     input directory
@@ -252,7 +255,7 @@ def get_input_path(pth):
     return get_path(pth, base=config.input_dir)
 
 
-def get_output_path(pth):
+def get_output_path(pth: str | Path) -> Path:
     """
     Gets path object, respecting the configurations
     output directory

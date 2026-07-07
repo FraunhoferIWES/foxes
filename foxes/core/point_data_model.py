@@ -1,11 +1,20 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.config import config
 from foxes.utils import new_instance
 import foxes.constants as FC
 
 from .data_calc_model import DataCalcModel
+from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class PointDataModel(DataCalcModel):
@@ -18,7 +27,7 @@ class PointDataModel(DataCalcModel):
     """
 
     @abstractmethod
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -30,7 +39,7 @@ class PointDataModel(DataCalcModel):
         """
         return []
 
-    def output_coords(self):
+    def output_coords(self) -> tuple[str, ...]:
         """
         Gets the coordinates of all output arrays
 
@@ -42,7 +51,7 @@ class PointDataModel(DataCalcModel):
         """
         return (FC.STATE, FC.TARGET, FC.TPOINT)
 
-    def ensure_output_vars(self, algo, tdata):
+    def ensure_output_vars(self, algo: Algorithm, tdata: TData) -> None:
         """
         Ensures that the output variables are present in the target data.
 
@@ -71,7 +80,13 @@ class PointDataModel(DataCalcModel):
                 )
 
     @abstractmethod
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -98,9 +113,15 @@ class PointDataModel(DataCalcModel):
 
         """
         self.ensure_output_vars(algo, tdata)
-        super().calculate(algo, mdata, fdata, tdata)
+        return super().calculate(algo, mdata, fdata, tdata)
 
-    def run_calculation(self, algo, *data, out_vars, **calc_pars):
+    def run_calculation(
+        self,
+        algo: Algorithm,
+        *data: tuple[Any, ...],
+        out_vars: list[str],
+        **calc_pars: Any,
+    ) -> Any:
         """
         Starts the model calculation in parallel.
 
@@ -123,7 +144,7 @@ class PointDataModel(DataCalcModel):
             The calculation results
 
         """
-        results = super().run_calculation(
+        results = super().run_calculation(  # type: ignore[misc]
             algo,
             *data,
             out_vars=out_vars,
@@ -137,7 +158,7 @@ class PointDataModel(DataCalcModel):
             )
         return results.sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
 
-    def __add__(self, m):
+    def __add__(self, m: Any) -> PointDataModelList:
         if isinstance(m, list):
             return PointDataModelList([self] + m)
         elif isinstance(m, PointDataModelList):
@@ -163,7 +184,7 @@ class PointDataModelList(PointDataModel):
 
     """
 
-    def __init__(self, models=[]):
+    def __init__(self, models: list[PointDataModel] | None = None) -> None:
         """
         Constructor.
 
@@ -174,12 +195,12 @@ class PointDataModelList(PointDataModel):
 
         """
         super().__init__()
-        self.models = models
+        self.models = [] if models is None else models
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({[m.name for m in self.models]})"
 
-    def append(self, model):
+    def append(self, model: PointDataModel) -> None:
         """
         Add a model to the list
 
@@ -191,7 +212,7 @@ class PointDataModelList(PointDataModel):
         """
         self.models.append(model)
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -201,9 +222,9 @@ class PointDataModelList(PointDataModel):
             Names of all sub models
 
         """
-        return self.models
+        return cast(list[Model], self.models)
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -223,7 +244,14 @@ class PointDataModelList(PointDataModel):
             ovars += m.output_point_vars(algo)
         return list(dict.fromkeys(ovars))
 
-    def calculate(self, algo, mdata, fdata, tdata, parameters=None):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        parameters: list[dict[str, Any]] | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -271,7 +299,12 @@ class PointDataModelList(PointDataModel):
         return {v: tdata[v] for v in self.output_point_vars(algo)}
 
     @classmethod
-    def new(cls, model_type, *args, **kwargs):
+    def new(
+        cls,
+        model_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> PointDataModel:
         """
         Run-time point model factory.
 

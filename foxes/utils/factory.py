@@ -1,4 +1,7 @@
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import Any
 
 from .dict import Dict
 import foxes.variables as FV
@@ -38,14 +41,14 @@ class Factory:
     def __init__(
         self,
         base,
-        name_template,
-        args=(),
-        kwargs={},
-        var2arg={},
-        hints={},
-        example_vars=None,
-        **options,
-    ):
+        name_template: str,
+        args: tuple[Any, ...] = (),
+        kwargs: dict[str, Any] | None = None,
+        var2arg: dict[str, str] | None = None,
+        hints: dict[str, Any] | None = None,
+        example_vars: dict[str, Any] | None = None,
+        **options: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -75,12 +78,12 @@ class Factory:
         self.base = base
         self.name_template = name_template
         self.args = args
-        self.kwargs = kwargs
-        self.var2arg = var2arg
-        self.hints = hints
+        self.kwargs = {} if kwargs is None else kwargs
+        self.var2arg = {} if var2arg is None else var2arg
+        self.hints = {} if hints is None else hints
 
-        self._vars = []
-        self._pre = []
+        self._vars: list[str] = []
+        self._pre: list[str] = []
         parts = name_template.split(">")
 
         for i, p in enumerate(parts):
@@ -107,7 +110,7 @@ class Factory:
                         f"Factory '{name_template}': Require indicator before variable '{v}' in template, e.g. '{v}<{v}>'"
                     )
 
-        self.options = Dict(_name=f"{self._pre[0]}_options")
+        self.options: Dict[str, Any] = Dict(_name=f"{self._pre[0]}_options")
         for v, o in options.items():
             if v not in self.variables:
                 raise KeyError(
@@ -142,7 +145,7 @@ class Factory:
         if example_vars is not None:
             exvars.update(example_vars)
         try:
-            self.example = ""
+            self.example: str | None = ""
             for i, v in enumerate(self._vars):
                 self.example += f"{self._pre[i]}{exvars[v]}"
             self.example += self._pre[-1]
@@ -154,7 +157,7 @@ class Factory:
             self.example = None
 
     @property
-    def name_prefix(self):
+    def name_prefix(self) -> str:
         """
         The beginning of the name template
 
@@ -167,7 +170,7 @@ class Factory:
         return self._pre[0]
 
     @property
-    def name_suffix(self):
+    def name_suffix(self) -> str:
         """
         The ending of the name template
 
@@ -180,7 +183,7 @@ class Factory:
         return self._pre[-1]
 
     @property
-    def variables(self):
+    def variables(self) -> list[str]:
         """
         The list of variables
 
@@ -192,7 +195,7 @@ class Factory:
         """
         return self._vars
 
-    def __str__(self):
+    def __str__(self) -> str:
         """String representation"""
         s = f"{self.name_template}: {self.base.__name__} with"
         for k, d in self.kwargs.items():
@@ -206,7 +209,7 @@ class Factory:
             s += f"\nExample: {self.example}"
         return s
 
-    def get_examples(self, **var_values):
+    def get_examples(self, **var_values: Any) -> list[str]:
         """
         Create example names from given values
 
@@ -223,7 +226,13 @@ class Factory:
 
         """
 
-        def gete(i, vals, vars, values, examples):
+        def gete(
+            i: int,
+            vals: dict[str, Any],
+            vars: list[str],
+            values: list[Any],
+            examples: list[str],
+        ) -> None:
             if i >= len(vars):
                 e = ""
                 for i, v in enumerate(self._vars):
@@ -241,7 +250,7 @@ class Factory:
                 else:
                     gete(i + 1, vals, vars, values, examples)
 
-        examples = []
+        examples: list[str] = []
         gete(
             0,
             {},
@@ -252,7 +261,9 @@ class Factory:
 
         return examples
 
-    def check_match(self, name, error=False, ret_pars=False):
+    def check_match(
+        self, name: str, error: bool = False, ret_pars: bool = False
+    ) -> bool | tuple[bool, dict[str, Any]]:
         """
         Tests if a name matches the template and constructs
         parameters
@@ -276,7 +287,7 @@ class Factory:
 
         """
         j = 0
-        wlist = []
+        wlist: list[str] = []
         for pi, p in enumerate(self._pre):
             if len(p) > 0:
                 i = name[j:].find(p)
@@ -297,7 +308,7 @@ class Factory:
                 wlist.append(w)
 
         if ret_pars:
-            kwargs = {}
+            kwargs: dict[str, Any] = {}
             for vi, v in enumerate(self.variables):
                 w = self.var2arg.get(v, v)
                 data = wlist[vi]
@@ -315,7 +326,7 @@ class Factory:
 
         return True
 
-    def construct(self, name):
+    def construct(self, name: str) -> Any:
         """
         Create an object of the base class.
 
@@ -330,7 +341,9 @@ class Factory:
             The instance of the base class
 
         """
-        __, kwargs = self.check_match(name, error=True, ret_pars=True)
+        result = self.check_match(name, error=True, ret_pars=True)
+        assert isinstance(result, tuple)
+        __, kwargs = result
         return self.base(*self.args, **kwargs)
 
 
@@ -348,7 +361,17 @@ class WakeKFactory:
 
     """
 
-    def __init__(self, base, name_template, *args, hints={}, **kwargs):
+    def __init__(
+        self,
+        base,
+        name_template: str,
+        *args: Any,
+        hints: dict[str, Any] | None = None,
+        factory_kwargs: dict[str, Any] | None = None,
+        var2arg: dict[str, str] | None = None,
+        example_vars: dict[str, Any] | None = None,
+        **options: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -364,19 +387,44 @@ class WakeKFactory:
         hints: dict
             Hints for print_toc, only for variables for which the
             options are functions or missing
-        kwargs: dict
+        factory_kwargs: dict, optional
+            Extra keyword arguments forwarded to Factory
+        var2arg: dict, optional
+            Mapping from variable names to constructor argument names
+        example_vars: dict, optional
+            Example values for variables
+        options: dict
             Additional arguments for Factory
 
         """
         self._base = base
-        self._kwargs = kwargs
+        legacy_factory_kwargs = options.pop("kwargs", None)
+        legacy_var2arg = options.pop("var2arg", None)
+        legacy_example_vars = options.pop("example_vars", None)
+
+        if factory_kwargs is None and legacy_factory_kwargs is not None:
+            factory_kwargs = legacy_factory_kwargs
+        if var2arg is None and legacy_var2arg is not None:
+            var2arg = legacy_var2arg
+        if example_vars is None and legacy_example_vars is not None:
+            example_vars = legacy_example_vars
+
+        self._kwargs = dict(options)
+        if factory_kwargs is not None:
+            self._kwargs["kwargs"] = factory_kwargs
+        if var2arg is not None:
+            self._kwargs["var2arg"] = var2arg
+        if example_vars is not None:
+            self._kwargs["example_vars"] = example_vars
         self._template0 = name_template
-        self.factories = []
+        self.factories: list[Factory] = []
+
+        hints = {} if hints is None else hints
 
         i0 = name_template.find("_[wake_k]")
         i1 = i0 + len("_[wake_k]")
-        kw = kwargs.pop("kwargs", {})
-        v2a = kwargs.pop("var2arg", {})
+        kw = {} if factory_kwargs is None else dict(factory_kwargs)
+        v2a = {} if var2arg is None else dict(var2arg)
 
         if i0 < 0:
             raise ValueError(
@@ -384,8 +432,10 @@ class WakeKFactory:
             )
 
         exvars = dict(k=0.04, ka=0.2, ambka=0.4, kb=0.001)
-        if "example_vars" in kwargs:
-            exvars.update(kwargs.pop("example_vars"))
+        if example_vars is not None:
+            exvars.update(example_vars)
+
+        fbase = dict(options)
 
         # add case ka, kb:
         t0 = name_template[:i0]
@@ -396,19 +446,15 @@ class WakeKFactory:
         h["ka"] = "(Value, e.g. 04 for 0.4)"
         h["kb"] = "(Value, e.g. 001 for 0.01)"
         kw["ti_var"] = FV.TI
-        self.factories.append(
-            Factory(
-                base,
-                t,
-                *args,
-                hints=h,
-                kwargs=kw.copy(),
-                **kwargs,
-                ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-                kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-                example_vars=exvars,
-            )
+        fpars = dict(fbase)
+        fpars.update(
+            hints=h,
+            kwargs=kw.copy(),
+            ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            example_vars=exvars,
         )
+        self.factories.append(Factory(base, t, *args, **fpars))
 
         # add case ambient ambka, kb:
         t = name_template[:i0] + "_ambka<ambka>_kb<kb>"
@@ -420,20 +466,16 @@ class WakeKFactory:
         kw["ti_var"] = FV.AMB_TI
         hv2a = v2a.copy()
         hv2a["ambka"] = "ka"
-        self.factories.append(
-            Factory(
-                base,
-                t,
-                *args,
-                hints=h,
-                kwargs=kw.copy(),
-                var2arg=hv2a,
-                **kwargs,
-                ambka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-                kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-                example_vars=exvars,
-            )
+        fpars = dict(fbase)
+        fpars.update(
+            hints=h,
+            kwargs=kw.copy(),
+            var2arg=hv2a,
+            ambka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            example_vars=exvars,
         )
+        self.factories.append(Factory(base, t, *args, **fpars))
 
         # add case ka:
         t = name_template[:i0] + "_ka<ka>"
@@ -442,18 +484,14 @@ class WakeKFactory:
         h = hints.copy()
         h["ka"] = "(Value, e.g. 04 for 0.4)"
         kw["ti_var"] = FV.TI
-        self.factories.append(
-            Factory(
-                base,
-                t,
-                *args,
-                hints=h,
-                kwargs=kw.copy(),
-                **kwargs,
-                ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-                example_vars=exvars,
-            )
+        fpars = dict(fbase)
+        fpars.update(
+            hints=h,
+            kwargs=kw.copy(),
+            ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            example_vars=exvars,
         )
+        self.factories.append(Factory(base, t, *args, **fpars))
 
         # add case ambka:
         t = name_template[:i0] + "_ambka<ambka>"
@@ -464,19 +502,15 @@ class WakeKFactory:
         kw["ti_var"] = FV.AMB_TI
         hv2a = v2a.copy()
         hv2a["ambka"] = "ka"
-        self.factories.append(
-            Factory(
-                base,
-                t,
-                *args,
-                hints=h,
-                kwargs=kw.copy(),
-                var2arg=hv2a,
-                **kwargs,
-                ambka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-                example_vars=exvars,
-            )
+        fpars = dict(fbase)
+        fpars.update(
+            hints=h,
+            kwargs=kw.copy(),
+            var2arg=hv2a,
+            ambka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            example_vars=exvars,
         )
+        self.factories.append(Factory(base, t, *args, **fpars))
 
         # add case k:
         t = name_template[:i0] + "_k<k>"
@@ -485,37 +519,25 @@ class WakeKFactory:
         h = hints.copy()
         h["k"] = "(Value, e.g. 004 for 0.04)"
         kw["ti_var"] = FV.TI
-        self.factories.append(
-            Factory(
-                base,
-                t,
-                *args,
-                hints=h,
-                kwargs=kw.copy(),
-                **kwargs,
-                k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-                example_vars=exvars,
-            )
+        fpars = dict(fbase)
+        fpars.update(
+            hints=h,
+            kwargs=kw.copy(),
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            example_vars=exvars,
         )
+        self.factories.append(Factory(base, t, *args, **fpars))
 
         # add case without k:
         t = name_template[:i0]
         if len(name_template) > i1:
             t += name_template[i1:]
         kw["ti_var"] = FV.TI
-        self.factories.append(
-            Factory(
-                base,
-                t,
-                *args,
-                hints=hints,
-                kwargs=kw.copy(),
-                **kwargs,
-                example_vars=exvars,
-            )
-        )
+        fpars = dict(fbase)
+        fpars.update(hints=hints, kwargs=kw.copy(), example_vars=exvars)
+        self.factories.append(Factory(base, t, *args, **fpars))
 
-    def __str__(self):
+    def __str__(self) -> str:
         """String representation"""
         s = f"{self._template0}: {self._base.__name__} with"
         for k, d in self._kwargs.items():
@@ -545,7 +567,13 @@ class FDict(Dict):
 
     """
 
-    def __init__(self, *args, store_created=True, **kwargs):
+    def __init__(
+        self,
+        *args: Any,
+        store_created: bool = True,
+        _name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -559,11 +587,13 @@ class FDict(Dict):
             Parameters for the base class
 
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, _name=_name, **kwargs)
         self.store_created = store_created
-        self.factories = []
+        self.factories: list[Factory] = []
 
-    def add_factory(self, *args, factory=None, **kwargs):
+    def add_factory(
+        self, *args: Any, factory: Factory | None = None, **kwargs: Any
+    ) -> None:
         """
         Adds a Factory object.
 
@@ -593,7 +623,7 @@ class FDict(Dict):
         else:
             self.factories.insert(i, f)
 
-    def add_k_factory(self, *args, **kwargs):
+    def add_k_factory(self, *args: Any, **kwargs: Any) -> None:
         """
         Adds a WakeKFactory.
 
@@ -608,7 +638,7 @@ class FDict(Dict):
         for f in WakeKFactory(*args, **kwargs).factories:
             self.add_factory(factory=f)
 
-    def __contains__(self, key):
+    def __contains__(self, key: Any) -> bool:
         found = super().__contains__(key)
         if not found:
             for f in self.factories:
@@ -616,7 +646,7 @@ class FDict(Dict):
                     return True
         return found
 
-    def get_item(self, key, prnt=True):
+    def get_item(self, key: Any, *deflt: Any, prnt: bool = True) -> Any:
         """
         Gets an item, prints readable error if not found
 
@@ -629,6 +659,11 @@ class FDict(Dict):
 
         """
         try:
+            if len(deflt):
+                assert len(deflt) == 1, (
+                    f"Expecting a single default entry, got {len(deflt)}"
+                )
+                return self.get(key, deflt[0])
             return self[key]
         except KeyError as e:
             if prnt:
@@ -645,7 +680,7 @@ class FDict(Dict):
                 print()
             raise e
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Any) -> Any:
         try:
             return super().__getitem__(key)
         except KeyError:

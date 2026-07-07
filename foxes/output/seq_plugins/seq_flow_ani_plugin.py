@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from foxes.algorithms.sequential import SequentialPlugin
+from typing import Any, Callable, Iterator
 
 from ..flow_plots_2d.flow_plots import FlowPlots2D
 
@@ -22,7 +25,12 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
     """
 
-    def __init__(self, orientation, title_fun=None, **data_pars):
+    def __init__(
+        self,
+        orientation: str,
+        title_fun: Callable[[int, Any], str] | None = None,
+        **data_pars: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -43,7 +51,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         self.data_pars = data_pars
         self._tfun = title_fun
 
-    def initialize(self, algo):
+    def initialize(self, algo) -> None:
         """
         Initialize data based on the intial iterator
 
@@ -54,10 +62,10 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
         """
         super().initialize(algo)
-        self._data = []
-        self._titles = []
+        self._data: list[tuple[Any, list[Any]]] = []
+        self._titles: list[str] = []
 
-    def update(self, algo, fres, pres=None):
+    def update(self, algo, fres, pres=None) -> None:
         """
         Updates data based on current iteration
 
@@ -97,7 +105,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
         self._data.append((o, d))
 
-    def gen_images(self, ax, **plot_pars):
+    def gen_images(self, ax, **plot_pars: Any) -> Iterator[tuple[Any, Any]]:
         """
 
         Parameters

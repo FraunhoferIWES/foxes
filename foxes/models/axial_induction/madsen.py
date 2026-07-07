@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from foxes.core import AxialInductionModel
 
 
@@ -26,7 +28,9 @@ class MadsenAxialInduction(AxialInductionModel):
 
     """
 
-    def __init__(self, k1=0.2460, k2=0.0586, k3=0.0883):
+    def __init__(
+        self, k1: float = 0.2460, k2: float = 0.0586, k3: float = 0.0883
+    ) -> None:
         """
         Constructor.
 
@@ -45,7 +49,7 @@ class MadsenAxialInduction(AxialInductionModel):
         self.k2 = k2
         self.k3 = k3
 
-    def ct2a(self, ct):
+    def ct2a(self, ct: float) -> float:
         """
         Computes induction from ct
 

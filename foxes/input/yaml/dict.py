@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from inspect import signature
 from copy import deepcopy
+from typing import Any
 
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
@@ -71,7 +72,7 @@ def read_dict(
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args, level: int = 1, **kwargs) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
@@ -234,7 +235,7 @@ def get_output_obj(
     return cls(**odict)
 
 
-def _get_object(results_storage, d):
+def _get_object(results_storage, d: str):
     """Helper function for object extraction"""
     d = d.replace("]", "")
     i0 = d.find("[")
@@ -283,7 +284,7 @@ def run_obj_function(
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args, level: int = 1, **kwargs) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
@@ -324,7 +325,7 @@ def run_obj_function(
     # store results under result labels:
     if rlbs is not None:
 
-        def _set_label(results_storage, k, r):
+        def _set_label(results_storage, k: str, r) -> None:
             if k not in ["", "none", "None", "_", "__"]:
                 assert k[0] == "$", (
                     f"Output of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
@@ -398,7 +399,7 @@ def run_outputs(
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args, level: int = 1, **kwargs) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
@@ -490,7 +491,21 @@ def run_outputs(
     return out if not ret_results_storage else out, results_storage
 
 
-def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
+def run_dict(
+    idict,
+    farm=None,
+    states=None,
+    mbook=None,
+    algo=None,
+    engine_pars=None,
+    iterative=None,
+    nofig: bool = False,
+    verbosity: int | None = None,
+    work_dir=None,
+    input_dir=None,
+    output_dir=None,
+    **algo_pars: Any,
+) -> tuple[Any, ...]:
     """
     Runs foxes from dictionary input
 
@@ -498,14 +513,30 @@ def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
     ----------
     idict: foxes.utils.Dict
         The input parameter dictionary
-    args: tuple, optional
-        Additional parameters for read_dict
+    farm: foxes.core.WindFarm, optional
+        The wind farm, overrules settings from idict
+    states: foxes.core.States, optional
+        The ambient states, overrules settings from idict
+    mbook: foxes.models.ModelBook, optional
+        The model book, overrules settings from idict
+    algo: foxes.core.Algorithm, optional
+        The algorithm, overrules settings from idict
+    engine_pars: dict, optional
+        Parameters for engine generation, overrules idict
+    iterative: bool, optional
+        Add iterative algorithm wrapper, overrules idict
     nofig: bool
         Do not show figures, overrules settings from idict
     verbosity: int, optional
         Force a verbosity level, 0 = silent, overrules
         settings from idict
-    kwargs: dict, optional
+    work_dir: pathlib.Path, optional
+        The main working directory path
+    input_dir: pathlib.Path, optional
+        The input directory path
+    output_dir: pathlib.Path, optional
+        The output directory path
+    algo_pars: dict, optional
         Additional parameters for read_dict
 
     Returns
@@ -523,12 +554,26 @@ def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args, level: int = 1, **kwargs) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
     # read components:
-    algo, engine = read_dict(idict, *args, verbosity=verbosity, **kwargs)
+    algo_pars.pop("verbosity", None)
+    algo, engine = read_dict(
+        idict,
+        farm=farm,
+        states=states,
+        mbook=mbook,
+        algo=algo,
+        engine_pars=engine_pars,
+        iterative=iterative,
+        verbosity=verbosity,
+        work_dir=work_dir,
+        input_dir=input_dir,
+        output_dir=output_dir,
+        **algo_pars,
+    )
     results_storage = None
     with engine:
         # run farm calculation:
@@ -538,7 +583,7 @@ def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
             farm_results = algo.calc_farm(**rdict)
         else:
             farm_results = None
-        out = (farm_results,)
+        out: tuple[Any, ...] = (farm_results,)
 
         # run points calculation:
         point_results = None

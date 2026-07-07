@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class TIPow(WakeSuperposition):
@@ -20,7 +27,7 @@ class TIPow(WakeSuperposition):
 
     """
 
-    def __init__(self, pow, superp_to_amb="quadratic"):
+    def __init__(self, pow: float, superp_to_amb: str = "quadratic") -> None:
         """
         Constructor.
 
@@ -37,23 +44,23 @@ class TIPow(WakeSuperposition):
         self.pow = pow
         self.superp_to_amb = superp_to_amb
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"{type(self).__name__}(pow={self.pow}, superp_to_amb={self.superp_to_amb})"
         )
 
     def add_wake(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        variable,
-        wake_delta,
-        wake_model_result,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        variable: str,
+        wake_delta: np.ndarray,
+        wake_model_result: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta to previous wake deltas,
         at rotor points.
@@ -99,13 +106,13 @@ class TIPow(WakeSuperposition):
 
     def calc_final_wake_delta(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        wake_delta,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        wake_delta: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the final wake delta after adding all
         contributions.

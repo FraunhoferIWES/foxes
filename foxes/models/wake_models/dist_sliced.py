@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import SingleTurbineWakeModel
 from foxes.config import config
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class DistSlicedWakeModel(SingleTurbineWakeModel):
@@ -19,7 +26,9 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
 
     """
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
@@ -57,14 +66,14 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
     @abstractmethod
     def calc_wakes_x_yz(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        yz,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        yz: np.ndarray,
+    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
         """
         Calculate wake deltas.
 
@@ -100,14 +109,14 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
 
     def contribute(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_coos,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_coos: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
@@ -145,12 +154,14 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
             assert self.has_vector_wind_superp, (
                 f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
             )
+            vec_superp = self.vec_superp
+            assert vec_superp is not None
             if FV.UV in wdeltas or FV.WS in wdeltas:
                 if FV.UV not in wdeltas:
-                    self.vec_superp.wdeltas_ws2uv(
+                    vec_superp.wdeltas_ws2uv(
                         algo, fdata, tdata, downwind_index, wdeltas, st_sel
                     )
-                wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
+                wake_deltas[FV.UV] = vec_superp.add_wake_vector(
                     algo,
                     mdata,
                     fdata,

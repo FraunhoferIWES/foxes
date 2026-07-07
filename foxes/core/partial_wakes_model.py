@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 import numpy as np
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.utils import new_instance, wd2uv, uv2wd
 from foxes.config import config
@@ -8,6 +11,11 @@ import foxes.constants as FC
 
 from .model import Model
 from .data import TData
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.wake_model import WakeModel
 
 
 class PartialWakesModel(Model):
@@ -28,7 +36,7 @@ class PartialWakesModel(Model):
 
     """
 
-    def check_wmodel(self, wmodel, error=True):
+    def check_wmodel(self, wmodel: WakeModel, error: bool = True) -> bool:
         """
         Checks the wake model type
 
@@ -48,7 +56,12 @@ class PartialWakesModel(Model):
         return True
 
     @abstractmethod
-    def get_wake_points(self, algo, mdata, fdata):
+    def get_wake_points(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Get the wake calculation points, and their
         weights.
@@ -75,13 +88,13 @@ class PartialWakesModel(Model):
 
     def get_initial_tdata(
         self,
-        algo,
-        mdata,
-        fdata,
-        amb_rotor_res,
-        rotor_weights,
-        wmodels,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        amb_rotor_res: dict[str, np.ndarray],
+        rotor_weights: np.ndarray,
+        wmodels: list[WakeModel],
+    ) -> TData:
         """
         Creates the initial target data object
 
@@ -109,7 +122,7 @@ class PartialWakesModel(Model):
 
         """
         tpoints, tweights = self.get_wake_points(algo, mdata, fdata)
-        tdata = TData.from_tpoints(tpoints, tweights)
+        tdata = cast(TData, TData.from_tpoints(tpoints, tweights))
 
         self.update_tdata(
             algo,
@@ -126,15 +139,15 @@ class PartialWakesModel(Model):
 
     def update_tdata(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        amb_rotor_res,
-        rotor_weights,
-        wmodels,
-        downwind_index=None,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        amb_rotor_res: dict[str, np.ndarray],
+        rotor_weights: np.ndarray,
+        wmodels: list[WakeModel],
+        downwind_index: int | None = None,
+    ) -> None:
         """
         Updates tdata on the fly during wake calculations.
 
@@ -259,15 +272,15 @@ class PartialWakesModel(Model):
 
     def map_rotor_results(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        rotor_res,
-        rotor_weights,
-        downwind_index=None,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        rotor_res: np.ndarray,
+        rotor_weights: np.ndarray,
+        downwind_index: int | None = None,
+    ) -> np.ndarray:
         """
         Map ambient rotor point results onto target points.
 
@@ -343,7 +356,14 @@ class PartialWakesModel(Model):
                 f"Partial wakes '{self.name}': Incompatible shape '{rotor_res.shape}' for variable '{variable}' in rotor results."
             )
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata, wmodel):
+    def new_wake_deltas(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wmodel: WakeModel,
+    ) -> dict[str, np.ndarray]:
         """
         Creates new initial wake deltas, filled
         with zeros.
@@ -372,14 +392,14 @@ class PartialWakesModel(Model):
 
     def contribute(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
@@ -405,21 +425,22 @@ class PartialWakesModel(Model):
             The wake model
 
         """
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wake_frame = algo.wake_frame
+        wcoos = wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
     @abstractmethod
     def finalize_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        rpoint_weights,
-        wake_deltas,
-        wmodel,
-        downwind_index,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        rpoint_weights: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+        downwind_index: int,
+    ) -> dict[str, np.ndarray]:
         """
         Updates the wake_deltas at the selected target
         downwind index.
@@ -458,7 +479,12 @@ class PartialWakesModel(Model):
         pass
 
     @classmethod
-    def new(cls, pwakes_type, *args, **kwargs):
+    def new(
+        cls,
+        pwakes_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> PartialWakesModel:
         """
         Run-time partial wakes model factory.
 

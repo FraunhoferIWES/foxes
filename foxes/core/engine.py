@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import os
 import numpy as np
 from abc import ABC, abstractmethod
 from tqdm.autonotebook import tqdm
 from xarray import Dataset
+from typing import Any, Callable, Iterator, cast
 
 from foxes.config import config, get_output_path
 from foxes.utils import new_instance
@@ -11,7 +14,7 @@ import foxes.constants as FC
 
 from .data import MData, FData, TData
 
-__global_engine_data__ = dict(engine=None)
+__global_engine_data__: dict[str, Engine | None] = dict(engine=None)
 
 
 class EngineRunner(ABC):
@@ -21,7 +24,14 @@ class EngineRunner(ABC):
     :group: core
     """
 
-    def _write_chunk_results(self, algo, results, write_nc, out_dims, mdata):
+    def _write_chunk_results(
+        self,
+        algo: Any,
+        results: dict[str, np.ndarray],
+        write_nc: dict[str, Any] | None,
+        out_dims: tuple[str, ...],
+        mdata: MData,
+    ) -> dict[str, np.ndarray] | None:
         """Helper function for optionally writing chunk results to netCDF file"""
         ret_data = True
         if write_nc is not None and write_nc["split"] == "chunks":
@@ -31,11 +41,11 @@ class EngineRunner(ABC):
             ret_data = write_nc.get("ret_data", False)
             out_dir.mkdir(parents=True, exist_ok=True)
 
-            coords = {}
+            coords: dict[str, np.ndarray] = {}
             if FC.STATE in out_dims and FC.STATE in mdata:
                 coords[FC.STATE] = mdata[FC.STATE]
 
-            dvars = {}
+            dvars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {}
             for v, d in results.items():
                 if (
                     out_dims == (FC.STATE, FC.TURBINE)
@@ -55,11 +65,22 @@ class EngineRunner(ABC):
                 fpath = out_dir / f"{base_name}_{i0:06d}.nc"
             else:
                 fpath = out_dir / f"{base_name}_{i0:06d}_{t0:06d}.nc"
-            write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
+            write_nc_file(
+                ds,
+                fpath,
+                nc_engine=config.nc_engine or "netcdf4",
+                verbosity=vrb,
+            )
 
         return results if ret_data else None
 
-    def _write_ani(self, algo, chunk_key, write_chunk_ani, *data):
+    def _write_ani(
+        self,
+        algo: Any,
+        chunk_key: tuple[int, int],
+        write_chunk_ani: dict[str, Any] | None,
+        *data: Any,
+    ) -> None:
         """Helper function for optionally writing chunk flow animations to file"""
         if write_chunk_ani is not None:
             from foxes.output import write_chunk_ani_xy
@@ -67,7 +88,7 @@ class EngineRunner(ABC):
             pars = write_chunk_ani.copy()
             chk = pars.pop("chunk")
 
-            def _do_run(chk):
+            def _do_run(chk: Any) -> bool:
                 if isinstance(chk, list):
                     for c in chk:
                         if _do_run(c):
@@ -84,7 +105,7 @@ class EngineRunner(ABC):
                 write_chunk_ani_xy(algo, *data, **pars)
 
     @abstractmethod
-    def run(self, *args, **kwargs):
+    def run(self, *args: Any, **kwargs: Any) -> Any:
         """Runs the chunk calculation"""
         pass
 
@@ -119,12 +140,12 @@ class Engine(ABC):
 
     def __init__(
         self,
-        chunk_size_states=None,
-        chunk_size_points=None,
-        n_procs=None,
-        progress_bar=True,
-        verbosity=1,
-    ):
+        chunk_size_states: int | None = None,
+        chunk_size_points: int | None = None,
+        n_procs: int | None = None,
+        progress_bar: bool | None = True,
+        verbosity: int = 1,
+    ) -> None:
         """
         Constructor.
 
@@ -151,20 +172,22 @@ class Engine(ABC):
         self.verbosity = verbosity
 
         try:
-            self._n_procs = n_procs if n_procs is not None else os.process_cpu_count()
+            self._n_procs = (
+                n_procs if n_procs is not None else os.process_cpu_count() or 1
+            )
         except AttributeError:
-            self._n_procs = os.cpu_count()
+            self._n_procs = os.cpu_count() or 1
         self._n_workers = max(self._n_procs - 1, 1)
 
         self.__name = type(self).__name__
         self.__entered = False
         self.__running_chunk_calc = False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = f"n_procs={self.n_procs}, chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
         return f"{self.name}({s})"
 
-    def __enter__(self):
+    def __enter__(self) -> Engine:
         if self.__entered:
             raise ValueError(
                 f"Engine '{self.name}': Enter called for already entered engine"
@@ -177,7 +200,7 @@ class Engine(ABC):
         __global_engine_data__["engine"] = self
         return self
 
-    def __exit__(self, *exit_args):
+    def __exit__(self, *exit_args: Any) -> None:
         if not self.__entered:
             raise ValueError(
                 f"Engine '{self.name}': Exit called for not entered engine"
@@ -185,12 +208,12 @@ class Engine(ABC):
         self.__entered = False
         __global_engine_data__["engine"] = None
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self.__entered:
             __global_engine_data__["engine"] = None
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         The engine's name
 
@@ -203,7 +226,7 @@ class Engine(ABC):
         return self.__name
 
     @property
-    def n_procs(self):
+    def n_procs(self) -> int:
         """
         The number of processes
 
@@ -216,7 +239,7 @@ class Engine(ABC):
         return self._n_procs
 
     @property
-    def n_workers(self):
+    def n_workers(self) -> int:
         """
         The number of worker processes
 
@@ -229,7 +252,7 @@ class Engine(ABC):
         return self._n_workers
 
     @property
-    def has_progress_bar(self):
+    def has_progress_bar(self) -> bool:
         """
         Flag for active progress bar
 
@@ -242,7 +265,7 @@ class Engine(ABC):
         return self.progress_bar is not None and self.progress_bar
 
     @property
-    def prints_progress(self):
+    def prints_progress(self) -> bool:
         """
         Flag for active progress printing
 
@@ -255,7 +278,7 @@ class Engine(ABC):
         return self.progress_bar is not None and not self.progress_bar
 
     @property
-    def entered(self):
+    def entered(self) -> bool:
         """
         Flag that this model has been entered.
 
@@ -268,7 +291,7 @@ class Engine(ABC):
         return self.__entered
 
     @property
-    def running_chunk_calc(self):
+    def running_chunk_calc(self) -> bool:
         """
         Flag that a chunk calculation is running.
 
@@ -280,13 +303,13 @@ class Engine(ABC):
         """
         return self.__running_chunk_calc
 
-    def print(self, *args, level=1, **kwargs):
+    def print(self, *args: Any, level: int = 1, **kwargs: Any) -> None:
         """Prints based on verbosity"""
         if self.verbosity >= level:
             print(*args, **kwargs)
 
     @abstractmethod
-    def submit(self, f, *args, **kwargs):
+    def submit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """
         Submits a job to worker, obtaining a future
 
@@ -309,7 +332,7 @@ class Engine(ABC):
         pass
 
     @abstractmethod
-    def future_is_done(self, future):
+    def future_is_done(self, future: Any) -> bool:
         """
         Checks if a future is done
 
@@ -327,7 +350,7 @@ class Engine(ABC):
         pass
 
     @abstractmethod
-    def await_result(self, future):
+    def await_result(self, future: Any) -> Any:
         """
         Waits for result from a future
 
@@ -347,11 +370,11 @@ class Engine(ABC):
     @abstractmethod
     def map(
         self,
-        func,
-        inputs,
-        *args,
-        **kwargs,
-    ):
+        func: Callable[..., Any],
+        inputs: Any,
+        *args: Any,
+        **kwargs: Any,
+    ) -> list[Any]:
         """
         Runs a function on a list of files
 
@@ -376,7 +399,7 @@ class Engine(ABC):
         pass
 
     @property
-    def loop_dims(self):
+    def loop_dims(self) -> list[str]:
         """
         Gets the loop dimensions (possibly chunked)
 
@@ -395,7 +418,13 @@ class Engine(ABC):
         else:
             return [FC.STATE, FC.TARGET]
 
-    def select_subsets(self, *datasets, sel=None, isel=None, default_n_states=None):
+    def select_subsets(
+        self,
+        *datasets: Any,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        default_n_states: int | None = None,
+    ) -> tuple[list[Any], int | None]:
         """
         Takes subsets of datasets
 
@@ -420,35 +449,41 @@ class Engine(ABC):
             or fallback value
 
         """
+        subsets: list[Any] = list(datasets)
+
         if sel is not None:
-            new_datasets = []
-            for data in datasets:
+            new_datasets: list[Any] = []
+            for data in subsets:
                 if data is not None:
                     s = {c: u for c, u in sel.items() if c in data.coords}
                     new_datasets.append(data.sel(s) if len(s) else data)
                 else:
                     new_datasets.append(data)
-            datasets = new_datasets
+            subsets = new_datasets
 
         if isel is not None:
             new_datasets = []
-            for data in datasets:
+            for data in subsets:
                 if data is not None:
                     s = {c: u for c, u in isel.items() if c in data.dims}
                     new_datasets.append(data.isel(s) if len(s) > 0 else data)
                 else:
                     new_datasets.append(data)
-            datasets = new_datasets
+            subsets = new_datasets
 
         n_states = default_n_states
-        for data in datasets:
+        for data in subsets:
             if data is not None and FC.STATE in data.sizes:
                 n_states = data.sizes[FC.STATE]
                 break
 
-        return datasets, n_states
+        return subsets, n_states
 
-    def calc_chunk_sizes(self, n_states, n_targets=1):
+    def calc_chunk_sizes(
+        self,
+        n_states: int,
+        n_targets: int = 1,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Computes the sizes of states and points chunks
 
@@ -522,18 +557,18 @@ class Engine(ABC):
 
     def get_chunk_input_data(
         self,
-        algo,
-        model_data,
-        farm_data,
-        point_data,
-        states_i0_i1,
-        targets_i0_i1,
-        out_vars,
-        chunki_states,
-        chunki_points,
-        n_chunks_states,
-        n_chunks_points,
-    ):
+        algo: Any,
+        model_data: Dataset,
+        farm_data: Dataset | None,
+        point_data: Dataset | None,
+        states_i0_i1: tuple[int, int],
+        targets_i0_i1: tuple[int, int],
+        out_vars: list[str],
+        chunki_states: int,
+        chunki_points: int,
+        n_chunks_states: int,
+        n_chunks_points: int,
+    ) -> tuple[MData, FData] | tuple[MData, FData, TData]:
         """
         Extracts the data for a single chunk calculation
 
@@ -581,50 +616,62 @@ class Engine(ABC):
             i0_states = algo.states_i0(counter=True)
 
         # create mdata:
-        mdata = MData.from_dataset(
-            model_data,
-            s_states=s_states,
-            loop_dims=[FC.STATE],
-            states_i0=i0_states,
-            copy=True,
-            chunki_states=chunki_states,
-            chunki_points=chunki_points,
-            n_chunks_states=n_chunks_states,
-            n_chunks_points=n_chunks_points,
-            n_states=n_states,
-            n_turbines=algo.n_turbines,
+        mdata = cast(
+            MData,
+            MData.from_dataset(
+                model_data,
+                s_states=s_states,
+                loop_dims=[FC.STATE],
+                states_i0=i0_states,
+                copy=True,
+                chunki_states=chunki_states,
+                chunki_points=chunki_points,
+                n_chunks_states=n_chunks_states,
+                n_chunks_points=n_chunks_points,
+                n_states=n_states,
+                n_turbines=algo.n_turbines,
+            ),
         )
 
         # create fdata:
         if farm_data is not None:
-            fdata = FData.from_dataset(
-                farm_data,
-                mdata=mdata,
-                s_states=s_states,
-                callback=None,
-                states_i0=i0_states,
-                n_states=n_states,
-                n_turbines=algo.n_turbines,
-                copy=True,
+            fdata = cast(
+                FData,
+                FData.from_dataset(
+                    farm_data,
+                    mdata=mdata,
+                    s_states=s_states,
+                    callback=None,
+                    states_i0=i0_states,
+                    n_states=n_states,
+                    n_turbines=algo.n_turbines,
+                    copy=True,
+                ),
             )
         else:
-            fdata = FData.from_data(
-                base_data=mdata,
-                states_i0=i0_states,
+            fdata = cast(
+                FData,
+                FData.from_data(
+                    base_data=mdata,
+                    states_i0=i0_states,
+                ),
             )
 
         # create tdata:
         tdata = (
-            TData.from_dataset(
-                point_data,
-                mdata=mdata,
-                s_states=s_states,
-                s_targets=s_targets,
-                callback=None,
-                states_i0=i0_states,
-                n_states=n_states,
-                n_turbines=algo.n_turbines,
-                copy=True,
+            cast(
+                TData,
+                TData.from_dataset(
+                    point_data,
+                    mdata=mdata,
+                    s_states=s_states,
+                    s_targets=s_targets,
+                    callback=None,
+                    states_i0=i0_states,
+                    n_states=n_states,
+                    n_turbines=algo.n_turbines,
+                    copy=True,
+                ),
             )
             if point_data is not None
             else None
@@ -634,9 +681,9 @@ class Engine(ABC):
 
     def get_start_calc_message(
         self,
-        n_chunks_states,
-        n_chunks_targets,
-    ):
+        n_chunks_states: int,
+        n_chunks_targets: int,
+    ) -> str:
         """Helper function for start calculation message"""
         msg = f"{self.name}: Starting calculation using "
         if self.n_workers > 1:
@@ -653,12 +700,12 @@ class Engine(ABC):
     @abstractmethod
     def run_calculation(
         self,
-        algo,
-        model,
-        model_data=None,
-        farm_data=None,
-        point_data=None,
-    ):
+        algo: Any,
+        model: Any,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+    ) -> Any:
         """
         Runs the model calculation
 
@@ -695,7 +742,7 @@ class Engine(ABC):
             raise ValueError(f"Model '{model.name}' not initialized")
 
     @abstractmethod
-    def new_runner(self):
+    def new_runner(self) -> EngineRunner:
         """
         Creates a new EngineRunner for running calculations in this engine
 
@@ -707,7 +754,9 @@ class Engine(ABC):
         """
         pass
 
-    def new_chunk_results_manager(self, algo, **kwargs):
+    def new_chunk_results_manager(
+        self, algo: Any, **kwargs: Any
+    ) -> ChunkResultsManager:
         """
         Creates a new ChunkResultsManager
 
@@ -744,18 +793,18 @@ class Engine(ABC):
 
         def __init__(
             self,
-            algo,
-            engine,
-            chunk_store,
-            goal_data,
-            n_chunks_states,
-            n_chunks_targets,
-            out_vars,
-            out_dims,
-            coords,
-            iterative,
-            write_nc,
-        ):
+            algo: Any,
+            engine: Engine,
+            chunk_store: Any,
+            goal_data: Dataset,
+            n_chunks_states: int,
+            n_chunks_targets: int,
+            out_vars: list[str],
+            out_dims: tuple[str, ...],
+            coords: dict[str, Any],
+            iterative: bool,
+            write_nc: dict[str, Any] | None,
+        ) -> None:
             """
             Constructor
 
@@ -794,19 +843,19 @@ class Engine(ABC):
             self.counter = 0
             self.scount = 0
             self.wcount = 0
-            self.wfutures = []
+            self.wfutures: list[Any] = []
             self.fcounter = 0
             self.split_size = None
             self.pdone = -1
-            self.pbar = None
-            self.res_vars = None
+            self.pbar: Any = None
+            self.res_vars: list[str] | None = None
             self.goal_data = goal_data
-            self.data_vars = {}
-            self.out_dir = None
-            self.pack = None
-            self.base_name = None
+            self.data_vars: dict[str, Any] = {}
+            self.out_dir: Any = None
+            self.pack: bool | None = None
+            self.base_name: str | None = None
             self.ret_data = True
-            self.gen_size = None
+            self.gen_size: Iterator[Any] | None = None
             self.write_on_fly = False
             self.write_from_ds = False
             self.n_chunks_states = n_chunks_states
@@ -816,9 +865,9 @@ class Engine(ABC):
             self.coords = coords
             self.out_vars = out_vars
             self.iterative = iterative
-            self.tres = None
+            self.tres: dict[str, list[np.ndarray]] | None = None
             self.verbosity = engine.verbosity
-            self.results = None
+            self.results: Dataset | None = None
 
             # read parameters for file writing
             if write_nc is not None and not (iterative and not algo.final_iteration):
@@ -858,7 +907,7 @@ class Engine(ABC):
 
             self.__entered = False
 
-        def __enter__(self):
+        def __enter__(self) -> Engine.ChunkResultsManager:
             if self.__entered:
                 raise ValueError("Enter called for already entered ChunkResultsManager")
             self.__entered = True
@@ -871,9 +920,11 @@ class Engine(ABC):
                 self.pbar = tqdm(total=self.n_chunks_all)
             return self
 
-        def _red_dims(self, data_vars):
+        def _red_dims(
+            self, data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]]
+        ) -> dict[str, tuple[tuple[str, ...], np.ndarray]]:
             """Helper function for reducing dimensions of data vars"""
-            dvars = {}
+            dvars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {}
             for v, (dims, d) in data_vars.items():
                 if (
                     dims == (FC.STATE, FC.TURBINE)
@@ -891,11 +942,13 @@ class Engine(ABC):
                     dvars[v] = (dims, d)
             return dvars
 
-        def _write_parts_on_fly(self, futures):
+        def _write_parts_on_fly(self, futures: list[Any] | None) -> None:
             """Helper function for writing results to files on the fly"""
             vrb = max(self.verbosity - 1, 0)
-            wfutures = []
+            wfutures: list[Any] = []
             if self.split_size is not None and self.split_size > 0:
+                assert self.out_dir is not None
+                assert self.base_name is not None
                 splits = min(self.split_size, self.algo.n_states - self.wcount)
                 while (
                     self.algo.n_states - self.wcount > 0
@@ -926,17 +979,26 @@ class Engine(ABC):
                             self.data_vars[v][1] = [self.data_vars[v][1][0][splits:]]
 
                     fpath = self.out_dir / f"{self.base_name}_{self.fcounter:06d}.nc"
-                    args = (ds, fpath)
-                    kwargs = dict(
-                        nc_engine=config.nc_engine, verbosity=vrb, pack=self.pack
-                    )
                     if futures is not None and len(futures) < self.engine.n_workers:
-                        future = self.engine.submit(write_nc_file, *args, **kwargs)
+                        future = self.engine.submit(
+                            write_nc_file,
+                            ds,
+                            fpath,
+                            nc_engine=config.nc_engine or "netcdf4",
+                            verbosity=vrb,
+                            pack=self.pack if self.pack is not None else False,
+                        )
                         wfutures.append(future)
                         del future
                     else:
-                        write_nc_file(*args, **kwargs)
-                    del ds, args, kwargs
+                        write_nc_file(
+                            ds,
+                            fpath,
+                            nc_engine=config.nc_engine or "netcdf4",
+                            verbosity=vrb,
+                            pack=self.pack if self.pack is not None else False,
+                        )
+                    del ds
 
                     self.wcount += splits
                     self.fcounter += 1
@@ -944,6 +1006,7 @@ class Engine(ABC):
                     if self.algo.n_states - self.wcount > 0:
                         if self.split_mode == "input":
                             try:
+                                assert self.gen_size is not None
                                 self.split_size = next(self.gen_size)
                             except StopIteration:
                                 self.split_size = self.algo.n_states - self.wcount
@@ -951,7 +1014,9 @@ class Engine(ABC):
 
             self.wfutures += wfutures
 
-        def update(self, results, futures=None):
+        def update(
+            self, results: dict[tuple[int, int], Any], futures: list[Any] | None = None
+        ) -> None:
             """
             Updates the chunk calculation progress, adds results to data_vars
 
@@ -1032,7 +1097,7 @@ class Engine(ABC):
                     self.ci_states += 1
                 chunk_key = (self.ci_states, self.ci_targets)
 
-        def __exit__(self, *exit_args):
+        def __exit__(self, *exit_args: Any) -> None:
             assert self.__entered, "ChunkResultsManager: exit called without enter"
             assert self.counter == self.n_chunks_all, (
                 f"{self.name}: Incomplete chunk calculation: {self.counter} of {self.n_chunks_all} chunks done"
@@ -1053,6 +1118,7 @@ class Engine(ABC):
 
             vrb = max(self.verbosity - 1, 0)
             if self.ret_data or self.write_from_ds:
+                assert self.res_vars is not None
                 for v in self.res_vars:
                     if v in self.data_vars:
                         if len(self.data_vars[v][1]) > 1:
@@ -1068,20 +1134,23 @@ class Engine(ABC):
                 )
 
                 if self.write_from_ds:
+                    assert self.out_dir is not None
+                    assert self.base_name is not None
                     if self.split_size is None:
                         fpath = self.out_dir / f"{self.base_name}.nc"
                         write_nc_file(
                             self.results,
                             fpath,
-                            nc_engine=config.nc_engine,
+                            nc_engine=config.nc_engine or "netcdf4",
                             verbosity=vrb,
                         )
                     else:
                         wcount = 0
                         fcounter = 0
-                        wfutures = []
+                        wfutures: list[Any] = []
                         while wcount < self.algo.n_states:
                             splits = min(self.split_size, self.algo.n_states - wcount)
+                            assert self.results is not None
                             dssub = self.results.isel(
                                 {FC.STATE: slice(wcount, wcount + splits)}
                             )
@@ -1091,7 +1160,7 @@ class Engine(ABC):
                                 write_nc_file,
                                 dssub,
                                 fpath,
-                                nc_engine=config.nc_engine,
+                                nc_engine=config.nc_engine or "netcdf4",
                                 verbosity=vrb,
                             )
                             wfutures.append(future)
@@ -1105,6 +1174,7 @@ class Engine(ABC):
                                 and self.split_mode == "input"
                             ):
                                 try:
+                                    assert self.gen_size is not None
                                     self.split_size = next(self.gen_size)
                                 except StopIteration:
                                     self.split_size = self.algo.n_states - wcount
@@ -1140,7 +1210,7 @@ class Engine(ABC):
             self.__entered = False
 
     @classmethod
-    def new(cls, engine_type, *args, **kwargs):
+    def new(cls, engine_type: str | None, *args: Any, **kwargs: Any) -> Engine:
         """
         Run-time engine factory.
 
@@ -1175,7 +1245,7 @@ class Engine(ABC):
         return new_instance(cls, engine_type, *args, **kwargs)
 
 
-def get_engine(error=True):
+def get_engine(error: bool = True) -> Engine | None:
     """
     Gets the global calculation engine
 
@@ -1199,7 +1269,7 @@ def get_engine(error=True):
     return engine
 
 
-def has_engine():
+def has_engine() -> bool:
     """
     Flag that checks if engine has been set
 
@@ -1214,7 +1284,7 @@ def has_engine():
     return __global_engine_data__.get("engine", None) is not None
 
 
-def run_with_engine(func, *args, **kwargs):
+def run_with_engine(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
     """
     Runs a function within engine context
 
@@ -1242,7 +1312,7 @@ def run_with_engine(func, *args, **kwargs):
     return results
 
 
-def map_with_engine(*args, **kwargs):
+def map_with_engine(*args: Any, **kwargs: Any) -> Any:
     """
     Maps a function via engine
 
@@ -1261,14 +1331,16 @@ def map_with_engine(*args, **kwargs):
 
     """
     if has_engine():
-        results = get_engine().map(*args, **kwargs)
+        engine = get_engine()
+        assert engine is not None
+        results = engine.map(*args, **kwargs)
     else:
         with Engine.new("default") as e:
             results = e.map(*args, **kwargs)
     return results
 
 
-def launch_parallel_calc(self, *args, **kwargs):
+def launch_parallel_calc(self: Any, *args: Any, **kwargs: Any) -> Any:
     """
     Launches parallel calculation using engine
 
@@ -1286,7 +1358,9 @@ def launch_parallel_calc(self, *args, **kwargs):
 
     """
     if has_engine():
-        results = get_engine().run_calculation(self, *args, **kwargs)
+        engine = get_engine()
+        assert engine is not None
+        results = engine.run_calculation(self, *args, **kwargs)
     else:
         with Engine.new("default") as e:
             results = e.run_calculation(self, *args, **kwargs)

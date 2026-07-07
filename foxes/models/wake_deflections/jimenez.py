@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core.wake_deflection import WakeDeflection
 from foxes.algorithms import Sequential
 import foxes.constants as FC
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class JimenezDeflection(WakeDeflection):
@@ -32,7 +39,12 @@ class JimenezDeflection(WakeDeflection):
 
     """
 
-    def __init__(self, rotate=True, beta=0.1, step_x=10.0):
+    def __init__(
+        self,
+        rotate: bool | None = True,
+        beta: float = 0.1,
+        step_x: float = 10.0,
+    ) -> None:
         """
         Constructor.
 
@@ -53,14 +65,14 @@ class JimenezDeflection(WakeDeflection):
         self.beta = beta
         self.step_x = step_x
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = f"{type(self).__name__}("
         s += f"rotate={self.rotate}, beta={self.beta}, step_x={self.step_x}"
         s += ")"
         return s
 
     @property
-    def has_uv(self):
+    def has_uv(self) -> bool:
         """
         This model uses wind vector data
 
@@ -74,13 +86,13 @@ class JimenezDeflection(WakeDeflection):
 
     def calc_deflection(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        coos,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        coos: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculates the wake deflection.
 
@@ -206,13 +218,13 @@ class JimenezDeflection(WakeDeflection):
 
     def get_yaw_alpha_seq(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Computes sequential wind vector rotation angles.
 
@@ -251,7 +263,7 @@ class JimenezDeflection(WakeDeflection):
 
         n_times = len(x)
 
-        def _get_data(var):
+        def _get_data(var: str) -> np.ndarray:
             data = algo.farm_results_downwind[var].to_numpy()[:n_times, downwind_index]
             data[-1] = fdata[var][0, downwind_index]
             return data

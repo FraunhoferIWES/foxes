@@ -18,7 +18,7 @@ repos:
       - id: debug-statements  # Check for pdb/breakpoint
   # Ruff - Fast Python linter and formatter (replaces flake8, isort, pycodestyle, black)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.9
+    rev: v0.15.20
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -26,6 +26,18 @@ repos:
       # Run the formatter.
       - id: ruff-format
         args: [ --exit-non-zero-on-fix ]
+  # Mypy - Static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.1.0
+    hooks:
+      - id: mypy
+        args:
+          - --ignore-missing-imports
+          - --follow-imports=silent
+        additional_dependencies:
+          - .
+        files: ^foxes/.*\.py$
+        exclude: ^foxes/(tests?/|notebooks?/)
 
 # CI configuration - run pre-commit in CI as well
 ci:

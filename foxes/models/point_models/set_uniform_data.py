@@ -1,9 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import pandas as pd
+from typing import TYPE_CHECKING, Any
 
 from foxes.core.point_data_model import PointDataModel
 from foxes.utils import PandasFileHelper
 from foxes.config import config
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData
 
 
 class SetUniformData(PointDataModel):
@@ -27,11 +36,11 @@ class SetUniformData(PointDataModel):
 
     def __init__(
         self,
-        data_source,
-        output_vars,
-        var2col={},
-        pd_read_pars={},
-    ):
+        data_source: str | pd.DataFrame | dict[str, Any],
+        output_vars: list[str],
+        var2col: dict[str, str] = {},
+        pd_read_pars: dict[str, Any] = {},
+    ) -> None:
         """
         Constructor.
 
@@ -57,7 +66,13 @@ class SetUniformData(PointDataModel):
 
         self._rpars = pd_read_pars
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -104,7 +119,7 @@ class SetUniformData(PointDataModel):
             loaded_data["coords"][self.VARS] = self.ovars
             loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -121,7 +136,13 @@ class SetUniformData(PointDataModel):
         """
         return self.ovars
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        pdata: TData,
+    ) -> dict[str, Any]:
         """
         The main model calculation.
 
@@ -151,7 +172,11 @@ class SetUniformData(PointDataModel):
                 values = mdata[self.DATA][:, self.ovars.index(v)]
                 pdata[v][:] = values[:, None]
             else:
-                values = self.data_source[v]
+                dsource = self.data_source
+                assert isinstance(dsource, dict), (
+                    f"{self.name}: Missing loaded data '{self.DATA}' requires dict data_source"
+                )
+                values = dsource[v]
                 if hasattr(values, "ndim") and values.ndim == 1:
                     pdata[v][:] = values[:, None]
                 else:

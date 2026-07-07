@@ -1,12 +1,21 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interpn
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_two_files
 from foxes.config import config, get_input_path
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class WsRho2PCtFromTwo(TurbineType):
@@ -47,16 +56,16 @@ class WsRho2PCtFromTwo(TurbineType):
 
     def __init__(
         self,
-        data_source_P,
-        data_source_ct,
-        var_ws_ct=FV.REWS2,
-        var_ws_P=FV.REWS3,
-        pd_file_read_pars_P={},
-        pd_file_read_pars_ct={},
-        interpn_pars_P=None,
-        interpn_pars_ct=None,
-        **parameters,
-    ):
+        data_source_P: str | pd.DataFrame,
+        data_source_ct: str | pd.DataFrame,
+        var_ws_ct: str = FV.REWS2,
+        var_ws_P: str = FV.REWS3,
+        pd_file_read_pars_P: dict[str, Any] | None = None,
+        pd_file_read_pars_ct: dict[str, Any] | None = None,
+        interpn_pars_P: dict[str, Any] | None = None,
+        interpn_pars_ct: dict[str, Any] | None = None,
+        **parameters: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -98,8 +107,8 @@ class WsRho2PCtFromTwo(TurbineType):
         self.source_ct = data_source_ct
         self.WSCT = var_ws_ct
         self.WSP = var_ws_P
-        self.rpars_P = pd_file_read_pars_P
-        self.rpars_ct = pd_file_read_pars_ct
+        self.rpars_P = {} if pd_file_read_pars_P is None else pd_file_read_pars_P
+        self.rpars_ct = {} if pd_file_read_pars_ct is None else pd_file_read_pars_ct
         self.ipars_P = interpn_pars_P
         self.ipars_ct = interpn_pars_ct
 
@@ -111,7 +120,7 @@ class WsRho2PCtFromTwo(TurbineType):
         self._P = None
         self._ct = None
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
@@ -123,7 +132,7 @@ class WsRho2PCtFromTwo(TurbineType):
         """
         return self.WSCT == FV.REWS2 or self.WSP == FV.REWS2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
@@ -135,7 +144,7 @@ class WsRho2PCtFromTwo(TurbineType):
         """
         return self.WSCT == FV.REWS3 or self.WSP == FV.REWS3
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -152,7 +161,13 @@ class WsRho2PCtFromTwo(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -215,7 +230,7 @@ class WsRho2PCtFromTwo(TurbineType):
 
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
-    def _bounds_info(self, target, qts):
+    def _bounds_info(self, target: str, qts: np.ndarray) -> None:
         """Helper function for printing bounds info"""
 
         print(f"\nBOUNDS INFO FOR TARGET {target}")
@@ -232,7 +247,13 @@ class WsRho2PCtFromTwo(TurbineType):
         print(f"  {FV.RHO}: min = {np.min(rho):.4f}, max = {np.max(rho):.4f}")
         print()
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -293,9 +314,10 @@ class WsRho2PCtFromTwo(TurbineType):
                 qts[:, 0] = rews_P
 
             # run interpolation:
+            ipars_P = self.ipars_P if self.ipars_P is not None else {}
             try:
                 fdata[FV.P][st_sel_P] = factor_P * interpn(
-                    (self._ws_P, self._rho_P), self._P, qts, **self.ipars_P
+                    (self._ws_P, self._rho_P), self._P, qts, **ipars_P
                 )
             except ValueError as e:
                 self._bounds_info(FV.P, qts)
@@ -330,9 +352,10 @@ class WsRho2PCtFromTwo(TurbineType):
                 qts[:, 0] = rews_ct
 
             # run interpolation:
+            ipars_ct = self.ipars_ct if self.ipars_ct is not None else {}
             try:
                 fdata[FV.CT][st_sel_ct] = factor_ct * interpn(
-                    (self._ws_ct, self._rho_ct), self._ct, qts, **self.ipars_ct
+                    (self._ws_ct, self._rho_ct), self._ct, qts, **ipars_ct
                 )
             except ValueError as e:
                 self._bounds_info(FV.CT, qts)
@@ -340,7 +363,7 @@ class WsRho2PCtFromTwo(TurbineType):
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 

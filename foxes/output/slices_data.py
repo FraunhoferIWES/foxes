@@ -1,5 +1,6 @@
 import xarray as xr
 import pandas as pd
+from typing import Any
 
 import foxes.constants as FC
 
@@ -20,9 +21,9 @@ class SlicesData(Output):
         self,
         algo,
         farm_results,
-        verbosity_delta=1,
-        **kwargs,
-    ):
+        verbosity_delta: int = 1,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -48,11 +49,10 @@ class SlicesData(Output):
 
     def get_mean_data_xy(
         self,
-        z_list,
-        *args,
-        verbosity=0,
-        **kwargs,
-    ):
+        z_list: list[float],
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Creates mean data of 2D farm flow slices in a xy-plane.
 
@@ -73,13 +73,17 @@ class SlicesData(Output):
             The gridded data
 
         """
+        kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in {"z", "data_format", "ret_states", "ret_grid", "verbosity"}
+        }
         dsl = []
         for z in z_list:
             if verbosity > 0:
                 print(f"{type(self).__name__}: Creating slice z = {z}")
             dsl.append(
                 self._slice_data.get_mean_data_xy(
-                    *args,
                     z=z,
                     data_format="xarray",
                     ret_states=False,
@@ -94,11 +98,10 @@ class SlicesData(Output):
 
     def get_mean_data_xz(
         self,
-        y_list,
-        *args,
-        verbosity=0,
-        **kwargs,
-    ):
+        y_list: list[float],
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Creates mean data of 2D farm flow slices in a xz-plane.
 
@@ -119,13 +122,17 @@ class SlicesData(Output):
             The gridded data
 
         """
+        kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in {"y", "data_format", "ret_states", "ret_grid", "verbosity"}
+        }
         dsl = []
         for y in y_list:
             if verbosity > 0:
                 print(f"{type(self).__name__}: Creating slice y = {y}")
             dsl.append(
                 self._slice_data.get_mean_data_xz(
-                    *args,
                     y=y,
                     data_format="xarray",
                     ret_states=False,
@@ -140,11 +147,10 @@ class SlicesData(Output):
 
     def get_mean_data_yz(
         self,
-        x_list,
-        *args,
-        verbosity=0,
-        **kwargs,
-    ):
+        x_list: list[float],
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Creates mean data of 2D farm flow slices in a yz-plane.
 
@@ -165,13 +171,17 @@ class SlicesData(Output):
             The gridded data
 
         """
+        kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in {"x", "data_format", "ret_states", "ret_grid", "verbosity"}
+        }
         dsl = []
         for x in x_list:
             if verbosity > 0:
                 print(f"{type(self).__name__}: Creating slice x = {x}")
             dsl.append(
                 self._slice_data.get_mean_data_yz(
-                    *args,
                     x=x,
                     data_format="xarray",
                     ret_states=False,
@@ -186,11 +196,10 @@ class SlicesData(Output):
 
     def get_states_data_xy(
         self,
-        z_list,
-        *args,
-        verbosity=0,
-        **kwargs,
-    ):
+        z_list: list[float],
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Creates states data of 2D farm flow slices in a xy-plane.
 
@@ -211,13 +220,17 @@ class SlicesData(Output):
             The gridded data
 
         """
+        kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in {"z", "data_format", "ret_states", "ret_grid", "verbosity"}
+        }
         dsl = []
         for z in z_list:
             if verbosity > 0:
                 print(f"{type(self).__name__}: Creating slice z = {z}")
             dsl.append(
                 self._slice_data.get_states_data_xy(
-                    *args,
                     z=z,
                     data_format="xarray",
                     ret_states=False,
@@ -232,11 +245,10 @@ class SlicesData(Output):
 
     def get_states_data_xz(
         self,
-        y_list,
-        *args,
-        verbosity=0,
-        **kwargs,
-    ):
+        y_list: list[float],
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Creates states data of 2D farm flow slices in a xz-plane.
 
@@ -257,13 +269,17 @@ class SlicesData(Output):
             The gridded data
 
         """
+        kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in {"y", "data_format", "ret_states", "ret_grid", "verbosity"}
+        }
         dsl = []
         for y in y_list:
             if verbosity > 0:
                 print(f"{type(self).__name__}: Creating slice y = {y}")
             dsl.append(
                 self._slice_data.get_states_data_xz(
-                    *args,
                     y=y,
                     data_format="xarray",
                     ret_states=False,
@@ -278,11 +294,10 @@ class SlicesData(Output):
 
     def get_states_data_yz(
         self,
-        x_list,
-        *args,
-        verbosity=0,
-        **kwargs,
-    ):
+        x_list: list[float],
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Creates states data of 2D farm flow slices in a yz-plane.
 
@@ -303,13 +318,17 @@ class SlicesData(Output):
             The gridded data
 
         """
+        kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in {"x", "data_format", "ret_states", "ret_grid", "verbosity"}
+        }
         dsl = []
         for x in x_list:
             if verbosity > 0:
                 print(f"{type(self).__name__}: Creating slice x = {x}")
             dsl.append(
                 self._slice_data.get_states_data_yz(
-                    *args,
                     x=x,
                     data_format="xarray",
                     ret_states=False,

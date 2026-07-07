@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 from .threads import ThreadsEngine, ThreadsEngineRunner
 
 
@@ -9,7 +13,7 @@ class NumpyEngine(ThreadsEngine):
 
     """
 
-    def submit(self, f, *args, **kwargs):
+    def submit(self, f: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """
         Submits a job to worker, obtaining a future
 
@@ -31,7 +35,7 @@ class NumpyEngine(ThreadsEngine):
         """
         return {"f": f, "args": args, "kwargs": kwargs, "result": None, "done": False}
 
-    def await_result(self, future):
+    def await_result(self, future: dict[str, Any]) -> Any:
         """
         Waits for result from a future
 
@@ -53,7 +57,7 @@ class NumpyEngine(ThreadsEngine):
 
         return future["result"]
 
-    def future_is_done(self, future):
+    def future_is_done(self, future: dict[str, Any]) -> bool:
         """
         Checks if a future is done
 
@@ -72,11 +76,11 @@ class NumpyEngine(ThreadsEngine):
 
     def map(
         self,
-        func,
-        inputs,
-        *args,
-        **kwargs,
-    ):
+        func: Any,
+        inputs: Any,
+        *args: Any,
+        **kwargs: Any,
+    ) -> list[Any]:
         """
         Runs a function on a list of files
 
@@ -102,9 +106,9 @@ class NumpyEngine(ThreadsEngine):
 
     def get_start_calc_message(
         self,
-        n_chunks_states,
-        n_chunks_targets,
-    ):
+        n_chunks_states: int,
+        n_chunks_targets: int,
+    ) -> str:
         """Helper function for start calculation message"""
         msg = f"{self.name}: Starting calculation using a loop over"
         msg += f" {n_chunks_states} states chunks"
@@ -113,7 +117,7 @@ class NumpyEngine(ThreadsEngine):
         msg += "."
         return msg
 
-    def new_runner(self):
+    def new_runner(self) -> ThreadsEngineRunner:
         """
         Creates a new EngineRunner for running calculations in this engine
 

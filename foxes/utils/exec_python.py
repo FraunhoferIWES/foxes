@@ -2,9 +2,16 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
+from typing import Any
 
 
-def exec_python(s, indicator="%", newline=";", globals=globals(), locals={}):
+def exec_python(
+    s: Any,
+    indicator: str = "%",
+    newline: str = ";",
+    globals: dict[str, Any] | None = None,
+    locals: dict[str, Any] | None = None,
+) -> Any:
     """
     Executes strings that start with the
     indicator as python commands, returns one value
@@ -34,6 +41,17 @@ def exec_python(s, indicator="%", newline=";", globals=globals(), locals={}):
     :group: utils
 
     """
+    if globals is None:
+        globals = {
+            "np": np,
+            "pd": pd,
+            "xr": xr,
+            "plt": plt,
+            "__builtins__": __builtins__,
+        }
+    if locals is None:
+        locals = {}
+
     if isinstance(s, str):
         L = len(indicator)
         if len(s) > L and s[:L] == indicator:
@@ -51,15 +69,21 @@ def exec_python(s, indicator="%", newline=";", globals=globals(), locals={}):
                     exec(c, globals, locals)
                 return locals[v]
     elif isinstance(s, list):
-        return [exec_python(a, indicator) for a in s]
+        return [exec_python(a, indicator, newline, globals, locals) for a in s]
     elif isinstance(s, tuple):
-        return tuple(exec_python(list(s), indicator))
+        return tuple(exec_python(list(s), indicator, newline, globals, locals))
     elif isinstance(s, dict):
-        return {k: exec_python(a, indicator) for k, a in s.items()}
+        return {
+            k: exec_python(a, indicator, newline, globals, locals) for k, a in s.items()
+        }
     return s
 
 
-def eval_dict_values(d, globals=None, locals=None):
+def eval_dict_values(
+    d: dict[str, Any],
+    globals: dict[str, Any] | None = None,
+    locals: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Tries to evaluate string values in a dictionary, recursively.
 

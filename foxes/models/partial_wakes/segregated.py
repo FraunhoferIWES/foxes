@@ -1,9 +1,19 @@
-import numpy as np
+from __future__ import annotations
 
-from foxes.core import PartialWakesModel
+import numpy as np
+from typing import TYPE_CHECKING, cast
+
+from foxes.core import PartialWakesModel, TData
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import Model
+    from foxes.core.rotor_model import RotorModel
+    from foxes.core.wake_model import WakeModel
 
 
 class PartialSegregated(PartialWakesModel):
@@ -22,7 +32,7 @@ class PartialSegregated(PartialWakesModel):
 
     """
 
-    def __init__(self, rotor_model):
+    def __init__(self, rotor_model: RotorModel) -> None:
         """
         Constructor.
 
@@ -38,10 +48,10 @@ class PartialSegregated(PartialWakesModel):
         self.YZ = self.var("YZ")
         self.W = self.var(FV.WEIGHT)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(rotor_model={self.rotor.name})"
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -53,7 +63,9 @@ class PartialSegregated(PartialWakesModel):
         """
         return super().sub_models() + [self.rotor]
 
-    def get_wake_points(self, algo, mdata, fdata):
+    def get_wake_points(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Get the wake calculation points, and their
         weights.
@@ -83,15 +95,15 @@ class PartialSegregated(PartialWakesModel):
 
     def finalize_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        rpoint_weights,
-        wake_deltas,
-        wmodel,
-        downwind_index,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        rpoint_weights: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+        downwind_index: int,
+    ) -> dict[str, np.ndarray]:
         """
         Updates the wake_deltas at the selected target
         downwind index.
@@ -132,7 +144,7 @@ class PartialSegregated(PartialWakesModel):
         gweights = tdata[FC.TWEIGHTS]
 
         wdel = {v: d[:, downwind_index, None].copy() for v, d in wake_deltas.items()}
-        htdata = tdata.get_slice([FC.TURBINE], np.s_[downwind_index])
+        htdata = cast(TData, tdata.get_slice([FC.TURBINE], np.s_[downwind_index]))
         wmodel.finalize_wake_deltas(algo, mdata, fdata, htdata, wdel)
 
         for v in wdel.keys():

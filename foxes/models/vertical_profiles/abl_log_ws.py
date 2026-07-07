@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import Any
 
 from foxes.core import VerticalProfile
 from foxes.utils import abl
@@ -22,7 +25,7 @@ class ABLLogWsProfile(VerticalProfile):
 
     """
 
-    def __init__(self, *args, ustar_input=False, **kwargs):
+    def __init__(self, *args: Any, ustar_input: bool = False, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -39,7 +42,7 @@ class ABLLogWsProfile(VerticalProfile):
         super().__init__(*args, **kwargs)
         self.ustar_input = ustar_input
 
-    def input_vars(self):
+    def input_vars(self) -> list[str]:
         """
         The input variables needed for the profile
         calculation.
@@ -55,7 +58,7 @@ class ABLLogWsProfile(VerticalProfile):
         else:
             return [FV.WS, FV.H, FV.Z0, FV.MOL]
 
-    def calculate(self, data, heights):
+    def calculate(self, data: dict[str, Any], heights: np.ndarray) -> np.ndarray:
         """
         Run the profile calculation.
 

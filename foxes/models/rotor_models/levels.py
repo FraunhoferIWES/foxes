@@ -1,8 +1,15 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import RotorModel
 from foxes.config import config
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.model import LoadedData
 
 
 class LevelRotor(RotorModel):
@@ -25,7 +32,9 @@ class LevelRotor(RotorModel):
 
     """
 
-    def __init__(self, n, reduce=True, nint=200, **kwargs):
+    def __init__(
+        self, n: int, reduce: bool = True, nint: int = 200, **kwargs: Any
+    ) -> None:
         """
         Constructor.
 
@@ -50,11 +59,17 @@ class LevelRotor(RotorModel):
         self.reduce = reduce
         self.nint = nint
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         r = "" if self.reduce else ", reduce=False"
         return f"{type(self).__name__}(n={self.n}){r}"
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -118,7 +133,7 @@ class LevelRotor(RotorModel):
 
         return loaded_data
 
-    def input_variables(self):
+    def input_variables(self) -> list[str]:
         """
         The input variables which are required by the model.
 
@@ -130,7 +145,7 @@ class LevelRotor(RotorModel):
         """
         return [FV.D, FV.TXYH, FV.YAW]
 
-    def n_rotor_points(self):
+    def n_rotor_points(self) -> int:
         """
         The number of rotor points
 
@@ -142,7 +157,7 @@ class LevelRotor(RotorModel):
         """
         return len(self.weights)
 
-    def design_points(self):
+    def design_points(self) -> np.ndarray:
         """
         The rotor model design points.
 
@@ -161,7 +176,7 @@ class LevelRotor(RotorModel):
         """
         return self.dpoints
 
-    def rotor_point_weights(self):
+    def rotor_point_weights(self) -> np.ndarray:
         """
         The weights of the rotor points
 

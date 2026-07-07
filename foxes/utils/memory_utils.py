@@ -1,11 +1,17 @@
 import numpy as np
 import sys
 from collections.abc import Collection, Mapping, Sequence, Set as AbstractSet
+from typing import Any
 
 from .load import import_module
 
 
-def get_object_nbytes(value, recursive=True, seen=None, allow_shallow_fallback=True):
+def get_object_nbytes(
+    value: Any,
+    recursive: bool = True,
+    seen: set[int] | None = None,
+    allow_shallow_fallback: bool = True,
+) -> int:
     """Estimate payload bytes of nested extra_data values.
 
     The estimate is recursive for generic container types and focuses on
@@ -134,7 +140,12 @@ def get_object_nbytes(value, recursive=True, seen=None, allow_shallow_fallback=T
         return 0
 
 
-def print_mem(obj, min_csize=0, max_csize=None, pre_str="OBJECT SIZE"):
+def print_mem(
+    obj: Any,
+    min_csize: int = 0,
+    max_csize: int | None = None,
+    pre_str: str = "OBJECT SIZE",
+) -> None:
     """
     Prints the memory consumption of a model and its components
 
@@ -175,7 +186,7 @@ def print_mem(obj, min_csize=0, max_csize=None, pre_str="OBJECT SIZE"):
                     raise ValueError(f"Component {k} exceeds maximal size {max_csize}")
 
 
-def deep_split(condition, data, fill_None=True):
+def deep_split(condition: Any, data: Any, fill_None: bool = True) -> tuple[Any, Any]:
     """
     Recursively split data into two parts based on a condition.
 
@@ -206,32 +217,33 @@ def deep_split(condition, data, fill_None=True):
                 return (None, data) if condition(data) else (data, None)
             except TypeError:
                 return (data, data)
-        data_0 = {}
-        data_1 = {}
+        map_0: dict[Any, Any] = {}
+        map_1: dict[Any, Any] = {}
         for k, v in data.items():
             c = condition[k] if isinstance(condition, Mapping) else condition
             d0, d1 = deep_split(c, v, fill_None=fill_None)
             if d0 is not None or fill_None:
-                data_0[k] = d0
+                map_0[k] = d0
             if d1 is not None or fill_None:
-                data_1[k] = d1
-        return data_0, data_1
+                map_1[k] = d1
+        return map_0, map_1
 
     elif isinstance(data, Sequence) and not isinstance(data, (str, bytes)):
-        data_0 = []
-        data_1 = []
+        seq_0: list[Any] = []
+        seq_1: list[Any] = []
         for i, v in enumerate(data):
             c = condition[i] if isinstance(condition, Sequence) else condition
             d0, d1 = deep_split(c, v, fill_None=fill_None)
             if d0 is not None or fill_None:
-                data_0.append(d0)
+                seq_0.append(d0)
             if d1 is not None or fill_None:
-                data_1.append(d1)
-        if not isinstance(data_0, type(data)):
-            data_0 = type(data)(data_0)
-        if not isinstance(data_1, type(data)):
-            data_1 = type(data)(data_1)
-        return data_0, data_1
+                seq_1.append(d1)
+        out_0: Any = seq_0
+        out_1: Any = seq_1
+        if isinstance(data, tuple):
+            out_0 = tuple(seq_0)
+            out_1 = tuple(seq_1)
+        return out_0, out_1
 
     else:
         try:
@@ -241,11 +253,11 @@ def deep_split(condition, data, fill_None=True):
 
 
 def deep_split_by_nbytes(
-    data,
-    max_nbytes,
-    fill_None=True,
-    allow_shallow_fallback=True,
-):
+    data: Any,
+    max_nbytes: int,
+    fill_None: bool = True,
+    allow_shallow_fallback: bool = True,
+) -> tuple[Any, Any]:
     """
     Recursively split data by payload size condition.
 
@@ -279,7 +291,7 @@ def deep_split_by_nbytes(
             f"Expected non-negative integer max_nbytes, got {max_nbytes!r}"
         )
 
-    def condition(value):
+    def condition(value: Any) -> bool:
         return (
             get_object_nbytes(
                 value,
@@ -293,7 +305,7 @@ def deep_split_by_nbytes(
     return data_small, data_large
 
 
-def deep_update(data_0, data_1):
+def deep_update(data_0: Any, data_1: Any) -> Any:
     """
     Recursively update data_0 with values from data_1.
 
@@ -323,26 +335,26 @@ def deep_update(data_0, data_1):
         )
 
     if isinstance(data_0, Mapping):
-        updated_data = {}
+        updated_map: dict[Any, Any] = {}
         for k in set(data_0.keys()).union(data_1.keys()):
             v0 = data_0.get(k, None)
             v1 = data_1.get(k, None)
-            updated_data[k] = deep_update(v0, v1)
-        return updated_data
+            updated_map[k] = deep_update(v0, v1)
+        return updated_map
 
     elif isinstance(data_0, Sequence) and not isinstance(data_0, (str, bytes)):
         if len(data_0) != len(data_1):
             raise ValueError(
                 f"data_0 and data_1 must have the same length, got {len(data_0)} and {len(data_1)}"
             )
-        updated_data = []
+        updated_seq: list[Any] = []
         for i in range(len(data_0)):
             v0 = data_0[i]
             v1 = data_1[i]
-            updated_data.append(deep_update(v0, v1))
-        if type(data_0) is not type(updated_data):
-            updated_data = type(data_0)(updated_data)
-        return updated_data
+            updated_seq.append(deep_update(v0, v1))
+        if isinstance(data_0, tuple):
+            return tuple(updated_seq)
+        return updated_seq
 
     elif isinstance(data_0, np.ndarray):
         if np.array_equal(data_0, data_1):

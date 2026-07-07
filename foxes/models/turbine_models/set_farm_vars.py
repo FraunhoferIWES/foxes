@@ -1,9 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class SetFarmVars(TurbineModel):
@@ -21,7 +30,7 @@ class SetFarmVars(TurbineModel):
 
     """
 
-    def __init__(self, once=False):
+    def __init__(self, once: bool = False) -> None:
         """
         Constructor.
 
@@ -33,9 +42,12 @@ class SetFarmVars(TurbineModel):
         """
         super().__init__()
         self.once = once
+        self.vars: list[str] = []
+        self.__vdata: list[np.ndarray] = []
+        self.__once_done: set[int] = set()
         self.reset()
 
-    def add_var(self, var, data):
+    def add_var(self, var: str, data: np.ndarray) -> None:
         """
         Add data for a variable.
 
@@ -56,7 +68,7 @@ class SetFarmVars(TurbineModel):
         self.vars.append(var)
         self.__vdata.append(np.asarray(data, dtype=config.dtype_double))
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Remove all variables.
         """
@@ -65,7 +77,13 @@ class SetFarmVars(TurbineModel):
         self.vars = []
         self.__vdata = []
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -90,7 +108,7 @@ class SetFarmVars(TurbineModel):
         self.__once_done = set()
         return loaded_data
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -107,7 +125,13 @@ class SetFarmVars(TurbineModel):
         """
         return self.vars
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -182,12 +206,12 @@ class SetFarmVars(TurbineModel):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -218,12 +242,12 @@ class SetFarmVars(TurbineModel):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -248,7 +272,13 @@ class SetFarmVars(TurbineModel):
         if data_stash is not None:
             self.__vdata = data_stash[self.name].pop("vdata")
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -277,6 +307,7 @@ class SetFarmVars(TurbineModel):
         self.ensure_output_vars(algo, fdata)
 
         i0 = mdata.states_i0(counter=True)
+        assert i0 is not None, "Missing states_i0 in mdata"
         if not self.once or i0 not in self.__once_done:
             bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
             bsel[st_sel] = True

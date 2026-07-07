@@ -1,5 +1,9 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
@@ -7,6 +11,11 @@ from foxes.data import PCTCURVE, parse_Pct_two_files
 from foxes.config import get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class PCtFromTwo(TurbineType):
@@ -44,19 +53,19 @@ class PCtFromTwo(TurbineType):
 
     def __init__(
         self,
-        data_source_P,
-        data_source_ct,
-        col_ws_P_file="ws",
-        col_ws_ct_file="ws",
-        col_P="P",
-        col_ct="ct",
-        rho=None,
-        var_ws_ct=FV.REWS2,
-        var_ws_P=FV.REWS3,
-        pd_file_read_pars_P={},
-        pd_file_read_pars_ct={},
-        **parameters,
-    ):
+        data_source_P: str | pd.DataFrame,
+        data_source_ct: str | pd.DataFrame,
+        col_ws_P_file: str = "ws",
+        col_ws_ct_file: str = "ws",
+        col_P: str = "P",
+        col_ct: str = "ct",
+        rho: float | None = None,
+        var_ws_ct: str = FV.REWS2,
+        var_ws_P: str = FV.REWS3,
+        pd_file_read_pars_P: dict[str, Any] = {},
+        pd_file_read_pars_ct: dict[str, Any] = {},
+        **parameters: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -114,12 +123,12 @@ class PCtFromTwo(TurbineType):
         self._data_ws_P = None
         self._data_ws_ct = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
         a += f", var_ws_ct={self.WSCT}, var_ws_P={self.WSP}"
         return f"{type(self).__name__}({a})"
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
@@ -131,7 +140,7 @@ class PCtFromTwo(TurbineType):
         """
         return self.WSCT == FV.REWS2 or self.WSP == FV.REWS2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
@@ -143,7 +152,7 @@ class PCtFromTwo(TurbineType):
         """
         return self.WSCT == FV.REWS3 or self.WSP == FV.REWS3
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -160,7 +169,13 @@ class PCtFromTwo(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -193,6 +208,7 @@ class PCtFromTwo(TurbineType):
                     PCTCURVE, self.source_P, check_raw=False
                 )
             self._data_P = PandasFileHelper.read_file(fpath, **self.rpars_P)
+        assert self._data_P is not None
 
         self._data_P = self._data_P.set_index(self.col_ws_P_file).sort_index()
         self._data_ws_P = self._data_P.index.to_numpy()
@@ -208,6 +224,7 @@ class PCtFromTwo(TurbineType):
                     PCTCURVE, self.source_ct, check_raw=False
                 )
             self._data_ct = PandasFileHelper.read_file(fpath, **self.rpars_ct)
+        assert self._data_ct is not None
 
         self._data_ct = self._data_ct.set_index(self.col_ws_ct_file).sort_index()
         self._data_ws_ct = self._data_ct.index.to_numpy()
@@ -224,13 +241,13 @@ class PCtFromTwo(TurbineType):
 
     def modify_cutin(
         self,
-        modify_ct,
-        modify_P,
-        steps=20,
-        iterations=100,
-        a=0.55,
-        b=0.55,
-    ):
+        modify_ct: bool,
+        modify_P: bool,
+        steps: int = 20,
+        iterations: int = 100,
+        a: float = 0.55,
+        b: float = 0.55,
+    ) -> None:
         """
         Modify the data such that a discontinuity
         at cutin wind speed is avoided
@@ -257,6 +274,7 @@ class PCtFromTwo(TurbineType):
         if modify_ct:
             ws = self._data_ws_ct
             ct = self._data_ct
+            assert ws is not None and ct is not None
 
             i = 0
             try:
@@ -284,6 +302,7 @@ class PCtFromTwo(TurbineType):
         if modify_P:
             ws = self._data_ws_P
             P = self._data_P
+            assert ws is not None and P is not None
 
             i = 0
             try:
@@ -311,7 +330,13 @@ class PCtFromTwo(TurbineType):
         if not modify_ct and not modify_P:
             super().modify_cutin(modify_ct, modify_P)
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -340,6 +365,16 @@ class PCtFromTwo(TurbineType):
         self.ensure_output_vars(algo, fdata)
         rews2 = fdata[self.WSCT][st_sel]
         rews3 = fdata[self.WSP][st_sel]
+        ws_P = self._data_ws_P
+        ws_ct = self._data_ws_ct
+        data_P = self._data_P
+        data_ct = self._data_ct
+        assert (
+            ws_P is not None
+            and ws_ct is not None
+            and data_P is not None
+            and data_ct is not None
+        )
 
         # compute air density and yaw misalignment corrections:
         corrects_rho = (
@@ -363,15 +398,15 @@ class PCtFromTwo(TurbineType):
             FV.CT: fdata[FV.CT],
         }
         out[FV.P][st_sel] = factor_P * np.interp(
-            rews3, self._data_ws_P, self._data_P, left=0.0, right=0.0
+            rews3, ws_P, data_P, left=0.0, right=0.0
         )
         out[FV.CT][st_sel] = factor_ct * np.interp(
-            rews2, self._data_ws_ct, self._data_ct, left=0.0, right=0.0
+            rews2, ws_ct, data_ct, left=0.0, right=0.0
         )
 
         return out
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 

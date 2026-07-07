@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.config import config
 from foxes.core import TurbineInductionModel
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData, Model
 
 
 class SelfSimilar(TurbineInductionModel):
@@ -44,13 +52,13 @@ class SelfSimilar(TurbineInductionModel):
 
     def __init__(
         self,
-        superposition="ws_linear",
-        induction="Madsen",
-        alpha=8 / 9,
-        beta=np.sqrt(2),
-        gamma=1.1,
-        pre_rotor_only=False,
-    ):
+        superposition: str = "ws_linear",
+        induction: str = "Madsen",
+        alpha: float = 8 / 9,
+        beta: float = np.sqrt(2),
+        gamma: float = 1.1,
+        pre_rotor_only: bool = False,
+    ) -> None:
         """
         Constructor.
 
@@ -77,14 +85,14 @@ class SelfSimilar(TurbineInductionModel):
         self.beta = beta
         self.gamma = gamma
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         return f"{type(self).__name__}({self.wind_superposition}, induction={iname}, gamma={self.gamma})"
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
@@ -96,7 +104,7 @@ class SelfSimilar(TurbineInductionModel):
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -106,9 +114,18 @@ class SelfSimilar(TurbineInductionModel):
             All sub models
 
         """
-        return super().sub_models() + [self.induction]
+        smdls = super().sub_models()
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -141,7 +158,9 @@ class SelfSimilar(TurbineInductionModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
@@ -176,23 +195,25 @@ class SelfSimilar(TurbineInductionModel):
             )
             return {FV.WS: dws}
 
-    def _mu(self, x_R):
+    def _mu(self, x_R: np.ndarray) -> np.ndarray:
         """Helper function: define mu (eqn 11 from [1])"""
         return 1 + (x_R / np.sqrt(1 + x_R**2))
 
-    def _a0(self, ct, x_R):
+    def _a0(self, ct: np.ndarray, x_R: np.ndarray) -> np.ndarray:
         """Helper function: define a0 with gamma factor, eqn 8 from [2]"""
-        return self.induction.ct2a(self.gamma * ct)
+        induction = self.induction
+        assert not isinstance(induction, str)
+        return induction.ct2a(self.gamma * ct)
 
-    def _a(self, ct, x_R):
+    def _a(self, ct: np.ndarray, x_R: np.ndarray) -> np.ndarray:
         """Helper function: define axial shape function (eqn 11 from [1])"""
         return self._a0(ct, x_R) * self._mu(x_R)
 
-    def _r_half(self, x_R):
+    def _r_half(self, x_R: np.ndarray) -> np.ndarray:
         """Helper function: using eqn 13 from [2]"""
         return np.sqrt(0.587 * (1.32 + x_R**2))
 
-    def _rad_fn(self, x_R, r_R):
+    def _rad_fn(self, x_R: np.ndarray, r_R: np.ndarray) -> np.ndarray:
         """Helper function: define radial shape function (eqn 12 from [1])"""
         with np.errstate(over="ignore"):
             result = (
@@ -202,14 +223,14 @@ class SelfSimilar(TurbineInductionModel):
 
     def contribute(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_coos,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_coos: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
@@ -264,17 +285,23 @@ class SelfSimilar(TurbineInductionModel):
         x_R = np.round(wake_coos[..., 0] / R, 12)
         r_R = np.linalg.norm(wake_coos[..., 1:3], axis=-1) / R
 
-        def add_wake(sp_sel, wake_deltas, blockage):
+        def add_wake(
+            sp_sel: np.ndarray,
+            wake_deltas: dict[str, np.ndarray],
+            blockage: np.ndarray,
+        ) -> None:
             """adds to wake deltas"""
             if self.has_uv:
                 assert self.has_vector_wind_superp, (
                     f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
                 )
+                vec_superp = self.vec_superp
+                assert vec_superp is not None
                 wdeltas = {FV.WS: blockage}
-                self.vec_superp.wdeltas_ws2uv(
+                vec_superp.wdeltas_ws2uv(
                     algo, fdata, tdata, downwind_index, wdeltas, sp_sel
                 )
-                wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
+                wake_deltas[FV.UV] = vec_superp.add_wake_vector(
                     algo,
                     mdata,
                     fdata,
@@ -316,4 +343,4 @@ class SelfSimilar(TurbineInductionModel):
 
                 add_wake(sp_sel, wake_deltas, blockage)
 
-        return wake_deltas
+        return None

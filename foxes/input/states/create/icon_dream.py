@@ -13,7 +13,7 @@ from foxes.data import StaticData, STATES
 import foxes.variables as FV
 
 
-def _rm_tmp_dir(cdo_tmp_dir, verbosity=1):
+def _rm_tmp_dir(cdo_tmp_dir, verbosity: int = 1) -> None:
     """Remove the temporary directory for CDO intermediate files."""
     if cdo_tmp_dir.exists():
         if verbosity > 0:
@@ -21,7 +21,7 @@ def _rm_tmp_dir(cdo_tmp_dir, verbosity=1):
         rmtree(cdo_tmp_dir)
 
 
-def _get_file_var_str(var, for_fname=False):
+def _get_file_var_str(var, for_fname: bool = False) -> str:
     """Get the variable string for the filename based on the variable code."""
     var_str = {
         FV.U: "U",
@@ -36,7 +36,13 @@ def _get_file_var_str(var, for_fname=False):
     return var_str
 
 
-def _get_fname(year, month, var=None, region=None, suffix="nc"):
+def _get_fname(
+    year: int,
+    month: int,
+    var=None,
+    region: str | None = None,
+    suffix: str = "nc",
+) -> str:
     """Construct the filename for a given year, month, and variable."""
     ym_str = f"{year}{month:02d}"
     var_str = _get_file_var_str(var, for_fname=True)
@@ -44,7 +50,7 @@ def _get_fname(year, month, var=None, region=None, suffix="nc"):
     return f"ICON-DREAM-EU_{ym_str}{region_str}{var_str}_hourly.{suffix}"
 
 
-def _download_icon_dream(ymv, base_url, out_dir, verbosity=1):
+def _download_icon_dream(ymv, base_url: str, out_dir, verbosity: int = 1) -> int:
     """Download a file from ICON-DREAM-EU for a given year, month, and variable."""
     year, month, var = ymv
     fname = _get_fname(year, month, var, region=None, suffix="grb")
@@ -596,7 +602,7 @@ def iconDream2foxes(
     _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "out_dir",

@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import numpy as np
 from pandas import DataFrame
 from xarray import Dataset, open_dataset
+from typing import Any, cast
 
 from foxes.core import States
 from foxes.config import config, get_input_path
@@ -51,18 +54,18 @@ class SingleStateField(States):
         self,
         data_source,
         output_vars,
-        var2ncvar={},
-        fixed_vars={},
-        x_coord="x",
-        y_coord="y",
-        h_coord="height",
+        var2ncvar: dict[str, str] | None = None,
+        fixed_vars: dict[str, Any] | None = None,
+        x_coord: str = "x",
+        y_coord: str = "y",
+        h_coord: str | None = "height",
         sel=None,
         isel=None,
-        interp_pars={},
+        interp_pars: dict[str, Any] | None = None,
         bounds_extra_space=1000,
         height_bounds=None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -100,14 +103,14 @@ class SingleStateField(States):
         super().__init__(**kwargs)
         self.data_source = data_source
         self.output_vars = output_vars
-        self.var2ncvar = var2ncvar
-        self.fixed_vars = fixed_vars
+        self.var2ncvar = {} if var2ncvar is None else var2ncvar
+        self.fixed_vars = {} if fixed_vars is None else fixed_vars
         self.x_coord = x_coord
         self.y_coord = y_coord
         self.h_coord = h_coord
         self.sel = sel
         self.isel = isel
-        self.interp_pars = interp_pars
+        self.interp_pars = {} if interp_pars is None else interp_pars
         self.bounds_extra_space = bounds_extra_space
         self.height_bounds = height_bounds
 
@@ -120,7 +123,7 @@ class SingleStateField(States):
 
         self._data = None
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -138,7 +141,7 @@ class SingleStateField(States):
         return self.output_vars
 
     @property
-    def data(self):
+    def data(self) -> Dataset | None:
         """
         The field data
 
@@ -150,7 +153,9 @@ class SingleStateField(States):
         """
         return self._data
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=1):
+    def load_data(
+        self, algo, loaded_data, force: bool = False, verbosity: int = 1
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -231,7 +236,7 @@ class SingleStateField(States):
             # reduce dimensions:
             if algo is not None:
                 DatasetStates.preproc_first(
-                    self,
+                    cast(Any, self),
                     algo,
                     data=data,
                     bounds_extra_space=self.bounds_extra_space,
@@ -258,7 +263,7 @@ class SingleStateField(States):
                 print(data)
                 print()
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -270,7 +275,7 @@ class SingleStateField(States):
         """
         return 1
 
-    def index(self):
+    def index(self) -> list[int]:
         """
         The index list
 
@@ -282,7 +287,7 @@ class SingleStateField(States):
         """
         return [0]
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
         """
         The main model calculation.
 

@@ -1,8 +1,16 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any, Generator
 
 from foxes.utils import new_instance
 
 from .point_data_model import PointDataModel, PointDataModelList
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class States(PointDataModel):
@@ -18,7 +26,7 @@ class States(PointDataModel):
     """
 
     @abstractmethod
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -30,7 +38,7 @@ class States(PointDataModel):
         """
         pass
 
-    def index(self):
+    def index(self) -> Any:
         """
         The index list
 
@@ -42,7 +50,13 @@ class States(PointDataModel):
         """
         return list(range(self.size()))
 
-    def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
+    def reset(
+        self,
+        algo: Algorithm | None = None,
+        states_sel: slice | range | list[int] | None = None,
+        states_loc: list[Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Reset the states, optionally select states
 
@@ -59,7 +73,7 @@ class States(PointDataModel):
         raise NotImplementedError(f"States '{self.name}': Reset is not implemented")
 
     @abstractmethod
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -76,7 +90,7 @@ class States(PointDataModel):
         """
         pass
 
-    def gen_states_split_size(self):
+    def gen_states_split_size(self) -> Generator[int | None, None, None]:
         """
         Generator for suggested states split sizes for output writing.
 
@@ -88,7 +102,7 @@ class States(PointDataModel):
         """
         yield None
 
-    def __add__(self, s):
+    def __add__(self, s: Any) -> ExtendedStates:
         if isinstance(s, list):
             return ExtendedStates(self, s)
         elif isinstance(s, ExtendedStates):
@@ -101,7 +115,12 @@ class States(PointDataModel):
             return ExtendedStates(self, [s])
 
     @classmethod
-    def new(cls, states_type, *args, **kwargs):
+    def new(
+        cls,
+        states_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> States:
         """
         Run-time states factory.
 
@@ -133,7 +152,11 @@ class ExtendedStates(States):
 
     """
 
-    def __init__(self, states, point_models=[]):
+    def __init__(
+        self,
+        states: States,
+        point_models: list[PointDataModel] = [],
+    ) -> None:
         """
         Constructor.
 
@@ -149,7 +172,7 @@ class ExtendedStates(States):
         self.states = states
         self.pmodels = PointDataModelList(models=[states] + point_models)
 
-    def append(self, model):
+    def append(self, model: PointDataModel) -> None:
         """
         Add a model to the list
 
@@ -161,7 +184,7 @@ class ExtendedStates(States):
         """
         self.pmodels.append(model)
 
-    def sub_models(self):
+    def sub_models(self) -> list[PointDataModelList]:
         """
         List of all sub-models
 
@@ -173,7 +196,7 @@ class ExtendedStates(States):
         """
         return [self.pmodels]
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -185,7 +208,7 @@ class ExtendedStates(States):
         """
         return self.states.size()
 
-    def index(self):
+    def index(self) -> Any:
         """
         The index list
 
@@ -197,7 +220,7 @@ class ExtendedStates(States):
         """
         return self.states.index()
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -214,7 +237,13 @@ class ExtendedStates(States):
         """
         return self.pmodels.output_point_vars(algo)
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, Any]:
         """
         The main model calculation.
 
@@ -241,7 +270,7 @@ class ExtendedStates(States):
         """
         return self.pmodels.calculate(algo, mdata, fdata, tdata)
 
-    def __add__(self, m):
+    def __add__(self, m: Any) -> ExtendedStates:
         models = self.pmodels.models[1:]
         if isinstance(m, list):
             return ExtendedStates(self.states, models + m)

@@ -1,10 +1,19 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineType, FData
 from foxes.data import parse_Pct_file_name
 from foxes.models.turbine_models import LookupTable
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import MData
+    from foxes.core.model import LoadedData, Model
 
 
 class FromLookupTable(TurbineType):
@@ -32,17 +41,17 @@ class FromLookupTable(TurbineType):
 
     def __init__(
         self,
-        data_source,
-        input_vars,
-        varmap={},
-        lookup_pars={},
-        rho=None,
-        var_ws_ct=FV.REWS2,
-        var_ws_P=FV.REWS3,
-        pd_file_read_pars={},
-        interpn_args={},
-        **parameters,
-    ):
+        data_source: str | pd.DataFrame,
+        input_vars: list[str],
+        varmap: dict[str, str] = {},
+        lookup_pars: dict[str, Any] = {},
+        rho: float | None = None,
+        var_ws_ct: str = FV.REWS2,
+        var_ws_P: str = FV.REWS3,
+        pd_file_read_pars: dict[str, Any] = {},
+        interpn_args: dict[str, Any] = {},
+        **parameters: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -104,12 +113,12 @@ class FromLookupTable(TurbineType):
             **lookup_pars,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
         a += f", var_ws_ct={self.WSCT}, var_ws_P={self.WSP}"
         return f"{type(self).__name__}({a})"
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
@@ -121,7 +130,7 @@ class FromLookupTable(TurbineType):
         """
         return self.WSCT == FV.REWS2 or self.WSP == FV.REWS2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
@@ -133,7 +142,7 @@ class FromLookupTable(TurbineType):
         """
         return self.WSCT == FV.REWS3 or self.WSP == FV.REWS3
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -145,7 +154,7 @@ class FromLookupTable(TurbineType):
         """
         return [self._lookup]
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -162,7 +171,13 @@ class FromLookupTable(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -194,18 +209,20 @@ class FromLookupTable(TurbineType):
         )
         if self.P_nominal is None:
             col_P = self._lookup.varmap.get(FV.P, FV.P)
-            self.P_nominal = np.max(self._lookup._data[col_P].to_numpy())
+            ldata = self._lookup._data
+            assert ldata is not None, "Lookup table data not initialized"
+            self.P_nominal = np.max(ldata[col_P].to_numpy())
         return loaded_data
 
     def modify_cutin(
         self,
-        modify_ct,
-        modify_P,
-        steps=20,
-        iterations=100,
-        a=0.55,
-        b=0.55,
-    ):
+        modify_ct: bool,
+        modify_P: bool,
+        steps: int = 20,
+        iterations: int = 100,
+        a: float = 0.55,
+        b: float = 0.55,
+    ) -> None:
         """
         Modify the data such that a discontinuity
         at cutin wind speed is avoided
@@ -235,7 +252,13 @@ class FromLookupTable(TurbineType):
         else:
             super().modify_cutin(modify_ct, modify_P)
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -291,6 +314,7 @@ class FromLookupTable(TurbineType):
             if rews2 is None:
                 rews2 = fdata[self.WSCT].copy()
                 rews3 = fdata[self.WSP].copy()
+            assert rews3 is not None
 
             rews3s, rews2s, factor_P, factor_ct = self.get_rho_yawm_corrections(
                 rews_P=rews3[st_sel],
@@ -306,6 +330,7 @@ class FromLookupTable(TurbineType):
         if rews2 is None:
             out = self._lookup.calculate(algo, mdata, fdata_lookup, st_sel)
         else:
+            assert rews3 is not None
             fdata_lookup[FV.REWS] = rews2
             ct = self._lookup.calculate(algo, mdata, fdata_lookup, st_sel)[FV.CT]
             fdata_lookup[FV.REWS] = rews3

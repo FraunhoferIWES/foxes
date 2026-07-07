@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
@@ -6,6 +9,10 @@ from foxes.config import config
 
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class RotorWD(WakeFrame):
@@ -22,7 +29,7 @@ class RotorWD(WakeFrame):
 
     """
 
-    def __init__(self, var_wd=FV.WD, **kwargs):
+    def __init__(self, var_wd: str = FV.WD, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -37,7 +44,7 @@ class RotorWD(WakeFrame):
         super().__init__(**kwargs)
         self.var_wd = var_wd
 
-    def calc_order(self, algo, mdata, fdata):
+    def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -67,12 +74,12 @@ class RotorWD(WakeFrame):
 
     def get_wake_coos(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+    ) -> np.ndarray:
         """
         Calculate wake coordinates of rotor points.
 
@@ -116,11 +123,18 @@ class RotorWD(WakeFrame):
 
         coos = np.einsum("stpd,sad->stpa", delta, nax)
 
-        return algo.wake_deflection.calc_deflection(
-            algo, mdata, fdata, tdata, downwind_index, coos
-        )
+        wdfl = algo.wake_deflection
+        assert wdfl is not None, "Wake deflection model not initialized"
+        return wdfl.calc_deflection(algo, mdata, fdata, tdata, downwind_index, coos)
 
-    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
+    def get_centreline_points(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Gets the points along the centreline for given
         values of x.

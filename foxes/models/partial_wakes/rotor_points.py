@@ -1,5 +1,15 @@
+from __future__ import annotations
+
+import numpy as np
+from typing import TYPE_CHECKING
+
 from foxes.core import PartialWakesModel
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.wake_model import WakeModel
 
 
 class RotorPoints(PartialWakesModel):
@@ -11,7 +21,9 @@ class RotorPoints(PartialWakesModel):
 
     """
 
-    def get_wake_points(self, algo, mdata, fdata):
+    def get_wake_points(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Get the wake calculation points, and their
         weights.
@@ -41,15 +53,15 @@ class RotorPoints(PartialWakesModel):
 
     def map_rotor_results(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        rotor_res,
-        rotor_weights,
-        downwind_index=None,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        rotor_res: np.ndarray,
+        rotor_weights: np.ndarray,
+        downwind_index: int | None = None,
+    ) -> np.ndarray:
         """
         Map ambient rotor point results onto target points.
 
@@ -87,15 +99,15 @@ class RotorPoints(PartialWakesModel):
 
     def finalize_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        rpoint_weights,
-        wake_deltas,
-        wmodel,
-        downwind_index,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        rpoint_weights: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+        downwind_index: int,
+    ) -> dict[str, np.ndarray]:
         """
         Updates the wake_deltas at the selected target
         downwind index.
@@ -131,7 +143,7 @@ class RotorPoints(PartialWakesModel):
             of shape (n_states, n_rotor_points)
 
         """
-        wdel = {
+        wdel: dict[str, np.ndarray] = {
             v: d[:, downwind_index, None].copy() if d.shape[1] > 1 else d[:, 0, None]
             for v, d in wake_deltas.items()
         }

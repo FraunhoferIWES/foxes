@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from xarray import Dataset
+from typing import Any
 
 from foxes.core import Engine, EngineRunner
 import foxes.constants as FC
@@ -14,17 +17,17 @@ class SingleChunkEngineRunner(EngineRunner):
 
     def run(
         self,
-        algo,
-        model,
-        mdata,
-        *data,
-        shared,
-        chunk_key,
-        out_dims,
-        write_nc,
-        write_chunk_ani,
-        **cpars,
-    ):
+        algo: Any,
+        model: Any,
+        mdata: Any,
+        *data: Any,
+        shared: Any,
+        chunk_key: Any,
+        out_dims: tuple[str, ...],
+        write_nc: dict[str, Any] | None,
+        write_chunk_ani: dict[str, Any] | None,
+        **cpars: Any,
+    ) -> tuple[dict[str, Any], dict[Any, Any]]:
         """Helper function for running in a single chunk."""
         if shared is not None:
             mdata.recombine_with_shared(shared)
@@ -36,6 +39,8 @@ class SingleChunkEngineRunner(EngineRunner):
         )
         self._write_ani(algo, chunk_key, write_chunk_ani, mdata, *data)
         results = self._write_chunk_results(algo, results, write_nc, out_dims, mdata)
+        if results is None:
+            results = {}
 
         return results, cstore
 
@@ -48,35 +53,54 @@ class SingleChunkEngine(Engine):
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        chunk_size_states: int | None = None,
+        chunk_size_points: int | None = None,
+        n_procs: int = 1,
+        progress_bar: bool | None = True,
+        verbosity: int = 1,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
-            Additional parameters for the base class
-        kwargs: dict, optional
-            Additional parameters for the base class
+        chunk_size_states: int, optional
+            Ignored for single chunk engine
+        chunk_size_points: int, optional
+            Ignored for single chunk engine
+        n_procs: int
+            Ignored for single chunk engine
+        progress_bar: bool, optional
+            Progress display mode
+        verbosity: int
+            Verbosity level
 
         """
-        ignr = ["chunk_size_states", "chunk_size_points", "n_procs"]
-        for k in ignr:
-            if kwargs.pop(k, None) is not None and kwargs.get("verbosity", 1) > 1:
+        ignr = {
+            "chunk_size_states": chunk_size_states,
+            "chunk_size_points": chunk_size_points,
+            "n_procs": n_procs,
+        }
+        for k, v in ignr.items():
+            if v is not None and k != "n_procs" and verbosity > 1:
+                print(f"{type(self).__name__}: Ignoring {k}")
+            elif k == "n_procs" and v != 1 and verbosity > 1:
                 print(f"{type(self).__name__}: Ignoring {k}")
         super().__init__(
-            *args,
             chunk_size_states=None,
             chunk_size_points=None,
             n_procs=1,
-            **kwargs,
+            progress_bar=progress_bar,
+            verbosity=verbosity,
         )
         self.progress_bar = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}()"
 
-    def new_runner(self):
+    def new_runner(self) -> SingleChunkEngineRunner:
         """
         Creates a new EngineRunner for running calculations in this engine
 
@@ -88,7 +112,7 @@ class SingleChunkEngine(Engine):
         """
         return SingleChunkEngineRunner()
 
-    def submit(self, f, *args, **kwargs):
+    def submit(self, f: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """
         Submits a job to worker, obtaining a future
 
@@ -102,7 +126,6 @@ class SingleChunkEngine(Engine):
         kwargs: dict, optional
             Arguments for the function
 
-        Returns
         -------
         future: object
             The future object
@@ -110,7 +133,7 @@ class SingleChunkEngine(Engine):
         """
         return {"f": f, "args": args, "kwargs": kwargs, "result": None, "done": False}
 
-    def await_result(self, future):
+    def await_result(self, future: dict[str, Any]) -> Any:
         """
         Waits for result from a future
 
@@ -132,7 +155,7 @@ class SingleChunkEngine(Engine):
 
         return future["result"]
 
-    def future_is_done(self, future):
+    def future_is_done(self, future: dict[str, Any]) -> bool:
         """
         Checks if a future is done
 
@@ -151,11 +174,11 @@ class SingleChunkEngine(Engine):
 
     def map(
         self,
-        func,
-        inputs,
-        *args,
-        **kwargs,
-    ):
+        func: Any,
+        inputs: Any,
+        *args: Any,
+        **kwargs: Any,
+    ) -> list[Any]:
         """
         Runs a function on a list of files
 
@@ -181,21 +204,21 @@ class SingleChunkEngine(Engine):
 
     def run_calculation(
         self,
-        algo,
-        model,
-        model_data,
-        farm_data=None,
-        point_data=None,
-        extra_data={},
-        out_vars=[],
-        chunk_store={},
-        sel=None,
-        isel=None,
-        iterative=False,
-        write_nc=None,
-        write_chunk_ani=None,
-        **calc_pars,
-    ):
+        algo: Any,
+        model: Any,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+        out_vars: list[str] | None = None,
+        chunk_store: dict[Any, Any] | None = None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        iterative: bool = False,
+        write_nc: dict[str, Any] | None = None,
+        write_chunk_ani: dict[str, Any] | None = None,
+        **calc_pars: Any,
+    ) -> Dataset:
         """
         Runs the model calculation
 
@@ -249,8 +272,16 @@ class SingleChunkEngine(Engine):
         -------
         results: xarray.Dataset
             The model results
-
         """
+        if model_data is None:
+            raise ValueError(f"{type(self).__name__}: model_data must not be None")
+        if extra_data is None:
+            extra_data = {}
+        if out_vars is None:
+            out_vars = []
+        if chunk_store is None:
+            chunk_store = {}
+
         # subset selection:
         (model_data, farm_data, point_data), n_states = self.select_subsets(
             model_data,
@@ -266,6 +297,7 @@ class SingleChunkEngine(Engine):
 
         # prepare:
         algo.reset_chunk_store(chunk_store)
+        n_states_eff = n_states if n_states is not None else algo.n_states
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         out_dims = model.output_coords()
         coords = {}
@@ -294,7 +326,7 @@ class SingleChunkEngine(Engine):
                 model_data=model_data,
                 farm_data=farm_data,
                 point_data=point_data,
-                states_i0_i1=(0, n_states),
+                states_i0_i1=(0, n_states_eff),
                 targets_i0_i1=(0, n_targets),
                 out_vars=out_vars,
                 chunki_states=0,
@@ -307,7 +339,6 @@ class SingleChunkEngine(Engine):
                 data[0].extra_data.update(extra_data)
 
             shared = None
-
             results, cstore = runner.run(
                 algo,
                 model,
@@ -319,9 +350,18 @@ class SingleChunkEngine(Engine):
                 write_chunk_ani=write_chunk_ani,
                 **calc_pars,
             )
-            results = {(0, 0): (results, cstore)}
-            results_mgr.update(results)
+            chunk_results = {(0, 0): (results, cstore)}
+            results_mgr.update(chunk_results)
 
-            del data, shared, results, cstore, farm_data, point_data, calc_pars
+            del (
+                data,
+                shared,
+                results,
+                cstore,
+                chunk_results,
+                farm_data,
+                point_data,
+                calc_pars,
+            )
 
         return results_mgr.results

@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Any
 import pandas as pd
 from xarray import Dataset
 from numbers import Number
@@ -19,7 +20,7 @@ default_values = {
 }
 
 
-def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
+def _get_profiles(coords, fields, dims, ovars, fixval, verbosity: int) -> dict:
     """Read ABL profiles information
     :group: input.yaml.windio
     """
@@ -359,7 +360,7 @@ def _get_WeibullField(
     return False
 
 
-def get_states(coords, fields, dims, verbosity=1):
+def get_states(coords, fields, dims, verbosity: int = 1) -> States:
     """
     Reads states parameters from windio input
 
@@ -386,10 +387,10 @@ def get_states(coords, fields, dims, verbosity=1):
         print("      Creating states")
 
     ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
-    fixval = {}
+    fixval: dict[str, Any] = {}
     profiles = _get_profiles(coords, fields, dims, ovars, fixval, verbosity)
 
-    states_dict = {}
+    states_dict: dict[str, Any] = {}
     if (
         _get_SingleStateStates(
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
@@ -420,7 +421,7 @@ def get_states(coords, fields, dims, verbosity=1):
         )
 
 
-def read_site(wio_dict, verbosity=1):
+def read_site(wio_dict, verbosity: int = 1) -> States:
     """
     Reads the site information
 
@@ -440,7 +441,7 @@ def read_site(wio_dict, verbosity=1):
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args, level: int = 1, **kwargs) -> None:
         if verbosity >= level:
             print(*args, **kwargs)
 
@@ -463,9 +464,9 @@ def read_site(wio_dict, verbosity=1):
     _print("      Contents:", [k for k in wind_resource.keys()], level=3)
 
     # read fields
-    coords = Dict(_name="coords")
-    fields = Dict(_name="fields")
-    dims = Dict(_name="dims")
+    coords: Dict = Dict(_name="coords")
+    fields: Dict = Dict(_name="fields")
+    dims: Dict = Dict(_name="dims")
     for n, d in wind_resource.items():
         read_wind_resource_field(n, d, coords, fields, dims, verbosity)
 

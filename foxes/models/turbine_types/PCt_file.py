@@ -1,5 +1,9 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
@@ -7,6 +11,11 @@ from foxes.data import PCTCURVE, parse_Pct_file_name
 from foxes.config import get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class PCtFile(TurbineType):
@@ -40,16 +49,16 @@ class PCtFile(TurbineType):
 
     def __init__(
         self,
-        data_source,
-        col_ws="ws",
-        col_P="P",
-        col_ct="ct",
-        rho=None,
-        var_ws_ct=FV.REWS2,
-        var_ws_P=FV.REWS3,
-        pd_file_read_pars={},
-        **parameters,
-    ):
+        data_source: str | pd.DataFrame,
+        col_ws: str = "ws",
+        col_P: str = "P",
+        col_ct: str = "ct",
+        rho: float | None = None,
+        var_ws_ct: str = FV.REWS2,
+        var_ws_P: str = FV.REWS3,
+        pd_file_read_pars: dict[str, Any] = {},
+        **parameters: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -92,12 +101,12 @@ class PCtFile(TurbineType):
         self.WSP = var_ws_P
         self.rpars = pd_file_read_pars
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
         a += f", var_ws_ct={self.WSCT}, var_ws_P={self.WSP}"
         return f"{type(self).__name__}({a})"
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
@@ -109,7 +118,7 @@ class PCtFile(TurbineType):
         """
         return self.WSCT == FV.REWS2 or self.WSP == FV.REWS2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
@@ -121,7 +130,7 @@ class PCtFile(TurbineType):
         """
         return self.WSCT == FV.REWS3 or self.WSP == FV.REWS3
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -138,7 +147,13 @@ class PCtFile(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -206,13 +221,13 @@ class PCtFile(TurbineType):
 
     def modify_cutin(
         self,
-        modify_ct,
-        modify_P,
-        steps=20,
-        iterations=100,
-        a=0.55,
-        b=0.55,
-    ):
+        modify_ct: bool,
+        modify_P: bool,
+        steps: int = 20,
+        iterations: int = 100,
+        a: float = 0.55,
+        b: float = 0.55,
+    ) -> None:
         """
         Modify the data such that a discontinuity
         at cutin wind speed is avoided
@@ -280,7 +295,13 @@ class PCtFile(TurbineType):
         else:
             super().modify_cutin(modify_ct, modify_P)
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

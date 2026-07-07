@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
+from typing import Any
 
 from foxes.utils.utm_utils import from_lonlat
 from foxes.config import config, get_output_path
@@ -53,20 +56,20 @@ class NEWAStates(DatasetStates):
     def __init__(
         self,
         input_files_nc,
-        time_coord="time",
-        west_east_coord="west_east",
-        south_north_coord="south_north",
-        height_coord="height",
-        xlat_coord="XLAT",
-        xlon_coord="XLON",
+        time_coord: str = "time",
+        west_east_coord: str = "west_east",
+        south_north_coord: str = "south_north",
+        height_coord: str = "height",
+        xlat_coord: str = "XLAT",
+        xlon_coord: str = "XLON",
         output_vars=None,
         var2ncvar=None,
-        load_mode="fly",
+        load_mode: str = "fly",
         time_format=None,
-        interp_pars={},
+        interp_pars: dict[str, Any] | None = None,
         wrf_point_plot=None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -133,7 +136,7 @@ class NEWAStates(DatasetStates):
             time_format=time_format,
             load_mode=load_mode,
             weight_factor=None,
-            interp_pars=interp_pars,
+            interp_pars={} if interp_pars is None else interp_pars,
             **kwargs,
         )
 
@@ -302,7 +305,7 @@ class NEWAStates(DatasetStates):
             fig.savefig(fpath, bbox_inches="tight")
             plt.close()
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+    def interpolate_data(self, idims, icrds, d, pts, vrs, times) -> np.ndarray:
         """
         Interpolates data to points.
 
@@ -340,7 +343,7 @@ class NEWAStates(DatasetStates):
         )
         ipars.update(self.interp_pars)
 
-        def _check_nan(gpts, d, pts, idims, results):
+        def _check_nan(gpts, d, pts, idims, results) -> None:
             """Checks for NaN results and raises errors."""
             if np.isnan(ipars.get("fill_value", np.nan)):
                 sel = np.isnan(results)

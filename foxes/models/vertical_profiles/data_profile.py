@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
+from typing import Any
 
 from foxes.core import VerticalProfile
 
@@ -26,13 +29,13 @@ class DataProfile(VerticalProfile):
 
     def __init__(
         self,
-        data_source,
-        variable,
-        col_z=None,
-        col_var=None,
-        pd_read_pars={},
-        **interp_pars,
-    ):
+        data_source: str | np.ndarray | pd.DataFrame,
+        variable: str,
+        col_z: str | int | None = None,
+        col_var: str | int | None = None,
+        pd_read_pars: dict[str, Any] | None = None,
+        **interp_pars: Any,
+    ) -> None:
         """
         Constructor
 
@@ -53,8 +56,9 @@ class DataProfile(VerticalProfile):
 
         """
         super().__init__()
-        self.var = variable
+        self.variable = variable
         self.interp_pars = interp_pars
+        pd_read_pars = {} if pd_read_pars is None else pd_read_pars
 
         if isinstance(data_source, np.ndarray):
             col_z = col_z if col_z is not None else 0
@@ -78,7 +82,7 @@ class DataProfile(VerticalProfile):
             self.data_z = self.data_z[inds]
             self.data_v = self.data_v[inds]
 
-    def input_vars(self):
+    def input_vars(self) -> list[str]:
         """
         The input variables needed for the profile
         calculation.
@@ -91,7 +95,7 @@ class DataProfile(VerticalProfile):
         """
         return []
 
-    def calculate(self, data, heights):
+    def calculate(self, data: dict[str, Any], heights: np.ndarray) -> np.ndarray:
         """
         Run the profile calculation.
 

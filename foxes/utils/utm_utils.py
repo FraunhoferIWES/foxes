@@ -2,7 +2,7 @@ import numpy as np
 import utm
 
 
-def to_lonlat(xy):
+def to_lonlat(xy: np.ndarray) -> np.ndarray:
     """
     Convert UTM coordinates to longitude and latitude.
 
@@ -34,7 +34,7 @@ def to_lonlat(xy):
     return np.stack((lon, lat), axis=-1)
 
 
-def from_lonlat(lonlat):
+def from_lonlat(lonlat: np.ndarray) -> np.ndarray:
     """
     Convert longitude and latitude to UTM coordinates.
 
@@ -65,7 +65,7 @@ def from_lonlat(lonlat):
     return np.stack((x, y), axis=-1)
 
 
-def get_utm_zone(lonlat):
+def get_utm_zone(lonlat: np.ndarray) -> tuple[int, str]:
     """
     Get the UTM zone for given latitude and longitude.
 

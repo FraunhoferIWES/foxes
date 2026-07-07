@@ -1,8 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import PointDataModel
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core import PointDataModelList, WakeModel
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData
 
 
 class PointWakesCalculation(PointDataModel):
@@ -24,7 +34,12 @@ class PointWakesCalculation(PointDataModel):
 
     """
 
-    def __init__(self, emodels=None, emodels_cpars=None, wake_models=None):
+    def __init__(
+        self,
+        emodels: PointDataModelList | None = None,
+        emodels_cpars: list[dict[str, Any]] | None = None,
+        wake_models: list[WakeModel] | None = None,
+    ) -> None:
         """
         Constructor.
 
@@ -39,12 +54,12 @@ class PointWakesCalculation(PointDataModel):
 
         """
         super().__init__()
-        self.pvars = None
+        self.pvars: list[str] = []
         self.emodels = emodels
-        self.emodels_cpars = emodels_cpars
+        self.emodels_cpars = [] if emodels_cpars is None else emodels_cpars
         self.wake_models = wake_models
 
-    def sub_models(self):
+    def sub_models(self) -> list[Any]:
         """
         List of all sub-models
 
@@ -56,7 +71,13 @@ class PointWakesCalculation(PointDataModel):
         """
         return [self.emodels] if self.emodels is not None else []
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -87,7 +108,7 @@ class PointWakesCalculation(PointDataModel):
         self.pvars = algo.states.output_point_vars(algo)
         return loaded_data
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -104,7 +125,14 @@ class PointWakesCalculation(PointDataModel):
         """
         return self.pvars
 
-    def calculate(self, algo, mdata, fdata, tdata, downwind_index=None):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -133,7 +161,13 @@ class PointWakesCalculation(PointDataModel):
 
         """
 
-        def _contribute(gmodel, tdata, oi, wdeltas, wmodel):
+        def _contribute(
+            gmodel: Any,
+            tdata: TData,
+            oi: int,
+            wdeltas: dict[str, np.ndarray],
+            wmodel: Any,
+        ) -> None:
             """Helper function for contribution of wake deltas to wake results"""
 
             # reduce to targets within max wake length, if applicable:
@@ -162,7 +196,9 @@ class PointWakesCalculation(PointDataModel):
                     wdeltas0[v][:, tsel, ...] = wdeltas[v]
 
         wmodels = (
-            algo.wake_models.values() if self.wake_models is None else self.wake_models
+            list(algo.wake_models.values())
+            if self.wake_models is None
+            else self.wake_models
         )
         pvrs = self.pvars + [FV.UV]
         for wmodel in wmodels:
@@ -172,6 +208,7 @@ class PointWakesCalculation(PointDataModel):
 
             if len(set(pvrs).intersection(wdeltas.keys())):
                 if downwind_index is None:
+                    assert fdata.n_turbines is not None
                     for oi in range(fdata.n_turbines):
                         _contribute(gmodel, tdata, oi, wdeltas, wmodel)
                 else:
@@ -184,6 +221,12 @@ class PointWakesCalculation(PointDataModel):
                         tdata[v] += wdeltas[v]
 
         if self.emodels is not None:
-            self.emodels.calculate(algo, mdata, fdata, tdata, self.emodels_cpars)
+            self.emodels.calculate(
+                algo,
+                mdata,
+                fdata,
+                tdata,
+                cast(list[dict[str, Any]], self.emodels_cpars),
+            )
 
         return {v: tdata[v] for v in self.pvars}

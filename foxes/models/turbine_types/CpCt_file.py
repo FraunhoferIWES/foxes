@@ -1,5 +1,9 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
@@ -7,6 +11,11 @@ from foxes.data import PCTCURVE, parse_Pct_file_name
 from foxes.config import get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class CpCtFile(TurbineType):
@@ -37,16 +46,16 @@ class CpCtFile(TurbineType):
 
     def __init__(
         self,
-        data_source,
-        col_ws="ws",
-        col_cp="cp",
-        col_ct="ct",
-        var_ws_ct=FV.REWS2,
-        var_ws_cp=FV.REWS3,
-        rho=None,
-        pd_file_read_pars={},
-        **parameters,
-    ):
+        data_source: str | pd.DataFrame,
+        col_ws: str = "ws",
+        col_cp: str = "cp",
+        col_ct: str = "ct",
+        var_ws_ct: str = FV.REWS2,
+        var_ws_cp: str = FV.REWS3,
+        rho: float | None = None,
+        pd_file_read_pars: dict[str, Any] = {},
+        **parameters: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -89,12 +98,12 @@ class CpCtFile(TurbineType):
         self.rpars = pd_file_read_pars
         self.rho = rho
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
         a += f", var_ws_ct={self.WSCT}, var_ws_cp={self.WSCP}"
         return f"{type(self).__name__}({a})"
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
@@ -106,7 +115,7 @@ class CpCtFile(TurbineType):
         """
         return self.WSCT == FV.REWS2 or self.WSCP == FV.REWS2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
@@ -118,7 +127,7 @@ class CpCtFile(TurbineType):
         """
         return self.WSCT == FV.REWS3 or self.WSCP == FV.REWS3
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -135,7 +144,13 @@ class CpCtFile(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -178,7 +193,9 @@ class CpCtFile(TurbineType):
         self.data_ct = data[self.col_ct].to_numpy()
 
         if self.P_nominal is None and self.rho is not None:
-            area = np.pi * (self.D / 2) ** 2
+            D = self.D
+            assert D is not None, "Rotor diameter D not initialized"
+            area = np.pi * (D / 2) ** 2
             self.P_nominal = (
                 0.5 * self.rho * area * np.max(self.data_cp) / FC.P_UNITS[self.P_unit]
             )
@@ -191,13 +208,13 @@ class CpCtFile(TurbineType):
 
     def modify_cutin(
         self,
-        modify_ct,
-        modify_P,
-        steps=20,
-        iterations=100,
-        a=0.55,
-        b=0.55,
-    ):
+        modify_ct: bool,
+        modify_P: bool,
+        steps: int = 20,
+        iterations: int = 100,
+        a: float = 0.55,
+        b: float = 0.55,
+    ) -> None:
         """
         Modify the data such that a discontinuity
         at cutin wind speed is avoided
@@ -265,7 +282,13 @@ class CpCtFile(TurbineType):
         else:
             super().modify_cutin(modify_ct, modify_P)
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -292,6 +315,8 @@ class CpCtFile(TurbineType):
 
         """
         self.ensure_output_vars(algo, fdata)
+        D = self.D
+        assert D is not None, "Rotor diameter D not initialized"
         rews2 = fdata[self.WSCT][st_sel]
         rews3 = fdata[self.WSCP][st_sel]
         rho = fdata[FV.RHO][st_sel]
@@ -313,13 +338,7 @@ class CpCtFile(TurbineType):
             rews3, self.data_ws, self.data_cp, left=0.0, right=0.0
         )
         out[FV.P][st_sel] = (
-            0.5
-            * rho
-            * np.pi
-            * (self.D / 2) ** 2
-            * cp
-            * rews3**3
-            / FC.P_UNITS[self.P_unit]
+            0.5 * rho * np.pi * (D / 2) ** 2 * cp * rews3**3 / FC.P_UNITS[self.P_unit]
         )
 
         out[FV.CT][st_sel] = factor_ct * np.interp(
@@ -328,7 +347,7 @@ class CpCtFile(TurbineType):
 
         return out
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 

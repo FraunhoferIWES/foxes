@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import Any
 
 from foxes.core import VerticalProfile
 from foxes.utils import abl
@@ -13,7 +16,7 @@ class ShearedProfile(VerticalProfile):
 
     """
 
-    def input_vars(self):
+    def input_vars(self) -> list[str]:
         """
         The input variables needed for the profile
         calculation.
@@ -26,7 +29,7 @@ class ShearedProfile(VerticalProfile):
         """
         return [FV.WS, FV.H, FV.SHEAR]
 
-    def calculate(self, data, heights):
+    def calculate(self, data: dict[str, Any], heights: np.ndarray) -> np.ndarray:
         """
         Run the profile calculation.
 

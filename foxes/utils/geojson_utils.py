@@ -1,13 +1,14 @@
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
-from foxes.utils.geom2d import AreaUnion, ClosedPolygon
+from foxes.utils.geom2d import AreaGeometry, AreaUnion, ClosedPolygon
 from foxes.utils.utm_utils import from_lonlat
 
 
-def area_contains_point(area, point):
+def area_contains_point(area: Any, point: np.ndarray) -> bool:
     """
     Checks if a point lies in an area geometry.
 
@@ -37,7 +38,7 @@ def area_contains_point(area, point):
     )
 
 
-def geojson_geometry_to_area(geometry):
+def geojson_geometry_to_area(geometry: dict[str, Any]) -> Any | None:
     """
     Converts one GeoJSON geometry object into an AreaGeometry.
 
@@ -56,14 +57,14 @@ def geojson_geometry_to_area(geometry):
     """
     gtype = geometry.get("type", None)
 
-    def _polygon_with_holes(rings):
+    def _polygon_with_holes(rings: list[Any]) -> Any | None:
         if not rings:
             return None
 
         ext = np.asarray(rings[0], dtype=np.float64)
         if ext.ndim != 2 or ext.shape[1] < 2:
             raise ValueError("Invalid polygon ring in GeoJSON")
-        geom = ClosedPolygon(from_lonlat(ext[:, :2]))
+        geom: AreaGeometry = ClosedPolygon(from_lonlat(ext[:, :2]))
 
         for ring in rings[1:]:
             hole = np.asarray(ring, dtype=np.float64)
@@ -77,10 +78,10 @@ def geojson_geometry_to_area(geometry):
         return _polygon_with_holes(geometry.get("coordinates", []))
 
     if gtype == "MultiPolygon":
-        geoms = [
+        geoms_all = [
             _polygon_with_holes(rings) for rings in geometry.get("coordinates", [])
         ]
-        geoms = [g for g in geoms if g is not None]
+        geoms: list[AreaGeometry] = [g for g in geoms_all if g is not None]
         if not geoms:
             return None
         if len(geoms) == 1:
@@ -93,7 +94,9 @@ def geojson_geometry_to_area(geometry):
     )
 
 
-def load_areas_from_geojson(geojson_path, name_key="name"):
+def load_areas_from_geojson(
+    geojson_path: str | Path, name_key: str | list[str] = "name"
+) -> dict[str, Any]:
     """
     Loads area geometries from a GeoJSON file path.
 
@@ -128,10 +131,10 @@ def load_areas_from_geojson(geojson_path, name_key="name"):
 
 
 def load_areas_from_geojson_data(
-    data,
-    source_name="GeoJSON data",
-    name_key="name",
-):
+    data: dict[str, Any],
+    source_name: str | Path = "GeoJSON data",
+    name_key: str | list[str] = "name",
+) -> dict[str, Any]:
     """
     Loads area geometries from a GeoJSON dictionary.
 
@@ -159,7 +162,7 @@ def load_areas_from_geojson_data(
     if not isinstance(data, dict):
         raise TypeError(f"Expected GeoJSON data as dict, got '{type(data).__name__}'")
 
-    def _feature_name(feature):
+    def _feature_name(feature: dict[str, Any]) -> str | None:
         props = feature.get("properties", {}) or {}
         keys = []
         if isinstance(name_key, str) and len(name_key):
@@ -210,7 +213,10 @@ def load_areas_from_geojson_data(
     return {name: area for name, area in zip(norm_names, areas)}
 
 
-def normalize_areas_input(areas, geojson_name_key="name"):
+def normalize_areas_input(
+    areas: list[Any] | str | Path | dict[str, Any],
+    geojson_name_key: str | list[str] = "name",
+) -> dict[str, Any]:
     """
     Normalizes area input and resolves unique area names.
 
@@ -238,7 +244,7 @@ def normalize_areas_input(areas, geojson_name_key="name"):
     :group: utils
 
     """
-    area_names = None
+    area_names: list[str | None] | None = None
 
     if isinstance(areas, (str, Path)):
         return load_areas_from_geojson(

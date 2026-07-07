@@ -1,8 +1,15 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WSPow(WakeSuperposition):
@@ -25,7 +32,13 @@ class WSPow(WakeSuperposition):
 
     """
 
-    def __init__(self, pow, scale_amb=False, lim_low=None, lim_high=None):
+    def __init__(
+        self,
+        pow: float,
+        scale_amb: bool = False,
+        lim_low: float | None = None,
+        lim_high: float | None = None,
+    ) -> None:
         """
         Constructor.
 
@@ -49,11 +62,11 @@ class WSPow(WakeSuperposition):
         self.lim_low = lim_low
         self.lim_high = lim_high
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"pow={self.pow}, scale_amb={self.scale_amb}, lim_low={self.lim_low}, lim_high={self.lim_high}"
         return f"{type(self).__name__}({a})"
 
-    def input_farm_vars(self, algo):
+    def input_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are needed for running
         the model.
@@ -73,16 +86,16 @@ class WSPow(WakeSuperposition):
 
     def add_wake(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        variable,
-        wake_delta,
-        wake_model_result,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        variable: str,
+        wake_delta: np.ndarray,
+        wake_model_result: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta to previous wake deltas,
         at rotor points.
@@ -142,13 +155,13 @@ class WSPow(WakeSuperposition):
 
     def calc_final_wake_delta(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        wake_delta,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        wake_delta: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the final wake delta after adding all
         contributions.
@@ -203,7 +216,9 @@ class WSPowLocal(WakeSuperposition):
 
     """
 
-    def __init__(self, pow, lim_low=None, lim_high=None):
+    def __init__(
+        self, pow: float, lim_low: float | None = None, lim_high: float | None = None
+    ) -> None:
         """
         Constructor.
 
@@ -223,11 +238,11 @@ class WSPowLocal(WakeSuperposition):
         self.lim_low = lim_low
         self.lim_high = lim_high
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"pow={self.pow}, lim_low={self.lim_low}, lim_high={self.lim_high}"
         return f"{type(self).__name__}({a})"
 
-    def input_farm_vars(self, algo):
+    def input_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are needed for running
         the model.
@@ -247,16 +262,16 @@ class WSPowLocal(WakeSuperposition):
 
     def add_wake(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        variable,
-        wake_delta,
-        wake_model_result,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        variable: str,
+        wake_delta: np.ndarray,
+        wake_model_result: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta to previous wake deltas,
         at rotor points.
@@ -304,13 +319,13 @@ class WSPowLocal(WakeSuperposition):
 
     def calc_final_wake_delta(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        wake_delta,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        wake_delta: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the final wake delta after adding all
         contributions.

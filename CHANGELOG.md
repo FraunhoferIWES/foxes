@@ -1006,6 +1006,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Updated `LocalClusterEngine`/`SlurmClusterEngine` to futureize large ndarray payloads before distributed task submission, reducing per-task graph transfer pressure for large chunk payloads
 - Core:
   - Extended chunk/state metadata propagation in data containers and algorithm data construction
+  - Completed repository-wide type-annotation cleanup and aligned full-codebase `mypy` checks
 - Input:
   - Generalized `DatasetStates` on-the-fly/lazy loading behavior and hardened threaded NetCDF reading
 - Algorithms:

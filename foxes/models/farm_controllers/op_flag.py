@@ -1,9 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from xarray import open_dataset, Dataset
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import FarmController
 import foxes.constants as FC
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class OpFlagController(FarmController):
@@ -26,11 +35,11 @@ class OpFlagController(FarmController):
 
     def __init__(
         self,
-        data_source,
-        non_op_values=None,
-        var2ncvar={},
-        **kwargs,
-    ):
+        data_source: np.ndarray | str | Dataset,
+        non_op_values: dict[str, float] | None = None,
+        var2ncvar: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -52,7 +61,7 @@ class OpFlagController(FarmController):
         """
         super().__init__(**kwargs)
         self.data_source = data_source
-        self.var2ncvar = var2ncvar
+        self.var2ncvar = {} if var2ncvar is None else var2ncvar
 
         self.non_op_values = {
             FV.P: 0.0,
@@ -61,9 +70,9 @@ class OpFlagController(FarmController):
         if non_op_values is not None:
             self.non_op_values.update(non_op_values)
 
-        self._op_flags = None
+        self._op_flags: np.ndarray | None = None
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -82,7 +91,13 @@ class OpFlagController(FarmController):
         vrs.update([FV.OPERATING])
         return list(vrs)
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -123,14 +138,19 @@ class OpFlagController(FarmController):
             self._op_flags = ds[cop].to_numpy()
             del ds
 
-        assert self._op_flags.shape == (algo.n_states, algo.n_turbines), (
-            f"OpFlagController data shape {self._op_flags.shape} does not match "
+        op_flags_data = self._op_flags
+        assert op_flags_data is not None
+        assert op_flags_data.shape == (algo.n_states, algo.n_turbines), (
+            f"OpFlagController data shape {op_flags_data.shape} does not match "
             f"(n_states, n_turbines)=({algo.n_states}, {algo.n_turbines})"
         )
-        op_flags = self._op_flags.astype(bool)
+        op_flags = op_flags_data.astype(bool)
 
         off = np.where(~op_flags)
-        for mi in range(len(self.turbine_model_names)):
+        turbine_model_names = self.turbine_model_names
+        tmall = self._tmall
+        assert turbine_model_names is not None and tmall is not None
+        for mi in range(len(turbine_model_names)):
             vsel = self._tmodel_sels_var(mi)
             if vsel in loaded_data["data_vars"]:
                 tsel = loaded_data["data_vars"][vsel][1]
@@ -140,10 +160,10 @@ class OpFlagController(FarmController):
 
             if np.all(tsel):
                 loaded_data["data_vars"].pop(vsel, None)
-                self._tmall[mi] = True
+                tmall[mi] = True
             else:
                 loaded_data["data_vars"][vsel] = ((FC.STATE, FC.TURBINE), tsel)
-                self._tmall[mi] = False
+                tmall[mi] = False
 
         loaded_data["data_vars"].pop(FC.TMODEL_SELS, None)
         loaded_data["data_vars"][FV.OPERATING] = (
@@ -151,7 +171,14 @@ class OpFlagController(FarmController):
             op_flags,
         )
 
-    def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        pre_rotor: bool,
+        downwind_index: int | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

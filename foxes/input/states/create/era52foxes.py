@@ -3,6 +3,7 @@ import argparse
 import matplotlib.pyplot as plt
 from pathlib import Path
 from xarray import open_dataset, Dataset, concat
+from typing import Any
 
 from foxes.config import config
 from foxes.core import Engine, get_engine
@@ -237,9 +238,9 @@ def _process_file(
     return data, f"{year:04d}{month:02d}"
 
 
-def _write_file(data, fpath, write_pars=None, verbosity=0):
+def _write_file(data, fpath, write_pars=None, verbosity: int = 0) -> None:
     """Write the processed data to a NetCDF file"""
-    wpars = dict(pack=True)
+    wpars: dict[str, Any] = dict(pack=True)
     if write_pars is not None:
         wpars.update(write_pars)
     write_nc(data, fpath, verbosity=verbosity, **wpars)
@@ -387,7 +388,7 @@ def era52foxes(
                 print(f"Progress: {proc}% ({done}/{total} files processed)")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "source_files",

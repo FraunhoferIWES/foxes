@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.algorithms.downwind.models.population import PopulationStates
-from foxes.core import States, MData
+from foxes.core import States, MData, FData, TData
 import foxes.constants as FC
 
 
@@ -47,8 +47,10 @@ def test_population_states_load_chunk_data_fly():
         states_i0=3,
         name="mdata_test",
     )
+    fdata = FData.from_sizes(4, 1)
+    tdata = TData.from_points(np.zeros((4, 1, 3), dtype=np.float64), mdata=mdata)
 
-    pstates.load_chunk_data(None, mdata, None, None)
+    pstates.load_chunk_data(None, mdata, fdata, tdata)
 
     assert states.calls == [(0, 4)]
     assert pstates.STATE0 in mdata

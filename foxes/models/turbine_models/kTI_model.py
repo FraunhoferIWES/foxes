@@ -1,9 +1,17 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import TurbineModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class kTI(TurbineModel):
@@ -22,7 +30,14 @@ class kTI(TurbineModel):
 
     """
 
-    def __init__(self, kTI=None, kb=None, ti_var=FV.TI, ti_val=None, k_var=FV.K):
+    def __init__(
+        self,
+        kTI: float | None = None,
+        kb: float | None = None,
+        ti_var: str = FV.TI,
+        ti_val: float | None = None,
+        k_var: str = FV.K,
+    ) -> None:
         """
         Constructor.
 
@@ -51,7 +66,7 @@ class kTI(TurbineModel):
         setattr(self, FV.KTI, kTI)
         setattr(self, FV.KB, 0 if kb is None else kb)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         kti = getattr(self, FV.KTI)
         kb = getattr(self, FV.KB)
         ti = getattr(self, self.ti_var)
@@ -59,7 +74,7 @@ class kTI(TurbineModel):
         a = f"kTI={kti}, kb={kb}, ti_var={self.ti_var}{tiv}, k_var={self.k_var}"
         return f"{type(self).__name__}({a})"
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -76,7 +91,13 @@ class kTI(TurbineModel):
         """
         return [self.k_var]
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

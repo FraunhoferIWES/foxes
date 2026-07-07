@@ -1,6 +1,14 @@
+from __future__ import annotations
+
 from foxes.core import GroundModel
 import foxes.variables as FV
 import foxes.constants as FC
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import numpy as np
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WakeMirror(GroundModel):
@@ -16,7 +24,7 @@ class WakeMirror(GroundModel):
 
     """
 
-    def __init__(self, heights):
+    def __init__(self, heights: list[float]) -> None:
         """
         Constructor.
 
@@ -31,15 +39,15 @@ class WakeMirror(GroundModel):
 
     def contribute_to_farm_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-        pwake,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: Any,
+        pwake: Any,
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
@@ -75,7 +83,12 @@ class WakeMirror(GroundModel):
         # assert(np.all(fdata[FV.H]==fdata[FV.TXYH[..., 2]]))
 
         # contribution from main wake:
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wake_frame = getattr(algo, "wake_frame", None)
+        if wake_frame is None:
+            raise ValueError(
+                f"WakeMirror '{self.name}': algorithm '{algo.name}' has no wake_frame"
+            )
+        wcoos = wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
         # contribution from mirrors:
@@ -92,14 +105,14 @@ class WakeMirror(GroundModel):
 
     def contribute_to_point_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: Any,
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
@@ -129,7 +142,12 @@ class WakeMirror(GroundModel):
         hh = fdata[FV.H][:, downwind_index].copy()
 
         # contribution from main wake:
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wake_frame = getattr(algo, "wake_frame", None)
+        if wake_frame is None:
+            raise ValueError(
+                f"WakeMirror '{self.name}': algorithm '{algo.name}' has no wake_frame"
+            )
+        wcoos = wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
         # contribution from mirrors:
@@ -137,9 +155,7 @@ class WakeMirror(GroundModel):
         for h in self.heights:
             fdata[FV.TXYH][:, downwind_index, 2] = hh + 2 * (h - hh)
 
-            wcoos = algo.wake_frame.get_wake_coos(
-                algo, mdata, fdata, tdata, downwind_index
-            )
+            wcoos = wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
             wmodel.contribute(
                 algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas
             )
@@ -156,7 +172,7 @@ class GroundMirror(WakeMirror):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """

@@ -1,7 +1,16 @@
+from __future__ import annotations
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
 
 from .model import Model
 from foxes.utils import new_instance
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class VerticalProfile(Model):
@@ -12,7 +21,13 @@ class VerticalProfile(Model):
 
     """
 
-    def load_chunk_data(self, algo, mdata, fdata, tdata):
+    def load_chunk_data(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> None:
         """
         Load chunk-local data required for calculations.
 
@@ -34,7 +49,7 @@ class VerticalProfile(Model):
         return None
 
     @abstractmethod
-    def input_vars(self):
+    def input_vars(self) -> list[str]:
         """
         The input variables needed for the profile
         calculation.
@@ -48,7 +63,7 @@ class VerticalProfile(Model):
         return []
 
     @abstractmethod
-    def calculate(self, tdata, heights):
+    def calculate(self, tdata: TData, heights: np.ndarray) -> np.ndarray:
         """
         Run the profile calculation.
 
@@ -69,7 +84,12 @@ class VerticalProfile(Model):
         pass
 
     @classmethod
-    def new(cls, profile_type, *args, **kwargs):
+    def new(
+        cls,
+        profile_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> "VerticalProfile":
         """
         Run-time vertical profile factory.
 

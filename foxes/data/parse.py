@@ -1,7 +1,8 @@
 from pathlib import Path
+from typing import Any
 
 
-def parse_Pct_file_name(file_name):
+def parse_Pct_file_name(file_name: str | Path) -> dict[str, Any]:
     """
     Parse basic turbine data from file name
 
@@ -21,7 +22,7 @@ def parse_Pct_file_name(file_name):
 
     """
     sname = Path(file_name).stem
-    pars = {"name": sname.split(".")[0]}
+    pars: dict[str, Any] = {"name": sname.split(".")[0]}
 
     i = sname.find(".")
     if i >= 0:
@@ -68,7 +69,9 @@ def parse_Pct_file_name(file_name):
     return pars
 
 
-def parse_Pct_two_files(file_name_A, file_name_B):
+def parse_Pct_two_files(
+    file_name_A: str | Path, file_name_B: str | Path
+) -> dict[str, Any]:
     """
     Parse basic turbine data from file names
 

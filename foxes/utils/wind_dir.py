@@ -1,7 +1,9 @@
 import numpy as np
 
 
-def wd2wdvec(wd, ws=1.0, axis=-1):
+def wd2wdvec(
+    wd: np.ndarray, ws: float | np.ndarray = 1.0, axis: int = -1
+) -> np.ndarray:
     """
     Calculate wind direction vectors from wind directions
     in degrees.
@@ -33,7 +35,7 @@ def wd2wdvec(wd, ws=1.0, axis=-1):
     return np.expand_dims(ws, axis) * n
 
 
-def wd2uv(wd, ws=1.0, axis=-1):
+def wd2uv(wd: np.ndarray, ws: float | np.ndarray = 1.0, axis: int = -1) -> np.ndarray:
     """
     Calculate wind vectors from wind directions
     in degrees.
@@ -59,7 +61,7 @@ def wd2uv(wd, ws=1.0, axis=-1):
     return -wd2wdvec(wd, ws, axis)
 
 
-def uv2wd(uv, axis=-1):
+def uv2wd(uv: np.ndarray, axis: int = -1) -> np.ndarray:
     """
     Calculate wind direction from wind vectors.
 
@@ -90,7 +92,7 @@ def uv2wd(uv, axis=-1):
     return np.mod(180 + np.rad2deg(np.arctan2(u, v)), 360)
 
 
-def wdvec2wd(wdvec, axis=-1):
+def wdvec2wd(wdvec: np.ndarray, axis: int = -1) -> np.ndarray:
     """
     Calculate wind direction from wind direction vectors.
 
@@ -112,7 +114,7 @@ def wdvec2wd(wdvec, axis=-1):
     return uv2wd(-wdvec, axis)
 
 
-def delta_wd(wd_a, wd_b):
+def delta_wd(wd_a: np.ndarray, wd_b: np.ndarray) -> np.ndarray:
     """
     Calculates wd_b - wd_a.
 

@@ -275,7 +275,7 @@ def download_eww(
     return fpath_db, fpath_pc
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "out_dir",

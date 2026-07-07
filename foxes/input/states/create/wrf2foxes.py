@@ -372,7 +372,7 @@ def _process_file(
     if interp_pars is not None:
         ipars.update(interp_pars)
 
-    def _interpolate(pts, arr, qts):
+    def _interpolate(pts, arr, qts) -> np.ndarray:
         if not check_nan:
             s = np.any(np.isnan(arr), axis=tuple(range(1, len(arr.shape))))
             s = np.s_[~s, ...]
@@ -654,7 +654,7 @@ def wrf2foxes(
         [engine.await_result(f) for f in futures]
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "source_files",

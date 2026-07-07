@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from scipy.interpolate import interpn
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeFrame
 from foxes.core import TData
@@ -8,6 +11,10 @@ from foxes.config import config
 
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class Streamlines2D(WakeFrame):
@@ -41,12 +48,12 @@ class Streamlines2D(WakeFrame):
 
     def __init__(
         self,
-        step,
-        chunksize_steps=100,
-        cl_ipars={},
-        intersection_error=True,
-        **kwargs,
-    ):
+        step: float,
+        chunksize_steps: int = 100,
+        cl_ipars: dict[str, Any] | None = None,
+        intersection_error: bool = True,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -69,13 +76,13 @@ class Streamlines2D(WakeFrame):
         super().__init__(**kwargs)
         self.step = step
         self.chunksize_steps = chunksize_steps
-        self.cl_ipars = cl_ipars
+        self.cl_ipars = {} if cl_ipars is None else cl_ipars
         self.intersection_error = intersection_error
 
         self.WPOINTS = self.var("wpoints")
         self.STEP = self.var("step")
 
-    def calc_order(self, algo, mdata, fdata):
+    def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -100,6 +107,8 @@ class Streamlines2D(WakeFrame):
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
+        assert n_states is not None, "Missing n_states in fdata"
+        assert n_turbines is not None, "Missing n_turbines in algorithm"
         tdata = TData.from_points(points=fdata[FV.TXYH], mdata=mdata)
 
         # calculate streamline x coordinates for turbines rotor centre points:
@@ -116,29 +125,34 @@ class Streamlines2D(WakeFrame):
 
         return order
 
-    def _get_streamlines(self, algo, mdata, fdata):
+    def _get_streamlines(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> np.ndarray:
         """Helper function for streamline calculation"""
+
+        cpoints = mdata.chunki_points
+        assert cpoints is not None, "Missing points chunk index in mdata"
 
         # check if already computed:
         wpoints = algo.get_from_chunk_store(
-            name=self.WPOINTS, mdata=mdata, prev_t=mdata.chunki_points, error=False
+            name=self.WPOINTS, mdata=mdata, prev_t=cpoints, error=False
         )
 
         # compute chunk store
         if wpoints is None:
-            assert mdata.chunki_points == 0, (
+            assert cpoints == 0, (
                 f"Wake frame '{self.name}': Streamlines can only be computed "
                 f"from the start of the points chunk (chunki_points=0), "
-                f"found (chunki_states, chunki_points)=({mdata.chunki_states}, {mdata.chunki_points}). "
+                f"found (chunki_states, chunki_points)=({mdata.chunki_states}, {cpoints}). "
                 f"Existing chunk store keys: {list(algo.chunk_store.keys())}"
             )
 
             # prepare:
             n_states = mdata.n_states
             n_turbines = algo.n_turbines
-            n_steps = (
-                np.ceil((algo.max_wake_length_km * 1000) / self.step).astype(int) + 1
-            )
+            max_wake_length_km = algo.max_wake_length_km
+            assert max_wake_length_km is not None, "Missing max_wake_length_km"
+            n_steps = np.ceil((max_wake_length_km * 1000) / self.step).astype(int) + 1
             states_ovars = algo.states.output_point_vars(algo)
             assert FV.WD in states_ovars and FV.WS in states_ovars, (
                 f"Wake frame '{self.name}': Require '{FV.WD}' and '{FV.WS}' in states output, found {states_ovars}"
@@ -217,12 +231,12 @@ class Streamlines2D(WakeFrame):
 
     def get_wake_coos(
         self,
-        algo,
-        mdata,
-        fdata,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
         tdata,
-        downwind_index=None,
-    ):
+        downwind_index: int | None = None,
+    ) -> np.ndarray:
         """
         Calculate wake coordinates of rotor points.
 
@@ -339,11 +353,18 @@ class Streamlines2D(WakeFrame):
         else:
             coos = coos[:, 0, :, :].reshape(n_states, n_targets, n_tpoints, 3)
 
-        return algo.wake_deflection.calc_deflection(
-            algo, mdata, fdata, tdata, downwind_index, coos
-        )
+        wdfl = algo.wake_deflection
+        assert wdfl is not None, "Wake deflection model not initialized"
+        return wdfl.calc_deflection(algo, mdata, fdata, tdata, downwind_index, coos)
 
-    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
+    def get_centreline_points(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Gets the points along the centreline for given
         values of x.

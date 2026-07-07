@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from xarray import Dataset
+from typing import Any
 
 from foxes.utils import wd2uv, write_nc
 from foxes.config import config
@@ -466,7 +467,9 @@ def get_grid_yz(
     )
 
 
-def np2np_p(data, a_pos, b_pos):
+def np2np_p(
+    data: dict[str, np.ndarray], a_pos: np.ndarray, b_pos: np.ndarray
+) -> np.ndarray:
     """
     Create numpy data from numpy data
 
@@ -498,7 +501,12 @@ def np2np_p(data, a_pos, b_pos):
     return out
 
 
-def np2np_sp(data, states, a_pos, b_pos):
+def np2np_sp(
+    data: dict[str, np.ndarray],
+    states: np.ndarray,
+    a_pos: np.ndarray,
+    b_pos: np.ndarray,
+) -> np.ndarray:
     """
     Create numpy data from numpy data
 
@@ -533,7 +541,13 @@ def np2np_sp(data, states, a_pos, b_pos):
     return out
 
 
-def np2pd_p(data, a_pos, b_pos, ori, label_map={}):
+def np2pd_p(
+    data: dict[str, np.ndarray],
+    a_pos: np.ndarray,
+    b_pos: np.ndarray,
+    ori: str,
+    label_map: dict[str, str] | None = None,
+) -> pd.DataFrame:
     """
     Create pandas DataFrame from numpy data
 
@@ -559,6 +573,8 @@ def np2pd_p(data, a_pos, b_pos, ori, label_map={}):
         The multi-indexed DataFrame object
 
     """
+    if label_map is None:
+        label_map = {}
     a, b = [label_map.get(o, o) for o in ori]
     n_a = len(a_pos)
     n_b = len(b_pos)
@@ -566,7 +582,14 @@ def np2pd_p(data, a_pos, b_pos, ori, label_map={}):
     return pd.DataFrame(index=minds, data=data)
 
 
-def np2pd_sp(data, states, a_pos, b_pos, ori, label_map={}):
+def np2pd_sp(
+    data: dict[str, np.ndarray],
+    states: np.ndarray,
+    a_pos: np.ndarray,
+    b_pos: np.ndarray,
+    ori: str,
+    label_map: dict[str, str] | None = None,
+) -> pd.DataFrame:
     """
     Create pandas DataFrame from numpy data
 
@@ -594,6 +617,8 @@ def np2pd_sp(data, states, a_pos, b_pos, ori, label_map={}):
         The multi-indexed DataFrame object
 
     """
+    if label_map is None:
+        label_map = {}
     a, b = [label_map.get(o, o) for o in ori]
     s = label_map.get(FC.STATE, FC.STATE)
     n_a = len(a_pos)
@@ -604,7 +629,14 @@ def np2pd_sp(data, states, a_pos, b_pos, ori, label_map={}):
     return pd.DataFrame(index=minds, data=data)
 
 
-def np2xr_p(data, a_pos, b_pos, c_pos, ori, label_map={}):
+def np2xr_p(
+    data: dict[str, np.ndarray],
+    a_pos: np.ndarray,
+    b_pos: np.ndarray,
+    c_pos: Any,
+    ori: str,
+    label_map: dict[str, str] | None = None,
+) -> Dataset:
     """
     Create xarray Dataset from numpy data
 
@@ -630,6 +662,8 @@ def np2xr_p(data, a_pos, b_pos, c_pos, ori, label_map={}):
         The Dataset object
 
     """
+    if label_map is None:
+        label_map = {}
     a, b = [label_map.get(o, o) for o in ori]
     c = list(set("xyz") - set(ori))[0]
     c = label_map.get(c, c)
@@ -644,7 +678,15 @@ def np2xr_p(data, a_pos, b_pos, c_pos, ori, label_map={}):
     )
 
 
-def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
+def np2xr_sp(
+    data: dict[str, np.ndarray],
+    states: np.ndarray,
+    a_pos: np.ndarray,
+    b_pos: np.ndarray,
+    c_pos: Any,
+    ori: str,
+    label_map: dict[str, str] | None = None,
+) -> Dataset:
     """
     Create xarray Dataset from numpy data
 
@@ -672,6 +714,8 @@ def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
         The Dataset object
 
     """
+    if label_map is None:
+        label_map = {}
     a, b = [label_map.get(o, o) for o in ori]
     c = list(set("xyz") - set(ori))[0]
     c = label_map.get(c, c)

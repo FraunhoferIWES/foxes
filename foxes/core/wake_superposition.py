@@ -1,8 +1,17 @@
+from __future__ import annotations
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
 
 from foxes.utils import new_instance
 
 from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WakeSuperposition(Model):
@@ -21,16 +30,16 @@ class WakeSuperposition(Model):
     @abstractmethod
     def add_wake(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        variable,
-        wake_delta,
-        wake_model_result,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        variable: str,
+        wake_delta: np.ndarray,
+        wake_model_result: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta to previous wake deltas,
         at rotor points.
@@ -71,13 +80,13 @@ class WakeSuperposition(Model):
     @abstractmethod
     def calc_final_wake_delta(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        wake_delta,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        wake_delta: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the final wake delta after adding all
         contributions.
@@ -109,7 +118,7 @@ class WakeSuperposition(Model):
         pass
 
     @classmethod
-    def new(cls, superp_type, *args, **kwargs):
+    def new(cls, superp_type: str, *args: Any, **kwargs: Any) -> WakeSuperposition:
         """
         Run-time wake superposition model factory.
 
@@ -142,15 +151,15 @@ class WindVectorWakeSuperposition(Model):
     @abstractmethod
     def add_wake_vector(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        wake_delta_uv,
-        wake_model_result_uv,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        wake_delta_uv: np.ndarray,
+        wake_model_result_uv: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta vector to previous wake deltas,
         at rotor points.
@@ -189,12 +198,12 @@ class WindVectorWakeSuperposition(Model):
     @abstractmethod
     def calc_final_wake_delta_uv(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wake_delta_uv,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wake_delta_uv: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Calculate the final wind vector wake delta after adding all
         contributions.
@@ -228,7 +237,12 @@ class WindVectorWakeSuperposition(Model):
         pass
 
     @classmethod
-    def new(cls, superp_type, *args, **kwargs):
+    def new(
+        cls,
+        superp_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> WindVectorWakeSuperposition:
         """
         Run-time wind wake superposition model factory.
 

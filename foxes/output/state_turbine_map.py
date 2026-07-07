@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import numpy as np
+from typing import Any
 
 import foxes.constants as FC
 
@@ -20,7 +23,7 @@ class StateTurbineMap(Output):
 
     """
 
-    def __init__(self, farm_results, **kwargs):
+    def __init__(self, farm_results, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -37,14 +40,14 @@ class StateTurbineMap(Output):
 
     def plot_map(
         self,
-        variable,
-        title=None,
-        cbar_label=None,
-        ax=None,
-        figsize=None,
-        rotate_xlabels=None,
-        **kwargs,
-    ):
+        variable: str,
+        title: str | None = None,
+        cbar_label: str | None = None,
+        ax: Any = None,
+        figsize: tuple[int, int] | None = None,
+        rotate_xlabels: float | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """
         Plot the heat map for the selected variable.
 

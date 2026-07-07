@@ -1,7 +1,16 @@
+from __future__ import annotations
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
 
 from foxes.utils import new_instance
 from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WakeDeflection(Model):
@@ -13,7 +22,7 @@ class WakeDeflection(Model):
     """
 
     @property
-    def has_uv(self):
+    def has_uv(self) -> bool:
         """
         This model uses wind vector data
 
@@ -28,13 +37,13 @@ class WakeDeflection(Model):
     @abstractmethod
     def calc_deflection(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        coos,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        coos: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculates the wake deflection.
 
@@ -69,13 +78,13 @@ class WakeDeflection(Model):
 
     def get_yaw_alpha_seq(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Computes sequential wind vector rotation angles.
 
@@ -113,7 +122,12 @@ class WakeDeflection(Model):
         )
 
     @classmethod
-    def new(cls, wdefl_type, *args, **kwargs):
+    def new(
+        cls,
+        wdefl_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> "WakeDeflection":
         """
         Run-time wake deflection model factory.
 

@@ -35,7 +35,7 @@ class StaticData(DataBook):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.add_data_package(FARM, farms, ".csv")

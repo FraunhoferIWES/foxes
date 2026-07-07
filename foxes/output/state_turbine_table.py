@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from xarray import Dataset
+from typing import Any
 
 from foxes.config import config
 from foxes.utils import write_nc
@@ -20,7 +23,7 @@ class StateTurbineTable(Output):
 
     """
 
-    def __init__(self, farm_results, **kwargs):
+    def __init__(self, farm_results, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -38,13 +41,13 @@ class StateTurbineTable(Output):
     def get_dataset(
         self,
         variables,
-        name_map={},
-        to_file=None,
-        isel=None,
-        sel=None,
-        transpose=False,
-        **kwargs,
-    ):
+        name_map: dict[str, str] | None = None,
+        to_file: str | None = None,
+        isel: dict[str, Any] | None = None,
+        sel: dict[str, Any] | None = None,
+        transpose: bool = False,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Creates a dataset object
 
@@ -71,6 +74,7 @@ class StateTurbineTable(Output):
             The state-turbine data table
 
         """
+        name_map = {} if name_map is None else name_map
         state = name_map.get(FC.STATE, FC.STATE)
         turbine = name_map.get(FC.TURBINE, FC.TURBINE)
 
@@ -98,6 +102,8 @@ class StateTurbineTable(Output):
 
         if to_file is not None:
             fpath = self.get_fpath(to_file)
-            write_nc(ds=ds, fpath=fpath, nc_engine=config.nc_engine, **kwargs)
+            nc_engine = config.nc_engine
+            assert nc_engine is not None
+            write_nc(ds=ds, fpath=fpath, nc_engine=nc_engine, **kwargs)
 
         return ds

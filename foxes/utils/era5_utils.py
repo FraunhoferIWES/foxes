@@ -3,7 +3,9 @@ import numpy as np
 from .load import import_module
 
 
-def calc_era5_density(era5, z, var2ncvar={}):
+def calc_era5_density(
+    era5, z: float, var2ncvar: dict[str, str] | None = None
+) -> np.ndarray:
     """
     Returns local air densities at specified height using the
     surface variables msl, t2m, d2m
@@ -38,6 +40,7 @@ def calc_era5_density(era5, z, var2ncvar={}):
     )
 
     # get column names:
+    var2ncvar = {} if var2ncvar is None else var2ncvar
     c_msl = var2ncvar.get("msl", "msl")
     c_t2m = var2ncvar.get("t2m", "t2m")
     c_d2m = var2ncvar.get("d2m", "d2m")

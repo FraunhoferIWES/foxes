@@ -1,4 +1,13 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from foxes.core import TurbineModel
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import numpy as np
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class Calculator(TurbineModel):
@@ -27,7 +36,13 @@ class Calculator(TurbineModel):
 
     """
 
-    def __init__(self, in_vars, out_vars, func, **kwargs):
+    def __init__(
+        self,
+        in_vars: list[str],
+        out_vars: list[str],
+        func: Any,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -57,11 +72,11 @@ class Calculator(TurbineModel):
         self.out_vars = out_vars
         self.func = func
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"{self.in_vars}, {self.out_vars}"
         return f"{type(self).__name__}({a})"
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -78,7 +93,13 @@ class Calculator(TurbineModel):
         """
         return self.out_vars
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

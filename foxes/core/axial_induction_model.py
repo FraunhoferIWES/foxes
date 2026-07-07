@@ -1,4 +1,7 @@
 from abc import abstractmethod
+from typing import Any
+
+import numpy as np
 
 from foxes.utils import new_instance
 from .model import Model
@@ -13,7 +16,7 @@ class AxialInductionModel(Model):
     """
 
     @abstractmethod
-    def ct2a(self, ct):
+    def ct2a(self, ct: np.ndarray | float) -> np.ndarray | float:
         """
         Computes induction from ct
 
@@ -31,7 +34,12 @@ class AxialInductionModel(Model):
         pass
 
     @classmethod
-    def new(cls, induction_type, *args, **kwargs):
+    def new(
+        cls,
+        induction_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> "AxialInductionModel":
         """
         Run-time axial induction model factory.
 

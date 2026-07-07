@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from scipy.interpolate import interpn
+from typing import Any
 
 from foxes.core.states import States
 from foxes.config import config, get_input_path
@@ -35,12 +38,12 @@ class WRGStates(States):
 
     def __init__(
         self,
-        wrg_fname,
+        wrg_fname: str,
         ws_bins,
-        fixed_vars={},
-        bounds_extra_space="1D",
-        **interp_pars,
-    ):
+        fixed_vars: dict[str, Any] | None = None,
+        bounds_extra_space: float | str = "1D",
+        **interp_pars: Any,
+    ) -> None:
         """
         Constructor
 
@@ -64,11 +67,13 @@ class WRGStates(States):
         super().__init__()
         self.wrg_fname = wrg_fname
         self.ws_bins = np.asarray(ws_bins)
-        self.fixed_vars = fixed_vars
+        self.fixed_vars = {} if fixed_vars is None else fixed_vars
         self.bounds_extra_space = bounds_extra_space
         self.interp_pars = interp_pars
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -170,7 +175,7 @@ class WRGStates(States):
         loaded_data["coords"][self.VARS] = ["ws", "wd", "dws"]
         loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -182,7 +187,7 @@ class WRGStates(States):
         """
         return self._N
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -201,7 +206,7 @@ class WRGStates(States):
         ovars.update(self.fixed_vars.keys())
         return list(ovars)
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
         """
         The main model calculation.
 

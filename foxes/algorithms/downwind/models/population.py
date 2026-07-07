@@ -1,10 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from xarray import Dataset, open_dataset
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config, get_input_path
-from foxes.core import TurbineModel, States, MData, FData, TData
+from foxes.core import TurbineModel, States, MData, FData, TData, Model
 import foxes.constants as FC
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.model import LoadedData
 
 
 class PopulationStates(States):
@@ -27,7 +35,7 @@ class PopulationStates(States):
 
     """
 
-    def __init__(self, states, n_pop, **kwargs):
+    def __init__(self, states: States, n_pop: int, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -45,7 +53,7 @@ class PopulationStates(States):
         self.states = states
         self.n_pop = n_pop
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models.
 
@@ -57,7 +65,7 @@ class PopulationStates(States):
         """
         return [self.states]
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -74,7 +82,7 @@ class PopulationStates(States):
         """
         return self.states.output_point_vars(algo)
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -86,7 +94,13 @@ class PopulationStates(States):
         """
         return self.states.size() * self.n_pop
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all data required for model calculations.
 
@@ -153,7 +167,14 @@ class PopulationStates(States):
         if self.STATE0 in coords and not need_state0:
             coords.pop(self.STATE0)
 
-    def load_chunk_data(self, algo, mdata, fdata, tdata):
+    def load_chunk_data(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData | None = None,
+        tdata: TData | None = None,
+        *extra_data: Any,
+    ) -> None:
         """
         Load chunk data according to load mode.
 
@@ -178,27 +199,28 @@ class PopulationStates(States):
         smap = mdata[self.SMAP]
         i0 = np.min(smap)
         i1 = np.max(smap) + 1
+        mdata_data: dict[str, Any]
         if self.STATE0 in mdata:
-            data = {FC.STATE: mdata[self.STATE0][i0:i1]}
+            mdata_data = {FC.STATE: mdata[self.STATE0][i0:i1]}
         else:
-            data = {FC.STATE: np.arange(i0, i1, dtype=config.dtype_int)}
-        dims = {FC.STATE: (FC.STATE,)}
+            mdata_data = {FC.STATE: np.arange(i0, i1, dtype=config.dtype_int)}
+        dims: dict[str, tuple[str, ...]] = {FC.STATE: (FC.STATE,)}
         for dname, ddata in mdata.items():
             dms = mdata.dims[dname]
             if dname == self.SMAP or dname == self.STATE0:
                 pass
             elif dms[0] == self.STATE0:
-                data[dname] = ddata[smap]
+                mdata_data[dname] = ddata[smap]
                 dims[dname] = tuple([FC.STATE] + list(dms)[1:])
             elif self.STATE0 in dms:
                 raise ValueError(
                     f"States '{self.name}': Expecting {self.STATE0} at position 0 for {dname}, got {dms}"
                 )
             else:
-                data[dname] = ddata
-                dims[dname] = dms
+                mdata_data[dname] = ddata
+                dims[dname] = tuple(dms)
         sub_mdata = MData(
-            data=data,
+            data=mdata_data,
             dims=dims,
             states_i0=i0,
             chunki_states=mdata.chunki_states,
@@ -211,7 +233,11 @@ class PopulationStates(States):
 
         # load sub model chunk data:
         keys0 = set(mdata.keys())
-        super().load_chunk_data(algo, sub_mdata, None, None)
+        if fdata is None or tdata is None:
+            raise ValueError(
+                f"States '{self.name}': Missing required fdata/tdata in load_chunk_data"
+            )
+        super().load_chunk_data(algo, sub_mdata, fdata, tdata)
         new_keys = set(mdata.keys()) - keys0
 
         # add new data to mdata:
@@ -234,9 +260,17 @@ class PopulationStates(States):
                 )
             else:
                 mdata[dname] = data
-                mdata.dims[dname] = dms
+                mdata.dims[dname] = tuple(dms)
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData | None = None,
+        fdata: FData | None = None,
+        tdata: TData | None = None,
+        *args: Any,
+        **parameters: Any,
+    ) -> dict[str, np.ndarray]:
         """ "
         The main model calculation.
 
@@ -261,11 +295,16 @@ class PopulationStates(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
+        if mdata is None or fdata is None or tdata is None:
+            raise KeyError(
+                f"States '{self.name}': Missing input data for calculate(), expected mdata, fdata and tdata"
+            )
+
         super().calculate(algo, mdata, fdata, tdata)
 
         smap = mdata[self.SMAP]
 
-        def _map(in_data, DClass):
+        def _map(in_data: Any, DClass: Any) -> Any:
             if in_data is None:
                 return None
 
@@ -343,14 +382,14 @@ class PopulationModel(TurbineModel):
 
     def __init__(
         self,
-        data_source,
-        index_coord="index",
-        turbine_coord="turbine",
-        var2ncvar={},
-        variables=None,
-        verbosity=1,
-        **kwargs,
-    ):
+        data_source: Dataset | str,
+        index_coord: str = "index",
+        turbine_coord: str = "turbine",
+        var2ncvar: dict[str, str] = {},
+        variables: list[str] | None = None,
+        verbosity: int = 1,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor
 
@@ -378,7 +417,7 @@ class PopulationModel(TurbineModel):
         self.index_coord = index_coord
         self.turbine_coord = turbine_coord
         self.var2ncvar = var2ncvar
-        self.variables = variables
+        self.variables: list[str] = [] if variables is None else list(variables)
 
         # n_pop is needed very early, hence the file is loaded here
         if isinstance(data_source, Dataset):
@@ -408,7 +447,7 @@ class PopulationModel(TurbineModel):
             )
 
     @property
-    def n_pop(self):
+    def n_pop(self) -> int:
         """
         The population size
 
@@ -420,7 +459,7 @@ class PopulationModel(TurbineModel):
         """
         return self.__n_pop
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -437,7 +476,13 @@ class PopulationModel(TurbineModel):
         """
         return self.variables
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all data required for model calculations.
 
@@ -465,13 +510,16 @@ class PopulationModel(TurbineModel):
         if self.DATA in loaded_data["data_vars"]:
             return
 
-        assert isinstance(algo.states, PopulationStates), (
+        states = getattr(algo, "states", None)
+        assert isinstance(states, PopulationStates), (
             f"Algorithm '{algo.name}': PopulationModel '{self.name}' requires PopulationStates, found '{type(algo.states).__name__}'"
         )
-        algo.init_states()
+        init_states = getattr(algo, "init_states", None)
+        if callable(init_states):
+            init_states()
 
-        self.n_states0 = algo.states.states.size()
-        self._inds0 = algo.states.states.index()
+        self.n_states0 = states.states.size()
+        self._inds0 = states.states.index()
         n_vrs = len(self.variables)
         data = np.zeros(
             (self.n_pop, self.n_states0, algo.n_turbines, n_vrs),
@@ -490,12 +538,12 @@ class PopulationModel(TurbineModel):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -519,17 +567,18 @@ class PopulationModel(TurbineModel):
 
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
-        data_stash[self.name] = dict(data=self._data, inds0=self._inds0)
+        if data_stash is not None:
+            data_stash[self.name] = dict(data=self._data, inds0=self._inds0)
         del self._data, self._inds0
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -550,11 +599,20 @@ class PopulationModel(TurbineModel):
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
-        data = data_stash[self.name]
-        self._data = data.pop("data")
-        self._inds0 = data.pop("inds0")
+        if data_stash is not None:
+            data = data_stash[self.name]
+            self._data = data.pop("data")
+            self._inds0 = data.pop("inds0")
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = np.s_[:],
+        *args: Any,
+        **parameters: Any,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -588,7 +646,7 @@ class PopulationModel(TurbineModel):
 
         return {v: fdata[v] for v in self.variables}
 
-    def farm2pop_results(self, algo, farm_results):
+    def farm2pop_results(self, algo: Algorithm, farm_results: Dataset) -> Dataset:
         """
         Convert farm results to population results
 
@@ -605,7 +663,8 @@ class PopulationModel(TurbineModel):
             The population farm results
 
         """
-        assert isinstance(algo.states, PopulationStates), (
+        states = getattr(algo, "states", None)
+        assert isinstance(states, PopulationStates), (
             f"Algorithm '{algo.name}': PopulationModel '{self.name}' requires PopulationStates, found '{type(algo.states).__name__}'"
         )
 

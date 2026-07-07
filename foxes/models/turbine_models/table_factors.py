@@ -1,10 +1,19 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interpn
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
 from foxes.config import config, get_input_path
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class TableFactors(TurbineModel):
@@ -33,13 +42,13 @@ class TableFactors(TurbineModel):
 
     def __init__(
         self,
-        data_source,
-        row_var,
-        col_var,
-        output_vars,
-        pd_file_read_pars={},
-        **ipars,
-    ):
+        data_source: str | pd.DataFrame,
+        row_var: str,
+        col_var: str,
+        output_vars: list[str],
+        pd_file_read_pars: dict[str, Any] = {},
+        **ipars: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -69,10 +78,11 @@ class TableFactors(TurbineModel):
         self._rpars = pd_file_read_pars
         self._ipars = ipars
 
-        self._cvals = None
-        self._data = None
+        self._rvals: np.ndarray | None = None
+        self._cvals: np.ndarray | None = None
+        self._data: np.ndarray | None = None
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -89,7 +99,13 @@ class TableFactors(TurbineModel):
         """
         return self.ovars
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -135,7 +151,13 @@ class TableFactors(TurbineModel):
         self._data = self._data.to_numpy(config.dtype_double)
         return loaded_data
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -162,6 +184,10 @@ class TableFactors(TurbineModel):
 
         """
         self.ensure_output_vars(algo, fdata)
+        rvals = self._rvals
+        cvals = self._cvals
+        data = self._data
+        assert rvals is not None and cvals is not None and data is not None
 
         n_sel = np.size(fdata[self.row_var][st_sel])
         qts = np.zeros((n_sel, 2), dtype=config.dtype_double)
@@ -169,13 +195,11 @@ class TableFactors(TurbineModel):
         qts[:, 1] = np.asarray(fdata[self.col_var][st_sel]).reshape(n_sel)
 
         try:
-            factors = interpn(
-                (self._rvals, self._cvals), self._data, qts, **self._ipars
-            )
+            factors = interpn((rvals, cvals), data, qts, **self._ipars)
         except ValueError as e:
             print(f"\nDATA       : ({self.row_var}, {self.col_var})")
             print(
-                f"DATA BOUNDS: ({np.min(self._rvals)}, {np.min(self._cvals)}) -- ({np.max(self._rvals)}, {np.max(self._cvals)})"
+                f"DATA BOUNDS: ({np.min(rvals)}, {np.min(cvals)}) -- ({np.max(rvals)}, {np.max(cvals)})"
             )
             print(
                 f"VALUE BOUNDS: ({np.min(qts[:, 0]):.4f}, {np.min(qts[:, 1]):.4f}) -- ({np.max(qts[:, 0]):.4f}, {np.max(qts[:, 1]):.4f})\n"

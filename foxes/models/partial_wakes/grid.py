@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 from .segregated import PartialSegregated
 from foxes.models.rotor_models.grid import GridRotor
 
@@ -11,7 +15,7 @@ class PartialGrid(PartialSegregated):
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Constructor.
 

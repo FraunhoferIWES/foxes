@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from cycler import cycler
 import matplotlib.pyplot as plt
+from typing import Any
+from xarray import Dataset
 
 from .output import Output
 from foxes.config import config
@@ -26,7 +30,7 @@ class FarmResultsEval(Output):
 
     """
 
-    def __init__(self, farm_results, algo=None, **kwargs):
+    def __init__(self, farm_results, algo=None, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -46,7 +50,7 @@ class FarmResultsEval(Output):
         self._LEVEL = FC.TURBINE
 
     @property
-    def results(self):
+    def results(self) -> Dataset:
         """
         Get the farm results.
 
@@ -58,7 +62,7 @@ class FarmResultsEval(Output):
         """
         return self._results
 
-    def weinsum(self, rhs, *vars):
+    def weinsum(self, rhs: str, *vars) -> np.ndarray:
         """
         Calculates Einstein sum, adding weights
         as last argument to the given fields.
@@ -144,7 +148,9 @@ class FarmResultsEval(Output):
 
         return np.einsum(expr, *fields)
 
-    def reduce_states(self, vars_op=None):
+    def reduce_states(
+        self, vars_op: dict[str, str | None] | None = None
+    ) -> pd.DataFrame:
         """
         Reduces the states dimension by some operation
 
@@ -213,7 +219,7 @@ class FarmResultsEval(Output):
 
         return data
 
-    def reduce_turbines(self, vars_op):
+    def reduce_turbines(self, vars_op: dict[str, str]) -> pd.DataFrame:
         """
         Reduces the turbine dimension by some operation
 
@@ -260,7 +266,9 @@ class FarmResultsEval(Output):
 
         return data
 
-    def reduce_all(self, states_op, turbines_op):
+    def reduce_all(
+        self, states_op: dict[str, str | None], turbines_op: dict[str, str]
+    ) -> dict:
         """
         Reduces states and turbine dimension by some operation
 
@@ -313,7 +321,7 @@ class FarmResultsEval(Output):
 
         return rdata
 
-    def calc_states_mean(self, vars, use_weights=True):
+    def calc_states_mean(self, vars, use_weights: bool = True) -> pd.DataFrame:
         """
         Calculates the mean wrt states.
 
@@ -335,7 +343,7 @@ class FarmResultsEval(Output):
             return self.reduce_states({vars: r})
         return self.reduce_states({v: r for v in vars})
 
-    def calc_states_sum(self, vars):
+    def calc_states_sum(self, vars) -> pd.DataFrame:
         """
         Calculates the sum wrt states.
 
@@ -352,7 +360,7 @@ class FarmResultsEval(Output):
         """
         return self.reduce_states({v: "sum" for v in vars})
 
-    def calc_states_std(self, vars):
+    def calc_states_std(self, vars) -> pd.DataFrame:
         """
         Calculates the standard deviation wrt states.
 
@@ -365,7 +373,7 @@ class FarmResultsEval(Output):
 
         return self.reduce_states({v: "std" for v in vars})
 
-    def calc_turbine_mean(self, vars):
+    def calc_turbine_mean(self, vars) -> pd.DataFrame:
         """
         Calculates the mean wrt turbines.
 
@@ -382,7 +390,7 @@ class FarmResultsEval(Output):
         """
         return self.reduce_turbines({v: "mean_no_weights" for v in vars})
 
-    def calc_turbine_sum(self, vars):
+    def calc_turbine_sum(self, vars) -> pd.DataFrame:
         """
         Calculates the sum wrt turbines.
 
@@ -399,7 +407,7 @@ class FarmResultsEval(Output):
         """
         return self.reduce_turbines({v: "sum" for v in vars})
 
-    def calc_farm_mean(self, vars):
+    def calc_farm_mean(self, vars) -> dict:
         """
         Calculates the mean over states and turbines.
 
@@ -414,10 +422,11 @@ class FarmResultsEval(Output):
             The fully contracted results
 
         """
-        op = {v: "weights" for v in vars}
-        return self.reduce_all(states_op=op, turbines_op=op)
+        op_states: dict[str, str | None] = {v: "weights" for v in vars}
+        op_turbines: dict[str, str] = {v: "weights" for v in vars}
+        return self.reduce_all(states_op=op_states, turbines_op=op_turbines)
 
-    def calc_farm_sum(self, vars):
+    def calc_farm_sum(self, vars) -> dict:
         """
         Calculates the sum over states and turbines.
 
@@ -432,10 +441,11 @@ class FarmResultsEval(Output):
             The fully contracted results
 
         """
-        op = {v: "sum" for v in vars}
-        return self.reduce_all(states_op=op, turbines_op=op)
+        op_states: dict[str, str | None] = {v: "sum" for v in vars}
+        op_turbines: dict[str, str] = {v: "sum" for v in vars}
+        return self.reduce_all(states_op=op_states, turbines_op=op_turbines)
 
-    def calc_mean_farm_power(self, ambient=False):
+    def calc_mean_farm_power(self, ambient: bool = False) -> float:
         """
         Calculates the mean total farm power.
 
@@ -454,7 +464,7 @@ class FarmResultsEval(Output):
         cdata = self.reduce_all(states_op={v: "weights"}, turbines_op={v: "sum"})
         return cdata[v]
 
-    def get_power_units(self):
+    def get_power_units(self) -> np.ndarray:
         """
         Gets the power units in Watts for all elements
 
@@ -475,12 +485,12 @@ class FarmResultsEval(Output):
 
     def calc_yield(
         self,
-        annual=False,
-        ambient=False,
-        hours=None,
+        annual: bool = False,
+        ambient: bool = False,
+        hours: int | None = None,
         delta_t=None,
         P_unit_W=None,
-    ):
+    ) -> pd.DataFrame:
         """
         Calculates the yield
 
@@ -547,7 +557,7 @@ class FarmResultsEval(Output):
         yld.rename(columns={var_in: var_out}, inplace=True)
         return yld
 
-    def get_capacity(self):
+    def get_capacity(self) -> np.ndarray:
         """
         Gets the capacity values for each turbine, equals nominal power
 
@@ -563,7 +573,7 @@ class FarmResultsEval(Output):
         Pnom = self.algo.farm.get_capacity_array(self.algo)
         return Pnom
 
-    def add_capacity(self, verbosity=1):
+    def add_capacity(self, verbosity: int = 1) -> None:
         """
         Adds capacity to the farm results, equals P_nominal on turbine level
 
@@ -577,7 +587,13 @@ class FarmResultsEval(Output):
         if verbosity > 0:
             print("Capacity added to farm results")
 
-    def add_yield(self, annual=True, ambient=False, verbosity=1, **kwargs):
+    def add_yield(
+        self,
+        annual: bool = True,
+        ambient: bool = False,
+        verbosity: int = 1,
+        **kwargs: Any,
+    ) -> None:
         """
         Adds yield to the farm results
 
@@ -601,7 +617,9 @@ class FarmResultsEval(Output):
             s = "Ambient yield" if ambient else "Yield"
             print(f"{s} added to results")
 
-    def add_capacity_factor(self, capacity=None, ambient=False, verbosity=1):
+    def add_capacity_factor(
+        self, capacity=None, ambient: bool = False, verbosity: int = 1
+    ) -> None:
         """
         Adds capacity factor to the farm results, P / CAP
 
@@ -637,7 +655,9 @@ class FarmResultsEval(Output):
             else:
                 print("Capacity factor added to farm results")
 
-    def calc_farm_yield(self, turbine_yield=None, power_uncert=None, **kwargs):
+    def calc_farm_yield(
+        self, turbine_yield=None, power_uncert=None, **kwargs: Any
+    ) -> float | tuple[float, float, float]:
         """
         Calculates yield, P75 and P90 at the farm level
 
@@ -675,7 +695,7 @@ class FarmResultsEval(Output):
 
         return farm_yield["YLD"]
 
-    def add_efficiency(self, verbosity=1):
+    def add_efficiency(self, verbosity: int = 1) -> None:
         """
         Adds efficiency to the farm results
 
@@ -693,7 +713,7 @@ class FarmResultsEval(Output):
         if verbosity > 0:
             print("Efficiency added to farm results")
 
-    def add_full_load_fraction(self, ambient=False, verbosity=1):
+    def add_full_load_fraction(self, ambient: bool = False, verbosity: int = 1) -> None:
         """
         Adds full load fraction to the farm results
 
@@ -730,7 +750,7 @@ class FarmResultsEval(Output):
             else:
                 print("Full load fraction added to farm results")
 
-    def calc_farm_efficiency(self):
+    def calc_farm_efficiency(self) -> float:
         """
         Calculates farm efficiency
 
@@ -747,13 +767,13 @@ class FarmResultsEval(Output):
     def gen_stdata(
         self,
         turbines,
-        variable,
+        variable: str,
         fig=None,
         ax=None,
         figsize=None,
-        legloc="lower right",
-        animated=True,
-        ret_im=True,
+        legloc: str = "lower right",
+        animated: bool = True,
+        ret_im: bool = True,
     ):
         """
         Generates state-turbine data,
@@ -817,7 +837,7 @@ class FarmResultsEval(Output):
             else:
                 yield hfig
 
-    def write_nc(self, fname, **kwargs):
+    def write_nc(self, fname: str, **kwargs: Any) -> Dataset:
         """
         Write the results to a netCDF file.
 

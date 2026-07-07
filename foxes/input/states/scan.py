@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import Any
 
 from foxes.core import States
 from foxes.config import config
@@ -20,7 +23,7 @@ class ScanStates(States):
 
     """
 
-    def __init__(self, scans, **kwargs):
+    def __init__(self, scans: dict[str, Any], **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -36,7 +39,9 @@ class ScanStates(States):
         super().__init__(**kwargs)
         self.scans = {v: np.asarray(d) for v, d in scans.items()}
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -68,8 +73,8 @@ class ScanStates(States):
         for i, d in enumerate(self.scans.values()):
             s = [None] * n_v
             s[i] = np.s_[:]
-            s = tuple(s)
-            data[..., i] = d[s]
+            st = tuple(s)
+            data[..., i] = d[st]
         data = data.reshape(self._N, n_v)
 
         self.VARS = self.var("vars")
@@ -84,8 +89,8 @@ class ScanStates(States):
         data_stash,
         sel=None,
         isel=None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -120,8 +125,8 @@ class ScanStates(States):
         data_stash,
         sel=None,
         isel=None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -147,7 +152,7 @@ class ScanStates(States):
             data = data_stash[self.name]
             self.scans = data.pop("scans")
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -159,7 +164,7 @@ class ScanStates(States):
         """
         return self._N
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -176,7 +181,7 @@ class ScanStates(States):
         """
         return self._vars
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
         """
         The main model calculation.
 

@@ -1,11 +1,20 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from abc import abstractmethod
 import numpy as np
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.config import config
 import foxes.constants as FC
 import foxes.variables as FV
 
 from .data_calc_model import DataCalcModel
+from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class FarmDataModel(DataCalcModel):
@@ -18,7 +27,7 @@ class FarmDataModel(DataCalcModel):
     """
 
     @abstractmethod
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -35,7 +44,7 @@ class FarmDataModel(DataCalcModel):
         """
         return []
 
-    def output_coords(self):
+    def output_coords(self) -> tuple[str, ...]:
         """
         Gets the coordinates of all output arrays
 
@@ -47,7 +56,12 @@ class FarmDataModel(DataCalcModel):
         """
         return (FC.STATE, FC.TURBINE)
 
-    def ensure_output_vars(self, algo, fdata, defaults=None):
+    def ensure_output_vars(
+        self,
+        algo: Algorithm,
+        fdata: FData,
+        defaults: dict[str, Any] | None = None,
+    ) -> None:
         """
         Ensures that the output variables are present in the farm data.
 
@@ -81,7 +95,12 @@ class FarmDataModel(DataCalcModel):
                 )
 
     @abstractmethod
-    def calculate(self, algo, mdata, fdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -106,7 +125,13 @@ class FarmDataModel(DataCalcModel):
         """
         pass
 
-    def run_calculation(self, algo, *data, out_vars, **calc_pars):
+    def run_calculation(
+        self,
+        algo: Algorithm,
+        *data: tuple[Any, ...],
+        out_vars: list[str],
+        **calc_pars: Any,
+    ) -> Any:
         """
         Starts the model calculation in parallel, via
         xarray's `apply_ufunc`.
@@ -130,7 +155,7 @@ class FarmDataModel(DataCalcModel):
             The calculation results
 
         """
-        return super().run_calculation(
+        return super().run_calculation(  # type: ignore[misc]
             algo,
             *data,
             out_vars=out_vars,
@@ -139,7 +164,7 @@ class FarmDataModel(DataCalcModel):
             **calc_pars,
         )
 
-    def __add__(self, m):
+    def __add__(self, m: Any) -> FarmDataModelList:
         if isinstance(m, list):
             return FarmDataModelList([self] + m)
         elif isinstance(m, FarmDataModelList):
@@ -165,7 +190,7 @@ class FarmDataModelList(FarmDataModel):
 
     """
 
-    def __init__(self, models=[]):
+    def __init__(self, models: list[FarmDataModel] | None = None) -> None:
         """
         Constructor.
 
@@ -176,12 +201,12 @@ class FarmDataModelList(FarmDataModel):
 
         """
         super().__init__()
-        self.models = models
+        self.models = [] if models is None else models
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({[m.name for m in self.models]})"
 
-    def append(self, model):
+    def append(self, model: FarmDataModel) -> None:
         """
         Add a model to the list
 
@@ -193,7 +218,7 @@ class FarmDataModelList(FarmDataModel):
         """
         self.models.append(model)
 
-    def insert(self, index, model):
+    def insert(self, index: int, model: FarmDataModel) -> None:
         """
         Insert a model into the list
 
@@ -207,7 +232,7 @@ class FarmDataModelList(FarmDataModel):
         """
         self.models.insert(index, model)
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -217,9 +242,9 @@ class FarmDataModelList(FarmDataModel):
             Names of all sub models
 
         """
-        return self.models
+        return cast(list[Model], self.models)
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -240,7 +265,13 @@ class FarmDataModelList(FarmDataModel):
 
         return list(dict.fromkeys(ovars))
 
-    def calculate(self, algo, mdata, fdata, parameters=[]):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        parameters: list[dict[str, Any]] | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

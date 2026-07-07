@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 from abc import ABCMeta, abstractmethod
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from typing import Any, cast
 
 
 class AreaGeometry(metaclass=ABCMeta):
@@ -13,7 +16,7 @@ class AreaGeometry(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def p_min(self):
+    def p_min(self) -> np.ndarray:
         """
         Returns minimal (x,y) point.
 
@@ -26,7 +29,7 @@ class AreaGeometry(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def p_max(self):
+    def p_max(self) -> np.ndarray:
         """
         Returns maximal (x,y) point.
 
@@ -38,7 +41,7 @@ class AreaGeometry(metaclass=ABCMeta):
         """
         pass
 
-    def box_centre(self):
+    def box_centre(self) -> np.ndarray:
         """
         Returns centre (x,y) point of the surrounding box.
 
@@ -51,7 +54,9 @@ class AreaGeometry(metaclass=ABCMeta):
         return 0.5 * (self.p_min() + self.p_max())
 
     @abstractmethod
-    def points_distance(self, points, return_nearest=False):
+    def points_distance(
+        self, points: np.ndarray, return_nearest: bool = False
+    ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
         """
         Calculates point distances wrt boundary.
 
@@ -75,7 +80,7 @@ class AreaGeometry(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def points_inside(self, points):
+    def points_inside(self, points: np.ndarray) -> np.ndarray:
         """
         Tests if points are inside the geometry.
 
@@ -95,11 +100,11 @@ class AreaGeometry(metaclass=ABCMeta):
     def add_to_figure(
         self,
         ax,
-        show_boundary=False,
-        fill_mode="inside_slategray",
-        pars_boundary={},
-        pars_distance={},
-    ):
+        show_boundary: bool = False,
+        fill_mode: str | None = "inside_slategray",
+        pars_boundary: dict[str, Any] | None = None,
+        pars_distance: dict[str, Any] | None = None,
+    ) -> None:
         """
         Add image to (x,y) figure.
 
@@ -119,6 +124,9 @@ class AreaGeometry(metaclass=ABCMeta):
             Parameters for distance plotting command
 
         """
+        pars_boundary = {} if pars_boundary is None else pars_boundary
+        pars_distance = {} if pars_distance is None else pars_distance
+
         if fill_mode is not None:
             if "Nx" in pars_distance or "Ny" in pars_distance:
                 Nx = pars_distance.pop("Nx")
@@ -164,7 +172,8 @@ class AreaGeometry(metaclass=ABCMeta):
             pars = dict(shading="auto", cmap="magma_r", zorder=-100)
             sbar = True
             if fill_mode == "dist":
-                dists = self.points_distance(pts).reshape(Nx, Ny)
+                dres = self.points_distance(pts)
+                dists = cast(np.ndarray, dres).reshape(Nx, Ny)
             elif fill_mode == "dist_inside":
                 ins = self.points_inside(pts)
                 dists = np.full(Nx * Ny, np.nan, dtype=np.float64)
@@ -204,7 +213,7 @@ class AreaGeometry(metaclass=ABCMeta):
         ax.set_ylabel("y [m]")
         ax.set_aspect("equal", adjustable="box")
 
-    def inverse(self):
+    def inverse(self) -> AreaGeometry:
         """
         Get the inverted geometry
 
@@ -279,7 +288,7 @@ class AreaGeometry(metaclass=ABCMeta):
             **kwargs,
         )
 
-    def __add__(self, g):
+    def __add__(self, g) -> AreaUnion:
         if isinstance(g, list):
             return AreaUnion([self] + g)
         elif isinstance(g, AreaUnion):
@@ -287,9 +296,9 @@ class AreaGeometry(metaclass=ABCMeta):
         else:
             return AreaUnion([self, g])
 
-    def __sub__(self, g):
+    def __sub__(self, g) -> AreaIntersection:
         if isinstance(g, list):
-            return AreaIntersection([self] + g.inverse())
+            return AreaIntersection([self] + [gi.inverse() for gi in g])
         else:
             return AreaIntersection([self, g.inverse()])
 
@@ -302,7 +311,7 @@ class InvertedAreaGeometry(AreaGeometry):
 
     """
 
-    def __init__(self, geometry):
+    def __init__(self, geometry: AreaGeometry) -> None:
         """
         Constructor.
 
@@ -314,7 +323,7 @@ class InvertedAreaGeometry(AreaGeometry):
         """
         self._geometry = geometry
 
-    def p_min(self):
+    def p_min(self) -> np.ndarray:
         """
         Returns minimal (x,y) point.
 
@@ -339,7 +348,7 @@ class InvertedAreaGeometry(AreaGeometry):
         else:
             return np.full(2, -np.inf, dtype=np.float64)
 
-    def p_max(self):
+    def p_max(self) -> np.ndarray:
         """
         Returns maximal (x,y) point.
 
@@ -364,7 +373,9 @@ class InvertedAreaGeometry(AreaGeometry):
         else:
             return np.full(2, np.inf, dtype=np.float64)
 
-    def points_distance(self, points, return_nearest=False):
+    def points_distance(
+        self, points: np.ndarray, return_nearest: bool = False
+    ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
         """
         Calculates point distances wrt boundary.
 
@@ -387,7 +398,7 @@ class InvertedAreaGeometry(AreaGeometry):
         """
         return self._geometry.points_distance(points, return_nearest)
 
-    def points_inside(self, points):
+    def points_inside(self, points: np.ndarray) -> np.ndarray:
         """
         Tests if points are inside the geometry.
 
@@ -407,11 +418,11 @@ class InvertedAreaGeometry(AreaGeometry):
     def add_to_figure(
         self,
         ax,
-        show_boundary=False,
-        fill_mode="inside_slategray",
-        pars_boundary={},
-        pars_distance={},
-    ):
+        show_boundary: bool = False,
+        fill_mode: str | None = "inside_slategray",
+        pars_boundary: dict[str, Any] | None = None,
+        pars_distance: dict[str, Any] | None = None,
+    ) -> None:
         """
         Add image to (x,y) figure.
 
@@ -431,6 +442,9 @@ class InvertedAreaGeometry(AreaGeometry):
             Parameters for distance plotting command
 
         """
+        pars_boundary = {} if pars_boundary is None else pars_boundary
+        pars_distance = {} if pars_distance is None else pars_distance
+
         self._geometry.add_to_figure(
             ax,
             show_boundary,
@@ -442,7 +456,7 @@ class InvertedAreaGeometry(AreaGeometry):
             ax, show_boundary, fill_mode, pars_boundary, pars_distance
         )
 
-    def inverse(self):
+    def inverse(self) -> AreaGeometry:
         """
         Get the inverted geometry
 
@@ -468,7 +482,7 @@ class AreaUnion(AreaGeometry):
 
     """
 
-    def __init__(self, geometries):
+    def __init__(self, geometries: list[AreaGeometry]) -> None:
         """
         Constructor.
 
@@ -480,7 +494,7 @@ class AreaUnion(AreaGeometry):
         """
         self.geometries = geometries
 
-    def p_min(self):
+    def p_min(self) -> np.ndarray:
         """
         Returns minimal (x,y) point.
 
@@ -490,16 +504,17 @@ class AreaUnion(AreaGeometry):
             The minimal (x,y) point, shape = (2,)
 
         """
-        out = None
+        out: np.ndarray | None = None
         for g in self.geometries:
             pmi = g.p_min()
             if out is None:
                 out = pmi
             else:
                 out = np.minimum(out, pmi)
+        assert out is not None
         return out
 
-    def p_max(self):
+    def p_max(self) -> np.ndarray:
         """
         Returns maximal (x,y) point.
 
@@ -509,16 +524,19 @@ class AreaUnion(AreaGeometry):
             The maximal (x,y) point, shape = (2,)
 
         """
-        out = None
+        out: np.ndarray | None = None
         for g in self.geometries:
             pma = g.p_max()
             if out is None:
                 out = pma
             else:
                 out = np.maximum(out, pma)
+        assert out is not None
         return out
 
-    def points_distance(self, points, return_nearest=False):
+    def points_distance(
+        self, points: np.ndarray, return_nearest: bool = False
+    ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
         """
         Calculates point distances wrt boundary.
 
@@ -549,14 +567,20 @@ class AreaUnion(AreaGeometry):
         for g in self.geometries:
             res = g.points_distance(points, return_nearest)
             ins = g.points_inside(points)
-            d = res[0] if return_nearest else res
+            if return_nearest:
+                rtuple = cast(tuple[np.ndarray, np.ndarray], res)
+                d = rtuple[0]
+                nearest = rtuple[1]
+            else:
+                d = cast(np.ndarray, res)
 
             # was outside, is outside:
             sel = ~pins & ~ins & (d < dist)
             if np.any(sel):
                 dist[sel] = d[sel]
                 if return_nearest:
-                    nerst[sel] = res[1][sel]
+                    assert nerst is not None
+                    nerst[sel] = nearest[sel]
 
             # was outside, is inside:
             sel = ~pins & ins
@@ -564,21 +588,24 @@ class AreaUnion(AreaGeometry):
                 pins[sel] = True
                 dist[sel] = d[sel]
                 if return_nearest:
-                    nerst[sel] = res[1][sel]
+                    assert nerst is not None
+                    nerst[sel] = nearest[sel]
 
             # was inside, is inside:
             sel = pins & ins & (d > dist)
             if np.any(sel):
                 dist[sel] = d[sel]
                 if return_nearest:
-                    nerst[sel] = res[1][sel]
+                    assert nerst is not None
+                    nerst[sel] = nearest[sel]
 
         if return_nearest:
+            assert nerst is not None
             return dist, nerst
         else:
             return dist
 
-    def points_inside(self, points):
+    def points_inside(self, points: np.ndarray) -> np.ndarray:
         """
         Tests if points are inside the geometry.
 
@@ -605,11 +632,11 @@ class AreaUnion(AreaGeometry):
     def add_to_figure(
         self,
         ax,
-        show_boundary=False,
-        fill_mode="inside_slategray",
-        pars_boundary={},
-        pars_distance={},
-    ):
+        show_boundary: bool = False,
+        fill_mode: str | None = "inside_slategray",
+        pars_boundary: dict[str, Any] | None = None,
+        pars_distance: dict[str, Any] | None = None,
+    ) -> None:
         """
         Add image to (x,y) figure.
 
@@ -629,6 +656,9 @@ class AreaUnion(AreaGeometry):
             Parameters for distance plotting command
 
         """
+        pars_boundary = {} if pars_boundary is None else pars_boundary
+        pars_distance = {} if pars_distance is None else pars_distance
+
         if show_boundary:
             for g in self.geometries:
                 g.add_to_figure(
@@ -647,7 +677,7 @@ class AreaUnion(AreaGeometry):
             pars_distance=pars_distance,
         )
 
-    def inverse(self):
+    def inverse(self) -> InvertedAreaUnion:
         """
         Get the inverted geometry
 
@@ -659,7 +689,7 @@ class AreaUnion(AreaGeometry):
         """
         return InvertedAreaUnion(self)
 
-    def __add__(self, g):
+    def __add__(self, g) -> AreaUnion:
         if isinstance(g, list):
             return AreaUnion(self.geometries + g)
         elif isinstance(g, AreaUnion):
@@ -676,7 +706,7 @@ class InvertedAreaUnion(InvertedAreaGeometry):
 
     """
 
-    def __init__(self, union):
+    def __init__(self, union: AreaUnion) -> None:
         """
         Constructor.
 
@@ -688,7 +718,7 @@ class InvertedAreaUnion(InvertedAreaGeometry):
         """
         super().__init__(union)
 
-    def p_min(self):
+    def p_min(self) -> np.ndarray:
         """
         Returns minimal (x,y) point.
 
@@ -698,15 +728,16 @@ class InvertedAreaUnion(InvertedAreaGeometry):
             The minimal (x,y) point, shape = (2,)
 
         """
-        if len(self._geometry.geometries) == 1:
-            return self._geometry.geometries[0].inverse().p_min()
+        union = cast(AreaUnion, self._geometry)
+        if len(union.geometries) == 1:
+            return union.geometries[0].inverse().p_min()
 
-        pmi = self._geometry.p_min()
+        pmi = union.p_min()
         if not np.any(np.isinf(pmi)):
             return np.full(2, -np.inf, dtype=np.float64)
         else:
             out = np.full(2, np.inf, dtype=np.float64)
-            for g in self._geometry.geometries:
+            for g in union.geometries:
                 imi = g.inverse().p_min()
                 for di in range(2):
                     if np.isinf(pmi[di]) and not np.isinf(imi[di]):
@@ -716,7 +747,7 @@ class InvertedAreaUnion(InvertedAreaGeometry):
                     out[di] = -np.inf
             return out
 
-    def p_max(self):
+    def p_max(self) -> np.ndarray:
         """
         Returns maximal (x,y) point.
 
@@ -726,15 +757,16 @@ class InvertedAreaUnion(InvertedAreaGeometry):
             The maximal (x,y) point, shape = (2,)
 
         """
-        if len(self._geometry.geometries) == 1:
-            return self._geometry.geometries[0].inverse().p_max()
+        union = cast(AreaUnion, self._geometry)
+        if len(union.geometries) == 1:
+            return union.geometries[0].inverse().p_max()
 
-        pma = self._geometry.p_max()
+        pma = union.p_max()
         if not np.any(np.isinf(pma)):
             return np.full(2, np.inf, dtype=np.float64)
         else:
             out = np.full(2, -np.inf, dtype=np.float64)
-            for g in self._geometry.geometries:
+            for g in union.geometries:
                 ima = g.inverse().p_max()
                 for di in range(2):
                     if np.isinf(pma[di]) and not np.isinf(ima[di]):
@@ -753,7 +785,7 @@ class AreaIntersection(AreaGeometry):
 
     """
 
-    def __new__(cls, geometries):
+    def __init__(self, geometries: list[AreaGeometry]) -> None:
         """
         Constructor.
 
@@ -763,10 +795,28 @@ class AreaIntersection(AreaGeometry):
             The geometries
 
         """
-        return AreaUnion([g.inverse() for g in geometries]).inverse()
+        self.geometries = geometries
+        self._geometry = AreaUnion([g.inverse() for g in geometries]).inverse()
+
+    def p_min(self) -> np.ndarray:
+        return self._geometry.p_min()
+
+    def p_max(self) -> np.ndarray:
+        return self._geometry.p_max()
+
+    def points_distance(
+        self, points: np.ndarray, return_nearest: bool = False
+    ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
+        return self._geometry.points_distance(points, return_nearest)
+
+    def points_inside(self, points: np.ndarray) -> np.ndarray:
+        return self._geometry.points_inside(points)
+
+    def inverse(self) -> AreaGeometry:
+        return self._geometry.inverse()
 
 
-def from_shp(*args, **kwargs):
+def from_shp(*args: Any, **kwargs: Any) -> Any:
     """
     Read a shapefile into an ``AreaGeometry``.
 

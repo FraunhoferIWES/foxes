@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import Model
 
 
 class IECTIWake(TopHatWakeModel):
@@ -37,15 +45,15 @@ class IECTIWake(TopHatWakeModel):
 
     def __init__(
         self,
-        superposition,
-        opening_angle=21.6,
-        iec_type="2019",
-        induction="Betz",
-        c0=None,
-        c1=None,
-        c2=None,
-        **wake_k,
-    ):
+        superposition: str,
+        opening_angle: float | None = 21.6,
+        iec_type: str = "2019",
+        induction: str = "Betz",
+        c0: float | None = None,
+        c1: float | None = None,
+        c2: float | None = None,
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -88,7 +96,7 @@ class IECTIWake(TopHatWakeModel):
                 )
             self._k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -99,7 +107,7 @@ class IECTIWake(TopHatWakeModel):
         s += ")"
         return s
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -111,7 +119,9 @@ class IECTIWake(TopHatWakeModel):
         """
         return super().sub_models() + ([self.wake_k] if self.wake_k is not None else [])
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 

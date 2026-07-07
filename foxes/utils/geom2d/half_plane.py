@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import Any
 
 from .area_geometry import AreaGeometry
 
@@ -21,7 +24,7 @@ class HalfPlane(AreaGeometry):
 
     """
 
-    def __init__(self, centre, n):
+    def __init__(self, centre: np.ndarray, n: np.ndarray) -> None:
         """
         Constructor.
 
@@ -38,7 +41,7 @@ class HalfPlane(AreaGeometry):
         self.n /= np.linalg.norm(self.n)
         self.m = np.array([-self.n[1], self.n[0]], dtype=np.float64)
 
-    def p_min(self):
+    def p_min(self) -> np.ndarray:
         """
         Returns minimal (x,y) point.
 
@@ -59,7 +62,7 @@ class HalfPlane(AreaGeometry):
 
         return np.array([-np.inf, -np.inf], dtype=np.float64)
 
-    def p_max(self):
+    def p_max(self) -> np.ndarray:
         """
         Returns maximal (x,y) point.
 
@@ -80,7 +83,9 @@ class HalfPlane(AreaGeometry):
 
         return np.array([np.inf, np.inf], dtype=np.float64)
 
-    def points_distance(self, points, return_nearest=False):
+    def points_distance(
+        self, points: np.ndarray, return_nearest: bool = False
+    ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
         """
         Calculates point distances wrt boundary.
 
@@ -112,7 +117,7 @@ class HalfPlane(AreaGeometry):
         else:
             return np.abs(x)
 
-    def points_inside(self, points):
+    def points_inside(self, points: np.ndarray) -> np.ndarray:
         """
         Tests if points are inside the geometry.
 
@@ -132,8 +137,13 @@ class HalfPlane(AreaGeometry):
         return x >= 0.0
 
     def add_to_figure(
-        self, ax, show_boundary=True, fill_mode=None, pars_boundary={}, pars_distance={}
-    ):
+        self,
+        ax,
+        show_boundary: bool = True,
+        fill_mode: str | None = None,
+        pars_boundary: dict[str, Any] | None = None,
+        pars_distance: dict[str, Any] | None = None,
+    ) -> None:
         """
         Add image to (x,y) figure.
 
@@ -153,6 +163,9 @@ class HalfPlane(AreaGeometry):
             Parameters for distance plotting command
 
         """
+        pars_boundary = {} if pars_boundary is None else pars_boundary
+        pars_distance = {} if pars_distance is None else pars_distance
+
         if show_boundary:
             pars = dict(color="darkblue", linewidth=1)
             pars.update(pars_boundary)
@@ -163,7 +176,7 @@ class HalfPlane(AreaGeometry):
             ax, show_boundary, fill_mode, pars_boundary, pars_distance
         )
 
-    def inverse(self):
+    def inverse(self) -> HalfPlane:
         """
         Get the inverted geometry
 
@@ -185,6 +198,7 @@ if __name__ == "__main__":
     centre = np.array([3.0, 4.0])
     radius = 2.5
     N = 500
+    g: AreaGeometry
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius) + HalfPlane(p0, n)

@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.utils import delta_wd
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from xarray import Dataset
+    from foxes.core.algorithm import Algorithm
 
 
 class ConvCrit(metaclass=ABCMeta):
@@ -19,7 +26,7 @@ class ConvCrit(metaclass=ABCMeta):
 
     """
 
-    def __init__(self, name=None):
+    def __init__(self, name: str | None = None) -> None:
         """
         Constructor.
 
@@ -31,11 +38,11 @@ class ConvCrit(metaclass=ABCMeta):
         """
         self.name = name if name is not None else type(self).__name__
 
-        self._deltas = None
-        self._conv_states = None
+        self._deltas: dict[str, float] | None = None
+        self._conv_states: np.ndarray | None = None
         self.__no_subs = False
 
-    def disable_subsets(self, no_subs=True):
+    def disable_subsets(self, no_subs: bool = True) -> None:
         """
         Disable subset state selection in iterative algorithm.
 
@@ -51,7 +58,7 @@ class ConvCrit(metaclass=ABCMeta):
         self.__no_subs = no_subs
 
     @property
-    def no_subs(self):
+    def no_subs(self) -> bool:
         """
         Get the disable subsets flag.
 
@@ -64,7 +71,13 @@ class ConvCrit(metaclass=ABCMeta):
         return self.__no_subs
 
     @abstractmethod
-    def check_converged(self, algo, prev_results, results, verbosity=0):
+    def check_converged(
+        self,
+        algo: Algorithm,
+        prev_results: Dataset | None,
+        results: Dataset,
+        verbosity: int = 0,
+    ) -> bool:
         """
         Check convergence criteria.
 
@@ -90,7 +103,7 @@ class ConvCrit(metaclass=ABCMeta):
         pass
 
     @property
-    def deltas(self):
+    def deltas(self) -> dict[str, float] | None:
         """
         Get the most recent evaluation deltas.
 
@@ -103,7 +116,7 @@ class ConvCrit(metaclass=ABCMeta):
         return self._deltas
 
     @property
-    def conv_states(self):
+    def conv_states(self) -> np.ndarray | None:
         """
         Get the convergence state per state.
 
@@ -129,7 +142,7 @@ class ConvCritList(ConvCrit):
 
     """
 
-    def __init__(self, crits=[], name=None):
+    def __init__(self, crits: list[ConvCrit] = [], name: str | None = None) -> None:
         """
         Constructor.
 
@@ -143,8 +156,13 @@ class ConvCritList(ConvCrit):
         """
         super().__init__(name)
         self.crits = crits
+        self._failed: ConvCrit | None = None
 
-    def add_crit(self, crit):
+    @property
+    def failed(self) -> ConvCrit | None:
+        return self._failed
+
+    def add_crit(self, crit: ConvCrit) -> None:
         """
         Add a convergence criterion
 
@@ -156,7 +174,13 @@ class ConvCritList(ConvCrit):
         """
         self.crits.append(crit)
 
-    def check_converged(self, algo, prev_results, results, verbosity=0):
+    def check_converged(
+        self,
+        algo: Algorithm,
+        prev_results: Dataset | None,
+        results: Dataset,
+        verbosity: int = 0,
+    ) -> bool:
         """
         Check convergence criteria.
 
@@ -188,6 +212,10 @@ class ConvCritList(ConvCrit):
                 self._conv_states = c.conv_states
                 self._deltas = c.deltas
             else:
+                assert self._conv_states is not None
+                assert c.conv_states is not None
+                assert self._deltas is not None
+                assert c.deltas is not None
                 self._conv_states = self._conv_states & c.conv_states
                 self._deltas = {v: max(self._deltas[v], d) for v, d in c.deltas.items()}
 
@@ -213,7 +241,12 @@ class ConvVarDelta(ConvCrit):
 
     """
 
-    def __init__(self, limits, wd_vars=None, name=None):
+    def __init__(
+        self,
+        limits: dict[str, float],
+        wd_vars: list[str] | None = None,
+        name: str | None = None,
+    ) -> None:
         """
         Constructor.
 
@@ -235,7 +268,13 @@ class ConvVarDelta(ConvCrit):
         else:
             self.wd_vars = wd_vars
 
-    def check_converged(self, algo, prev_results, results, verbosity=0):
+    def check_converged(
+        self,
+        algo: Algorithm,
+        prev_results: Dataset | None,
+        results: Dataset,
+        verbosity: int = 0,
+    ) -> bool:
         """
         Check convergence criteria.
 
@@ -302,7 +341,7 @@ class DefaultConv(ConvVarDelta):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """

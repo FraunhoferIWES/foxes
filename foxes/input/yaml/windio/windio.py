@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from typing import Any
 
 from foxes.core import Algorithm
 from foxes.models import ModelBook
@@ -12,7 +13,7 @@ from .read_outputs import read_outputs
 from ..dict import run_dict
 
 
-def windio_file2dict(yml_file, verbosity=1):
+def windio_file2dict(yml_file: Path | str, verbosity: int = 1) -> Dict:
     """
     Read windio yaml file and translate to foxes input data dictionary
 
@@ -45,7 +46,9 @@ def windio_file2dict(yml_file, verbosity=1):
     return Dict(windio.load_yaml(wio_file), _name="windio")
 
 
-def read_windio_dict(wio_dict, verbosity=1, **algo_kwargs):
+def read_windio_dict(
+    wio_dict: Dict | dict[str, Any], verbosity: int = 1, **algo_kwargs: Any
+) -> tuple[Dict, Algorithm, Path | None]:
     """
     Translate windio data to foxes input data
 
@@ -74,12 +77,12 @@ def read_windio_dict(wio_dict, verbosity=1, **algo_kwargs):
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args, level: int = 1, **kwargs) -> None:
         if verbosity >= level:
             print(*args, **kwargs)
 
     if not isinstance(wio_dict, Dict):
-        tmp = Dict(_name="windio")
+        tmp: Dict = Dict(_name="windio")
         for k, d in wio_dict.items():
             tmp[k] = d
         wio_dict = tmp
@@ -88,7 +91,7 @@ def read_windio_dict(wio_dict, verbosity=1, **algo_kwargs):
     _print("  Name:", wio_dict.pop_item("name", None))
     _print("  Contents:", [k for k in wio_dict.keys()])
 
-    idict = Dict(
+    idict: Dict[str, Any] = Dict(
         wind_farm=Dict(_name="wio2fxs.farm"),
         algorithm=Dict(
             algo_type="Downwind",
@@ -134,7 +137,12 @@ def read_windio_dict(wio_dict, verbosity=1, **algo_kwargs):
     return idict, algo, odir
 
 
-def read_windio_file(yml_file, ret_wio=False, verbosity=1, **algo_kwargs):
+def read_windio_file(
+    yml_file: Path | str,
+    ret_wio: bool = False,
+    verbosity: int = 1,
+    **algo_kwargs: Any,
+) -> tuple[Any, ...]:
     """
     Read windio yaml file and translate to foxes input data
 
@@ -184,7 +192,7 @@ def foxes_windio(
     iterative=False,
     nofig=False,
     verbosity=1,
-):
+) -> tuple[Any, Any, list[tuple[dict[str, Any], list[Any]]]]:
     """Run foxes from windio yaml file input
 
     Parameters
@@ -267,7 +275,7 @@ def foxes_windio(
     )
 
 
-def main():
+def main() -> None:
     """
     Command line tool for running foxes from windio yaml file input.
 

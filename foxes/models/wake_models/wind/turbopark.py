@@ -1,10 +1,19 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeK
 from foxes.models.wake_models.gaussian import GaussianWakeModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData, Model
+    from foxes.core.wake_model import WakeModel
 
 
 class TurbOParkWake(GaussianWakeModel):
@@ -37,13 +46,13 @@ class TurbOParkWake(GaussianWakeModel):
 
     def __init__(
         self,
-        superposition,
-        sbeta_factor=0.25,
-        c1=1.5,
-        c2=0.8,
-        induction="Madsen",
-        **wake_k,
-    ):
+        superposition: str,
+        sbeta_factor: float = 0.25,
+        c1: float = 1.5,
+        c2: float = 0.8,
+        induction: str = "Madsen",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -71,7 +80,7 @@ class TurbOParkWake(GaussianWakeModel):
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -81,7 +90,7 @@ class TurbOParkWake(GaussianWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
@@ -93,7 +102,7 @@ class TurbOParkWake(GaussianWakeModel):
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -103,9 +112,18 @@ class TurbOParkWake(GaussianWakeModel):
             All sub models
 
         """
-        return [self.wake_k, self.induction]
+        smdls: list[Model] = [self.wake_k]
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -307,14 +325,14 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
     def __init__(
         self,
-        superposition,
-        dx,
-        sbeta_factor=0.25,
-        self_wake=True,
-        induction="Madsen",
-        ipars={},
-        **wake_k,
-    ):
+        superposition: str,
+        dx: float,
+        sbeta_factor: float = 0.25,
+        self_wake: bool = True,
+        induction: str = "Madsen",
+        ipars: dict[str, Any] | None = None,
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -340,15 +358,15 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         self.dx = dx
         self.sbeta_factor = sbeta_factor
-        self.ipars = ipars
-        self._tiwakes = None
+        self.ipars = {} if ipars is None else ipars
+        self._tiwakes: list[WakeModel] | None = None
         self.self_wake = self_wake
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
 
         assert not self.wake_k.is_kTI, f"{self.name}: Cannot apply ka or ambka setup"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -358,7 +376,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
@@ -370,7 +388,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -380,9 +398,18 @@ class TurbOParkWakeIX(GaussianWakeModel):
             All sub models
 
         """
-        return [self.wake_k, self.induction]
+        smdls: list[Model] = [self.wake_k]
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -415,7 +442,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
@@ -570,7 +599,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         return {FV.WS: (ampld, sigma)}, st_sel
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 

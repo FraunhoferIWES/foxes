@@ -1,4 +1,13 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from foxes.core import TurbineType
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import numpy as np
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class CalculatorType(TurbineType):
@@ -11,13 +20,13 @@ class CalculatorType(TurbineType):
 
     def __init__(
         self,
-        func,
-        out_vars,
-        *args,
-        needs_rews2=False,
-        needs_rews3=False,
-        **kwargs,
-    ):
+        func: Any,
+        out_vars: list[str],
+        *args: Any,
+        needs_rews2: bool = False,
+        needs_rews3: bool = False,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -52,7 +61,7 @@ class CalculatorType(TurbineType):
         self._rews2 = needs_rews2
         self._rews3 = needs_rews3
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
@@ -64,7 +73,7 @@ class CalculatorType(TurbineType):
         """
         return self._rews2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
@@ -76,7 +85,7 @@ class CalculatorType(TurbineType):
         """
         return self._rews3
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -93,7 +102,13 @@ class CalculatorType(TurbineType):
         """
         return self._ovars
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

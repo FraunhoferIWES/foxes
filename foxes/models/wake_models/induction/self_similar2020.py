@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .self_similar import SelfSimilar
@@ -25,7 +27,7 @@ class SelfSimilar2020(SelfSimilar):
 
     """
 
-    def _a0(self, ct, x_R):
+    def _a0(self, ct: np.ndarray, x_R: np.ndarray) -> np.ndarray:
         """Helper function: define a0 with gamma factor, eqn 8 from [2]"""
 
         x_new = np.minimum(np.maximum(-1 * np.abs(x_R), -6), -1)
@@ -45,8 +47,10 @@ class SelfSimilar2020(SelfSimilar):
 
         gamma = c * far_gamma + (1 - c) * near_gamma
 
-        return self.induction.ct2a(gamma * ct)
+        induction = self.induction
+        assert not isinstance(induction, str)
+        return induction.ct2a(gamma * ct)
 
-    def _r_half(self, x_R):
+    def _r_half(self, x_R: np.ndarray) -> np.ndarray:
         """Helper function: define induction zone half radius (eqn 13)"""
         return -0.672 * x_R + 0.4897

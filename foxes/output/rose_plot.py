@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from xarray import Dataset
 from matplotlib.projections.polar import PolarAxes
 from matplotlib.lines import Line2D
+from typing import Any
 
 from foxes.algorithms import Downwind
 from foxes.core import WindFarm, Turbine
@@ -60,7 +61,7 @@ class RosePlotOutput(Output):
             raise KeyError("Require either farm_results or point_results")
 
     @classmethod
-    def get_data_info(cls, dname):
+    def get_data_info(cls, dname: str) -> tuple[str, str]:
         """
         Returns default description for a variable.
 
@@ -319,7 +320,7 @@ class RosePlotOutput(Output):
         else:
             return ax
 
-    def write_figure(self, file_name, *args, ret_data=False, **kwargs):
+    def write_figure(self, file_name: str, ret_data: bool = False, **kwargs: Any):
         """
         Write rose plot to file
 
@@ -343,7 +344,7 @@ class RosePlotOutput(Output):
         if self.nofig:
             return None
 
-        r = self.get_figure(*args, ret_data=ret_data, **kwargs)
+        r = self.get_figure(ret_data=ret_data, **kwargs)
         fpath = self.get_fpath(file_name)
         if ret_data:
             r[0].get_figure().savefig(fpath, bbox_inches="tight")
@@ -414,7 +415,7 @@ class WindRoseBinPlot(Output):
 
     """
 
-    def __init__(self, farm_results, **kwargs):
+    def __init__(self, farm_results, **kwargs: Any) -> None:
         """
         Constructor
 
@@ -612,7 +613,7 @@ class WindRoseBinPlot(Output):
         else:
             return ax
 
-    def write_figure(self, file_name, *args, ret_data=False, **kwargs):
+    def write_figure(self, file_name: str, ret_data: bool = False, **kwargs: Any):
         """
         Write rose plot to file
 
@@ -636,7 +637,7 @@ class WindRoseBinPlot(Output):
         if self.nofig:
             return None
 
-        r = self.get_figure(*args, ret_data=ret_data, **kwargs)
+        r = self.get_figure(ret_data=ret_data, **kwargs)
         fpath = self.get_fpath(file_name)
         if ret_data:
             r[0].get_figure().savefig(fpath, bbox_inches="tight")

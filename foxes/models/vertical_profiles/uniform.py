@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import Any
 
 from foxes.core import VerticalProfile
 
@@ -16,7 +19,7 @@ class UniformProfile(VerticalProfile):
 
     """
 
-    def __init__(self, variable):
+    def __init__(self, variable: str) -> None:
         """
         Constructor
 
@@ -27,9 +30,9 @@ class UniformProfile(VerticalProfile):
 
         """
         super().__init__()
-        self.var = variable
+        self.variable = variable
 
-    def input_vars(self):
+    def input_vars(self) -> list[str]:
         """
         The input variables needed for the profile
         calculation.
@@ -40,9 +43,9 @@ class UniformProfile(VerticalProfile):
             The variable names
 
         """
-        return [self.var]
+        return [self.variable]
 
-    def calculate(self, data, heights):
+    def calculate(self, data: dict[str, Any], heights: np.ndarray) -> np.ndarray:
         """
         Run the profile calculation.
 
@@ -61,5 +64,5 @@ class UniformProfile(VerticalProfile):
 
         """
         out = np.zeros_like(heights)
-        out[:] = data[self.var]
+        out[:] = data[self.variable]
         return out

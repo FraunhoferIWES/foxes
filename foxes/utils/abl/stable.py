@@ -2,7 +2,7 @@ import numpy as np
 from .neutral import logz as lgz
 
 
-def logz(height, z0):
+def logz(height: float | np.ndarray, z0: float | np.ndarray) -> float | np.ndarray:
     """
     Calculates the log factor for
     wind speed profiles.
@@ -25,7 +25,7 @@ def logz(height, z0):
     return lgz(height, z0)
 
 
-def psi(height, mol):
+def psi(height: float | np.ndarray, mol: float | np.ndarray) -> float | np.ndarray:
     """
     The Psi function
 
@@ -48,7 +48,13 @@ def psi(height, mol):
     return -5.0 * h / mol
 
 
-def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):
+def ustar(
+    ws_ref: float | np.ndarray,
+    h_ref: float | np.ndarray,
+    z0: float | np.ndarray,
+    mol: float | np.ndarray,
+    kappa: float = 0.41,
+) -> float | np.ndarray:
     """
     Calculates the friction velocity,
     based on reference data.
@@ -77,7 +83,13 @@ def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):
     return ws_ref * kappa / (logz(h_ref, z0) - psi(h_ref, mol))
 
 
-def calc_ws(height, z0, ustar, psi, kappa=0.41):
+def calc_ws(
+    height: float | np.ndarray,
+    z0: float | np.ndarray,
+    ustar: float | np.ndarray,
+    psi: float | np.ndarray,
+    kappa: float = 0.41,
+) -> float | np.ndarray:
     """
     Calculate wind speeds at given height
 

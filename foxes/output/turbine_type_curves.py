@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from typing import Any
 
 from foxes.input.states import StatesTable
 from foxes.core import WindFarm, Turbine
@@ -27,7 +30,7 @@ class TurbineTypeCurves(Output):
 
     """
 
-    def __init__(self, mbook, **kwargs):
+    def __init__(self, mbook, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -44,14 +47,14 @@ class TurbineTypeCurves(Output):
 
     def calc_plot_data(
         self,
-        turbine_type,
+        turbine_type: str,
         variables,
-        P_max=None,
-        ws_min=0.0,
-        ws_max=30.0,
-        ws_step=0.1,
-        ti=0.05,
-        rho=1.225,
+        P_max: float | None = None,
+        ws_min: float = 0.0,
+        ws_max: float = 30.0,
+        ws_step: float = 0.1,
+        ti: float = 0.05,
+        rho: float = 1.225,
     ):
         """
         Plot the power or ct curve.
@@ -145,12 +148,12 @@ class TurbineTypeCurves(Output):
         self,
         plot_data,
         titles=None,
-        x_label=None,
+        x_label: str | None = None,
         y_labels=None,
         axs=None,
         figsize=None,
-        pmax_args={},
-        **kwargs,
+        pmax_args: dict[str, Any] | None = None,
+        **kwargs: Any,
     ):
         """
         Plot the power or ct curve.
@@ -186,6 +189,7 @@ class TurbineTypeCurves(Output):
         if self.nofig:
             return None
 
+        pmax_args = {} if pmax_args is None else pmax_args
         parameters, results0, results1 = plot_data
         turbine_type = parameters["turbine_type"]
         vars = parameters["vars"]

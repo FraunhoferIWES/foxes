@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WSProduct(WakeSuperposition):
@@ -27,12 +34,20 @@ class WSProduct(WakeSuperposition):
 
     """
 
-    def __init__(self, lim_low=None, lim_high=None):
+    def __init__(
+        self,
+        scale_amb: bool = False,
+        lim_low: float | None = None,
+        lim_high: float | None = None,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
+        scale_amb: bool
+            Flag for scaling wind deficit with ambient wind speed
+            instead of waked wind speed
         lim_low: float
             Lower limit of the final waked wind speed
         lim_high: float
@@ -41,14 +56,15 @@ class WSProduct(WakeSuperposition):
         """
         super().__init__()
 
+        self.scale_amb = scale_amb
         self.lim_low = lim_low
         self.lim_high = lim_high
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"lim_low={self.lim_low}, lim_high={self.lim_high}"
         return f"{type(self).__name__}({a})"
 
-    def input_farm_vars(self, algo):
+    def input_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are needed for running
         the model.
@@ -68,16 +84,16 @@ class WSProduct(WakeSuperposition):
 
     def add_wake(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        variable,
-        wake_delta,
-        wake_model_result,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        variable: str,
+        wake_delta: np.ndarray,
+        wake_model_result: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta to previous wake deltas,
         at rotor points.
@@ -128,13 +144,13 @@ class WSProduct(WakeSuperposition):
 
     def calc_final_wake_delta(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        wake_delta,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        wake_delta: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the final wake delta after adding all
         contributions.

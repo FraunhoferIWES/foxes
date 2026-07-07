@@ -3,7 +3,7 @@ import numpy as np
 import foxes.constants as FC
 
 
-def tke2ti(tke, ws, max_ti=None):
+def tke2ti(tke: np.ndarray, ws: np.ndarray, max_ti: float | None = None) -> np.ndarray:
     """
     Convert turbulent kinetic energy (TKE) to turbulence intensity (TI).
 
@@ -31,7 +31,9 @@ def tke2ti(tke, ws, max_ti=None):
     return ti
 
 
-def ustar2ti(ustar, ws, max_ti=None):
+def ustar2ti(
+    ustar: np.ndarray, ws: np.ndarray, max_ti: float | None = None
+) -> np.ndarray:
     """
     Convert friction velocity (u*) to turbulence intensity (TI).
 

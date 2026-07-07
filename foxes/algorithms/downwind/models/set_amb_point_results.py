@@ -1,5 +1,16 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
+from typing import TYPE_CHECKING
+import numpy as np
+
 import foxes.variables as FV
 from foxes.core import PointDataModel
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData
 
 
 class SetAmbPointResults(PointDataModel):
@@ -17,15 +28,21 @@ class SetAmbPointResults(PointDataModel):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """
         super().__init__()
-        self.pvars = None
-        self.vars = None
+        self.pvars: list[str] = []
+        self.vars: list[str] = []
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -56,7 +73,7 @@ class SetAmbPointResults(PointDataModel):
         self.vars = [v for v in self.pvars if v in FV.var2amb]
         return super().initialize(algo, loaded_data, force, verbosity)
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -73,7 +90,13 @@ class SetAmbPointResults(PointDataModel):
         """
         return [FV.var2amb[v] for v in self.vars] + [FV.WEIGHT]
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

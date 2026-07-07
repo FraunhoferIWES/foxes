@@ -1,9 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineModel
 from foxes.config import config
 from foxes.utils import cubic_roots
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class PowerMask(TurbineModel):
@@ -35,11 +44,11 @@ class PowerMask(TurbineModel):
 
     def __init__(
         self,
-        var_ws_P=FV.REWS3,
-        factor_P=1.0e3,
-        P_lim=100,
-        induction="Betz",
-    ):
+        var_ws_P: str = FV.REWS3,
+        factor_P: float = 1.0e3,
+        P_lim: float = 100,
+        induction: Any = "Betz",
+    ) -> None:
         """
         Constructor.
 
@@ -61,15 +70,16 @@ class PowerMask(TurbineModel):
         self.factor_P = factor_P
         self.P_lim = P_lim
         self.induction = induction
+        self._P_rated: np.ndarray | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         a = f"var_ws_P={self.var_ws_P}, P_lim={self.P_lim}, induction={iname}"
         return f"{type(self).__name__}({a})"
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -86,7 +96,7 @@ class PowerMask(TurbineModel):
         """
         return [FV.P, FV.CT]
 
-    def sub_models(self):
+    def sub_models(self) -> list[Any]:
         """
         List of all sub-models
 
@@ -98,7 +108,13 @@ class PowerMask(TurbineModel):
         """
         return [self.induction]
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -142,7 +158,13 @@ class PowerMask(TurbineModel):
         self._P_rated = np.array(self._P_rated, dtype=config.dtype_double)
         return loaded_data
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -172,7 +194,9 @@ class PowerMask(TurbineModel):
         self.ensure_output_vars(algo, fdata)
         P = fdata[FV.P]
         max_P = fdata[FV.MAX_P]
-        P_rated = self._P_rated[None, :]
+        P_rated0 = self._P_rated
+        assert P_rated0 is not None, "Rated powers not initialized"
+        P_rated = P_rated0[None, :]
 
         # select power entries for which this is active:
         sel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)

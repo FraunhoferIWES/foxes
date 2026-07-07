@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 from scipy.interpolate import interpn
+from typing import Any, cast
 
-from foxes.core import States
+from foxes.core import States, Model
 from foxes.utils import uv2wd
 from foxes.models.wake_frames.timelines import Timelines
 from foxes.config import config
@@ -35,12 +38,12 @@ class OnePointFlowStates(States):
     def __init__(
         self,
         ref_xy,
-        *base_states_args,
+        *base_states_args: Any,
         base_states=None,
         tl_heights=None,
-        dt_min=None,
-        **base_states_kwargs,
-    ):
+        dt_min: float | None = None,
+        **base_states_kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -70,6 +73,7 @@ class OnePointFlowStates(States):
         self.heights = tl_heights
         self.base_states = base_states
         self.dt_min = dt_min
+        self.timelines_data: Any = None
 
         self.intp_pars = {"fill_value": None}
         if "bounds_error" in base_states_kwargs:
@@ -86,10 +90,10 @@ class OnePointFlowStates(States):
         elif base_states is None:
             self.base_states = States.new(*base_states_args, **base_states_kwargs)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(base={type(self.base_states).__name__}, heights={self.heights}, dt_min={self.dt_min})"
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -101,7 +105,9 @@ class OnePointFlowStates(States):
         """
         return [self.base_states]
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -140,10 +146,15 @@ class OnePointFlowStates(States):
         self.WEIGHT = self.var(FV.WEIGHT)
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
         loaded_data["data_vars"][self.WEIGHT] = Timelines._precalc_data(
-            self, algo, self.base_states, self.heights, verbosity, needs_res=True
+            cast(Timelines, self),
+            algo,
+            self.base_states,
+            self.heights,
+            verbosity,
+            needs_res=True,
         )
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -167,7 +178,7 @@ class OnePointFlowStates(States):
         """
         return self.base_states.index()
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -190,8 +201,8 @@ class OnePointFlowStates(States):
         data_stash,
         sel=None,
         isel=None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -230,8 +241,8 @@ class OnePointFlowStates(States):
         data_stash,
         sel=None,
         isel=None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -258,7 +269,9 @@ class OnePointFlowStates(States):
             if "data" in data:
                 self.timelines_data = data.pop("data")
 
-    def calc_states_indices(self, algo, mdata, points, hi, ref_xy):
+    def calc_states_indices(
+        self, algo, mdata, points: np.ndarray, hi: int, ref_xy: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
         # prepare:
         n_states, n_points = points.shape[:2]
         dxy = self.timelines_data["dxy"].to_numpy()[hi]
@@ -269,7 +282,7 @@ class OnePointFlowStates(States):
         coeffs = np.full((n_states, n_points), np.nan, dtype=config.dtype_double)
 
         # flake8: noqa: F821
-        def _eval_trace(sel, hdxy=None, hdxy0=None, trs=None):
+        def _eval_trace(sel, hdxy=None, hdxy0=None, trs=None) -> None:
             """Helper function that updates trace_done"""
             nonlocal coeffs
 
@@ -338,7 +351,15 @@ class OnePointFlowStates(States):
 
         return trace_si, coeffs
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo,
+        mdata=None,
+        fdata=None,
+        tdata=None,
+        *args: Any,
+        **parameters: Any,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -349,12 +370,16 @@ class OnePointFlowStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata: foxes.core.MData, optional
             The model data
-        fdata: foxes.core.FData
+        fdata: foxes.core.FData, optional
             The farm data
-        tdata: foxes.core.TData
+        tdata: foxes.core.TData, optional
             The target point data
+        args: tuple, optional
+            Additional positional parameters for extension compatibility
+        parameters: dict, optional
+            Additional keyword parameters for extension compatibility
 
         Returns
         -------
@@ -364,6 +389,11 @@ class OnePointFlowStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
+        if mdata is None or tdata is None:
+            raise KeyError(
+                f"States '{self.name}': Missing input data for calculate(), expected mdata and tdata"
+            )
+
         # prepare:
         self.ensure_output_vars(algo, tdata)
         targets = tdata[FC.TARGETS]
@@ -385,7 +415,7 @@ class OnePointFlowStates(States):
             del s, c
 
         # flake8: noqa: F821
-        def _interp_time(hi, v):
+        def _interp_time(hi, v) -> np.ndarray:
             """Helper function for interpolation bewteen states"""
 
             sts = trace_si[hi]
@@ -422,13 +452,13 @@ class OnePointFlowStates(States):
 
             crds = (heights, ar_states, ar_points)
 
-            data = {
+            data_vars = {
                 v: np.stack([_interp_time(hi, v) for hi in range(n_heights)], axis=0)
                 for v in self.timelines_data.data_vars.keys()
                 if v != "dxy"
             }
-            vres = list(data.keys())
-            data = np.stack(list(data.values()), axis=-1)
+            vres = list(data_vars.keys())
+            data_arr = np.stack(list(data_vars.values()), axis=-1)
 
             eval = np.zeros((n_states, n_points, 3), dtype=config.dtype_double)
             eval[:, :, 0] = points[:, :, 2]
@@ -436,7 +466,7 @@ class OnePointFlowStates(States):
             eval[:, :, 2] = ar_points[None, :]
 
             try:
-                ires = interpn(crds, data, eval, **self.intp_pars)
+                ires = interpn(crds, data_arr, eval, **self.intp_pars)
             except ValueError as e:
                 print(f"\nStates '{self.name}': Interpolation error")
                 print("INPUT VARS: (heights, states, points)")
@@ -454,7 +484,7 @@ class OnePointFlowStates(States):
                     "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
                 )
                 raise e
-            del crds, eval, data, ar_points, ar_states
+            del crds, eval, data_arr, data_vars, ar_points, ar_states
 
             results = {}
             for v in self.output_point_vars(algo):
@@ -499,7 +529,7 @@ class OnePointFlowTimeseries(OnePointFlowStates):
 
     """
 
-    def __init__(self, ref_xy, *args, tl_heights=None, **kwargs):
+    def __init__(self, ref_xy, *args: Any, tl_heights=None, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -536,7 +566,7 @@ class OnePointFlowMultiHeightTimeseries(OnePointFlowStates):
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -560,7 +590,7 @@ class OnePointFlowMultiHeightNCTimeseries(OnePointFlowStates):
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Constructor.
 

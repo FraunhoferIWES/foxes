@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import pandas as pd
 from xarray import Dataset
+from typing import Any
 
 from foxes.config import config
 from foxes.utils import write_nc as write_nc_file
@@ -21,7 +24,9 @@ class ResultsWriter(Output):
 
     """
 
-    def __init__(self, farm_results=None, data=None, **kwargs):
+    def __init__(
+        self, farm_results: Dataset | None = None, data=None, **kwargs: Any
+    ) -> None:
         """
         Constructor.
 
@@ -50,7 +55,7 @@ class ResultsWriter(Output):
                 "ResultsWriter: Either give 'farm_results' or 'data' arguments"
             )
 
-    def _get_data_vars(self, variables):
+    def _get_data_vars(self, variables) -> tuple[pd.DataFrame, list[str]]:
         """Helper function for variable gathering"""
         data = self.data
         if variables is None:
@@ -71,13 +76,13 @@ class ResultsWriter(Output):
 
     def write_csv(
         self,
-        file_name,
+        file_name: str,
         variables=None,
-        turbine_names=False,
-        state_turbine_table=False,
-        verbosity=1,
-        **kwargs,
-    ):
+        turbine_names: bool = False,
+        state_turbine_table: bool = False,
+        verbosity: int = 1,
+        **kwargs: Any,
+    ) -> None:
         """
         Writes a csv file
 
@@ -138,12 +143,12 @@ class ResultsWriter(Output):
 
     def write_nc(
         self,
-        file_name,
+        file_name: str,
         variables=None,
-        turbine_names=False,
-        verbosity=1,
-        **kwargs,
-    ):
+        turbine_names: bool = False,
+        verbosity: int = 1,
+        **kwargs: Any,
+    ) -> None:
         """
         Writes a netCDF file
 
@@ -186,6 +191,6 @@ class ResultsWriter(Output):
         )
 
         fpath = self.get_fpath(file_name)
-        write_nc_file(
-            ds, fpath, nc_engine=config.nc_engine, verbosity=verbosity, **kwargs
-        )
+        nc_engine = config.nc_engine
+        assert nc_engine is not None
+        write_nc_file(ds, fpath, nc_engine=nc_engine, verbosity=verbosity, **kwargs)

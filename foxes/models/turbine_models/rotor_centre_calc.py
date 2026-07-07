@@ -1,8 +1,17 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineModel, TData
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class RotorCentreCalc(TurbineModel):
@@ -19,7 +28,7 @@ class RotorCentreCalc(TurbineModel):
 
     """
 
-    def __init__(self, calc_vars):
+    def __init__(self, calc_vars: dict[str, str] | list[str]) -> None:
         """
         Constructor.
 
@@ -37,7 +46,13 @@ class RotorCentreCalc(TurbineModel):
         else:
             self.calc_vars = {v: v for v in calc_vars}
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -69,7 +84,7 @@ class RotorCentreCalc(TurbineModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def sub_models(self):
+    def sub_models(self) -> list[Any]:
         """
         List of all sub-models
 
@@ -81,7 +96,7 @@ class RotorCentreCalc(TurbineModel):
         """
         return [self._wcalc]
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -98,7 +113,13 @@ class RotorCentreCalc(TurbineModel):
         """
         return list(self.calc_vars.keys())
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

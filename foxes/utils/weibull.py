@@ -1,7 +1,12 @@
 import numpy as np
 
 
-def weibull_weights(ws, ws_deltas, A, k):
+def weibull_weights(
+    ws: np.ndarray,
+    ws_deltas: np.ndarray,
+    A: np.ndarray,
+    k: np.ndarray,
+) -> np.ndarray:
     """
     Computes the weibull weights for given wind speeds
 

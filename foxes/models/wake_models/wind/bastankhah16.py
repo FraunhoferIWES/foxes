@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
 from foxes.core import Model, WakeK
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import MData
+    from foxes.core.model import LoadedData, Model
 
 
 class Bastankhah2016Model(Model):
@@ -49,7 +57,7 @@ class Bastankhah2016Model(Model):
     SIGMA_Z_FAR = "sigma_z_far"
     DELTA_FAR = "delta_far"
 
-    def __init__(self, alpha, beta, induction):
+    def __init__(self, alpha: float, beta: float, induction: str) -> None:
         """
         Constructor.
 
@@ -68,7 +76,7 @@ class Bastankhah2016Model(Model):
         setattr(self, FV.PA_ALPHA, alpha)
         setattr(self, FV.PA_BETA, beta)
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -78,9 +86,15 @@ class Bastankhah2016Model(Model):
             All sub models
 
         """
-        return [self.induction]
+        return [] if isinstance(self.induction, str) else [self.induction]
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -114,7 +128,7 @@ class Bastankhah2016Model(Model):
         )
 
     @property
-    def pars(self):
+    def pars(self) -> dict[str, float | str]:
         """
         Dictionary of the model parameters
 
@@ -126,7 +140,10 @@ class Bastankhah2016Model(Model):
         """
         alpha = getattr(self, FV.PA_ALPHA)
         beta = getattr(self, FV.PA_BETA)
-        return dict(alpha=alpha, beta=beta, induction=self.induction.name)
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
+        return dict(alpha=alpha, beta=beta, induction=iname)
 
     def calc_data(
         self,
@@ -347,7 +364,7 @@ class Bastankhah2016Model(Model):
         out[self.ST_SEL] = st_sel
         mdata.add(self.MDATA_KEY, out, None)
 
-    def has_data(self, mdata, downwind_index, x):
+    def has_data(self, mdata: MData, downwind_index: int, x: np.ndarray) -> bool:
         """
         Check if data exists
 
@@ -375,7 +392,7 @@ class Bastankhah2016Model(Model):
         )
         return self.MDATA_KEY in mdata and mdata[self.MDATA_KEY][self.CHECK] == check
 
-    def get_data(self, key, mdata):
+    def get_cached_data(self, key: str, mdata: MData) -> Any:
         """
         Return data entry
 
@@ -394,7 +411,7 @@ class Bastankhah2016Model(Model):
         """
         return mdata[self.MDATA_KEY][key]
 
-    def clean(self, mdata):
+    def clean(self, mdata: MData) -> None:
         """
         Clean all data
         """
@@ -472,7 +489,7 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         setattr(self, FV.YAWM, 0.0)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = self.induction
         s = f"{type(self).__name__}"
         s += f"({self.wind_superposition}, induction={iname}, "
@@ -480,7 +497,7 @@ class Bastankhah2016(DistSlicedWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
@@ -492,7 +509,7 @@ class Bastankhah2016(DistSlicedWakeModel):
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -504,7 +521,13 @@ class Bastankhah2016(DistSlicedWakeModel):
         """
         return super().sub_models() + [self.wake_k, self.model]
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -612,7 +635,7 @@ class Bastankhah2016(DistSlicedWakeModel):
             self.model.calc_data(algo, mdata, fdata, tdata, downwind_index, x, gamma, k)
 
         # select targets:
-        st_sel = self.model.get_data(Bastankhah2016Model.ST_SEL, mdata)
+        st_sel = self.model.get_cached_data(Bastankhah2016Model.ST_SEL, mdata)
         n_sp_sel = np.sum(st_sel)
         wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=config.dtype_double)}
         if np.any(st_sel):
@@ -620,15 +643,15 @@ class Bastankhah2016(DistSlicedWakeModel):
             yz = yz[st_sel]
 
             # collect data:
-            near = self.model.get_data(Bastankhah2016Model.NEAR, mdata)
+            near = self.model.get_cached_data(Bastankhah2016Model.NEAR, mdata)
             far = ~near
 
             # near wake:
             if np.any(near):
                 # collect data:
-                ampl = self.model.get_data(Bastankhah2016Model.AMPL_NEAR, mdata)
-                r_pc = self.model.get_data(Bastankhah2016Model.R_PC, mdata)
-                s = self.model.get_data(Bastankhah2016Model.R_PC_S, mdata)
+                ampl = self.model.get_cached_data(Bastankhah2016Model.AMPL_NEAR, mdata)
+                r_pc = self.model.get_cached_data(Bastankhah2016Model.R_PC, mdata)
+                s = self.model.get_cached_data(Bastankhah2016Model.R_PC_S, mdata)
 
                 # radial dependency:
                 r = np.linalg.norm(yz[near], axis=-1)
@@ -648,13 +671,15 @@ class Bastankhah2016(DistSlicedWakeModel):
                 yz = yz[far]
 
                 # collect data:
-                ampl = self.model.get_data(Bastankhah2016Model.AMPL_FAR, mdata)[:, None]
-                sigma_y = self.model.get_data(Bastankhah2016Model.SIGMA_Y_FAR, mdata)[
+                ampl = self.model.get_cached_data(Bastankhah2016Model.AMPL_FAR, mdata)[
                     :, None
                 ]
-                sigma_z = self.model.get_data(Bastankhah2016Model.SIGMA_Z_FAR, mdata)[
-                    :, None
-                ]
+                sigma_y = self.model.get_cached_data(
+                    Bastankhah2016Model.SIGMA_Y_FAR, mdata
+                )[:, None]
+                sigma_z = self.model.get_cached_data(
+                    Bastankhah2016Model.SIGMA_Z_FAR, mdata
+                )[:, None]
 
                 # set deficit, Eq. (7.1):
                 y = yz[..., 0]

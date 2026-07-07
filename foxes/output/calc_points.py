@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from xarray import Dataset
+from typing import Any
 
 from foxes.config import config
 from foxes.utils import write_nc
@@ -24,7 +27,7 @@ class PointCalculator(Output):
 
     """
 
-    def __init__(self, algo, farm_results, **kwargs):
+    def __init__(self, algo, farm_results, **kwargs: Any) -> None:
         """
         Constructor.
 
@@ -44,15 +47,15 @@ class PointCalculator(Output):
 
     def calculate(
         self,
-        points,
-        *args,
-        states_mean=False,
-        weight_turbine=0,
-        to_file=None,
+        points: np.ndarray,
+        *args: Any,
+        states_mean: bool = False,
+        weight_turbine: int = 0,
+        to_file: str | None = None,
         write_vars=None,
-        write_pars={},
-        **kwargs,
-    ):
+        write_pars: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Calculate point results
 
@@ -84,6 +87,8 @@ class PointCalculator(Output):
             dimensions (state, point)
 
         """
+        write_pars = {} if write_pars is None else write_pars
+
         if points.shape[-1] == 3 and len(points.shape) == 3:
             pts = points
             p_has_s = True
@@ -114,6 +119,7 @@ class PointCalculator(Output):
 
         vrs = list(pres.data_vars.keys()) if write_vars is None else write_vars
         if to_file is not None:
+            dvars: dict[str, tuple[tuple[str, ...], Any]]
             if states_mean:
                 if p_has_s:
                     points = np.einsum("s,spd->pd", weights, points)
@@ -145,6 +151,8 @@ class PointCalculator(Output):
                 )
 
             fpath = self.get_fpath(to_file)
-            write_nc(ds, fpath, nc_engine=config.nc_engine, **write_pars)
+            nc_engine = config.nc_engine
+            assert nc_engine is not None
+            write_nc(ds, fpath, nc_engine=nc_engine, **write_pars)
 
         return pres

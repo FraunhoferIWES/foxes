@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from scipy.spatial.distance import cdist
+from typing import TYPE_CHECKING, Any
 
 from foxes.utils import wd2uv
 from foxes.core.data import TData
@@ -9,6 +12,12 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 from .farm_order import FarmOrder
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.axial_induction_model import AxialInductionModel
+    from foxes.core.model import LoadedData, Model
 
 
 class SeqDynamicWakes(FarmOrder):
@@ -30,7 +39,13 @@ class SeqDynamicWakes(FarmOrder):
 
     """
 
-    def __init__(self, cl_ipars={}, dt_min=None, induction="Madsen", **kwargs):
+    def __init__(
+        self,
+        cl_ipars: dict[str, Any] | None = None,
+        dt_min: float | None = None,
+        induction: str = "Madsen",
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -49,17 +64,17 @@ class SeqDynamicWakes(FarmOrder):
 
         """
         super().__init__(**kwargs)
-        self.cl_ipars = cl_ipars
+        self.cl_ipars = {} if cl_ipars is None else cl_ipars
         self.dt_min = dt_min
-        self.induction = induction
+        self.induction: str | AxialInductionModel = induction
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         return f"{type(self).__name__}(dt_min={self.dt_min}, induction={iname})"
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -69,9 +84,15 @@ class SeqDynamicWakes(FarmOrder):
             All sub models
 
         """
-        return [self.induction]
+        return [] if isinstance(self.induction, str) else [self.induction]
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -143,7 +164,7 @@ class SeqDynamicWakes(FarmOrder):
         )
         return loaded_data
 
-    def calc_order(self, algo, mdata, fdata):
+    def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -169,12 +190,12 @@ class SeqDynamicWakes(FarmOrder):
 
     def get_wake_coos(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+    ) -> np.ndarray:
         """
         Calculate wake coordinates of rotor points.
 
@@ -233,7 +254,9 @@ class SeqDynamicWakes(FarmOrder):
             res = algo.states.calculate(algo, mdata, fdata, hpdata)
             wd = res[FV.WD][0, :, 0]
             if FV.YAWM in fdata:
-                wddef = algo.wake_deflection.get_yaw_alpha_seq(
+                wdfl = algo.wake_deflection
+                assert wdfl is not None, "Wake deflection model not initialized"
+                wddef = wdfl.get_yaw_alpha_seq(
                     algo,
                     mdata,
                     fdata,
@@ -284,14 +307,14 @@ class SeqDynamicWakes(FarmOrder):
 
     def get_wake_modelling_data(
         self,
-        algo,
-        variable,
-        downwind_index,
-        fdata,
-        tdata,
-        target,
-        states0=None,
-    ):
+        algo: Algorithm,
+        variable: str,
+        downwind_index: int,
+        fdata: FData,
+        tdata: TData,
+        target: str,
+        states0: np.ndarray | None = None,
+    ) -> np.ndarray:
         """
         Return data that is required for computing the
         wake from source turbines to evaluation points.
@@ -332,10 +355,13 @@ class SeqDynamicWakes(FarmOrder):
             n_targets = tdata.n_targets
             n_tpoints = tdata.n_tpoints
             n_points = n_targets * n_tpoints
+            counter = algo.states.counter
 
             s = tdata[FC.STATES_SEL][0].reshape(n_points)
-            data = algo.farm_results_downwind[variable].to_numpy()
-            data[algo.counter] = fdata[variable][0]
+            fresults = algo.farm_results_downwind
+            assert fresults is not None, "Missing farm_results_downwind"
+            data = fresults[variable].to_numpy()
+            data[counter] = fdata[variable][0]
             data = data[s, downwind_index].reshape(n_states, n_targets, n_tpoints)
 
             if target == FC.STATE_TARGET:
@@ -356,7 +382,14 @@ class SeqDynamicWakes(FarmOrder):
                 algo, variable, downwind_index, fdata, tdata, target, states0
             )
 
-    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
+    def get_centreline_points(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Gets the points along the centreline for given
         values of x.

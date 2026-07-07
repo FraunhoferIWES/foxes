@@ -1,8 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
 
 from foxes.utils import new_instance
 
 from .farm_data_model import FarmDataModel
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class TurbineModel(FarmDataModel):
@@ -17,7 +27,13 @@ class TurbineModel(FarmDataModel):
     """
 
     @abstractmethod
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -46,7 +62,12 @@ class TurbineModel(FarmDataModel):
         pass
 
     @classmethod
-    def new(cls, tmodel_type, *args, **kwargs):
+    def new(
+        cls,
+        tmodel_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> "TurbineModel":
         """
         Run-time turbine model factory.
 

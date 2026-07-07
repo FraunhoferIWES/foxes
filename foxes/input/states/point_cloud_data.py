@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import numpy as np
 from scipy.interpolate import griddata
 from scipy.spatial import QhullError
+from typing import Any, cast
 
 from foxes.config import config
 from foxes.utils import weibull_weights
@@ -125,10 +128,12 @@ class PointCloudData(DatasetStates):
             FC.POINT: self.point_coord,
         }
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(n_pt={self._n_pt}, n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, cmap=None, verbosity=0):
+    def _read_ds(
+        self, ds, cmap=None, verbosity: int = 0
+    ) -> tuple[dict[str, Any], dict[str, tuple[tuple[str, ...], np.ndarray]]]:
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -178,7 +183,7 @@ class PointCloudData(DatasetStates):
 
         return coords, data
 
-    def _check_nan(self, ipars, gpts, d, pts, idims, vrs, results):
+    def _check_nan(self, ipars, gpts, d, pts, idims, vrs, results) -> None:
         """Checks for NaN results and raises errors."""
         if np.isnan(ipars.get("fill_value", np.nan)):
             sel = np.isnan(results)
@@ -221,7 +226,7 @@ class PointCloudData(DatasetStates):
                         f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
                     )
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+    def interpolate_data(self, idims, icrds, d, pts, vrs, times) -> np.ndarray:
         """
         Interpolates data to points.
 
@@ -387,10 +392,12 @@ class WeibullPointCloud(PointCloudData):
         self._n_wd = None
         self._n_ws = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, cmap=None, verbosity=0):
+    def _read_ds(
+        self, ds, cmap=None, verbosity: int = 0
+    ) -> tuple[dict[str, Any], dict[str, tuple[tuple[str, ...], np.ndarray]]]:
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -474,19 +481,19 @@ class WeibullPointCloud(PointCloudData):
                 dms.append(FC.POINT)
                 shp.append(data0[v][1].shape[data0[v][0].index(FC.POINT)])
                 break
-        dms = tuple(dms)
-        shp = tuple(shp)
-        if data0[FV.WEIGHT][0] == dms:
+        dms_t = tuple(dms)
+        shp_t = tuple(shp)
+        if data0[FV.WEIGHT][0] == dms_t:
             w = data0.pop(FV.WEIGHT)[1]
         else:
-            s_w = tuple([np.s_[:] if c in data0[FV.WEIGHT][0] else None for c in dms])
-            w = np.zeros(shp, dtype=config.dtype_double)
+            s_w = tuple([np.s_[:] if c in data0[FV.WEIGHT][0] else None for c in dms_t])
+            w = np.zeros(shp_t, dtype=config.dtype_double)
             w[:] = data0.pop(FV.WEIGHT)[1][s_w]
-        s_ws = tuple([np.s_[:], None] + [None] * (len(dms) - 2))
-        s_A = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
-        s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
+        s_ws = tuple([np.s_[:], None] + [None] * (len(dms_t) - 2))
+        s_A = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms_t])
+        s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms_t])
         data0[FV.WEIGHT] = (
-            dms,
+            dms_t,
             w
             * weibull_weights(
                 ws=wss[s_ws],
@@ -511,21 +518,21 @@ class WeibullPointCloud(PointCloudData):
         for v in list(data0.keys()):
             dims, d = data0.pop(v)
             if len(dims) >= 2 and dims[:2] == (FV.WS, FV.WD):
-                dms = tuple([FC.STATE] + list(dims[2:]))
+                dms2 = tuple([FC.STATE] + list(dims[2:]))
                 shp = [self._N] + list(d.shape[2:])
-                data[v] = (dms, d.reshape(shp))
+                data[v] = (dms2, d.reshape(shp))
             elif dims[0] == FV.WD:
-                dms = tuple([FC.STATE] + list(dims[1:]))
+                dms2 = tuple([FC.STATE] + list(dims[1:]))
                 shp = [n_ws] + list(d.shape)
                 data[v] = np.zeros(shp, dtype=config.dtype_double)
                 data[v][:] = d[None, ...]
-                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
+                data[v] = (dms2, data[v].reshape([self._N] + shp[2:]))
             elif dims[0] == FV.WS:
-                dms = tuple([FC.STATE] + list(dims[1:]))
+                dms2 = tuple([FC.STATE] + list(dims[1:]))
                 shp = [n_ws, n_wd] + list(d.shape[2:])
                 data[v] = np.zeros(shp, dtype=config.dtype_double)
                 data[v][:] = d[:, None, ...]
-                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
+                data[v] = (dms2, data[v].reshape([self._N] + shp[2:]))
             else:
                 data[v] = (dims, d)
 
@@ -611,7 +618,15 @@ class TurbinePointCloud(DatasetStates):
             FC.TURBINE: self.turbine_coord,
         }
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(  # type: ignore[override]
+        self,
+        algo,
+        loaded_data,
+        force: bool = False,
+        bounds_extra_space=None,
+        height_bounds=None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -638,16 +653,17 @@ class TurbinePointCloud(DatasetStates):
             algo,
             loaded_data,
             force=force,
-            bounds_extra_space=None,
+            bounds_extra_space=bounds_extra_space,
+            height_bounds=height_bounds,
             verbosity=verbosity,
         )
 
-    def _update_dims(self, dims, coords, vrs, d, fdata):
+    def _update_dims(self, dims, coords, vrs, d, fdata) -> tuple[Any, Any]:
         """Helper function for dimension adjustment, if needed"""
         coords[FC.TURBINE] = fdata[FV.TXYH]
         return dims, coords
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+    def interpolate_data(self, idims, icrds, d, pts, vrs, times) -> np.ndarray:
         """
         Interpolates data to points.
 
@@ -740,7 +756,9 @@ class TurbinePointCloud(DatasetStates):
             results = griddata(gpts, d, epts, **fpars)
 
         # check for NaN results:
-        PointCloudData._check_nan(self, ipars, gpts, d, epts, idims, vrs, results)
+        PointCloudData._check_nan(
+            cast(PointCloudData, self), ipars, gpts, d, epts, idims, vrs, results
+        )
 
         # reshape results to (n_states, n_turbines, n_vars):
         results = results.reshape(n_states, n_turbines, results.shape[-1])

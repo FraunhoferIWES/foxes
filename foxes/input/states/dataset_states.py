@@ -5,6 +5,7 @@ import threading
 from copy import copy
 from scipy.interpolate import interpn
 from contextlib import nullcontext
+from typing import Any, Generator, cast
 
 from foxes.core import States, map_with_engine
 from foxes.utils import import_module
@@ -276,7 +277,7 @@ class DatasetStates(States):
         self.__data_source = data_source
 
     @property
-    def data_source(self):
+    def data_source(self) -> Any:
         """
         The data source
 
@@ -292,7 +293,9 @@ class DatasetStates(States):
             )
         return self.__data_source
 
-    def _read_ds(self, ds, cmap=None, verbosity=0):
+    def _read_ds(
+        self, ds, cmap=None, verbosity: int = 0
+    ) -> tuple[dict[str, Any], dict[str, tuple[tuple[str, ...], np.ndarray]]]:
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -358,7 +361,9 @@ class DatasetStates(States):
 
         return coords, data
 
-    def _get_data(self, ds, bounds_extra_space=None, height_bounds=None, verbosity=0):
+    def _get_data(
+        self, ds, bounds_extra_space=None, height_bounds=None, verbosity: int = 0
+    ) -> tuple[dict[str, Any], dict[tuple[str, ...], list[Any]], np.ndarray | None]:
         """
         Gets the data from the Dataset and prepares it for calculations.
 
@@ -398,11 +403,12 @@ class DatasetStates(States):
                 f"States '{self.name}': Missing weights variable '{FV.WEIGHT}' in data, found {sorted(list(data0.keys()))}"
             )
             if self.weight_factor is not None:
-                data0[FV.WEIGHT][1] *= self.weight_factor
+                wdims, wdata = data0[FV.WEIGHT]
+                data0[FV.WEIGHT] = (wdims, wdata * self.weight_factor)
             if data0[FV.WEIGHT][0] == (FC.STATE,):
                 weights = data0.pop(FV.WEIGHT)[1]
 
-        data = {}  # dim: [DATA key, variables, data array]
+        data: dict[tuple[str, ...], list[Any]] = {}
         for v, (dims, d) in data0.items():
             if dims not in data:
                 i = len(data)
@@ -418,11 +424,7 @@ class DatasetStates(States):
 
         return coords, data, weights
 
-    def _find_xy_bounds(self, algo, bounds_extra_space):
-        """Helper function to determine x/y bounds with extra space."""
-        return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
-
-    def _find_xy_bounds(self, algo, bounds_extra_space):
+    def _find_xy_bounds(self, algo, bounds_extra_space) -> Any:
         """Helper function to determine x/y bounds with extra space."""
         return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
 
@@ -671,7 +673,7 @@ class DatasetStates(States):
                 preprocess=self.preprocess_nc,
             )
 
-            def _len_ds(ds):
+            def _len_ds(ds) -> int:
                 """Helper function to get the number of states"""
                 return ds.sizes[states_coord] if isinstance(ds, xr.Dataset) else len(ds)
 
@@ -749,7 +751,7 @@ class DatasetStates(States):
             self._vars = _update_vars(data, self._vars)
 
         # make sure state indices are sorted ascending:
-        def _is_sorted(a):
+        def _is_sorted(a) -> bool:
             return np.all(a[:-1] <= a[1:])
 
         if self.check_times and not _is_sorted(self._inds):
@@ -766,7 +768,7 @@ class DatasetStates(States):
 
         return data
 
-    def gen_states_split_size(self):
+    def gen_states_split_size(self) -> Generator[int | None, None, None]:
         """
         Generator for suggested states split sizes for output writing.
 
@@ -871,7 +873,7 @@ class DatasetStates(States):
         elif self.load_mode == "lazy":
             self.__lazy_data = data
 
-    def load_chunk_data(self, algo, mdata, fdata, tdata):
+    def load_chunk_data(self, algo, mdata, fdata, tdata) -> None:  # type: ignore[override]
         """
         Load chunk data according to load mode.
 
@@ -1080,7 +1082,7 @@ class DatasetStates(States):
             if self.load_mode == "preload":
                 self.__data_source = data.pop("data_source")
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -1097,7 +1099,7 @@ class DatasetStates(States):
         """
         return self.ovars
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -1109,7 +1111,7 @@ class DatasetStates(States):
         """
         return self._N
 
-    def index(self):
+    def index(self) -> Any:
         """
         The index list
 
@@ -1123,7 +1125,13 @@ class DatasetStates(States):
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self._inds
 
-    def get_calc_data(self, mdata, fdata):
+    def get_calc_data(
+        self, mdata, fdata
+    ) -> tuple[
+        dict[str, Any],
+        dict[tuple[str, ...], tuple[list[str], np.ndarray]],
+        np.ndarray | None,
+    ]:
         """
         Gathers data for calculations.
 
@@ -1162,24 +1170,26 @@ class DatasetStates(States):
 
         # extract data from mdata
         weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
-        data = {}
-        coords = {}
+        data: dict[tuple[str, ...], tuple[list[str], np.ndarray]] = {}
+        coords: dict[str, Any] = {}
         for DATA in data_keys:
             dims = mdata.dims[DATA]
-            vrs = (
+            vrs0 = (
                 mdata[dims[-1]]
                 if isinstance(mdata[dims[-1]], list)
                 else mdata[dims[-1]].tolist()
             )
-            dms = []
+            vrs = list(vrs0)
+            dms: list[str] = []
             for c in dims[:-1]:
                 c0 = self.unvar(c) if c not in [FC.STATE, FC.TURBINE] else c
-                dms.append(c0)
-                if c0 not in coords:
-                    coords[c0] = mdata[c]
-            dms = tuple(dms + [dims[-1]])
-            coords[dims[-1]] = vrs
-            data[dms] = (vrs, mdata[DATA].copy())
+                c0s = cast(str, c0)
+                dms.append(c0s)
+                if c0s not in coords:
+                    coords[c0s] = mdata[c]
+            dms_t = tuple(dms + [cast(str, dims[-1])])
+            coords[cast(str, dims[-1])] = vrs
+            data[dms_t] = (vrs, mdata[DATA].copy())
 
         # adjust turbine order for purely turbine dependent data:
         mvd = []
@@ -1207,7 +1217,7 @@ class DatasetStates(States):
 
         return coords, data, weights
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+    def interpolate_data(self, idims, icrds, d, pts, vrs, times) -> np.ndarray:
         """
         Interpolates data to points.
 
@@ -1269,11 +1279,11 @@ class DatasetStates(States):
 
         return d
 
-    def _update_dims(self, dims, coords, vrs, d, fdata):
+    def _update_dims(self, dims, coords, vrs, d, fdata) -> tuple[Any, Any]:
         """Helper function for dimension adjustment, if needed"""
         return dims, coords
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
         """
         The main model calculation.
 
@@ -1314,18 +1324,12 @@ class DatasetStates(States):
         # get data for calculation
         coords, data, weights = self.get_calc_data(mdata, fdata)
         coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
-
-        # check if points are state dependent
-        _points_data = None
+        _points_data: dict[str, Any] = {}
 
         def _analyze_points(has_p, has_h, hcoords=None):
-            """Helper function for points analysis."""
-            nonlocal _points_data
-
-            if _points_data is None:
+            if len(_points_data) == 0:
                 pmin = np.min(points, axis=(0, 1))
                 pmax = np.max(points, axis=(0, 1))
-                _points_data = {}
                 _points_data["pmin"] = pmin
                 _points_data["pmax"] = pmax
             else:
@@ -1438,11 +1442,11 @@ class DatasetStates(States):
                         raise NotImplementedError(
                             f"States '{self.name}': Unsupported dimension '{c}' in {dims} for interpolation of variables {vrs}"
                         )
-                pts = np.stack(pts, axis=-1) if len(pts) > 0 else None
+                pts_eval = np.stack(pts, axis=-1) if len(pts) > 0 else None
 
                 # interpolate:
                 icrds = [hcoords[c] for c in idims]
-                d = self.interpolate_data(idims, icrds, d, pts, vrs, times)
+                d = self.interpolate_data(idims, icrds, d, pts_eval, vrs, times)
 
                 # move state dimension back to front:
                 if dims[0] == FC.STATE:
@@ -1468,7 +1472,7 @@ class DatasetStates(States):
                         d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
                     else:
                         d = d[0, ...]
-                del pts, icrds
+                del pts, pts_eval, icrds
 
             # case no interpolation needed:
             else:

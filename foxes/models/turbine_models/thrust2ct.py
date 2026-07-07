@@ -1,7 +1,15 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import TurbineModel
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class Thrust2Ct(TurbineModel):
@@ -19,7 +27,7 @@ class Thrust2Ct(TurbineModel):
 
     """
 
-    def __init__(self, thrust_var=FV.T, var_ws_ct=FV.REWS2):
+    def __init__(self, thrust_var: str = FV.T, var_ws_ct: str = FV.REWS2) -> None:
         """
         Constructor.
 
@@ -35,11 +43,11 @@ class Thrust2Ct(TurbineModel):
         self.thrust_var = thrust_var
         self.WSCT = var_ws_ct
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"thrust_var={self.thrust_var}, var_ws_ct={self.WSCT}"
         return f"{type(self).__name__}({a})"
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -56,7 +64,13 @@ class Thrust2Ct(TurbineModel):
         """
         return [FV.CT]
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 import foxes.variables as FV
 from foxes.config import config
 
 from .rotor_points import RotorPoints
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class PartialCentre(RotorPoints):
@@ -15,7 +22,9 @@ class PartialCentre(RotorPoints):
 
     """
 
-    def get_wake_points(self, algo, mdata, fdata):
+    def get_wake_points(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Get the wake calculation points, and their
         weights.
@@ -42,15 +51,15 @@ class PartialCentre(RotorPoints):
 
     def map_rotor_results(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        rotor_res,
-        rotor_weights,
-        downwind_index=None,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        rotor_res: np.ndarray,
+        rotor_weights: np.ndarray,
+        downwind_index: int | None = None,
+    ) -> np.ndarray:
         """
         Map ambient rotor point results onto target points.
 

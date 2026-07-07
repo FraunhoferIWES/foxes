@@ -1,9 +1,10 @@
 import numpy as np
 from xarray import Dataset
 from io import StringIO
+from pathlib import Path
 
 
-def read_tab_file(fname, normalize=True):
+def read_tab_file(fname: str | Path, normalize: bool = True) -> Dataset:
     """
     Reads a tab file into a Dataset
 

@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import Model
 
 
 class CrespoHernandezTIWake(TopHatWakeModel):
@@ -50,18 +58,18 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     def __init__(
         self,
-        superposition,
-        use_ambti=False,
-        sbeta_factor=0.25,
-        near_wake_D=None,
-        a_near=0.362,
-        a_far=0.73,
-        e1=0.83,
-        e2=-0.0325,
-        e3=-0.32,
-        induction="Betz",
-        **wake_k,
-    ):
+        superposition: str,
+        use_ambti: bool = False,
+        sbeta_factor: float = 0.25,
+        near_wake_D: float | None = None,
+        a_near: float = 0.362,
+        a_far: float = 0.73,
+        e1: float = 0.83,
+        e2: float = -0.0325,
+        e3: float = -0.32,
+        induction: str = "Betz",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -112,7 +120,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         self.near_wake_D = near_wake_D
         self.wake_k = WakeK(**wake_k)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -121,7 +129,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         s += self.wake_k.repr() + ")"
         return s
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -133,7 +141,9 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         """
         return super().sub_models() + [self.wake_k]
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 

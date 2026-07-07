@@ -1,9 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from copy import deepcopy
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import FarmDataModel
 import foxes.constants as FC
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from .urelax import URelax
 
 
 class FarmWakesCalculation(FarmDataModel):
@@ -19,7 +28,7 @@ class FarmWakesCalculation(FarmDataModel):
 
     """
 
-    def __init__(self, urelax=None):
+    def __init__(self, urelax: URelax | None = None) -> None:
         """
         Constructor.
 
@@ -32,7 +41,7 @@ class FarmWakesCalculation(FarmDataModel):
         super().__init__()
         self.urelax = urelax
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -47,12 +56,12 @@ class FarmWakesCalculation(FarmDataModel):
             The output variable names
 
         """
-        ovars = algo.rotor_model.output_farm_vars(
+        ovars: list[str] = algo.rotor_model.output_farm_vars(
             algo
         ) + algo.farm_controller.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
 
-    def sub_models(self):
+    def sub_models(self) -> list[Any]:
         """
         List of all sub-models
 
@@ -64,7 +73,9 @@ class FarmWakesCalculation(FarmDataModel):
         """
         return [] if self.urelax is None else [self.urelax]
 
-    def calculate(self, algo, mdata, fdata):
+    def calculate(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -112,7 +123,14 @@ class FarmWakesCalculation(FarmDataModel):
                 )
                 pwake2wmodels[pwake.name] = wmodels
 
-        def _contribute(gmodel, pwake, tdatap, wdeltas, variables, s):
+        def _contribute(
+            gmodel: Any,
+            pwake: Any,
+            tdatap: Any,
+            wdeltas: dict[str, np.ndarray],
+            variables: list[str],
+            s: Any,
+        ) -> None:
             """Helper function for contribution of wake deltas to wake results"""
 
             # grab target slice:
@@ -146,6 +164,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         wake_res = deepcopy(amb_res)
         n_turbines = mdata.n_turbines
+        assert n_turbines is not None
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             gmodel = algo.ground_models[wname]

@@ -1,7 +1,11 @@
 import numpy as np
 
 
-def area(r1, r2, d):
+def area(
+    r1: float | np.ndarray,
+    r2: float | np.ndarray,
+    d: float | np.ndarray,
+) -> float | np.ndarray:
     """
     Calculates the intersection of two
     circles with radii r1, r2 and a centre
@@ -55,7 +59,7 @@ def area(r1, r2, d):
     return A1 + A2
 
 
-def calc_area(r1, r2, d):
+def calc_area(r1: np.ndarray, r2: np.ndarray, d: np.ndarray) -> np.ndarray:
     """
     Calculates the intersection of two circles.
 

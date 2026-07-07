@@ -1,6 +1,18 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
+
 from foxes.utils import new_instance
 
 from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.partial_wakes_model import PartialWakesModel
+    from foxes.core.wake_model import WakeModel
 
 
 class GroundModel(Model):
@@ -10,13 +22,13 @@ class GroundModel(Model):
 
     def new_farm_wake_deltas(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wmodel,
-        pwake,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wmodel: WakeModel,
+        pwake: PartialWakesModel,
+    ) -> dict[str, np.ndarray]:
         """
         Creates new initial wake deltas, filled
         with zeros.
@@ -47,15 +59,15 @@ class GroundModel(Model):
 
     def contribute_to_farm_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-        pwake,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+        pwake: PartialWakesModel,
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
@@ -87,16 +99,16 @@ class GroundModel(Model):
 
     def finalize_farm_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        rpoint_weights,
-        wake_deltas,
-        wmodel,
-        downwind_index,
-        pwake,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        rpoint_weights: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+        downwind_index: int,
+        pwake: PartialWakesModel,
+    ) -> dict[str, np.ndarray]:
         """
         Updates the wake_deltas at the selected target
         downwind index.
@@ -145,12 +157,12 @@ class GroundModel(Model):
 
     def new_point_wake_deltas(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wmodel,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wmodel: WakeModel,
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
@@ -178,14 +190,14 @@ class GroundModel(Model):
 
     def contribute_to_point_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
@@ -211,18 +223,19 @@ class GroundModel(Model):
             The wake model
 
         """
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wake_frame = algo.wake_frame
+        wcoos = wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
     def finalize_point_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wake_deltas,
-        wmodel,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+    ) -> None:
         """
         Finalize the wake calculation.
 
@@ -247,7 +260,7 @@ class GroundModel(Model):
         wmodel.finalize_wake_deltas(algo, mdata, fdata, tdata, wake_deltas)
 
     @classmethod
-    def new(cls, ground_type, *args, **kwargs):
+    def new(cls, ground_type: str, *args: Any, **kwargs: Any) -> GroundModel:
         """
         Run-time ground model factory.
 

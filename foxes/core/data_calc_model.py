@@ -1,6 +1,15 @@
+from __future__ import annotations
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
 
 from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import Data
 
 
 class DataCalcModel(Model):
@@ -17,7 +26,12 @@ class DataCalcModel(Model):
 
     """
 
-    def __init__(self, *args, load_mode="preload", **kwargs):
+    def __init__(
+        self,
+        *args: Any,
+        load_mode: str = "preload",
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -35,7 +49,7 @@ class DataCalcModel(Model):
         self.load_mode = load_mode
 
     @abstractmethod
-    def output_coords(self):
+    def output_coords(self) -> tuple[str, ...]:
         """
         Gets the coordinates of all output arrays
 
@@ -47,7 +61,7 @@ class DataCalcModel(Model):
         """
         pass
 
-    def load_chunk_data(self, algo, *data):
+    def load_chunk_data(self, algo: Algorithm, *data: Data) -> None:
         """
         Load chunk data according to load mode.
 
@@ -64,10 +78,17 @@ class DataCalcModel(Model):
 
         """
         for m in self.sub_models():
-            m.load_chunk_data(algo, *data)
+            load_chunk_data = getattr(m, "load_chunk_data", None)
+            if callable(load_chunk_data):
+                load_chunk_data(algo, *data)
 
     @abstractmethod
-    def calculate(self, algo, *data, **parameters):
+    def calculate(
+        self,
+        algo: Algorithm,
+        *data: Data,
+        **parameters: Any,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -93,3 +114,4 @@ class DataCalcModel(Model):
 
         """
         self.load_chunk_data(algo, *data)
+        return {}

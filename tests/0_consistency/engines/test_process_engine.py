@@ -4,7 +4,7 @@ from multiprocessing import shared_memory as mp_shared_memory
 from multiprocessing import resource_tracker
 from xarray import Dataset
 
-from foxes.core import MData
+from foxes.core import MData, FData
 import foxes.constants as FC
 from foxes.engines.process import (
     ProcessEngine,
@@ -96,7 +96,6 @@ def test_process_engine_resource_tracker_bypass_install_is_idempotent():
     _install_resource_tracker_shared_memory_bypass()
     assert resource_tracker.register is reg_before
     assert resource_tracker.unregister is unreg_before
-    assert getattr(resource_tracker, "_foxes_shm_bypass_installed", False)
 
 
 def test_process_engine_init_shared_memory_roundtrip_and_release():
@@ -444,6 +443,7 @@ def test_process_engine_pool_run_shares_memory_but_keeps_extra_data_local():
     algo = _DummyAlgo()
     model = _SharedMemoryMutatingModel()
     mdata = _new_empty_chunk_mdata()
+    fdata = FData.from_sizes(1, 1)
 
     try:
         engine._create_pool()
@@ -453,6 +453,8 @@ def test_process_engine_pool_run_shares_memory_but_keeps_extra_data_local():
                 algo,
                 model,
                 mdata,
+                fdata,
+                None,
                 shared=handle,
                 chunk_store={},
                 chunk_key=(0, 0),
@@ -469,6 +471,8 @@ def test_process_engine_pool_run_shares_memory_but_keeps_extra_data_local():
                 algo,
                 model,
                 mdata,
+                fdata,
+                None,
                 shared=handle,
                 chunk_store={},
                 chunk_key=(0, 1),

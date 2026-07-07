@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from os import PathLike
+from pathlib import Path
 from xarray import Dataset, open_dataset
+from typing import Any
 
 from foxes.data import STATES
 from foxes.utils import PandasFileHelper, weibull_weights
@@ -45,12 +49,12 @@ class WeibullSectors(StatesTable):
         data_source,
         output_vars,
         ws_bins=None,
-        var2ncvar={},
+        var2ncvar: dict[str, str] | None = None,
         sel=None,
         isel=None,
-        read_pars={},
-        **kwargs,
-    ):
+        read_pars: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -78,10 +82,10 @@ class WeibullSectors(StatesTable):
         """
         super().__init__(data_source, output_vars, var2col={}, **kwargs)
         self.ws_bins = None if ws_bins is None else np.asarray(ws_bins)
-        self.var2ncvar = var2ncvar
+        self.var2ncvar = {} if var2ncvar is None else var2ncvar
         self.sel = sel if sel is not None else {}
         self.isel = isel if isel is not None else {}
-        self.rpars = read_pars
+        self.rpars = {} if read_pars is None else read_pars
 
         if FV.WS not in self.ovars:
             raise ValueError(
@@ -93,12 +97,14 @@ class WeibullSectors(StatesTable):
                     f"States '{self.name}': Cannot have '{v}' as output variable"
                 )
 
-        self._original_data = None
+        self._original_data: Dataset | pd.DataFrame | str | Path | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_data(self, algo, point_coord=None, verbosity=0):
+    def _read_data(
+        self, algo, point_coord: str | None = None, verbosity: int = 0
+    ) -> Dataset:
         """
         Extracts data from file or Dataset.
 
@@ -125,7 +131,7 @@ class WeibullSectors(StatesTable):
         # read file or grab data
         cwd = self.var2ncvar.get(FV.WD, FV.WD)
         if isinstance(self.data_source, (str, PathLike)):
-            fpath = get_input_path(self.data_source)
+            fpath = get_input_path(Path(self.data_source))
             if not fpath.is_file():
                 if verbosity > 0:
                     print(
@@ -187,13 +193,15 @@ class WeibullSectors(StatesTable):
         # prepare data binning
         if self._original_data is None:
             self._original_data = self.data_source
-        cpt = (
+        cpt: str | None = (
             self.var2ncvar.get(FC.POINT, FC.POINT) if point_coord is not None else None
         )
         n_wd = data.sizes[cwd]
         self.BIN_WD = self.var("bin_wd")
         self.BIN_WS = self.var("bin_ws")
         self.POINT = self.var("point")
+        shp: tuple[int, ...]
+        dms: tuple[str, ...]
         if cpt is None:
             n_pt = 0
             shp = (n_wd, n_ws)
@@ -288,7 +296,9 @@ class WeibullSectors(StatesTable):
 
         return data
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 

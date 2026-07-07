@@ -1,7 +1,12 @@
 import numpy as np
 
 
-def cubic_roots(a0, a1, a2, a3=None):
+def cubic_roots(
+    a0: np.ndarray,
+    a1: np.ndarray,
+    a2: np.ndarray,
+    a3: np.ndarray | None = None,
+) -> np.ndarray:
     """
     Calculate real roots of polynomials of degree 3.
 
@@ -78,7 +83,14 @@ def cubic_roots(a0, a1, a2, a3=None):
     return out
 
 
-def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.0e-12):
+def test_cubic_roots(
+    roots: np.ndarray,
+    a0: np.ndarray,
+    a1: np.ndarray,
+    a2: np.ndarray,
+    a3: np.ndarray | None = None,
+    tol: float = 1.0e-12,
+) -> None:
     """
     Test the cubic roots results
 
@@ -102,7 +114,7 @@ def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.0e-12):
         c0 = a0[n]
         c1 = a1[n]
         c2 = a2[n]
-        c3 = a3[n]
+        c3 = 1.0 if a3 is None else a3[n]
 
         print(f"Polynomial {n}: a = {(c0, c1, c2, c3)}")
 

@@ -476,7 +476,7 @@ ROUND_DIGITS.update(
 )
 
 
-def get_default_digits(variable):
+def get_default_digits(variable: str) -> int:
     """
     Gets the default number of output digits
 

@@ -1,10 +1,19 @@
+from __future__ import annotations
+
 import numpy as np
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData, Model
+    from foxes.core.axial_induction_model import AxialInductionModel
 
 
 class TopHatWakeModel(AxisymmetricWakeModel):
@@ -20,7 +29,9 @@ class TopHatWakeModel(AxisymmetricWakeModel):
 
     """
 
-    def __init__(self, *args, induction="Betz", **kwargs):
+    def __init__(
+        self, *args: Any, induction: AxialInductionModel | str = "Betz", **kwargs: Any
+    ) -> None:
         """
         Constructor.
 
@@ -37,7 +48,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         super().__init__(*args, **kwargs)
         self.induction = induction
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -47,9 +58,18 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             All sub models
 
         """
-        return super().sub_models() + [self.induction]
+        smdls = super().sub_models()
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -82,7 +102,9 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
@@ -120,14 +142,14 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     @abstractmethod
     def calc_wake_radius(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        ct: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the wake radius, depending on x only (not r).
 
@@ -160,16 +182,16 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     @abstractmethod
     def calc_centreline(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        x,
-        wake_r,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        x: np.ndarray,
+        wake_r: np.ndarray,
+        ct: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Calculate centre line results of wake deltas.
 
@@ -207,14 +229,14 @@ class TopHatWakeModel(AxisymmetricWakeModel):
 
     def calc_wakes_x_r(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        r,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        r: np.ndarray,
+    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
         """
         Calculate wake deltas.
 

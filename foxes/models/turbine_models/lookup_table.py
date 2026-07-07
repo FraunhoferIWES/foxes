@@ -1,11 +1,20 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
 import xarray as xr
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
 from foxes.config import config, get_input_path
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class LookupTable(TurbineModel):
@@ -31,15 +40,15 @@ class LookupTable(TurbineModel):
 
     def __init__(
         self,
-        data_source,
-        input_vars,
-        output_vars,
-        varmap={},
-        pd_file_read_pars={},
-        xr_interp_args={},
-        interpn_args={},
-        **kwargs,
-    ):
+        data_source: str | pd.DataFrame,
+        input_vars: list[str],
+        output_vars: list[str],
+        varmap: dict[str, str] = {},
+        pd_file_read_pars: dict[str, Any] = {},
+        xr_interp_args: dict[str, Any] = {},
+        interpn_args: dict[str, Any] = {},
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -84,7 +93,7 @@ class LookupTable(TurbineModel):
                 )
             setattr(self, v, d)
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -101,7 +110,13 @@ class LookupTable(TurbineModel):
         """
         return self.output_vars
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -162,7 +177,13 @@ class LookupTable(TurbineModel):
 
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -189,6 +210,8 @@ class LookupTable(TurbineModel):
 
         """
         self.ensure_output_vars(algo, fdata)
+        table = self._data
+        assert table is not None, "Lookup table data not initialized"
 
         data = {
             v: self.get_data(
@@ -218,14 +241,14 @@ class LookupTable(TurbineModel):
         iargs = dict(bounds_error=True)
         iargs.update(self._iargs)
         try:
-            odata = self._data.interp(**indata, kwargs=iargs, **self._xargs)
+            odata = table.interp(**indata, kwargs=iargs, **self._xargs)
         except ValueError as e:
             print("\nBOUNDS ERROR", self.name)
             print("Variables:", list(indata.keys()))
             print(
                 "DATA min/max:",
-                [float(np.min(self._data[v].to_numpy())) for v in indata.keys()],
-                [float(np.max(self._data[v].to_numpy())) for v in indata.keys()],
+                [float(np.min(table[v].to_numpy())) for v in indata.keys()],
+                [float(np.max(table[v].to_numpy())) for v in indata.keys()],
             )
             print(
                 "EVAL min/max:",

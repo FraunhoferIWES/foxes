@@ -1,53 +1,72 @@
+from __future__ import annotations
+
 import numpy as np
 import atexit
+from collections.abc import Sized
 from multiprocessing import Manager, shared_memory as mp_shared_memory
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import resource_tracker
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
 from foxes.core import EngineRunner, MData
 
 from .pool import PoolEngine
 
+if TYPE_CHECKING:
+    from foxes.core import FData, TData
+
 
 _resource_tracker_register = resource_tracker.register
 _resource_tracker_unregister = resource_tracker.unregister
 
 
-def _resource_tracker_register_no_shared(name, rtype):
+def _resource_tracker_register_no_shared(name: str, rtype: str) -> Any:
     if rtype == "shared_memory":
-        return
+        return None
     return _resource_tracker_register(name, rtype)
 
 
-def _resource_tracker_unregister_no_shared(name, rtype):
+def _resource_tracker_unregister_no_shared(name: str, rtype: str) -> Any:
     if rtype == "shared_memory":
-        return
+        return None
     return _resource_tracker_unregister(name, rtype)
 
 
-def _install_resource_tracker_shared_memory_bypass():
+def _resource_tracker_register_no_shared_typed(name: Sized, rtype: str) -> None:
+    _resource_tracker_register_no_shared(str(name), rtype)
+
+
+def _resource_tracker_unregister_no_shared_typed(name: Sized, rtype: str) -> None:
+    _resource_tracker_unregister_no_shared(str(name), rtype)
+
+
+_FOXES_SHM_BYPASS_INSTALLED = False
+
+
+def _install_resource_tracker_shared_memory_bypass() -> None:
     """Installs an idempotent bypass for resource_tracker shared-memory registration.
 
     Shared memory ownership is managed explicitly by this engine (close/unlink in
     the parent process), so worker-side resource_tracker registration for
     ``shared_memory`` must be disabled to avoid duplicate tracking noise.
     """
-    if getattr(resource_tracker, "_foxes_shm_bypass_installed", False):
+    global _FOXES_SHM_BYPASS_INSTALLED
+    if _FOXES_SHM_BYPASS_INSTALLED:
         return
 
-    resource_tracker.register = _resource_tracker_register_no_shared
-    resource_tracker.unregister = _resource_tracker_unregister_no_shared
-    resource_tracker._foxes_shm_bypass_installed = True
+    resource_tracker.register = _resource_tracker_register_no_shared_typed
+    resource_tracker.unregister = _resource_tracker_unregister_no_shared_typed
+    _FOXES_SHM_BYPASS_INSTALLED = True
 
 
 _install_resource_tracker_shared_memory_bypass()
 
 
-_PROCESS_WORKER_SHM_CACHE = {}
+_PROCESS_WORKER_SHM_CACHE: dict[str, Any] = {}
 
 
-def _close_cached_shared_memory(shm_name):
+def _close_cached_shared_memory(shm_name: str) -> None:
     """Closes and removes one cached worker shared-memory handle."""
     shm = _PROCESS_WORKER_SHM_CACHE.pop(shm_name, None)
     if shm is not None:
@@ -57,7 +76,7 @@ def _close_cached_shared_memory(shm_name):
             pass
 
 
-def _close_all_cached_shared_memory():
+def _close_all_cached_shared_memory() -> None:
     """Closes all cached worker shared-memory handles."""
     for shm_name in list(_PROCESS_WORKER_SHM_CACHE):
         _close_cached_shared_memory(shm_name)
@@ -74,7 +93,7 @@ class ProcessEngineRunner(EngineRunner):
 
     """
 
-    def _recombine_mdata_with_shared(self, mdata, handle):
+    def _recombine_mdata_with_shared(self, mdata: MData, handle: Any) -> MData:
         """
         Recombines the mdata with the shared data
 
@@ -128,19 +147,21 @@ class ProcessEngineRunner(EngineRunner):
 
     def run(
         self,
-        algo,
-        model,
-        mdata,
-        *data,
-        shared,
-        chunk_store,
-        chunk_key,
-        out_dims,
-        write_nc,
-        write_chunk_ani=None,
-        utm_zone=None,
-        **cpars,
-    ):
+        algo: Any,
+        model: Any,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData | None = None,
+        *,
+        shared: Any,
+        chunk_store: dict[Any, Any],
+        chunk_key: Any,
+        out_dims: tuple[str, ...],
+        write_nc: dict[str, Any] | None,
+        write_chunk_ani: dict[str, Any] | None = None,
+        utm_zone: tuple[int, str] | None = None,
+        **cpars: Any,
+    ) -> tuple[dict[str, Any] | None, dict[Any, Any]]:
         """Helper function for running in a single process"""
 
         if utm_zone is not None:  # needed in some cases for mpi engine TODO investigate
@@ -148,10 +169,13 @@ class ProcessEngineRunner(EngineRunner):
         algo.reset_chunk_store(chunk_store.copy())
         mdata = self._recombine_mdata_with_shared(mdata, shared)
 
-        results = model.calculate(algo, mdata, *data, **cpars)
+        if tdata is None:
+            results = model.calculate(algo, mdata, fdata, **cpars)
+        else:
+            results = model.calculate(algo, mdata, fdata, tdata, **cpars)
         chunk_store = algo.reset_chunk_store()
         cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
-        self._write_ani(algo, chunk_key, write_chunk_ani, mdata, *data)
+        self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)
         results = self._write_chunk_results(algo, results, write_nc, out_dims, mdata)
         return results, cstore
 
@@ -164,7 +188,7 @@ class ProcessEngine(PoolEngine):
 
     """
 
-    def new_runner(self):
+    def new_runner(self) -> ProcessEngineRunner:
         """
         Creates a new EngineRunner for running calculations in this engine
 
@@ -176,11 +200,11 @@ class ProcessEngine(PoolEngine):
         """
         return ProcessEngineRunner()
 
-    def _create_pool(self):
+    def _create_pool(self) -> None:
         """Creates the pool"""
         self._pool = ProcessPoolExecutor(max_workers=self.n_workers, **self.pool_args)
 
-    def submit(self, f, *args, **kwargs):
+    def submit(self, f: Any, *args: Any, **kwargs: Any) -> Any:
         """
         Submits a job to worker, obtaining a future
 
@@ -202,7 +226,7 @@ class ProcessEngine(PoolEngine):
         """
         return self._pool.submit(f, *args, **kwargs)
 
-    def future_is_done(self, future):
+    def future_is_done(self, future: Any) -> bool:
         """
         Checks if a future is done
 
@@ -219,7 +243,7 @@ class ProcessEngine(PoolEngine):
         """
         return future.done()
 
-    def await_result(self, future):
+    def await_result(self, future: Any) -> Any:
         """
         Waits for result from a future
 
@@ -236,7 +260,13 @@ class ProcessEngine(PoolEngine):
         """
         return future.result()
 
-    def init_shared_memory(self, shared_memory, mdata, shared_mdata, verbosity=0):
+    def init_shared_memory(
+        self,
+        shared_memory: list[Any],
+        mdata: MData,
+        shared_mdata: MData | None,
+        verbosity: int = 0,
+    ) -> dict[str, Any] | None:
         """
         Sets the shared memory for the chunk calculation
 
@@ -297,14 +327,20 @@ class ProcessEngine(PoolEngine):
             "extra_data": extra_data,
         }
 
-    def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
+    def prepare_chunk_mdata_for_shared(
+        self, mdata: MData, shared_handle: dict[str, Any]
+    ) -> None:
         """Remove entries that will be restored from shared storage in workers."""
         for v in shared_handle.get("data", {}).keys():
             if v in mdata:
                 mdata.pop(v)
                 mdata.dims.pop(v)
 
-    def release_shared_memory(self, shared_memory, shared_handle):
+    def release_shared_memory(
+        self,
+        shared_memory: list[dict[str, Any]],
+        shared_handle: dict[str, Any] | None,
+    ) -> None:
         """
         Releases the shared memory after the chunk calculation
 
@@ -319,7 +355,7 @@ class ProcessEngine(PoolEngine):
         for entry in reversed(shared_memory):
             kind = entry.get("kind")
             obj = entry.get("obj")
-            if kind == "shm":
+            if kind == "shm" and obj is not None:
                 try:
                     obj.close()
                 except FileNotFoundError:
@@ -328,10 +364,10 @@ class ProcessEngine(PoolEngine):
                     obj.unlink()
                 except FileNotFoundError:
                     pass
-            elif kind == "manager":
+            elif kind == "manager" and obj is not None:
                 obj.shutdown()
         shared_memory.clear()
 
-    def _shutdown_pool(self):
+    def _shutdown_pool(self) -> None:
         """Shuts down the pool"""
         self._pool.shutdown()

@@ -1,10 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import TData
 import foxes.variables as FV
 import foxes.constants as FC
 
 from .centre import CentreRotor
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class DirectMDataInfusion(CentreRotor):
@@ -29,11 +37,11 @@ class DirectMDataInfusion(CentreRotor):
 
     def __init__(
         self,
-        svars2mdvars=None,
-        mdata_vars=None,
-        turbine_coord=None,
-        **kwargs,
-    ):
+        svars2mdvars: dict[str, str] | None = None,
+        mdata_vars: list[str] | None = None,
+        turbine_coord: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -57,7 +65,7 @@ class DirectMDataInfusion(CentreRotor):
         self.mdata_vars = mdata_vars
         self.turbine_coord = turbine_coord
 
-    def input_variables(self):
+    def input_variables(self) -> list[str]:
         """
         The input variables which are required by the model.
 
@@ -69,7 +77,7 @@ class DirectMDataInfusion(CentreRotor):
         """
         return []
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -114,14 +122,14 @@ class DirectMDataInfusion(CentreRotor):
 
     def calculate(
         self,
-        algo,
-        mdata,
-        fdata,
-        rpoints=None,
-        rpoint_weights=None,
-        store=False,
-        downwind_index=None,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        rpoints: np.ndarray | None = None,
+        rpoint_weights: np.ndarray | None = None,
+        store: bool = False,
+        downwind_index: int | None = None,
+    ) -> dict[str, np.ndarray]:  # type: ignore[override]
         """
         Calculate ambient rotor effective results.
 
@@ -168,9 +176,12 @@ class DirectMDataInfusion(CentreRotor):
                 mdata=mdata,
             )
 
-        tdata = TData.from_tpoints(rpoints, rpoint_weights)
+        tdata = cast(TData, TData.from_tpoints(rpoints, rpoint_weights))
         sres = {}
         mdvs = self.mdata_vars if self.mdata_vars is not None else list(mdata.keys())
+        if self.svars2mdvars is None:
+            self.output_farm_vars(algo)
+        assert self.svars2mdvars is not None
         for v, w in self.svars2mdvars.items():
             tdata.add(
                 v,

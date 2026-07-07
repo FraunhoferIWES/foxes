@@ -2,11 +2,14 @@ import numpy as np
 from xarray import Dataset, SerializationWarning
 from pathlib import Path
 import warnings
+from typing import Any
 
 import foxes.variables as FV
 
 
-def compute_scale_and_offset(min, max, n, hasnan=True):
+def compute_scale_and_offset(
+    min: float, max: float, n: int, hasnan: bool = True
+) -> tuple[float, float, float | None]:
     """
     Computes scale_factor and add_offset for packing data
     into n-bit integers.
@@ -49,7 +52,13 @@ def compute_scale_and_offset(min, max, n, hasnan=True):
     return scale_factor, add_offset, fill_value
 
 
-def pack_value(unpacked_value, scale_factor, add_offset, dtype, fill_value):
+def pack_value(
+    unpacked_value: float | np.ndarray,
+    scale_factor: float,
+    add_offset: float,
+    dtype,
+    fill_value: float | None,
+) -> np.ndarray:
     """
     Pack a floating point value into an integer representation.
 
@@ -87,7 +96,12 @@ def pack_value(unpacked_value, scale_factor, add_offset, dtype, fill_value):
             return packed.astype(dtype)
 
 
-def unpack_value(packed_value, scale_factor, add_offset, fill_value):
+def unpack_value(
+    packed_value: int | np.ndarray,
+    scale_factor: float,
+    add_offset: float,
+    fill_value: float | None,
+) -> np.ndarray:
     """
     Unpack an integer representation back into a floating point value.
 
@@ -111,14 +125,21 @@ def unpack_value(packed_value, scale_factor, add_offset, fill_value):
 
     """
     if fill_value is None:
-        return (packed_value * scale_factor + add_offset).astype(scale_factor.dtype)
+        return np.asarray(packed_value * scale_factor + add_offset, dtype=np.float64)
     else:
-        return np.where(
-            packed_value == fill_value, np.nan, packed_value * scale_factor + add_offset
-        ).astype(scale_factor.dtype)
+        return np.asarray(
+            np.where(
+                packed_value == fill_value,
+                np.nan,
+                packed_value * scale_factor + add_offset,
+            ),
+            dtype=np.float64,
+        )
 
 
-def get_encoding(data, complevel=5, pack=True):
+def get_encoding(
+    data: np.ndarray, complevel: int = 5, pack: bool = True
+) -> dict[str, Any]:
     """
     Get the encoding parameters for a numpy array.
 
@@ -139,7 +160,7 @@ def get_encoding(data, complevel=5, pack=True):
     :group: utils
 
     """
-    enc = {"zlib": True, "complevel": complevel}
+    enc: dict[str, Any] = {"zlib": True, "complevel": complevel}
     if pack:
         if np.issubdtype(data.dtype, np.integer):
             for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32]:
@@ -170,12 +191,12 @@ def get_encoding(data, complevel=5, pack=True):
 def write_nc(
     ds,
     fpath,
-    round={},
-    complevel=5,
-    nc_engine="netcdf4",
-    pack=False,
-    verbosity=1,
-    **kwargs,
+    round: dict[str, int] | int | None = None,
+    complevel: int = 5,
+    nc_engine: str = "netcdf4",
+    pack: bool = False,
+    verbosity: int = 1,
+    **kwargs: Any,
 ):
     """
     Writes a dataset to netCDF file
@@ -202,7 +223,7 @@ def write_nc(
 
     """
 
-    def _round(x, v, d):
+    def _round(x: np.ndarray, v: str, d: int | None) -> np.ndarray:
         """Helper function to round values"""
         if d is not None:
             if np.issubdtype(x.dtype, np.integer):

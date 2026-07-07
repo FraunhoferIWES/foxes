@@ -25,7 +25,7 @@ def test_rotor_centre_calc_extracts_selected_values():
     model = RotorCentreCalc(calc_vars={"out_v": "rotor_v"})
     algo = SimpleNamespace(
         store_model_data=lambda *args, **kwargs: None,
-        get_model=lambda _name: (lambda: DummyWakeCalc()),
+        get_model=lambda _name: lambda: DummyWakeCalc(),
         states=SimpleNamespace(calculate=lambda *args, **kwargs: {}),
     )
     model.initialize(algo=algo, verbosity=0)

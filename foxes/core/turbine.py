@@ -1,5 +1,6 @@
 import numpy as np
 from copy import deepcopy
+from typing import Any
 
 
 class Turbine:
@@ -40,16 +41,16 @@ class Turbine:
 
     def __init__(
         self,
-        xy,
-        turbine_models=[],
-        index=None,
-        name=None,
-        models_state_sel=None,
-        D=None,
-        H=None,
-        wind_farm_name=None,
-        cluster_name=None,
-    ):
+        xy: Any,
+        turbine_models: list[str] = [],
+        index: int | None = None,
+        name: str | None = None,
+        models_state_sel: list[np.ndarray | None] | None = None,
+        D: float | None = None,
+        H: float | None = None,
+        wind_farm_name: str | None = None,
+        cluster_name: str | None = None,
+    ) -> None:
         """
         Constructor.
 
@@ -88,11 +89,12 @@ class Turbine:
         self.wind_farm_name = wind_farm_name
         self.cluster_name = cluster_name
 
-        self.mstates_sel = models_state_sel
-        if self.mstates_sel is None:
+        self.mstates_sel: list[np.ndarray | None]
+        self.mstates_sel = models_state_sel if models_state_sel is not None else []
+        if not self.mstates_sel:
             self.mstates_sel = [None] * len(self.models)
 
-    def add_model(self, model, states_sel=None):
+    def add_model(self, model: str, states_sel: np.ndarray | None = None) -> None:
         """
         Add a turbine model to the list.
 
@@ -107,7 +109,12 @@ class Turbine:
         self.models.append(model)
         self.mstates_sel.append(states_sel)
 
-    def insert_model(self, index, model, states_sel=None):
+    def insert_model(
+        self,
+        index: int,
+        model: str,
+        states_sel: np.ndarray | None = None,
+    ) -> None:
         """
         Insert a turbine model into the list of models.
 

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def sqrt_reg(x, x0=0.01):
+def sqrt_reg(x: np.ndarray, x0: float = 0.01) -> np.ndarray:
     """
     A regularized sqrt function, producing
     non-zero values also for smallish negative x.

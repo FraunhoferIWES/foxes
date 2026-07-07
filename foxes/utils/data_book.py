@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import importlib.resources as resources
 
 from pathlib import Path
+from typing import Any
 
 
 class DataBook:
@@ -23,7 +26,7 @@ class DataBook:
 
     """
 
-    def __init__(self, data_book=None):
+    def __init__(self, data_book: DataBook | None = None) -> None:
         """
         Constructor.
 
@@ -33,13 +36,15 @@ class DataBook:
             A data book to start from
 
         """
-        self.dbase = {}
+        self.dbase: dict[str, dict[str, Path]] = {}
         if data_book is not None:
-            for c, d in data_book.items():
+            for c, d in data_book.dbase.items():
                 self.dbase[c] = {}
                 self.dbase[c].update(d)
 
-    def add_data_package(self, context, package, file_sfx):
+    def add_data_package(
+        self, context: str, package: str | Any, file_sfx: str | list[str]
+    ) -> None:
         """
         Add static files from a package location.
 
@@ -66,7 +71,7 @@ class DataBook:
         except AttributeError:
             contents = list(resources.contents(package))
 
-        def check_f(f):
+        def check_f(f: str) -> bool:
             """little helper function to check file endings"""
             return any([len(f) > len(s) and f[-len(s) :] == s for s in file_sfx])
 
@@ -81,7 +86,9 @@ class DataBook:
                 with resources.path(package, f) as path:
                     self.dbase[context][f] = path
 
-    def add_data_package_file(self, context, package, file_name):
+    def add_data_package_file(
+        self, context: str, package: str | Any, file_name: str
+    ) -> None:
         """
         Add a static file from a package location.
 
@@ -106,7 +113,7 @@ class DataBook:
                 f"File '{file_name}' not found in package '{package}'"
             )
 
-    def add_files(self, context, file_paths):
+    def add_files(self, context: str, file_paths: list[str]) -> None:
         """
         Add file paths
 
@@ -130,7 +137,7 @@ class DataBook:
                 )
             self.dbase[context][path.name] = path
 
-    def add_file(self, context, file_path):
+    def add_file(self, context: str, file_path: str) -> None:
         """
         Add a file path
 
@@ -144,7 +151,13 @@ class DataBook:
         """
         self.add_files(context, [file_path])
 
-    def get_file_path(self, context, file_name, check_raw=True, errors=True):
+    def get_file_path(
+        self,
+        context: str,
+        file_name: str,
+        check_raw: bool = True,
+        errors: bool = True,
+    ) -> Path | None:
         """
         Get path of a file
 
@@ -193,7 +206,7 @@ class DataBook:
                 f"File '{file_name}' not found in context '{context}'. Available: {sorted(list(cdata.keys()))}"
             )
 
-    def toc(self, context):
+    def toc(self, context: str) -> list[str]:
         """
         Get list of contents
 

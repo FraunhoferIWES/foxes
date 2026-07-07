@@ -1,4 +1,7 @@
-def all_subclasses(cls):
+from typing import Any
+
+
+def all_subclasses(cls: type[Any]) -> set[type[Any]]:
     """
     Searches all classes derived from some
     base class.
@@ -21,7 +24,7 @@ def all_subclasses(cls):
     )
 
 
-def new_cls(base_cls, cls_name):
+def new_cls(base_cls: type[Any], cls_name: str | None) -> type[Any] | None:
     """
     Run-time class selector.
 
@@ -51,6 +54,9 @@ def new_cls(base_cls, cls_name):
         for scls in allc:
             if scls.__name__ == cls_name:
                 return scls
+        raise RuntimeError(
+            f"Class lookup inconsistency for '{cls_name}' in '{base_cls.__name__}'"
+        )
 
     else:
         estr = "Class '{}' not found, available classes derived from '{}' are \n {}".format(
@@ -59,7 +65,9 @@ def new_cls(base_cls, cls_name):
         raise KeyError(estr)
 
 
-def new_instance(base_cls, cls_name, *args, **kwargs):
+def new_instance(
+    base_cls: type[Any], cls_name: str | None, *args: Any, **kwargs: Any
+) -> Any:
     """
     Run-time factory.
 

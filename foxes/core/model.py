@@ -1,9 +1,23 @@
+from __future__ import annotations
+
 import numpy as np
 from abc import ABC
 from itertools import count
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, overload
 
 from foxes.config import config
 import foxes.constants as FC
+
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+
+
+class LoadedData(TypedDict):
+    coords: dict[str, np.ndarray]
+    data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]]
+    extra_data: dict[str, Any]
 
 
 class Model(ABC):
@@ -19,9 +33,9 @@ class Model(ABC):
 
     """
 
-    _ids = {}
+    _ids: dict[str, Any] = {}
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """
@@ -37,11 +51,11 @@ class Model(ABC):
         self.__initialized = False
         self.__running = False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}()"
 
     @property
-    def model_id(self):
+    def model_id(self) -> int:
         """
         Unique id based on the model type.
 
@@ -53,7 +67,7 @@ class Model(ABC):
         """
         return self._id
 
-    def var(self, v):
+    def var(self, v: str) -> str:
         """
         Creates a model specific variable name.
 
@@ -70,7 +84,7 @@ class Model(ABC):
         """
         return f"{self.name}_{v}"
 
-    def unvar(self, vnm):
+    def unvar(self, vnm: str) -> str | None:
         """
         Translates model specific variable name to origninal variable name.
 
@@ -89,7 +103,7 @@ class Model(ABC):
         return vnm[lng:] if vnm.startswith(f"{self.name}_") else None
 
     @property
-    def initialized(self):
+    def initialized(self) -> bool:
         """
         Initialization flag.
 
@@ -101,7 +115,7 @@ class Model(ABC):
         """
         return self.__initialized
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -113,7 +127,13 @@ class Model(ABC):
         """
         return []
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all data required for model calculations.
 
@@ -139,7 +159,13 @@ class Model(ABC):
                 f"Model '{self.name}': Cannot call load_data after initialization"
             )
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -201,7 +227,7 @@ class Model(ABC):
         return loaded_data
 
     @property
-    def running(self):
+    def running(self) -> bool:
         """
         Flag for currently running models
 
@@ -215,12 +241,12 @@ class Model(ABC):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -260,12 +286,12 @@ class Model(ABC):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -297,7 +323,7 @@ class Model(ABC):
             print(f"Model '{self.name}': not running")
         self.__running = False
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 
@@ -326,21 +352,55 @@ class Model(ABC):
 
             self.__initialized = False
 
+    @overload
     def get_data(
         self,
-        variable,
-        target,
-        lookup="smfp",
-        mdata=None,
-        fdata=None,
-        tdata=None,
-        downwind_index=None,
-        accept_none=False,
-        accept_nan=True,
-        algo=None,
-        upcast=False,
-        selection=None,
-    ):
+        variable: str,
+        target: str,
+        lookup: str = "smfp",
+        mdata: MData | None = None,
+        fdata: FData | None = None,
+        tdata: TData | None = None,
+        downwind_index: int | None = None,
+        accept_none: Literal[False] = False,
+        accept_nan: bool = True,
+        algo: Algorithm | None = None,
+        upcast: bool = False,
+        selection: np.ndarray | tuple[Any, ...] | list[Any] | None = None,
+    ) -> np.ndarray: ...
+
+    @overload
+    def get_data(
+        self,
+        variable: str,
+        target: str,
+        lookup: str = "smfp",
+        mdata: MData | None = None,
+        fdata: FData | None = None,
+        tdata: TData | None = None,
+        downwind_index: int | None = None,
+        accept_none: Literal[True] = True,
+        accept_nan: bool = True,
+        algo: Algorithm | None = None,
+        upcast: bool = False,
+        selection: np.ndarray | tuple[Any, ...] | list[Any] | None = None,
+    ) -> np.ndarray | None: ...
+
+    def get_data(
+        self,
+        variable: str,
+        target: str,
+        lookup: str = "smfp",
+        mdata: MData | None = None,
+        fdata: FData | None = None,
+        tdata: TData | None = None,
+        downwind_index: int | None = None,
+        accept_none: bool = False,
+        accept_nan: bool = True,
+        algo: Algorithm | None = None,
+        upcast: bool = False,
+        selection: np.ndarray | tuple[Any, ...] | list[Any] | None = None,
+    ) -> np.ndarray | None:
         """
         Getter for a data entry in the model object
         or provided data sources
@@ -385,14 +445,18 @@ class Model(ABC):
 
         """
 
-        def _geta(a):
-            sources = [s for s in [mdata, fdata, tdata, algo, self] if s is not None]
+        def _geta(a: str) -> Any:
+            sources: list[Any] = [
+                s for s in [mdata, fdata, tdata, algo, self] if s is not None
+            ]
             for s in sources:
                 try:
                     if a == "states_i0":
-                        out = s.states_i0(counter=True)
-                        if out is not None:
-                            return out
+                        get_states_i0 = getattr(s, "states_i0", None)
+                        if callable(get_states_i0):
+                            out = get_states_i0(counter=True)
+                            if out is not None:
+                                return out
                     else:
                         out = getattr(s, a)
                         if out is not None:
@@ -403,6 +467,8 @@ class Model(ABC):
                 f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, tdata, algo?"
             )
 
+        dims: tuple[str, ...]
+        shp: tuple[int, ...]
         n_states = _geta("n_states")
         if target == FC.STATE_TURBINE:
             if downwind_index is not None:
@@ -426,13 +492,13 @@ class Model(ABC):
                 f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
             )
 
-        def _match_shape(a):
+        def _match_shape(a: Any) -> np.ndarray:
             out = np.asarray(a)
             if len(out.shape) < len(shp):
                 for i, s in enumerate(shp):
                     if i >= len(out.shape):
                         out = out[..., None]
-                    elif a.shape[i] not in (1, s):
+                    elif out.shape[i] not in (1, s):
                         raise ValueError(
                             f"Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}"
                         )
@@ -442,17 +508,19 @@ class Model(ABC):
                 )
             return out
 
-        def _filter_dims(source):
+        def _filter_dims(
+            source: MData | FData | TData,
+        ) -> tuple[np.ndarray, tuple[str, ...]]:
             a = source[variable]
             a_dims = tuple(source.dims[variable])
             if downwind_index is None or FC.TURBINE not in a_dims:
-                d = a_dims
+                d: tuple[str, ...] = a_dims
             else:
                 slc = tuple(
                     [downwind_index if dd == FC.TURBINE else np.s_[:] for dd in a_dims]
                 )
                 a = a[slc]
-                d = tuple([dd for dd in a_dims if dd != FC.TURBINE])
+                d = tuple(dd for dd in a_dims if dd != FC.TURBINE)
             return a, d
 
         out = None
@@ -468,7 +536,7 @@ class Model(ABC):
                 a, d = _filter_dims(mdata)
                 ld = len(d)
                 if ld <= len(dims) and d == dims[:ld]:
-                    out = _match_shape(mdata[variable])
+                    out = _match_shape(a)
 
             # lookup fdata:
             elif (
@@ -490,9 +558,9 @@ class Model(ABC):
                 and variable in tdata
             ):
                 a, d = _filter_dims(tdata)
-                ld = len(ld)
+                ld = len(d)
                 if ld <= len(dims) and d == dims[:ld]:
-                    out = _match_shape(tdata[variable])
+                    out = _match_shape(a)
 
             # lookup wake modelling data:
             elif (
@@ -504,8 +572,9 @@ class Model(ABC):
                 and downwind_index is not None
                 and algo is not None
             ):
+                wake_frame = algo.wake_frame
                 out = _match_shape(
-                    algo.wake_frame.get_wake_modelling_data(
+                    wake_frame.get_wake_modelling_data(
                         algo,
                         variable,
                         downwind_index,
@@ -525,6 +594,7 @@ class Model(ABC):
                     f"Model '{self.name}': Variable '{variable}' is requested but not found."
                 )
             return out
+        assert out is not None
 
         # data from other chunks, only with iterations:
         if (
@@ -558,7 +628,7 @@ class Model(ABC):
             from foxes.algorithms.sequential import Sequential
 
             if isinstance(algo, Sequential):
-                i0 = algo.states.counter
+                i0 = getattr(algo.states, "counter", _geta("states_i0"))
             else:
                 i0 = _geta("states_i0")
             sts = tdata[FC.STATES_SEL]
@@ -568,11 +638,7 @@ class Model(ABC):
                 sts = (sts + 0.5).astype(config.dtype_int)
             sel = sts < i0
             if np.any(sel):
-                if not hasattr(algo, "farm_results_downwind"):
-                    raise KeyError(
-                        f"Model '{self.name}': Iteration data found for variable '{variable}', requiring iterative algorithm"
-                    )
-                prev_fres = getattr(algo, "farm_results_downwind")
+                prev_fres = algo.farm_results_downwind
                 if prev_fres is not None:
                     prev_data = prev_fres[variable].to_numpy()[sts[sel], downwind_index]
                     if target == FC.STATE_TARGET:
@@ -580,7 +646,6 @@ class Model(ABC):
                     else:
                         out[sel] = prev_data
                     del prev_data
-                del prev_fres
             if np.any(~sel):
                 sts = sts[~sel] - i0
                 sel_data = fdata[variable][sts, downwind_index]
@@ -603,10 +668,11 @@ class Model(ABC):
 
         # apply selection:
         if selection is not None:
+            selected_out = out
 
-            def _upcast_sel(sel_shape):
-                chp = []
-                for i, s in enumerate(out.shape):
+            def _upcast_sel(sel_shape: tuple[int, ...]) -> tuple[np.ndarray, list[int]]:
+                chp: list[int] = []
+                for i, s in enumerate(selected_out.shape):
                     if i < len(sel_shape) and sel_shape[i] > 1:
                         if sel_shape[i] != shp[i]:
                             raise ValueError(
@@ -615,13 +681,13 @@ class Model(ABC):
                         chp.append(shp[i])
                     else:
                         chp.append(s)
-                chp = tuple(chp)
-                eshp = list(shp[len(sel_shape) :])
-                if chp != out.shape:
-                    nout = np.zeros(chp, dtype=out.dtype)
-                    nout[:] = out
+                chp_t = tuple(chp)
+                eshp: list[int] = list(shp[len(sel_shape) :])
+                if chp_t != selected_out.shape:
+                    nout = np.zeros(chp_t, dtype=selected_out.dtype)
+                    nout[:] = selected_out
                     return nout, eshp
-                return out, eshp
+                return selected_out, eshp
 
             if isinstance(selection, np.ndarray) and selection.dtype == bool:
                 if len(selection.shape) > len(out.shape):
@@ -640,7 +706,7 @@ class Model(ABC):
                     f"Expecting selection of type np.ndarray (bool), or tuple, or list. Got {type(selection).__name__}"
                 )
             out = out[selection]
-            shp = tuple([len(out)] + list(eshp))
+            shp = (len(out), *eshp)
 
         # apply upcast:
         if upcast and out.shape != shp:

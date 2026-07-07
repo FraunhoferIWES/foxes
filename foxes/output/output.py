@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any, Callable
 
 from foxes.config import config, get_output_path
 from foxes.utils import PandasFileHelper, new_instance, all_subclasses
@@ -24,7 +27,12 @@ class Output:
 
     """
 
-    def __init__(self, out_dir=None, out_fname_fun=None, nofig=False):
+    def __init__(
+        self,
+        out_dir: str | Path | None = None,
+        out_fname_fun: Callable[[Path], Path] | None = None,
+        nofig: bool = False,
+    ) -> None:
         """
         Constructor.
 
@@ -48,7 +56,7 @@ class Output:
             print(f"{type(self).__name__}: Creating output dir {self.out_dir}")
             self.out_dir.mkdir(parents=True)
 
-    def get_fpath(self, fname):
+    def get_fpath(self, fname: str | Path) -> Path:
         """
         Gets the total file path
 
@@ -68,7 +76,14 @@ class Output:
             fnm = self.out_fname_fun(fnm)
         return self.out_dir / fnm if self.out_dir is not None else get_output_path(fnm)
 
-    def write(self, file_name, data, format_col2var={}, format_dict={}, **kwargs):
+    def write(
+        self,
+        file_name: str,
+        data,
+        format_col2var: dict[str, str] | None = None,
+        format_dict: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Writes data to file via pandas.
 
@@ -88,7 +103,9 @@ class Output:
             {FV.P: '{:.4f}'}. Note that the keys are foxes variables
 
         """
-        fdict = {}
+        format_col2var = {} if format_col2var is None else format_col2var
+        format_dict = {} if format_dict is None else format_dict
+        fdict: dict[str, str] = {}
         for c in data.columns:
             v = format_col2var.get(c, c)
             if v in format_dict:
@@ -100,7 +117,7 @@ class Output:
         PandasFileHelper.write_file(data, fpath, fdict, **kwargs)
 
     @classmethod
-    def print_models(cls):
+    def print_models(cls) -> None:
         """
         Prints all model names.
         """
@@ -109,7 +126,7 @@ class Output:
             print(n)
 
     @classmethod
-    def new(cls, output_type, *args, **kwargs):
+    def new(cls, output_type: str, *args: Any, **kwargs: Any) -> Any:
         """
         Run-time output model factory.
 

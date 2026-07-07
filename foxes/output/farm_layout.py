@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from typing import Any
 
 from foxes.config import config
 from foxes.output.output import Output
@@ -72,7 +73,7 @@ class FarmLayoutOutput(Output):
         if from_results and results_state is None:
             raise ValueError("Please specify results_state for switch from_results.")
 
-    def get_layout_data(self, lonlat=False):
+    def get_layout_data(self, lonlat: bool = False) -> np.ndarray:
         """
         Returns wind farm layout.
 
@@ -112,7 +113,7 @@ class FarmLayoutOutput(Output):
 
         return data
 
-    def get_layout_dict(self):
+    def get_layout_dict(self) -> dict[str, dict[str, dict[str, Any]]]:
         """
         Returns wind farm layout.
 
@@ -126,7 +127,7 @@ class FarmLayoutOutput(Output):
 
         data = self.get_layout_data()
 
-        out = {self.farm.name: {}}
+        out: dict[str, dict[str, dict[str, Any]]] = {self.farm.name: {}}
         for ti, p in enumerate(data):
             t = self.farm.turbines[ti]
             out[self.farm.name][t.name] = {
@@ -352,7 +353,9 @@ class FarmLayoutOutput(Output):
 
         return ax
 
-    def write_plot(self, file_name=None, fontsize=8, **kwargs):
+    def write_plot(
+        self, file_name: str | None = None, fontsize: int = 8, **kwargs: Any
+    ) -> None:
         """
         Writes the layout plot to file.
 
@@ -377,7 +380,7 @@ class FarmLayoutOutput(Output):
 
         plt.close(fig)
 
-    def write_xyh(self, file_path=None):
+    def write_xyh(self, file_path: str | None = None) -> None:
         """
         Writes xyh layout file.
 
@@ -463,7 +466,9 @@ class FarmLayoutOutput(Output):
 
         return lyt
 
-    def write_csv(self, file_name=None, verbosity=1, **kwargs):
+    def write_csv(
+        self, file_name: str | None = None, verbosity: int = 1, **kwargs: Any
+    ) -> None:
         """
         Writes the layout data to csv file.
 
@@ -484,7 +489,7 @@ class FarmLayoutOutput(Output):
             print(f"Writing farm layout to '{fpath}'")
         self.get_dataframe(**kwargs).to_csv(fpath)
 
-    def write_json(self, file_name=None):
+    def write_json(self, file_name: str | None = None) -> None:
         """
         Writes xyh layout file.
 

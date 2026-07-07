@@ -3,7 +3,7 @@ from pathlib import Path
 from .load import import_module
 
 
-def download_file(url, out_path, verbosity=1):
+def download_file(url: str, out_path: str | Path, verbosity: int = 1) -> int:
     """
     Download a file from a URL with resume capability.
 
@@ -25,6 +25,8 @@ def download_file(url, out_path, verbosity=1):
     :group: utils
 
     """
+    out_path = Path(out_path)
+
     requests = import_module(
         "requests",
         pip_hint="pip install requests",

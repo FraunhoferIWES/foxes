@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from typing import Any
 
 from foxes.utils import Dict
 
@@ -20,7 +21,7 @@ def foxes_yaml(
     iterative=False,
     nofig=False,
     verbosity=1,
-):
+) -> tuple[Any, Any, list[tuple[dict[str, Any], list[Any]]]]:
     """
     Run foxes from yaml file input
 
@@ -92,7 +93,7 @@ def foxes_yaml(
     )
 
 
-def main():
+def main() -> None:
     """
     Command line tool for running foxes from yaml file input.
 

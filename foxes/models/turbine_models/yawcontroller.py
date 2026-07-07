@@ -1,8 +1,17 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 from foxes.core import TurbineModel
 from foxes.utils import wd2uv, uv2wd, delta_wd
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class YawController(TurbineModel):
@@ -12,7 +21,12 @@ class YawController(TurbineModel):
     when wind is from north (WD around 0 degrees).
     """
 
-    def __init__(self, max_yaw_rate=0.3, max_yawm=7.5, avg_time=60):
+    def __init__(
+        self,
+        max_yaw_rate: float = 0.3,
+        max_yawm: float = 7.5,
+        avg_time: float = 60,
+    ) -> None:
         """
         Constructor.
 
@@ -30,11 +44,17 @@ class YawController(TurbineModel):
         self._max_yawm = max_yawm
         self._avg_time = avg_time
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """The variables modified by this model."""
         return [FV.YAW, FV.YAWM]
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initialize the controller before iterations start.
 
@@ -65,6 +85,7 @@ class YawController(TurbineModel):
         )
 
         n_turbines = algo.n_turbines
+        assert n_turbines is not None, "Missing n_turbines in algorithm"
 
         delta_t = algo.states.index()[1] - algo.states.index()[0]
         self._dt = delta_t.astype("timedelta64[s]").astype(
@@ -76,7 +97,13 @@ class YawController(TurbineModel):
         # self.__once_done = set()
         return loaded_data
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -116,30 +143,33 @@ class YawController(TurbineModel):
         t_sel = t_sel[0, :]
 
         # get current data:
+        counter = algo.states.counter
+        fresults = algo.farm_results_downwind
+        assert fresults is not None, "Missing farm_results_downwind"
         wd = fdata[FV.AMB_WD][0, :]
         ws = fdata[FV.AMB_REWS][0, :]
         yaw = fdata[FV.YAW][0, :]
         yawm = fdata[FV.YAWM][0, :]
 
         # special case of first time step:
-        if algo.counter == 0:
+        if counter == 0:
             yawm[:] = 0.0
             return {FV.YAW: fdata[FV.YAW], FV.YAWM: fdata[FV.YAWM]}
 
         # Respect waiting time for window average:
-        lastyaw = algo.farm_results_downwind[FV.YAW].to_numpy()[algo.counter - 1]
-        sel = t_sel & (algo.counter < self._windowstart + self._n - 1)
+        lastyaw = fresults[FV.YAW].to_numpy()[counter - 1]
+        sel = t_sel & (counter < self._windowstart + self._n - 1)
         if np.any(sel):
             yaw[sel] = lastyaw[sel]
 
         # compute setpoint from last n time steps:
-        sel = t_sel & (algo.counter == self._windowstart + self._n - 1)
+        sel = t_sel & (counter == self._windowstart + self._n - 1)
         if np.any(sel):
-            s = np.s_[algo.counter - self._n + 1 : algo.counter + 1]
-            wd_hist = algo.farm_results_downwind[FV.AMB_WD].to_numpy()
+            s = np.s_[counter - self._n + 1 : counter + 1]
+            wd_hist = fresults[FV.AMB_WD].to_numpy()
             wd_hist = wd_hist[s, sel]
             wd_hist[-1] = wd[sel]
-            ws_hist = algo.farm_results_downwind[FV.AMB_REWS].to_numpy()
+            ws_hist = fresults[FV.AMB_REWS].to_numpy()
             ws_hist = ws_hist[s, sel]
             ws_hist[-1] = ws[sel]
             uv_hist = wd2uv(wd_hist, ws_hist)
@@ -158,7 +188,7 @@ class YawController(TurbineModel):
         # run controller logic:
         sel = (
             t_sel
-            & (algo.counter >= self._windowstart + self._n - 1)
+            & (counter >= self._windowstart + self._n - 1)
             & ~np.isnan(self._targetyaw)
         )
         if np.any(sel):
@@ -175,7 +205,7 @@ class YawController(TurbineModel):
             # reset window if target yaw is reached:
             if np.any(reached):
                 self._windowstart[sel] = np.where(
-                    reached, algo.counter + 1, self._windowstart[sel]
+                    reached, counter + 1, self._windowstart[sel]
                 )
 
         yawm[t_sel] = delta_wd(wd[t_sel], yaw[t_sel])

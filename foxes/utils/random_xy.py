@@ -3,13 +3,13 @@ from scipy.spatial.distance import cdist
 
 
 def random_xy_square(
-    n,
-    min_dist=500,
-    xmax_ini=None,
-    growth=1.02,
-    seed=None,
-    verbosity=1,
-):
+    n: int,
+    min_dist: float = 500,
+    xmax_ini: float | None = None,
+    growth: float = 1.02,
+    seed: int | None = None,
+    verbosity: int = 1,
+) -> np.ndarray:
     """
     Creates random xy positions within a square,
     with mean (0, 0)

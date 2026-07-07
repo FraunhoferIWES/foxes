@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from xarray import Dataset
 from pathlib import Path
+from typing import Any
 
-from foxes.core import States, VerticalProfile
+from foxes.core import States, VerticalProfile, Model
 from foxes.utils import PandasFileHelper, read_tab_file
 from foxes.data import STATES
 from foxes.config import config, get_input_path
@@ -48,13 +51,13 @@ class StatesTable(States):
         self,
         data_source,
         output_vars,
-        var2col={},
-        fixed_vars={},
-        profiles={},
-        read_pars={},
+        var2col: dict[str, str] | None = None,
+        fixed_vars: dict[str, Any] | None = None,
+        profiles: dict[str, str | dict[str, Any] | VerticalProfile] | None = None,
+        read_pars: dict[str, Any] | None = None,
         states_sel=None,
         states_loc=None,
-    ):
+    ) -> None:
         """
         Constructor.
 
@@ -83,10 +86,10 @@ class StatesTable(States):
         super().__init__()
 
         self.ovars = list(output_vars)
-        self.rpars = read_pars
-        self.var2col = var2col
-        self.fixed_vars = fixed_vars
-        self.profdicts = profiles
+        self.rpars = {} if read_pars is None else read_pars
+        self.var2col = {} if var2col is None else var2col
+        self.fixed_vars = {} if fixed_vars is None else fixed_vars
+        self.profdicts = {} if profiles is None else profiles
         self.states_sel = states_sel
         self.states_loc = states_loc
 
@@ -95,13 +98,14 @@ class StatesTable(States):
                 f"States '{self.name}': Cannot handle both 'states_sel' and 'states_loc', please pick one"
             )
 
-        self._N = None
-        self._tvars = None
-        self._profiles = None
+        self._N: int = 0
+        self._tvars: list[str] = []
+        self._profiles: dict[str, VerticalProfile] = {}
         self._data = data_source
+        self.__inds: np.ndarray = np.array([], dtype=config.dtype_int)
 
     @property
-    def data_source(self):
+    def data_source(self) -> pd.DataFrame | Path:
         """
         The data source
 
@@ -117,7 +121,9 @@ class StatesTable(States):
             )
         return self._data
 
-    def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
+    def reset(
+        self, algo=None, states_sel=None, states_loc=None, verbosity: int = 0
+    ) -> None:
         """
         Reset the states, optionally select states
 
@@ -135,12 +141,14 @@ class StatesTable(States):
             if algo is None:
                 raise KeyError(f"{self.name}: Missing algo for reset")
             elif algo.states is not self:
-                raise ValueError(f"{self.states}: algo.states differs from self")
+                raise ValueError(f"{self.name}: algo.states differs from self")
             self.finalize(algo, verbosity)
         self.states_sel = states_sel
         self.states_loc = states_loc
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self, algo, loaded_data=None, force: bool = False, verbosity: int = 0
+    ):
         """
         Initializes the model.
 
@@ -175,7 +183,7 @@ class StatesTable(States):
 
         return super().initialize(algo, loaded_data, force=force, verbosity=verbosity)
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -187,7 +195,9 @@ class StatesTable(States):
         """
         return list(self._profiles.values())
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+    ) -> None:
         """
         Load and/or create all data required for model calculations.
 
@@ -252,11 +262,11 @@ class StatesTable(States):
                 f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {data.columns}"
             )
 
-        self._tvars = set(self.ovars)
+        tvars = set(self.ovars)
         for v in self.profdicts.keys():
-            self._tvars.update(self._profiles[v].input_vars())
-        self._tvars -= set(self.fixed_vars.keys())
-        self._tvars = list(self._tvars)
+            tvars.update(self._profiles[v].input_vars())
+        tvars -= set(self.fixed_vars.keys())
+        self._tvars = list(tvars)
 
         tcols = []
         for v in self._tvars:
@@ -274,7 +284,7 @@ class StatesTable(States):
         if weights is not None:
             loaded_data["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -286,7 +296,7 @@ class StatesTable(States):
         """
         return self._N
 
-    def index(self):
+    def index(self) -> np.ndarray:
         """
         The index list
 
@@ -300,7 +310,7 @@ class StatesTable(States):
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self.__inds
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -323,8 +333,8 @@ class StatesTable(States):
         data_stash,
         sel=None,
         isel=None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -362,8 +372,8 @@ class StatesTable(States):
         data_stash,
         sel=None,
         isel=None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -390,7 +400,15 @@ class StatesTable(States):
             self._data = data.pop("data_source")
             self.__inds = data.pop("inds")
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo,
+        mdata=None,
+        fdata=None,
+        tdata=None,
+        *args: Any,
+        **parameters: Any,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -401,12 +419,16 @@ class StatesTable(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata: foxes.core.MData, optional
             The model data
-        fdata: foxes.core.FData
+        fdata: foxes.core.FData, optional
             The farm data
-        tdata: foxes.core.TData
+        tdata: foxes.core.TData, optional
             The target point data
+        args: tuple, optional
+            Additional positional parameters for extension compatibility
+        parameters: dict, optional
+            Additional keyword parameters for extension compatibility
 
         Returns
         -------
@@ -416,6 +438,11 @@ class StatesTable(States):
             (n_states, n_targets, n_tpoints)
 
         """
+        if mdata is None or tdata is None:
+            raise KeyError(
+                f"States '{self.name}': Missing input data for calculate(), expected mdata and tdata"
+            )
+
         super().calculate(algo, mdata, fdata, tdata)
 
         for i, v in enumerate(self._tvars):
@@ -447,7 +474,7 @@ class Timeseries(StatesTable):
 
     """
 
-    RDICT = {"index_col": 0, "parse_dates": [0]}
+    RDICT: dict[str, Any] = {"index_col": 0, "parse_dates": [0]}
 
 
 class TabStates(StatesTable):
@@ -458,7 +485,18 @@ class TabStates(StatesTable):
 
     """
 
-    def __init__(self, data_source, *args, normalize=True, **kwargs):
+    def __init__(
+        self,
+        data_source,
+        output_vars,
+        var2col: dict[str, str] | None = None,
+        fixed_vars: dict[str, Any] | None = None,
+        profiles: dict[str, str | dict[str, Any] | VerticalProfile] | None = None,
+        read_pars: dict[str, Any] | None = None,
+        states_sel=None,
+        states_loc=None,
+        normalize: bool = True,
+    ) -> None:
         """
         Constructor.
 
@@ -466,12 +504,22 @@ class TabStates(StatesTable):
         ----------
         data_source: str or xarray.Dataset
             The tab file data file name, or its data
-        args: tuple, optional
-            Additional parameters for StatesTable
+        output_vars: list of str
+            The output variables
+        var2col: dict, optional
+            Mapping from variable names to data column names
+        fixed_vars: dict, optional
+            Fixed uniform variable values
+        profiles: dict, optional
+            Vertical profile definitions by variable
+        read_pars: dict, optional
+            pandas file reading parameters
+        states_sel: slice or range or list of int, optional
+            States subset selection
+        states_loc: list, optional
+            State index selection via pandas loc function
         normalize: bool
             Normalize the tab file data
-        kwargs: dict, optional
-            Additional parameters for StatesTable
 
         """
         self._normalize = normalize
@@ -486,9 +534,20 @@ class TabStates(StatesTable):
                 f"Expecting str, Path or xarray.Dataset as data_source, got {type(data_source)}"
             )
 
-        super().__init__(data_source=None, *args, **kwargs)
+        super().__init__(
+            data_source=None,
+            output_vars=output_vars,
+            var2col=var2col,
+            fixed_vars=fixed_vars,
+            profiles=profiles,
+            read_pars=read_pars,
+            states_sel=states_sel,
+            states_loc=states_loc,
+        )
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -513,6 +572,7 @@ class TabStates(StatesTable):
         """
         if self.data_source is None:
             if self.__tab_data is None:
+                assert self.__tab_source is not None
                 self.__tab_source = get_input_path(self.__tab_source)
                 if not self.__tab_source.is_file():
                     if verbosity > 0:

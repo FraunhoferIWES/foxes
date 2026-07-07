@@ -1,6 +1,14 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from foxes.core import PointDataModel
 from foxes.utils import tke2ti
 import foxes.variables as FV
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class TKE2TI(PointDataModel):
@@ -11,7 +19,7 @@ class TKE2TI(PointDataModel):
 
     """
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -28,7 +36,13 @@ class TKE2TI(PointDataModel):
         """
         return [FV.TI]
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, object]:
         """
         The main model calculation.
 

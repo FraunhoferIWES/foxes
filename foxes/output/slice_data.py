@@ -84,7 +84,7 @@ class SliceData(Output):
 
         return a_pos, b_pos, c_pos, data
 
-    def _write(self, format, data, fname, verbosity, **write_pars):
+    def _write(self, format, data, fname, verbosity, **write_pars) -> None:
         """Helper function for file writing"""
         if fname is not None:
             if format == "numpy":
@@ -96,15 +96,18 @@ class SliceData(Output):
                 data.tofile(fpath, **wpars)
 
             elif format == "pandas":
+                fpath = self.get_fpath(fname)
                 if verbosity > 0:
                     print("Writing file", fpath)
                 self.write(fname, data, **write_pars)
 
             elif format == "xarray":
+                nc_engine = config.nc_engine
+                assert nc_engine is not None
                 write_nc(
                     data,
                     self.get_fpath(fname),
-                    nc_engine=config.nc_engine,
+                    nc_engine=nc_engine,
                     verbosity=verbosity,
                     **write_pars,
                 )
