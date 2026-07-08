@@ -50,15 +50,19 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
             wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
+        n_states = tdata.n_states
+        n_targets = tdata.n_targets
+        n_tpoints = tdata.n_tpoints
+        assert n_states is not None and n_targets is not None and n_tpoints is not None
         if self.has_uv:
-            duv = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
+            duv: np.ndarray = np.zeros(
+                (n_states, n_targets, n_tpoints, 2),
                 dtype=config.dtype_double,
             )
             return {FV.UV: duv}
         else:
-            dws = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+            dws: np.ndarray = np.zeros(
+                (n_states, n_targets, n_tpoints),
                 dtype=config.dtype_double,
             )
             return {FV.WS: dws}

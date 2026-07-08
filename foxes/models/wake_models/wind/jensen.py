@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import numpy as np
 from typing import Any
 
 from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
+
+from foxes.core.algorithm import Algorithm
+from foxes.core.data import FData, MData, TData
 
 
 class JensenWake(TopHatWakeModel):
@@ -64,14 +68,14 @@ class JensenWake(TopHatWakeModel):
 
     def calc_wake_radius(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        ct: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the wake radius, depending on x only (not r).
 
@@ -123,16 +127,16 @@ class JensenWake(TopHatWakeModel):
 
     def calc_centreline(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        x,
-        wake_r,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        x: np.ndarray,
+        wake_r: np.ndarray,
+        ct: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Calculate centre line results of wake deltas.
 
@@ -166,6 +170,8 @@ class JensenWake(TopHatWakeModel):
             varlue: numpy.ndarray, shape: (n_st_sel,)
 
         """
+        assert not isinstance(self.induction, str)
+
         R = (
             self.get_data(
                 FV.D,

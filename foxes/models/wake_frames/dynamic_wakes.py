@@ -70,6 +70,7 @@ class DynamicWakes(WakeFrame):
         self.cl_ipars = {} if cl_ipars is None else cl_ipars
         self.dt_min = dt_min
         self._mage_ws = max_age_mean_ws
+        self._dt: np.ndarray = np.array([], dtype=config.dtype_int)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(dt_min={self.dt_min}, max_age={self.max_age})"
@@ -155,7 +156,7 @@ class DynamicWakes(WakeFrame):
         self.UPDATE = self.var("update")
         return loaded_data
 
-    def calc_order(self, algo, mdata, fdata) -> np.ndarray:
+    def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -177,8 +178,11 @@ class DynamicWakes(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_int)
-        order[:] = np.arange(fdata.n_turbines)[None, :]
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        assert n_states is not None and n_turbines is not None
+        order: np.ndarray = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
+        order[:] = np.arange(n_turbines)[None, :]
         return order
 
     def _calc_wakes(
@@ -222,7 +226,7 @@ class DynamicWakes(WakeFrame):
             data = np.full((n_states, max_age, 4), np.nan, dtype=config.dtype_double)
             data[:, 0, :3] = rxyh
             data[:, 0, 3] = 0
-            tdt = {
+            tdt: dict[str, np.ndarray] = {
                 v: np.zeros((n_states, 1, 1), dtype=config.dtype_double)
                 for v in tdi.keys()
             }
@@ -238,16 +242,16 @@ class DynamicWakes(WakeFrame):
                     )
                     hdt = dt[:, None]
                 else:
-                    s = np.s_[age:]
                     pts = pts[:-1]
-                    hmdata = cast(Any, mdata.get_slice(FC.STATE, s))
-                    hfdata = cast(Any, fdata.get_slice(FC.STATE, s))
-                    htdt = {v: d[s] for v, d in tdt.items()}
+                    hslice = slice(age, None)
+                    hmdata = cast(Any, mdata.get_slice(FC.STATE, hslice))
+                    hfdata = cast(Any, fdata.get_slice(FC.STATE, hslice))
+                    htdt = {v: d[hslice] for v, d in tdt.items()}
                     htdata = TData.from_points(
                         points=pts[:, None], data=htdt, dims=tdi, mdata=hmdata
                     )
-                    hdt = dt[s, None]
-                    del htdt, s
+                    hdt = dt[hslice, None]
+                    del htdt, hslice
 
                 res = algo.states.calculate(algo, hmdata, hfdata, htdata)
                 del hmdata, hfdata, htdata
@@ -255,9 +259,16 @@ class DynamicWakes(WakeFrame):
                 uv = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0]
                 dxy = uv * hdt
                 pts[:, :2] += dxy
-                s = np.s_[:-age] if age > 0 else np.s_[:]
-                data[s, age + 1, :3] = pts
-                data[s, age + 1, 3] = data[s, age, 3] + np.linalg.norm(dxy, axis=-1)
+                if age > 0:
+                    data[:-age, age + 1, :3] = pts
+                    data[:-age, age + 1, 3] = data[:-age, age, 3] + np.linalg.norm(
+                        dxy, axis=-1
+                    )
+                else:
+                    data[:, age + 1, :3] = pts
+                    data[:, age + 1, 3] = data[:, age, 3] + np.linalg.norm(
+                        dxy, axis=-1
+                    )
 
                 if age < max_age - 2:
                     s = ~np.isnan(data[:, age + 1, 3])
@@ -355,18 +366,18 @@ class DynamicWakes(WakeFrame):
                             # compute single state wake propagation:
                             isnan0 = np.isnan(hdata)
                             for si in range(n_states):
-                                s = slice(si, si + 1, None)
-                                hmdata = cast(Any, mdata.get_slice(FC.STATE, s))
-                                hfdata = cast(Any, fdata.get_slice(FC.STATE, s))
-                                htdt = {v: d[s] for v, d in tdt.items()}
+                                state_slice = slice(si, si + 1)
+                                hmdata = cast(Any, mdata.get_slice(FC.STATE, state_slice))
+                                hfdata = cast(Any, fdata.get_slice(FC.STATE, state_slice))
+                                htdt = {v: d[state_slice] for v, d in tdt.items()}
                                 htdata = TData.from_points(
                                     points=pts[None, :],
                                     data=htdt,
                                     dims=tdi,
                                     mdata=hmdata,
                                 )
-                                hdt = dt[s, None]
-                                del htdt, s
+                                hdt = dt[state_slice, None]
+                                del htdt, state_slice
 
                                 res = algo.states.calculate(
                                     algo, hmdata, hfdata, htdata

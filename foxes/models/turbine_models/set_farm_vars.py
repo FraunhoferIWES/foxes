@@ -155,22 +155,25 @@ class SetFarmVars(TurbineModel):
 
         """
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+        n_states = algo.n_states
+        n_turbines = algo.n_turbines
+        assert n_states is not None and n_turbines is not None
 
         for i, v in enumerate(self.vars):
-            data = np.full(
-                (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
+            data: np.ndarray = np.full(
+                (n_states, n_turbines), np.nan, dtype=config.dtype_double
             )
             vdata = self.__vdata[i]
 
             # handle special case of call during vectorized optimization:
             if (
                 np.ndim(vdata)
-                and vdata.shape[0] != algo.n_states
+                and vdata.shape[0] != n_states
                 and hasattr(algo.states, "n_pop")
             ):
                 n_pop = algo.states.n_pop
                 n_ost = algo.states.states.size()
-                n_trb = algo.n_turbines
+                n_trb = n_turbines
                 vdata = np.zeros((n_pop, n_ost, n_trb), dtype=config.dtype_double)
                 vdata[:] = self.__vdata[i][None, :]
                 vdata = vdata.reshape(n_pop * n_ost, n_trb)
@@ -181,10 +184,12 @@ class SetFarmVars(TurbineModel):
             # special case of turbine positions:
             if v in [FV.X, FV.Y]:
                 i = [FV.X, FV.Y].index(v)
-                for ti in range(algo.n_turbines):
+                for ti in range(n_turbines):
                     t = algo.farm.turbines[ti]
                     if len(t.xy.shape) == 1:
-                        xy = np.zeros((algo.n_states, 2), dtype=config.dtype_double)
+                        xy: np.ndarray = np.zeros(
+                            (n_states, 2), dtype=config.dtype_double
+                        )
                         xy[:] = t.xy[None, :]
                         t.xy = xy
                     t.xy[:, i] = np.where(
@@ -193,15 +198,17 @@ class SetFarmVars(TurbineModel):
 
             # special case of rotor diameter and hub height:
             if v in [FV.D, FV.H]:
-                for ti in range(algo.n_turbines):
+                for ti in range(n_turbines):
                     t = algo.farm.turbines[ti]
-                    x = np.zeros(algo.n_states, dtype=config.dtype_double)
+                    x: np.ndarray = np.zeros(n_states, dtype=config.dtype_double)
                     if v == FV.D:
-                        x[:] = t.D
-                        t.D = x
+                        d0: np.ndarray = np.asarray(t.D, dtype=config.dtype_double)
+                        x[:] = d0 if np.ndim(d0) else float(d0)
+                        t.D = x  # type: ignore[assignment]
                     else:
-                        x[:] = t.H
-                        t.H = x
+                        h0: np.ndarray = np.asarray(t.H, dtype=config.dtype_double)
+                        x[:] = h0 if np.ndim(h0) else float(h0)
+                        t.H = x  # type: ignore[assignment]
                     x[:] = np.where(np.isnan(data[:, ti]), x, data[:, ti])
 
     def set_running(
@@ -309,7 +316,9 @@ class SetFarmVars(TurbineModel):
         i0 = mdata.states_i0(counter=True)
         assert i0 is not None, "Missing states_i0 in mdata"
         if not self.once or i0 not in self.__once_done:
-            bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
+            n_turbines = fdata.n_turbines
+            assert n_turbines is not None
+            bsel: np.ndarray = np.zeros((fdata.n_states, n_turbines), dtype=np.bool_)
             bsel[st_sel] = True
 
             for v in self.vars:

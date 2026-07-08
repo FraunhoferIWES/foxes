@@ -105,5 +105,8 @@ class Turbine2FarmModel(FarmModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        s = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
+        n_states = algo.n_states
+        n_turbines = algo.n_turbines
+        assert n_states is not None and n_turbines is not None
+        s = np.ones((n_states, n_turbines), dtype=np.bool_)
         return self.turbine_model.calculate(algo, mdata, fdata, st_sel=s, **parameters)

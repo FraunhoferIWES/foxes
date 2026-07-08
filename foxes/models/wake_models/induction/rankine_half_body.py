@@ -151,8 +151,12 @@ class RankineHalfBody(TurbineInductionModel):
             wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
-        duv = np.zeros(
-            (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
+        n_states = tdata.n_states
+        n_targets = tdata.n_targets
+        n_tpoints = tdata.n_tpoints
+        assert n_states is not None and n_targets is not None and n_tpoints is not None
+        duv: np.ndarray = np.zeros(
+            (n_states, n_targets, n_tpoints, 2),
             dtype=config.dtype_double,
         )
         return {FV.UV: duv}

@@ -169,14 +169,14 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     def calc_wake_radius(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        ct: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the wake radius, depending on x only (not r).
 
@@ -204,6 +204,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The wake radii, shape: (n_states, n_targets)
 
         """
+        assert not isinstance(self.induction, str)
+
         # get D:
         D = self.get_data(
             FV.D,
@@ -235,16 +237,16 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     def calc_centreline(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        x,
-        wake_r,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        x: np.ndarray,
+        wake_r: np.ndarray,
+        ct: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Calculate centre line results of wake deltas.
 
@@ -278,12 +280,15 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             varlue: numpy.ndarray, shape: (n_st_sel,)
 
         """
+        assert not isinstance(self.induction, str)
+
         # prepare:
         n_targts = np.sum(st_sel)
         TI = FV.AMB_TI if self.use_ambti else FV.TI
 
         # get D:
-        D = self.get_data(
+        D = np.asarray(
+            self.get_data(
             FV.D,
             FC.STATE_TARGET,
             lookup="w",
@@ -293,10 +298,12 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             downwind_index=downwind_index,
             upcast=False,
             selection=st_sel,
+            )
         )
 
         # get TI:
-        ti = self.get_data(
+        ti = np.asarray(
+            self.get_data(
             TI,
             FC.STATE_TARGET,
             lookup="w",
@@ -306,10 +313,11 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             downwind_index=downwind_index,
             upcast=False,
             selection=st_sel,
+            )
         )
 
         # calculate induction factor:
-        twoa = 2 * self.induction.ct2a(ct)
+        twoa = np.asarray(2 * self.induction.ct2a(ct))
 
         # prepare output:
         wake_deltas = np.zeros(n_targts, dtype=config.dtype_double)
@@ -323,7 +331,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
                 * twoa ** (1 - self.e1)
             ) ** (1 / self.e3)
         else:
-            near_wake_D = self.near_wake_D
+            near_wake_D = np.full_like(x, self.near_wake_D, dtype=config.dtype_double)
 
         # calc near wake:
         sel = x < near_wake_D * D

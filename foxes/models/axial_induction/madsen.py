@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 from foxes.core import AxialInductionModel
 
 
@@ -49,7 +51,7 @@ class MadsenAxialInduction(AxialInductionModel):
         self.k2 = k2
         self.k3 = k3
 
-    def ct2a(self, ct: float) -> float:
+    def ct2a(self, ct: np.ndarray | float) -> np.ndarray | float:
         """
         Computes induction from ct
 

@@ -43,6 +43,8 @@ class YawController(TurbineModel):
         self._max_yaw_rate = max_yaw_rate
         self._max_yawm = max_yawm
         self._avg_time = avg_time
+        self._targetyaw: np.ndarray | None = None
+        self._windowstart: np.ndarray | None = None
 
     def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """The variables modified by this model."""
@@ -138,7 +140,9 @@ class YawController(TurbineModel):
 
         # prepare:
         # self.ensure_output_vars(algo, fdata)
-        t_sel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
+        n_turbines = fdata.n_turbines
+        assert n_turbines is not None
+        t_sel = np.zeros((fdata.n_states, n_turbines), dtype=np.bool_)
         t_sel[st_sel] = True
         t_sel = t_sel[0, :]
 
@@ -158,12 +162,15 @@ class YawController(TurbineModel):
 
         # Respect waiting time for window average:
         lastyaw = fresults[FV.YAW].to_numpy()[counter - 1]
-        sel = t_sel & (counter < self._windowstart + self._n - 1)
+        wstart = self._windowstart
+        targetyaw = self._targetyaw
+        assert wstart is not None and targetyaw is not None
+        sel = t_sel & (counter < wstart + self._n - 1)
         if np.any(sel):
             yaw[sel] = lastyaw[sel]
 
         # compute setpoint from last n time steps:
-        sel = t_sel & (counter == self._windowstart + self._n - 1)
+        sel = t_sel & (counter == wstart + self._n - 1)
         if np.any(sel):
             s = np.s_[counter - self._n + 1 : counter + 1]
             wd_hist = fresults[FV.AMB_WD].to_numpy()
@@ -179,22 +186,22 @@ class YawController(TurbineModel):
             # set new setpoint only if exceeding max yaw misalignment:
             sel2 = np.abs(delta_wd(lastyaw[sel], targets)) >= self._max_yawm
             if np.any(sel2):
-                self._targetyaw[sel] = np.where(sel2, targets, self._targetyaw[sel])
+                targetyaw[sel] = np.where(sel2, targets, targetyaw[sel])
             if np.any(~sel2):
                 yaw[sel] = np.where(~sel2, lastyaw[sel], yaw[sel])
-                wstart = self._windowstart[sel]
-                self._windowstart[sel] = np.where(~sel2, wstart + 1, wstart)
+                wsel = wstart[sel]
+                wstart[sel] = np.where(~sel2, wsel + 1, wsel)
 
         # run controller logic:
         sel = (
             t_sel
-            & (counter >= self._windowstart + self._n - 1)
-            & ~np.isnan(self._targetyaw)
+            & (counter >= wstart + self._n - 1)
+            & ~np.isnan(targetyaw)
         )
         if np.any(sel):
             # prepare:
             yaw0 = lastyaw[sel]
-            wd_target = self._targetyaw[sel]
+            wd_target = targetyaw[sel]
             delyaw = delta_wd(yaw0, wd_target)  # misalignment towards target yaw
             maxyaw = self._max_yaw_rate * self._dt  # max yaw maneuver during time step
 
@@ -204,9 +211,7 @@ class YawController(TurbineModel):
 
             # reset window if target yaw is reached:
             if np.any(reached):
-                self._windowstart[sel] = np.where(
-                    reached, counter + 1, self._windowstart[sel]
-                )
+                wstart[sel] = np.where(reached, counter + 1, wstart[sel])
 
         yawm[t_sel] = delta_wd(wd[t_sel], yaw[t_sel])
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import xarray as xr
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
@@ -84,7 +84,7 @@ class LookupTable(TurbineModel):
         self._rpars = pd_file_read_pars
         self._xargs = xr_interp_args
         self._iargs = interpn_args
-        self._data = None
+        self._data: xr.Dataset | None = None
 
         for v, d in kwargs.items():
             if v not in input_vars:
@@ -212,6 +212,18 @@ class LookupTable(TurbineModel):
         self.ensure_output_vars(algo, fdata)
         table = self._data
         assert table is not None, "Lookup table data not initialized"
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        assert n_states is not None and n_turbines is not None
+        sel_data: np.ndarray | None
+        if isinstance(st_sel, slice) and st_sel == slice(None):
+            sel_data = None
+        elif isinstance(st_sel, slice):
+            sel_arr = np.zeros((n_states, n_turbines), dtype=np.bool_)
+            sel_arr[st_sel] = True
+            sel_data = sel_arr
+        else:
+            sel_data = st_sel
 
         data = {
             v: self.get_data(
@@ -220,7 +232,7 @@ class LookupTable(TurbineModel):
                 lookup="fs",
                 fdata=fdata,
                 upcast=False,
-                selection=st_sel,
+                selection=sel_data,
             )
             for v in self.input_vars
         }
@@ -241,7 +253,8 @@ class LookupTable(TurbineModel):
         iargs = dict(bounds_error=True)
         iargs.update(self._iargs)
         try:
-            odata = table.interp(**indata, kwargs=iargs, **self._xargs)
+            table_any: Any = table
+            odata = cast(xr.Dataset, table_any.interp(**indata, kwargs=iargs, **self._xargs))
         except ValueError as e:
             print("\nBOUNDS ERROR", self.name)
             print("Variables:", list(indata.keys()))
@@ -263,6 +276,6 @@ class LookupTable(TurbineModel):
         out = {}
         for v in self.output_vars:
             out[v] = fdata[v]
-            out[v][st_sel] = odata[v]
+            out[v][st_sel] = odata[v].to_numpy()
 
         return out

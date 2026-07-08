@@ -65,7 +65,7 @@ class Timelines(WakeFrame):
     def _precalc_data(
         self,
         algo: Algorithm,
-        states,
+        states: Any,
         heights: np.ndarray,
         verbosity: int,
         needs_res: bool = False,
@@ -77,6 +77,7 @@ class Timelines(WakeFrame):
 
         # get and check times:
         times = np.asarray(states.index())
+        dt: np.ndarray
         if self.dt_min is None:
             if not np.issubdtype(times.dtype, np.datetime64):
                 raise TypeError(
@@ -93,18 +94,18 @@ class Timelines(WakeFrame):
             )
         else:
             n = max(len(times) - 1, 1)
-            dt = np.timedelta64(int(round(self.dt_min * 60)), "s")
-            dt = np.full(n, dt, dtype="timedelta64[s]").astype(config.dtype_int)
+            dt_step = np.timedelta64(int(round(self.dt_min * 60)), "s")
+            dt = np.full(n, dt_step, dtype="timedelta64[s]").astype(config.dtype_int)
 
         # prepare mdata:
-        data = algo.loaded_data["coords"]
-        mdict = {v: np.array(d) for v, d in data.items()}
-        mdims: dict[str, tuple[str, ...]] = {v: (v,) for v in data.keys()}
-        data = algo.loaded_data["data_vars"]
-        mdict.update({v: d[1] for v, d in data.items()})
-        mdims.update({v: d[0] for v, d in data.items()})
+        coords_data = algo.loaded_data["coords"]
+        mdict = {v: np.array(d) for v, d in coords_data.items()}
+        mdims: dict[str, tuple[str, ...]] = {v: (v,) for v in coords_data.keys()}
+        data_vars = algo.loaded_data["data_vars"]
+        mdict.update({v: d[1] for v, d in data_vars.items()})
+        mdims.update({v: d[0] for v, d in data_vars.items()})
         mdata = MData(mdict, mdims, loop_dims=[FC.STATE], states_i0=0)
-        del mdict, mdims, data
+        del mdict, mdims, coords_data, data_vars
 
         # prepare fdata:
         fdata = FData()
@@ -235,7 +236,7 @@ class Timelines(WakeFrame):
         algo.conv_crit.disable_subsets()
 
         # find turbine hub heights:
-        t2h = np.zeros(algo.n_turbines, dtype=config.dtype_double)
+        t2h: np.ndarray = np.zeros(algo.n_turbines, dtype=config.dtype_double)
         ttypes = algo.farm_controller.turbine_types
         assert ttypes is not None, "Turbine types not initialized"
         for ti, t in enumerate(algo.farm.turbines):
@@ -253,12 +254,12 @@ class Timelines(WakeFrame):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, Any] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -296,12 +297,12 @@ class Timelines(WakeFrame):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, Any] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -328,7 +329,7 @@ class Timelines(WakeFrame):
             if "data" in data:
                 self.timelines_data = data.pop("data")
 
-    def calc_order(self, algo, mdata, fdata) -> np.ndarray:
+    def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -350,16 +351,19 @@ class Timelines(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_int)
-        order[:] = np.arange(fdata.n_turbines)[None, :]
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        assert n_states is not None and n_turbines is not None
+        order: np.ndarray = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
+        order[:] = np.arange(n_turbines)[None, :]
         return order
 
     def get_wake_coos(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
         downwind_index: int,
     ) -> np.ndarray:
         """
@@ -409,7 +413,10 @@ class Timelines(WakeFrame):
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
 
         i0 = mdata.states_i0(counter=True)
-        i1 = i0 + mdata.n_states
+        assert i0 is not None, "Missing states_i0 in mdata"
+        n_states_md = mdata.n_states
+        assert n_states_md is not None, "Missing n_states in mdata"
+        i1 = i0 + n_states_md
         trace_si = np.zeros((n_states, n_points), dtype=config.dtype_int)
         trace_si[:] = i0 + np.arange(n_states)[:, None]
         for hi, h in enumerate(heights):
@@ -494,7 +501,12 @@ class Timelines(WakeFrame):
         )
 
     def get_centreline_points(
-        self, algo, mdata, fdata, downwind_index: int, x: np.ndarray
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        downwind_index: int,
+        x: np.ndarray,
     ) -> np.ndarray:
         """
         Gets the points along the centreline for given
@@ -528,12 +540,12 @@ class Timelines(WakeFrame):
         heights = tldata["height"].to_numpy()
         data_dxy = tldata["dxy"].to_numpy()
 
-        points = np.zeros((n_states, n_points, 3), dtype=config.dtype_double)
+        points: np.ndarray = np.zeros((n_states, n_points, 3), dtype=config.dtype_double)
         points[:] = rxyz[:, None, :]
 
         trace_dp = np.zeros_like(points[..., :2])
         trace_l = x.copy()
-        trace_si = np.zeros((n_states, n_points), dtype=config.dtype_int)
+        trace_si: np.ndarray = np.zeros((n_states, n_points), dtype=config.dtype_int)
         trace_si[:] = np.arange(n_states)[:, None]
 
         for hi, h in enumerate(heights):
@@ -571,7 +583,7 @@ class Timelines(WakeFrame):
 
         return points
 
-    def finalize(self, algo, verbosity: int = 0) -> None:
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 

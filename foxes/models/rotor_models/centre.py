@@ -187,6 +187,7 @@ class CentreRotor(RotorModel):
 
             if (set_wd and v == FV.WD) or v == FV.YAW:
                 if wd is None:
+                    assert uv is not None
                     wd = uv2wd(uv, axis=-1)
                 self._set_res(fdata, v, wd, downwind_index)
                 vdone.append(v)
@@ -207,6 +208,7 @@ class CentreRotor(RotorModel):
             else:
                 yaw = fdata[FV.YAW][:, downwind_index, None]
             nax = wd2uv(yaw, axis=-1)
+            assert uvp is not None
             wsp = np.einsum("stpd,std->stp", uvp, nax)
 
             for v in self.calc_vars:

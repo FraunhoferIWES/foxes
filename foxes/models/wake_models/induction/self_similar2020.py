@@ -31,7 +31,9 @@ class SelfSimilar2020(SelfSimilar):
         """Helper function: define a0 with gamma factor, eqn 8 from [2]"""
 
         x_new = np.minimum(np.maximum(-1 * np.abs(x_R), -6), -1)
-        c = (self._mu(x_new) - self._mu(-1)) / (self._mu(-6) - self._mu(-1))
+        x_m1 = np.asarray(-1.0)
+        x_m6 = np.asarray(-6.0)
+        c = (self._mu(x_new) - self._mu(x_m1)) / (self._mu(x_m6) - self._mu(x_m1))
 
         fg1 = -0.06489
         fg2 = 0.4911

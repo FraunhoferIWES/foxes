@@ -339,7 +339,7 @@ class CpCtFromTwo(TurbineType):
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
-        st_sel: np.ndarray = slice(None),
+        st_sel: slice | np.ndarray = slice(None),
     ) -> dict[str, np.ndarray]:
         """
         The main model calculation.

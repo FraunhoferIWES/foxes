@@ -140,6 +140,7 @@ class PartialSegregated(PartialWakesModel):
 
         """
         n_states = fdata.n_states
+        assert n_states is not None
         n_rotor_points = len(rpoint_weights)
         gweights = tdata[FC.TWEIGHTS]
 
@@ -148,7 +149,9 @@ class PartialSegregated(PartialWakesModel):
         wmodel.finalize_wake_deltas(algo, mdata, fdata, htdata, wdel)
 
         for v in wdel.keys():
-            hdel = np.zeros((n_states, n_rotor_points), dtype=config.dtype_double)
+            hdel: np.ndarray = np.zeros(
+                (n_states, n_rotor_points), dtype=config.dtype_double
+            )
             hdel[:] = np.einsum("sp,p->s", wdel[v][:, 0], gweights)[:, None]
             wdel[v] = hdel
 

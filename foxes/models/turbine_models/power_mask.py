@@ -147,15 +147,15 @@ class PowerMask(TurbineModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-        self._P_rated = []
+        p_rated: list[float] = []
         for t in algo.farm_controller.turbine_types:
             Pnom = config.dtype_double(t.P_nominal)
             if np.isnan(Pnom):
                 raise ValueError(
                     f"Model '{self.name}': P_nominal is NaN for turbine type '{t.name}'"
                 )
-            self._P_rated.append(Pnom)
-        self._P_rated = np.array(self._P_rated, dtype=config.dtype_double)
+            p_rated.append(float(Pnom))
+        self._P_rated = np.array(p_rated, dtype=config.dtype_double)
         return loaded_data
 
     def calculate(
@@ -199,7 +199,10 @@ class PowerMask(TurbineModel):
         P_rated = P_rated0[None, :]
 
         # select power entries for which this is active:
-        sel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        assert n_states is not None and n_turbines is not None
+        sel = np.zeros((n_states, n_turbines), dtype=np.bool_)
         sel[st_sel] = True
         sel = (
             sel
@@ -232,9 +235,9 @@ class PowerMask(TurbineModel):
 
             # find roots:
             N = len(cp)
-            a3 = np.full(N, 4.0, dtype=config.dtype_double)
-            a2 = np.full(N, -8.0, dtype=config.dtype_double)
-            a1 = np.full(N, 4.0, dtype=config.dtype_double)
+            a3: np.ndarray = np.full(N, 4.0, dtype=config.dtype_double)
+            a2: np.ndarray = np.full(N, -8.0, dtype=config.dtype_double)
+            a1: np.ndarray = np.full(N, 4.0, dtype=config.dtype_double)
             a0 = -cp / e
             rts = cubic_roots(a0, a1, a2, a3)
             rts[np.isnan(rts)] = np.inf

@@ -252,7 +252,7 @@ class WsRho2PCtFromTwo(TurbineType):
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
-        st_sel: np.ndarray = slice(None),
+        st_sel: slice | np.ndarray = slice(None),
     ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
@@ -301,7 +301,7 @@ class WsRho2PCtFromTwo(TurbineType):
             qts = np.zeros((n_sel, 2), dtype=config.dtype_double)  # ws, rho
             qts[:, 0] = fdata[self.WSP][st_sel_P]
             qts[:, 1] = fdata[FV.RHO][st_sel_P]
-            factor_P = 1.0
+            factor_P: float | np.ndarray = 1.0
 
             # apply yaw misalignment corrections:
             if FV.YAWM in fdata and self.yawm_corr_P is not None:
@@ -339,7 +339,7 @@ class WsRho2PCtFromTwo(TurbineType):
             qts = np.zeros((n_sel, 2), dtype=config.dtype_double)  # ws, rho
             qts[:, 0] = fdata[self.WSP][st_sel_ct]
             qts[:, 1] = fdata[FV.RHO][st_sel_ct]
-            factor_ct = 1.0
+            factor_ct: float | np.ndarray = 1.0
 
             # apply yaw misalignment corrections:
             if FV.YAWM in fdata and self.yawm_corr_ct is not None:

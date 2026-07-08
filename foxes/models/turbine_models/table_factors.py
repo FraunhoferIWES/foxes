@@ -136,19 +136,20 @@ class TableFactors(TurbineModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
+        data_df: pd.DataFrame
         if isinstance(self.data_source, pd.DataFrame):
-            self._data = self.data_source
+            data_df = self.data_source
         else:
             fpath = get_input_path(self.data_source)
             if verbosity > 0:
                 print(f"{self.name}: Reading file {fpath}")
             rpars = dict(index_col=0)
             rpars.update(self._rpars)
-            self._data = PandasFileHelper.read_file(fpath, **rpars)
+            data_df = PandasFileHelper.read_file(fpath, **rpars)
 
-        self._rvals = self._data.index.to_numpy(config.dtype_double)
-        self._cvals = self._data.columns.to_numpy(config.dtype_double)
-        self._data = self._data.to_numpy(config.dtype_double)
+        self._rvals = data_df.index.to_numpy(config.dtype_double)
+        self._cvals = data_df.columns.to_numpy(config.dtype_double)
+        self._data = data_df.to_numpy(config.dtype_double)
         return loaded_data
 
     def calculate(
@@ -190,7 +191,7 @@ class TableFactors(TurbineModel):
         assert rvals is not None and cvals is not None and data is not None
 
         n_sel = np.size(fdata[self.row_var][st_sel])
-        qts = np.zeros((n_sel, 2), dtype=config.dtype_double)
+        qts: np.ndarray = np.zeros((n_sel, 2), dtype=config.dtype_double)
         qts[:, 0] = np.asarray(fdata[self.row_var][st_sel]).reshape(n_sel)
         qts[:, 1] = np.asarray(fdata[self.col_var][st_sel]).reshape(n_sel)
 

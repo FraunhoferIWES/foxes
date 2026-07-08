@@ -102,20 +102,22 @@ class LevelRotor(RotorModel):
 
         delta = 2.0 / self.n
         y = [-1.0 + (i + 0.5) * delta for i in range(self.n)]
-        x = np.zeros(self.n, dtype=config.dtype_double)
+        x: np.ndarray = np.zeros(self.n, dtype=config.dtype_double)
 
-        self.dpoints = np.zeros([self.n, 3], dtype=config.dtype_double)
+        self.dpoints: np.ndarray = np.zeros([self.n, 3], dtype=config.dtype_double)
         self.dpoints[:, 1] = x
         self.dpoints[:, 2] = y
 
         if self.reduce:
-            self.weights = np.zeros((self.n), dtype=config.dtype_double)
+            self.weights: np.ndarray = np.zeros((self.n), dtype=config.dtype_double)
             hx = np.linspace(1, -1, self.nint)
 
             for i in range(0, self.n):
                 d = delta / self.nint
                 hy = [y[i] - delta / 2.0 + (k + 0.5) * d for k in range(self.nint)]
-                pts = np.zeros((self.nint, self.nint, 2), dtype=config.dtype_double)
+                pts: np.ndarray = np.zeros(
+                    (self.nint, self.nint, 2), dtype=config.dtype_double
+                )
                 pts[:, :, 0], pts[:, :, 1] = np.meshgrid(hx, hy, indexing="ij")
 
                 d = np.linalg.norm(pts, axis=2)
@@ -130,6 +132,8 @@ class LevelRotor(RotorModel):
             self.dpoints[:, 1] = x
             self.dpoints[:, 2] = y
             self.weights = np.ones(self.n, dtype=config.dtype_double) / self.n
+
+        self.weights = np.asarray(self.weights, dtype=config.dtype_double)
 
         return loaded_data
 

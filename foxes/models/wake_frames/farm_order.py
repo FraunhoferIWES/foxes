@@ -120,8 +120,11 @@ class FarmOrder(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_int)
-        order[:] = np.arange(fdata.n_turbines)[None, :]
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        assert n_states is not None and n_turbines is not None
+        order: np.ndarray = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
+        order[:] = np.arange(n_turbines)[None, :]
 
         return order
 

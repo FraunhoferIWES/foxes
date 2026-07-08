@@ -66,7 +66,7 @@ class NoDeflection(WakeDeflection):
         tdata: TData,
         downwind_index: int,
         x: np.ndarray,
-    ) -> None:
+    ) -> np.ndarray:
         """
         Computes sequential wind vector rotation angles.
 
@@ -99,4 +99,4 @@ class NoDeflection(WakeDeflection):
             shape: (n_times,)
 
         """
-        return None
+        return np.zeros_like(x)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 # mypy: disable-error-code=override
 
+import numpy as np
 import pandas as pd
 from typing import TYPE_CHECKING, Any
 
@@ -116,7 +117,7 @@ class SetUniformData(PointDataModel):
 
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
         if data is not None:
-            loaded_data["coords"][self.VARS] = self.ovars
+            loaded_data["coords"][self.VARS] = np.asarray(self.ovars, dtype=str)
             loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
     def output_point_vars(self, algo: Algorithm) -> list[str]:

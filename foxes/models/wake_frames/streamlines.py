@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from scipy.interpolate import interpn
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import WakeFrame
 from foxes.core import TData
@@ -109,7 +109,7 @@ class Streamlines2D(WakeFrame):
         n_turbines = algo.n_turbines
         assert n_states is not None, "Missing n_states in fdata"
         assert n_turbines is not None, "Missing n_turbines in algorithm"
-        tdata = TData.from_points(points=fdata[FV.TXYH], mdata=mdata)
+        tdata = cast(TData, TData.from_points(points=fdata[FV.TXYH], mdata=mdata))
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
@@ -119,7 +119,7 @@ class Streamlines2D(WakeFrame):
 
         # derive turbine order:
         # TODO: Remove loop over states
-        order = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
+        order: np.ndarray = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
         for si in range(n_states):
             order[si] = np.lexsort(keys=coosx[si])
 
@@ -234,7 +234,7 @@ class Streamlines2D(WakeFrame):
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
-        tdata,
+        tdata: TData,
         downwind_index: int | None = None,
     ) -> np.ndarray:
         """
@@ -395,13 +395,13 @@ class Streamlines2D(WakeFrame):
         xs = self.step * np.arange(n_steps)
 
         # interpolate to x of interest:
-        qts = np.zeros((n_states, n_points, 2), dtype=config.dtype_double)
+        qts: np.ndarray = np.zeros((n_states, n_points, 2), dtype=config.dtype_double)
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = np.minimum(x, xs[-1])
-        qts = qts.reshape(n_states * n_points, 2)
+        qts_flat = qts.reshape(n_states * n_points, 2)
         ipars = dict(bounds_error=False, fill_value=0.0)
         ipars.update(self.cl_ipars)
-        results = interpn((np.arange(n_states), xs), wpoints, qts, **ipars)
+        results = interpn((np.arange(n_states), xs), wpoints, qts_flat, **ipars)
 
         # add hub heights to results:
         results = results.reshape(n_states, n_points, 2)

@@ -125,13 +125,26 @@ class kTI(TurbineModel):
         """
         self.ensure_output_vars(algo, fdata)
 
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        assert n_states is not None and n_turbines is not None
+        sel_data: np.ndarray | None
+        if isinstance(st_sel, slice) and st_sel == slice(None):
+            sel_data = None
+        elif isinstance(st_sel, slice):
+            sel_arr = np.zeros((n_states, n_turbines), dtype=np.bool_)
+            sel_arr[st_sel] = True
+            sel_data = sel_arr
+        else:
+            sel_data = st_sel
+
         kti = self.get_data(
             FV.KTI,
             FC.STATE_TURBINE,
             lookup="sf",
             fdata=fdata,
             upcast=False,
-            selection=st_sel,
+            selection=sel_data,
         )
         kb = self.get_data(
             FV.KB,
@@ -139,7 +152,7 @@ class kTI(TurbineModel):
             lookup="sf",
             fdata=fdata,
             upcast=False,
-            selection=st_sel,
+            selection=sel_data,
         )
         ti = self.get_data(
             self.ti_var,
@@ -147,12 +160,12 @@ class kTI(TurbineModel):
             lookup="f",
             fdata=fdata,
             upcast=False,
-            selection=st_sel,
+            selection=sel_data,
         )
 
         k = fdata.get(
             self.k_var,
-            np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_double),
+            np.zeros((n_states, n_turbines), dtype=config.dtype_double),
         )
 
         k[st_sel] = kti * ti + kb

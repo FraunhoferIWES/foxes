@@ -158,13 +158,13 @@ class TurbOParkWake(GaussianWakeModel):
 
     def calc_amplitude_sigma(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> tuple[dict[str, tuple[np.ndarray, np.ndarray]], np.ndarray]:
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
@@ -194,6 +194,8 @@ class TurbOParkWake(GaussianWakeModel):
             is non-zero, shape: (n_states, n_targets)
 
         """
+        assert not isinstance(self.induction, str)
+
         # get ct:
         ct = self.get_data(
             FV.CT,
@@ -482,13 +484,13 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
     def calc_amplitude_sigma(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> tuple[dict[str, tuple[np.ndarray, np.ndarray]], np.ndarray]:
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
@@ -518,6 +520,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
             is non-zero, shape: (n_states, n_targets)
 
         """
+        assert not isinstance(self.induction, str)
+
         # get ct:
         ct = self.get_data(
             FV.CT,

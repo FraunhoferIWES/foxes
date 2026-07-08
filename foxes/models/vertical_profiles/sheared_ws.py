@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Any
+from typing import Any, cast
 
 from foxes.core import VerticalProfile
 from foxes.utils import abl
@@ -58,6 +58,7 @@ class ShearedProfile(VerticalProfile):
         shear[:] = data[FV.SHEAR]
 
         out = np.zeros_like(heights)
-        out[:] = abl.sheared.calc_ws(heights, h0, ws, shear)
+        calc_ws = cast(Any, abl.sheared.calc_ws)
+        out[:] = calc_ws(heights, h0, ws, shear)
 
         return out

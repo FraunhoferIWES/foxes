@@ -744,7 +744,7 @@ class ModelBook:
         class_name: str | None = None,
         *args: Any,
         **kwargs: Any,
-    ):
+    ) -> Any:
         """
         Gets a model object.
 
@@ -807,7 +807,7 @@ class ModelBook:
                 f"No default partial wakes model defined for wake model type '{type(wake_model).__name__}'"
             )
 
-    def finalize(self, algo, verbosity: int = 0) -> None:
+    def finalize(self, algo: Any, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 

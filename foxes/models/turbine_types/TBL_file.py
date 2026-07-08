@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from typing import Any
 
 from foxes.config import get_input_path
 
@@ -40,10 +41,10 @@ class TBLFile(PCtFile):
 
     def __init__(
         self,
-        tbl_file,
-        rho=1.225,
-        **parameters,
-    ):
+        tbl_file: str,
+        rho: float = 1.225,
+        **parameters: Any,
+    ) -> None:
         """
         Constructor.
 

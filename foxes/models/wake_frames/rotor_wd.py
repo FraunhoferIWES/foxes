@@ -105,6 +105,7 @@ class RotorWD(WakeFrame):
 
         """
         n_states = tdata.n_states
+        assert n_states is not None
         targets = tdata[FC.TARGETS]
 
         xyz = fdata[FV.TXYH][:, downwind_index]
@@ -113,7 +114,7 @@ class RotorWD(WakeFrame):
 
         wd = fdata[self.var_wd][:, downwind_index]
 
-        nax = np.zeros((n_states, 3, 3), dtype=config.dtype_double)
+        nax: np.ndarray = np.zeros((n_states, 3, 3), dtype=config.dtype_double)
         n = nax[:, 0, :2]
         n[:] = wd2uv(wd, axis=-1)
         m = nax[:, 1, :2]

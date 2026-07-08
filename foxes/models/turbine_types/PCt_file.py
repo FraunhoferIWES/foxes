@@ -206,7 +206,7 @@ class PCtFile(TurbineType):
             self.WS = self.var(FV.WS)
             self.VARS = self.var("vars")
             loaded_data["coords"][self.WS] = self.data_ws
-            loaded_data["coords"][self.VARS] = [FV.P, FV.CT]
+            loaded_data["coords"][self.VARS] = np.asarray([FV.P, FV.CT], dtype=str)
             loaded_data["data_vars"][self.DATA] = (
                 (self.WS, self.VARS),
                 np.stack([self.data_P, self.data_ct], axis=1),
@@ -300,7 +300,7 @@ class PCtFile(TurbineType):
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
-        st_sel: np.ndarray = slice(None),
+        st_sel: slice | np.ndarray = slice(None),
     ) -> dict[str, np.ndarray]:
         """
         The main model calculation.

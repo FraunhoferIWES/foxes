@@ -11,7 +11,7 @@ import foxes.constants as FC
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
-    from foxes.core.data import MData
+    from foxes.core.data import FData, MData, TData
     from foxes.core.model import LoadedData, Model
 
 
@@ -147,15 +147,15 @@ class Bastankhah2016Model(Model):
 
     def calc_data(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        gamma,
-        k,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        gamma: np.ndarray,
+        k: np.ndarray,
+    ) -> None:
         """
         Calculate common model data, store it in mdata.
 
@@ -180,7 +180,8 @@ class Bastankhah2016Model(Model):
 
         """
         # store parameters:
-        out = {self.PARS: self.pars}
+        assert not isinstance(self.induction, str)
+        out: dict[str, Any] = {self.PARS: self.pars}
         out[self.CHECK] = (
             mdata.states_i0(counter=True),
             mdata.n_states,
@@ -362,7 +363,7 @@ class Bastankhah2016Model(Model):
 
         # update mdata:
         out[self.ST_SEL] = st_sel
-        mdata.add(self.MDATA_KEY, out, None)
+        mdata.add(self.MDATA_KEY, out, None)  # type: ignore[arg-type]
 
     def has_data(self, mdata: MData, downwind_index: int, x: np.ndarray) -> bool:
         """
@@ -453,12 +454,12 @@ class Bastankhah2016(DistSlicedWakeModel):
 
     def __init__(
         self,
-        superposition,
-        alpha=0.58,
-        beta=0.077,
-        induction="Madsen",
-        **wake_k,
-    ):
+        superposition: str,
+        alpha: float = 0.58,
+        beta: float = 0.077,
+        induction: str = "Madsen",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -481,7 +482,7 @@ class Bastankhah2016(DistSlicedWakeModel):
         """
         super().__init__(wind_superposition=superposition)
 
-        self.model = None
+        self.model: Bastankhah2016Model | None = None
         self.alpha = alpha
         self.beta = beta
         self.induction = induction
@@ -519,7 +520,10 @@ class Bastankhah2016(DistSlicedWakeModel):
             Names of all sub models
 
         """
-        return super().sub_models() + [self.wake_k, self.model]
+        smdls = super().sub_models() + [self.wake_k]
+        if self.model is not None:
+            smdls.append(self.model)
+        return smdls
 
     def initialize(
         self,
@@ -564,14 +568,14 @@ class Bastankhah2016(DistSlicedWakeModel):
 
     def calc_wakes_x_yz(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        yz,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        yz: np.ndarray,
+    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
         """
         Calculate wake deltas.
 
@@ -604,6 +608,7 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         """
         # prepare:
+        assert self.model is not None
         n_y_per_z = yz.shape[2]
 
         # calculate model data:

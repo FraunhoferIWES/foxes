@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class GaussianWakeModel(AxisymmetricWakeModel):
@@ -17,13 +24,13 @@ class GaussianWakeModel(AxisymmetricWakeModel):
     @abstractmethod
     def calc_amplitude_sigma(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> tuple[dict[str, tuple[np.ndarray, np.ndarray]], np.ndarray]:
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
@@ -57,14 +64,14 @@ class GaussianWakeModel(AxisymmetricWakeModel):
 
     def calc_wakes_x_r(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        r,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        r: np.ndarray,
+    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
         """
         Calculate wake deltas.
 

@@ -118,6 +118,7 @@ class PartialAxiwake(PartialCentre):
         # prepare:
         n_states = mdata.n_states
         n_targets = tdata.n_targets
+        assert n_states is not None and n_targets is not None
 
         # get D:
         D = self.get_data(
@@ -138,11 +139,11 @@ class PartialAxiwake(PartialCentre):
         x = wcoos[..., 0, 0]
         n = wcoos[..., 0, 1:3]
         R = np.linalg.norm(n, axis=-1)
-        r = np.zeros((n_states, n_targets, self.n), dtype=config.dtype_double)
+        r: np.ndarray = np.zeros((n_states, n_targets, self.n), dtype=config.dtype_double)
         del wcoos
 
         # prepare circle section area calculation:
-        A = np.zeros((n_states, n_targets, self.n), dtype=config.dtype_double)
+        A: np.ndarray = np.zeros((n_states, n_targets, self.n), dtype=config.dtype_double)
         weights = np.zeros_like(A)
 
         # get normalized 2D vector between rotor and wake centres:
