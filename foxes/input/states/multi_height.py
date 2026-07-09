@@ -42,6 +42,10 @@ class MultiHeightStates(States):
         States subset selection
     states_loc: list
         State index selection via pandas loc function
+    check_nans: bool
+        Whether to check for NaN values in the data
+    interpolate_nans_pars: dict, optional
+        Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
     RDICT: dict
         Default pandas file reading parameters
 
@@ -61,6 +65,8 @@ class MultiHeightStates(States):
         read_pars={},
         states_sel=None,
         states_loc=None,
+        check_nans=True,
+        interpolate_nans_pars=None,
         **ipars,
     ):
         """
@@ -85,6 +91,10 @@ class MultiHeightStates(States):
             States subset selection
         states_loc: list, optional
             State index selection via pandas loc function
+        check_nans: bool, optional
+            Whether to check for NaN values in the data
+        interpolate_nans_pars: dict, optional
+            Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
         ipars: dict, optional
             Parameters for scipy.interpolate.interp1d
 
@@ -99,6 +109,8 @@ class MultiHeightStates(States):
         self.ipars = ipars
         self.states_sel = states_sel
         self.states_loc = states_loc
+        self.check_nans = check_nans
+        self.interpolate_nans_pars = interpolate_nans_pars
 
         self._data_source = data_source
         self._solo = None
@@ -156,17 +168,32 @@ class MultiHeightStates(States):
         """
         c0 = self.var2col.get(v, v)
         if v in self.fixed_vars:
-            return []
+            return {}
         elif c0 in cols:
-            return [c0]
+            return {v: [c0]}
         else:
-            cls = []
+            cls = {v: []}
             for h in self.heights:
                 hh = int(h) if int(h) == h else h
                 c = f"{c0}-{hh}"
                 oc = self.var2col.get(c, c)
                 if oc in cols:
-                    cls.append(oc)
+                    cls[v].append(oc)
+                elif v == FV.TI:
+                    try:
+                        cls = self._find_cols(FV.TKE, cols)
+                    except KeyError:
+                        raise KeyError(
+                            f"Missing: '{v}' in fixed_vars, or '{c0}' or '{oc}' in columns (same for '{FV.TKE}'). Maybe make use of var2col?"
+                        )
+                elif v == FV.RHO:
+                    try:
+                        cls = self._find_cols(FV.T, cols)
+                        cls.update(self._find_cols(FV.p, cols))
+                    except KeyError:
+                        raise KeyError(
+                            f"Missing: '{v}' in fixed_vars, or '{c0}' or '{oc}' in columns (same for '{FV.T}' and/or '{FV.p}'). Maybe make use of var2col?"
+                        )
                 else:
                     raise KeyError(
                         f"Missing: '{v}' in fixed_vars, or '{c0}' or '{oc}' in columns. Maybe make use of var2col?"
@@ -228,6 +255,17 @@ class MultiHeightStates(States):
         elif self.states_loc is not None:
             data = data.loc[self.states_loc]
 
+        if self.check_nans:
+            for c in data.columns:
+                if np.any(np.isnan(data[c].to_numpy())):
+                    raise ValueError(
+                        f"States '{self.name}': Column '{c}' contains {np.sum(np.isnan(data[c].to_numpy()))} NaN values, state indices: {data.index[np.isnan(data[c].to_numpy())].tolist()}"
+                    )
+        elif self.interpolate_nans_pars is not None and np.any(
+            np.isnan(data.to_numpy())
+        ):
+            data.interpolate(inplace=True, **self.interpolate_nans_pars)
+
         self._N = len(data.index)
         self._inds = data.index.to_numpy()
 
@@ -246,11 +284,12 @@ class MultiHeightStates(States):
         for v in self.ovars:
             if v != FV.WEIGHT:
                 vcols = self._find_cols(v, data.columns)
-                if len(vcols) == 1:
-                    self._solo[v] = data[vcols[0]].to_numpy()
-                elif len(vcols) > 1:
-                    cmap[v] = (len(cols), len(cols) + len(vcols))
-                    cols += vcols
+                for w, c in vcols.items():
+                    if len(c) == 1:
+                        self._solo[w] = data[c[0]].to_numpy()
+                    elif len(c) > 1:
+                        cmap[w] = (len(cols), len(cols) + len(c))
+                        cols += c
         data = data[cols]
 
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
@@ -728,6 +767,27 @@ class MultiHeightTimeseries(MultiHeightStates):
     """
 
     RDICT = {"index_col": 0, "parse_dates": [0]}
+
+    def __init__(
+        self,
+        *args,
+        interpolate_nans_pars={},
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Parameters for the base class
+        interpolate_nans_pars: dict, optional
+            Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
+        kwargs: dict, optional
+            Parameters for the base class
+
+        """
+        super().__init__(*args, interpolate_nans_pars=interpolate_nans_pars, **kwargs)
 
 
 class MultiHeightNCTimeseries(MultiHeightNCStates):

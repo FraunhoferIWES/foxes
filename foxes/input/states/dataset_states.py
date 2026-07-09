@@ -1299,6 +1299,7 @@ class DatasetStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
+
         # load data on the fly, if necessary:
         super().calculate(algo, mdata, fdata, tdata)
 

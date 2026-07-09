@@ -1011,6 +1011,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Extended chunk/state metadata propagation in data containers and algorithm data construction
 - Input:
   - Generalized `DatasetStates` on-the-fly/lazy loading behavior and hardened threaded NetCDF reading
+  - New states class `RefPointField`, combining a wind direction sector based field with timeseries data at a reference point to a timeseries of fields
 - Algorithms:
   - Reworked `PopulationStates` chunk-loading behavior and recovery paths
 - Utils:
