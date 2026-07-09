@@ -584,7 +584,7 @@ class MultiHeightNCStates(MultiHeightStates):
         h_coord=FV.H,
         heights=None,
         format_times_func="default",
-        xr_read_pars={},
+        xr_read_pars=None,
         **kwargs,
     ):
         """
@@ -623,7 +623,8 @@ class MultiHeightNCStates(MultiHeightStates):
         self.state_coord = state_coord
         self.heights = heights
         self.h_coord = h_coord
-        self.xr_read_pars = xr_read_pars
+        self.xr_read_pars = {} if xr_read_pars is None else dict(xr_read_pars)
+        self.xr_read_pars.setdefault("engine", config.nc_engine)
         self._format_times_func = format_times_func
 
     def load_data(self, algo, loaded_data, force=False, verbosity=0):

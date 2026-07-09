@@ -199,7 +199,7 @@ class SingleStateField(States):
                         print(f"Path: {fpath}")
                 elif verbosity:
                     print(f"States '{self.name}': Reading file {fpath}")
-                data = open_dataset(fpath)
+                data = open_dataset(fpath, engine=config.nc_engine)
 
             # remove unnecessary variables:
             vrs = {
@@ -322,17 +322,30 @@ class SingleStateField(States):
             if c in self._cmap:
                 pts[c] = points[:, i]
 
+        valid = np.ones(n_targets * n_tpoints, dtype=bool)
+        for c in self._cmap:
+            valid &= np.isfinite(pts[c])
+
+        out = {
+            v: np.full(n_targets * n_tpoints, np.nan, dtype=config.dtype_double)
+            for v in vrs
+        }
+
         # interpolate through Dataset.interp():
-        pts = DataFrame(pts).to_xarray()
-        results = data.interp(
-            **{c: pts[c] for c in self._cmap.keys()},
-            **self.interp_pars,
-        )
-        del pts
+        if np.any(valid):
+            pvalid = DataFrame({c: pts[c][valid] for c in self._cmap}).to_xarray()
+            results = data.interp(
+                **{c: pvalid[c] for c in self._cmap.keys()},
+                **self.interp_pars,
+            )
+            del pvalid
+
+            for v in vrs:
+                out[v][valid] = results[v].to_numpy()
 
         # set interpolated values:
         for v in vrs:
-            tdata[v] = results[v].to_numpy().reshape(1, n_targets, n_tpoints)
+            tdata[v] = out[v].reshape(1, n_targets, n_tpoints)
 
         # set fixed values:
         for v, d in self.fixed_vars.items():
