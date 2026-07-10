@@ -848,7 +848,6 @@ class DatasetStates(States):
             )
 
             vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
-
             for c, d in coords.items():
                 c = self.var(c) if c not in [FC.STATE, FC.TURBINE] else c
                 if isinstance(d, tuple):
@@ -870,6 +869,14 @@ class DatasetStates(States):
         # store data for lazy mode:
         elif self.load_mode == "lazy":
             self.__lazy_data = data
+
+        # store state indices:
+        if (
+            FC.STATE not in loaded_data["coords"].keys()
+            and self._inds is not None
+            and not np.all(self._inds == np.arange(self._N))
+        ):
+            loaded_data["coords"][FC.STATE] = self._inds
 
     def load_chunk_data(self, algo, mdata, fdata, tdata):
         """

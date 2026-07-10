@@ -2,23 +2,21 @@ import numpy as np
 
 from foxes.config import config
 from foxes.core import States, MData, FData, TData, run_with_engine, WindFarm, Turbine
-from foxes.utils import get_utm_zone, from_lonlat, delta_wd
+from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv, uv2wd
 from foxes.algorithms import Downwind
 import foxes.constants as FC
 import foxes.variables as FV
 
 
-class RefPointField(States):
+class SectorSimRefPointField(States):
     """
-    States that combine timeseries data at one reference point into
-    a timeseries of fields, based on given wind rose type field data.
+    Combines field data representing wind direction sectors and timeseries 
+    data at one reference point into a timeseries of fields.
     
     Attributes
     ----------
     field_states: foxes.core.States
         Field data states
-    wd_sector_width: float
-        The width of the wind direction sectors in degrees
     ref_point_states: foxes.core.States
         Reference point states
     ref_point: array_like
@@ -27,6 +25,8 @@ class RefPointField(States):
         The output variables, if None, all field_states variables are used
     fixed_vars: dict
         Fixed variables, e.g. {"var_name": var_value}
+    apply_blending: bool
+        Whether to blend between wind direction sectors
     check_nans: bool
         Whether to check for NaN values
 
@@ -37,13 +37,13 @@ class RefPointField(States):
     def __init__(
         self,
         field_states,
-        wd_sector_width,
         ref_point_states,
         ref_point,
         ref_point_is_lonlat=False,
         utm_zone=None,
         output_vars=None,
         fixed_vars={},
+        apply_blending=True,
         check_nans=True,
         **kwargs,
     ):
@@ -54,8 +54,6 @@ class RefPointField(States):
         ----------
         field_states: foxes.core.States
             Field data states
-        wd_sector_width: float
-            The width of the wind direction sectors in degrees
         ref_point_states: foxes.core.States
             Reference point states
         ref_point: array_like
@@ -70,13 +68,14 @@ class RefPointField(States):
             The output variables, if None, all field_states variables are used
         fixed_vars: dict, optional
             Fixed variables, e.g. {"var_name": var_value}
+        apply_blending: bool, optional
+            Whether to blend between wind direction sectors
         check_nans: bool, optional
             Whether to check for NaN values
         
         """
         super().__init__(**kwargs)
         self.field_states = field_states
-        self.wd_sector_width = wd_sector_width
         self.ref_point_states = ref_point_states
         self.ref_point = np.asarray(ref_point)
         if self.ref_point.shape != (3,):
@@ -85,6 +84,7 @@ class RefPointField(States):
             )
         self.output_vars = output_vars
         self.fixed_vars = fixed_vars
+        self.apply_blending = apply_blending
         self.check_nans = check_nans
 
         self.__ref_point_is_lonlat = ref_point_is_lonlat
@@ -400,8 +400,13 @@ class RefPointField(States):
         wd_bin_centre = mdata[self.WD_BIN_DATA][:, 0]
         wd_bin_minus = mdata[self.WD_BIN_DATA][:, 1]
         wd_bin_plus = mdata[self.WD_BIN_DATA][:, 2]
+        n_bins = len(wd_bin_centre)
         ovars = self.output_point_vars(algo)
-        out = {v: tdata[v] for v in ovars}
+        out = {v: np.zeros_like(tdata[v]) for v in ovars}
+
+        assert FV.WD in ovars and FV.WS in ovars and FV.U not in ovars and FV.V not in ovars and FV.UV not in ovars, (
+            f"States '{self.name}': Output variables must include '{FV.WD}', '{FV.WS}' and '{FV.UV}', and must not include '{FV.U}' or '{FV.V}', got {ovars}"
+        )
 
         # evaluate reference point:
         points = np.zeros((n_states, 1, 3), dtype=self.ref_point.dtype)
@@ -423,49 +428,71 @@ class RefPointField(States):
         assert FV.WD in ref_results.keys(), f"States '{self.name}': Reference point states '{self.ref_point_states.name}' must provide '{FV.WD}', got {list(ref_results.keys())}"
         assert FV.WS in ref_results.keys(), f"States '{self.name}': Reference point states '{self.ref_point_states.name}' must provide '{FV.WS}', got {list(ref_results.keys())}"
 
-        # find field data in same sector as reference point data and average weights:
-        dwd = delta_wd(wd_bin_centre[None, :], ref_results[FV.WD][:, None])
-        sel = (dwd > wd_bin_minus) & (dwd <= wd_bin_plus)
-        selw = sel.astype(config.dtype_double) / np.maximum(np.sum(sel, axis=1)[:, None], 1)
-        fstates = np.where(np.any(sel, axis=0))[0]
-        selw = selw[:, fstates]
-        sel = np.any(sel, axis=1)
-        if not np.all(sel):
+        def _print_wd_error_info(statesi):
             print("\nLOCAL WIND DIRECTION SECTORS:")
             for i, (c, m, p) in enumerate(zip(wd_bin_centre, wd_bin_minus, wd_bin_plus)):
                 print(f"  {i:3d}: {c:7.2f} ({m:7.2f}, {p:7.2f})")
             print("\nREFERENCE POINT WIND DIRECTIONS:")
-            sel = np.where(~sel)[0]
-            for i in sel:
+            for i in statesi:
                 print(f"  {i:4d}: WD = {ref_results[FV.WD][i]:7.2f}, WS = {ref_results[FV.WS][i]:7.2f}")
             print()
             raise ValueError(
-                f"States '{self.name}': Reference point states '{self.ref_point_states.name}' have {len(sel)} states that do not match any local wind direction sectors of field states '{self.field_states.name}', state indices: {sel.tolist()}"
+                f"States '{self.name}': States '{self.ref_point_states.name}' have {len(statesi)} states that do not match any local wind direction sectors of field states '{self.field_states.name}', state indices: {statesi.tolist()}"
             )
-        del dwd, sel
+
+        # find field data in same sector as reference point data and average weights:
+        dwd = delta_wd(wd_bin_centre[None, :], ref_results[FV.WD][:, None])
+        sel = (dwd > wd_bin_minus) & (dwd <= wd_bin_plus)
+        if np.max(np.sum(sel, axis=1)) > 1:
+            _print_wd_error_info(np.where(np.sum(sel, axis=1) > 1)[0])
+            raise ValueError(
+                f"States '{self.name}': Reference point states '{self.ref_point_states.name}' have {np.sum(sel, axis=1)} states that match multiple local wind direction sectors of field states '{self.field_states.name}'"
+            )
+        if np.min(np.sum(sel, axis=1)) == 0:
+            _print_wd_error_info(np.where(np.sum(sel, axis=1) == 0)[0])
+            raise ValueError(
+                f"States '{self.name}': Reference point states '{self.ref_point_states.name}' have {np.sum(sel, axis=1)} states that do not match any local wind direction sectors of field states '{self.field_states.name}'"
+            )
+
+        # prepare states mapping, either with or without blending between wind direction sectors:
+        if self.apply_blending:
+            # replace WD and WS with UV for blending:
+            del out[FV.WS]
+            del out[FV.WD]
+            out[FV.UV] = np.zeros((n_states, tdata.n_targets, tdata.n_tpoints, 2), dtype=config.dtype_double)
+
+            # compute blending weights:
+            b0 = np.where(sel)[1]
+            b1 = (b0 + np.sign(dwd[sel]).astype(config.dtype_int) ) % n_bins
+            bf0 = np.abs(dwd[sel]) / np.abs(delta_wd(wd_bin_centre[b0], wd_bin_centre[b1]))
+            del dwd, b0
+
+            # select second sector states:
+            sel2 = np.zeros_like(sel)
+            sel2[np.arange(sel.shape[0]), b1] = True
+            del b1
+
+            # blending requires evaluation of two sectors:
+            fstates =  np.where(np.any(sel | sel2, axis=0))[0]
+            fs2s_0 = np.where(sel[:, fstates])[1]
+            fs2s_1 = np.where(sel2[:, fstates])[1]
+            sector_maps = [fs2s_0, fs2s_1]
+            del fs2s_0, fs2s_1, sel, sel2
+        
+        else:
+            # single sector case:
+            fstates = np.where(np.any(sel, axis=0))[0]
+            fs2s = np.where(sel[:, fstates])[1]
+            sector_maps = [fs2s]
+            bf0 = 1.0
+            del dwd, sel, fs2s
+
+        # filter to relevant field states:
+        field_ref_results = field_ref_results[fstates]
 
         # compute field states at target points:
         field_n_states = len(fstates)
         if field_n_states > 0:
-
-            # compute speedups:
-            speedups = {}
-            for v in ref_results.keys():
-                if v in field_ref_vars:
-                    i = field_ref_vars.index(v)
-                    fres = field_ref_results[None, fstates, i]
-                    speedups[v] = np.where(
-                        np.abs(fres) > 1.e-10,
-                        ref_results[v][:, None] / fres,
-                        0.0,
-                    )
-                    del fres
-                elif v in ovars:
-                    out[v][:] = ref_results[v][:, None, None]
-                else:
-                    raise KeyError(
-                        f"States '{self.name}': Reference point states '{self.ref_point_states.name}' output variable '{v}' not found in field states variables {field_ref_vars} or output variables {ovars}"
-                    )
 
             # create mdata:
             mdict = {c: mdata[c] for c in field_coords0}
@@ -502,42 +529,81 @@ class RefPointField(States):
             # run field states calculation:
             field_results = self.field_states.calculate(algo, hmdata, hfdata, htdata)
             del hmdata, hfdata, htdata
-            
-            # apply speedups:
-            for v in field_results.keys():
-                if v == FV.WD:
-                    wd = np.zeros((n_states, len(fstates), tdata.n_targets, tdata.n_tpoints), dtype=config.dtype_double)
-                    wd[:] = field_results[FV.WD][None, ...]
-                    field_results[FV.WD] = np.einsum("sr...,sr->s...", wd, selw)
-                    del wd
-                elif v in speedups.keys():
-                    field_results[v] = speedups[v][:, :, None, None] * field_results[v][None, ...]
-                    field_results[v] = np.einsum("sr...,sr->s...", field_results[v], selw)
-                else:
-                    raise KeyError(
-                        f"States '{self.name}': Field states variable '{v}' not found in speedups, got {list(speedups.keys())}"
-                    )
-            del speedups
 
-            # set output variables:
-            for v in ovars:
-                if v in field_results.keys():
-                    out[v] = field_results[v]
-                elif v in ref_results.keys():
-                    out[v][:] = ref_results[v][:, None, None]
-                elif v == FV.TI and (FV.TKE in field_results.keys() or FV.TKE in ref_results.keys()):
-                    tke = field_results[FV.TKE] if FV.TKE in field_results.keys() else ref_results[FV.TKE][:, None, None]
-                    ws = field_results[FV.WS] 
-                    out[v][:] = np.sqrt(2.0 / 3.0 * tke) / ws
-                    del tke, ws
-                elif v == FV.RHO and (FV.P in field_results.keys() or FV.P in ref_results.keys()) and (FV.T in field_results.keys() or FV.T in ref_results.keys()):
-                    p = field_results[FV.P] if FV.P in field_results.keys() else ref_results[FV.P][:, None, None]
-                    T = field_results[FV.T] if FV.T in field_results.keys() else ref_results[FV.T][:, None, None]
-                    out[v][:] = p / (FC.Rd * T)
-                    del p, T
-                else:
-                    raise KeyError(
-                        f"States '{self.name}': Output variable '{v}' not found in field states variables {list(field_results.keys())} or reference point states variables {list(ref_results.keys())}"
-                    )
+            # evaluate sectors:
+            for bi, fs2s in enumerate(sector_maps):
+
+                # sector weight:
+                weight = bf0 if bi == 0 else (1.0 - bf0)
+
+                # compute speedups:
+                speedups = {}
+                for v in ref_results.keys():
+                    if v in field_ref_vars:
+                        i = field_ref_vars.index(v)
+                        fres = field_ref_results[fs2s, i]
+                        speedups[v] = np.where(
+                            np.abs(fres) > 1.e-10,
+                            ref_results[v] / fres,
+                            0.0,
+                        )
+                        del fres
+                    elif v in out:
+                        out[v][:] = ref_results[v][:, None, None]
+                    elif self.apply_blending and v == FV.WD:
+                        pass
+                    else:
+                        raise KeyError(
+                            f"States '{self.name}': Reference point states '{self.ref_point_states.name}' output variable '{v}' not found in field states variables {field_ref_vars} or output variables {ovars}"
+                        )
+                    
+                def _get_data(v):
+                    if v in field_results.keys():
+                        return field_results[v][fs2s, :, :]
+                    elif v in ref_results.keys():
+                        return ref_results[v][:, None, None]
+                    else:
+                        raise KeyError(
+                            f"States '{self.name}': Output variable '{v}' not found in field states variables {list(field_results.keys())} or reference point states variables {list(ref_results.keys())}"
+                        )
+
+                # add to output variables:
+                for v in ovars:
+                    if v == FV.WD:
+                        pass
+                    elif v in field_results.keys():
+                        if v in speedups.keys():
+                            if v != FV.WS or not self.apply_blending:
+                                out[v][:] += weight[:, None, None] * speedups[v][:, None, None] * field_results[v][fs2s, :, :]
+                            else:
+                                uv = wd2uv(field_results[FV.WD], field_results[FV.WS])[fs2s, :, :]
+                                out[FV.UV][:] += weight[:, None, None, None] * speedups[FV.WS][:, None, None, None] * uv
+                                del uv
+                        else:
+                            raise KeyError(
+                                f"States '{self.name}': Field states variable '{v}' not found in speedups, got {list(speedups.keys())}"
+                            )
+                    elif v in ref_results.keys():
+                        out[v][:] = ref_results[v][:, None, None]
+                    elif v == FV.TI and (FV.TKE in field_results.keys() or FV.TKE in ref_results.keys()):
+                        tke = _get_data(FV.TKE)
+                        ws = _get_data(FV.WS)
+                        out[v][:] += weight[:, None, None] * np.sqrt(2.0 / 3.0 * tke) / ws
+                        del tke, ws
+                    elif v == FV.RHO and (FV.P in field_results.keys() or FV.P in ref_results.keys()) and (FV.T in field_results.keys() or FV.T in ref_results.keys()):
+                        p = _get_data(FV.P)
+                        T = _get_data(FV.T)
+                        out[v][:] += weight[:, None, None] * p / (FC.Rd * T)
+                        del p, T
+                    else:
+                        raise KeyError(
+                            f"States '{self.name}': Output variable '{v}' not found in field states variables {list(field_results.keys())} or reference point states variables {list(ref_results.keys())}"
+                        )
+                    
+        if self.apply_blending:
+            uv = out.pop(FV.UV)
+            out[FV.WD] = uv2wd(uv)
+            out[FV.WS] = np.linalg.norm(uv, axis=-1)
+            del uv
 
         return out

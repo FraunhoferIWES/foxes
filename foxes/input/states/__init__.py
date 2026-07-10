@@ -37,6 +37,6 @@ from .one_point_flow import (
 
 from .newa_states import NEWAStates as NEWAStates
 from .icon_states import ICONStates as ICONStates
-from .ref_point_field import RefPointField as RefPointField
+from .ref_point_fields import SectorSimRefPointField as SectorSimRefPointField
 
 from . import create as create
