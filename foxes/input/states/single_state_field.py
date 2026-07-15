@@ -236,6 +236,7 @@ class SingleStateField(States):
                     data=data,
                     bounds_extra_space=self.bounds_extra_space,
                     height_bounds=self.height_bounds,
+                    loaded_data=loaded_data,
                     verbosity=verbosity,
                 )
             if self.isel is not None and len(self.isel):

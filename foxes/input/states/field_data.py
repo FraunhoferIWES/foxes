@@ -119,8 +119,9 @@ class FieldData(DatasetStates):
         self,
         algo,
         data,
-        bounds_extra_space,
-        height_bounds,
+        bounds_extra_space=None,
+        height_bounds=None,
+        loaded_data=None,
         verbosity=0,
     ):
         """
@@ -136,7 +137,10 @@ class FieldData(DatasetStates):
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/-
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        loaded_data: dict, optional
+            If given, optionally add to this loaded data dict with entries
+            {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -147,6 +151,7 @@ class FieldData(DatasetStates):
             data,
             bounds_extra_space=bounds_extra_space,
             height_bounds=height_bounds,
+            loaded_data=loaded_data,
             verbosity=verbosity,
         )
 
@@ -292,8 +297,9 @@ class LatLonFieldData(DatasetStates):
         self,
         algo,
         data,
-        bounds_extra_space,
-        height_bounds,
+        bounds_extra_space=None,
+        height_bounds=None,
+        loaded_data=None,
         verbosity=0,
     ):
         """
@@ -309,7 +315,10 @@ class LatLonFieldData(DatasetStates):
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/-
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        loaded_data: dict, optional
+            If given, optionally add to this loaded data dict with entries
+            {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -352,7 +361,14 @@ class LatLonFieldData(DatasetStates):
                 f"States '{self.name}': config.utm_zone = {config.utm_zone} differs from determined zone {zone}"
             )
 
-        super().preproc_first(algo, data, bounds_extra_space, height_bounds, verbosity)
+        super().preproc_first(
+            algo,
+            data,
+            bounds_extra_space,
+            height_bounds,
+            loaded_data=loaded_data,
+            verbosity=verbosity,
+        )
 
         if self.grid_point_plot is not None:
             try:

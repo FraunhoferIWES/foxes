@@ -432,6 +432,7 @@ class DatasetStates(States):
         data,
         bounds_extra_space=None,
         height_bounds=None,
+        loaded_data=None,
         verbosity=0,
     ):
         """
@@ -448,6 +449,9 @@ class DatasetStates(States):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        loaded_data: dict, optional
+            If given, optionally add to this loaded data dict with entries
+            {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -546,11 +550,25 @@ class DatasetStates(States):
                         f"States '{self.name}': Selected {self._cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
                     )
 
+        # optionally add coordinates to loaded data:
+        if loaded_data is not None:
+            for c in (FV.X, FV.Y, FV.H):
+                if c in self._cmap:
+                    cc = self._cmap[c]
+                    d = (
+                        data[cc].isel({cc: self.isel[cc]})
+                        if cc in self.isel
+                        else data[cc]
+                    )
+                    loaded_data["coords"][cc] = d.to_numpy()
+                    del d
+
     def __load_files(
         self,
         algo,
         bounds_extra_space,
         height_bounds,
+        loaded_data=None,
         verbosity=0,
     ):
         """Initial loading of all files, as needed by load mode"""
@@ -636,6 +654,7 @@ class DatasetStates(States):
                 data=data_first,
                 bounds_extra_space=bounds_extra_space,
                 height_bounds=height_bounds,
+                loaded_data=loaded_data,
                 verbosity=verbosity,
             )
             del data_first
@@ -741,6 +760,7 @@ class DatasetStates(States):
                 data=data,
                 bounds_extra_space=bounds_extra_space,
                 height_bounds=height_bounds,
+                loaded_data=loaded_data,
                 verbosity=verbosity,
             )
             self._inds = data[states_coord].to_numpy()
@@ -763,6 +783,14 @@ class DatasetStates(States):
             raise ValueError(
                 f"States '{self.name}': State indices are not sorted ascending: {self._inds[i - 1]} > {self._inds[i]} at position {i - 1}"
             )
+
+        # store state indices, if not already present:
+        if (
+            FC.STATE not in loaded_data["coords"].keys()
+            and self._inds is not None
+            and not np.all(self._inds == np.arange(self._N))
+        ):
+            loaded_data["coords"][FC.STATE] = self._inds
 
         return data
 
@@ -835,6 +863,7 @@ class DatasetStates(States):
             algo,
             bounds_extra_space=bounds_extra_space,
             height_bounds=height_bounds,
+            loaded_data=loaded_data,
             verbosity=verbosity,
         )
 
@@ -869,14 +898,6 @@ class DatasetStates(States):
         # store data for lazy mode:
         elif self.load_mode == "lazy":
             self.__lazy_data = data
-
-        # store state indices:
-        if (
-            FC.STATE not in loaded_data["coords"].keys()
-            and self._inds is not None
-            and not np.all(self._inds == np.arange(self._N))
-        ):
-            loaded_data["coords"][FC.STATE] = self._inds
 
     def load_chunk_data(self, algo, mdata, fdata, tdata):
         """
@@ -1130,6 +1151,94 @@ class DatasetStates(States):
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self._inds
 
+    def get_grid_points(
+        self, loaded_data=None, mdata=None, all_heights=True, height=None
+    ):
+        """
+        Returns the grid points from the mdata object.
+
+        Parameters
+        ----------
+        loaded_data: dict, optional
+            The loaded data dictionary
+        mdata: foxes.core.MData, optional
+            The model data
+        all_heights: bool, optional
+            If True, return all heights, otherwise only the highest.
+        height: float, optional
+            The height to use. If None, the highest height is used if
+            all_heights is False.
+
+        Returns
+        -------
+        grid_points: numpy.ndarray
+            The grid points, shape (n_points, 3)
+
+        """
+        assert loaded_data is not None or mdata is not None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided"
+        )
+        assert loaded_data is None or mdata is None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided, not both"
+        )
+
+        X = self.var(FV.X)
+        Y = self.var(FV.Y)
+        H = self.var(FV.H)
+
+        if mdata is not None:
+            assert X in mdata and Y in mdata, (
+                f"States '{self.name}': Missing coordinates '{X}' and/or '{Y}' in mdata, got {list(mdata.keys())}"
+            )
+            x = mdata[X]
+            y = mdata[Y]
+
+            if all_heights or height is None:
+                assert H in mdata, (
+                    f"States '{self.name}': Missing heights '{H}' in mdata, got {list(mdata.keys())}"
+                )
+                h = mdata[H]
+                if height is None:
+                    h = np.atleast_1d(np.max(h))
+                elif all_heights:
+                    raise ValueError(
+                        f"States '{self.name}': Cannot specify both all_heights and height, got all_heights={all_heights}, height={height}"
+                    )
+            else:
+                h = np.atleast_1d(height)
+
+        else:
+            assert X in loaded_data["coords"] and Y in loaded_data["coords"], (
+                f"States '{self.name}': Missing coordinates '{X}' and/or '{Y}' in loaded_data, got {list(loaded_data['coords'].keys())}"
+            )
+            x = loaded_data["coords"][X]
+            y = loaded_data["coords"][Y]
+
+            if all_heights or height is None:
+                assert H in loaded_data["coords"], (
+                    f"States '{self.name}': Missing heights '{H}' in loaded_data, got {list(loaded_data['coords'].keys())}"
+                )
+                h = loaded_data["coords"][H]
+                if height is None:
+                    h = np.atleast_1d(np.max(h))
+                elif all_heights:
+                    raise ValueError(
+                        f"States '{self.name}': Cannot specify both all_heights and height, got all_heights={all_heights}, height={height}"
+                    )
+            else:
+                h = np.atleast_1d(height)
+
+        nx = len(x)
+        ny = len(y)
+        nh = len(h)
+        gpts = np.zeros((nx, ny, nh, 3), dtype=x.dtype)
+        gpts[..., 0] = x[:, None, None]
+        gpts[..., 1] = y[None, :, None]
+        gpts[..., 2] = h[None, None, :]
+        gpts = gpts.reshape(nx * ny * nh, 3)
+
+        return gpts
+
     def get_calc_data(self, mdata, fdata):
         """
         Gathers data for calculations.
@@ -1225,8 +1334,8 @@ class DatasetStates(States):
         idims: list of str
             The input dimensions, e.g. [x, y, height]
         icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
+            The input coordinates, each with shape (ni,)
+            where ni is the number of grid points in dimension i
         d: numpy.ndarray
             The data array, with shape (n1, n2, ..., nv)
             where ni represents the dimension sizes and
