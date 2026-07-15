@@ -413,29 +413,40 @@ class LatLonFieldData(DatasetStates):
                 fig.savefig(fpath, bbox_inches="tight")
                 plt.close()
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+    def interpolate_data(
+        self,
+        mdata,
+        idims,
+        d,
+        pts,
+        vrs,
+        state_indices=None,
+        gpts=None,
+    ):
         """
         Interpolates data to points.
 
-        This function should be implemented in derived classes.
-
         Parameters
         ----------
+        mdata: foxes.core.MData
+            The model data
         idims: list of str
-            The input dimensions, e.g. [x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
+            The input dimensions, e.g. ['x', 'y', 'height']
         d: numpy.ndarray
             The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
+            where ni represents the dimension sizes of the ordered
+            icoords keys, and nv is the number of variables
         pts: numpy.ndarray
             The points to interpolate to, with shape (n_pts, n_idims)
         vrs: list of str
             The variable names, length nv
-        times: numpy.ndarray
-            The time coordinates of the states, with shape (n_states,)
+        state_indices: numpy.ndarray, optional
+            The indices of the states, with shape (n_states,)
+        gpts: tuple of numpy.ndarray or numpy.ndarray
+            Either a list of 1D arrays for each dimension, or a single 2D array
+            with shape (n_points, n_dims). If None, the grid points are extracted
+            from mdata.
+
         Returns
         -------
         d_interp: numpy.ndarray
@@ -450,7 +461,9 @@ class LatLonFieldData(DatasetStates):
             )
             pts[:, ix : ix + 2] = to_lonlat(pts[:, ix : ix + 2])
 
-        return super().interpolate_data(idims, icrds, d, pts, vrs, times)
+        return super().interpolate_data(
+            mdata, idims, d, pts, vrs, state_indices=state_indices, gpts=gpts
+        )
 
 
 class WeibullField(FieldData):

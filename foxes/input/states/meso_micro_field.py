@@ -1,9 +1,8 @@
 import numpy as np
-from copy import deepcopy
 
 from foxes.config import config
 from foxes.core import States, MData, FData, TData, run_with_engine, WindFarm, Turbine
-from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv, uv2wd
+from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv
 from foxes.algorithms import Downwind
 import foxes.constants as FC
 import foxes.variables as FV
@@ -11,9 +10,9 @@ import foxes.variables as FV
 
 class MesoMicroField(States):
     """
-    Combines field data representing micro scale wind direction sectors 
+    Combines field data representing micro scale wind direction sectors
     and meso scale results at multiple reference points into a timeseries of fields.
-    
+
     Attributes
     ----------
     micro_states: foxes.input.states.DatasetStates
@@ -21,7 +20,7 @@ class MesoMicroField(States):
         different wind direction sectors, and the states must be in "preload" mode.
     meso_states: foxes.core.States
         Meso scale states, evaluated at reference points. These define the final
-        states and states weights. Will be evaluated at the reference points, and the 
+        states and states weights. Will be evaluated at the reference points, and the
         results will be used to scale the micro states.
     ref_points: array_like, optional
         The [x, y, h] reference point coordinates, shape: (n_ref_points, 3),
@@ -67,7 +66,7 @@ class MesoMicroField(States):
             different wind direction sectors, and the states must be in "preload" mode.
         meso_states: foxes.core.States
             Meso scale states, evaluated at reference points. These define the final
-            states and states weights. Will be evaluated at the reference points, and the 
+            states and states weights. Will be evaluated at the reference points, and the
             results will be used to scale the micro states.
         ref_points: array_like, optional
             The [x, y, h] reference point coordinates, shape: (n_ref_points, 3),
@@ -89,7 +88,7 @@ class MesoMicroField(States):
             Whether to blend between wind direction sectors
         check_nans: bool, optional
             Whether to check for NaN values
-        
+
         """
         super().__init__(**kwargs)
         self.micro_states = micro_states
@@ -106,7 +105,7 @@ class MesoMicroField(States):
                 raise ValueError(
                     f"States '{self.name}': Expecting ref_points shape (N, 3), got {self.ref_points.shape}"
                 )
-        
+
         self.__ref_points_are_lonlat = ref_points_are_lonlat
         self.__utm_zone = utm_zone
 
@@ -126,7 +125,7 @@ class MesoMicroField(States):
 
         """
         return self.output_vars
-    
+
     def sub_models(self):
         """
         List of all sub-models
@@ -137,10 +136,10 @@ class MesoMicroField(States):
             All sub models
 
         """
-        return [self.meso_states] # keep micro_states out of the loop
-    
+        return [self.meso_states]  # keep micro_states out of the loop
+
     def _lonlat_to_utm(self, verbosity=0):
-        """ Helper function to convert lonlat reference point to UTM coordinates """
+        """Helper function to convert lonlat reference point to UTM coordinates"""
         if self.__ref_points_are_lonlat:
             if not config.utm_zone_set and self.__utm_zone is None:
                 zone = get_utm_zone(self.ref_points[None, :2])
@@ -173,7 +172,7 @@ class MesoMicroField(States):
             raise ValueError(
                 f"States '{self.name}': ref_points_are_lonlat is False, but utm_zone is given: {self.__utm_zone}. This is not allowed."
             )
-    
+
     def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
@@ -200,7 +199,6 @@ class MesoMicroField(States):
 
         self.REF_DATA = self.var("ref_data")
         if self.REF_DATA not in loaded_data["data_vars"] or force:
-
             self.COORDS0 = self.var("coords0")
             self.VARS0 = self.var("vars0")
             self.EXTRA0 = self.var("extra0")
@@ -213,7 +211,9 @@ class MesoMicroField(States):
 
             # update ref points:
             if self.ref_points is None:
-                self.ref_points = self.meso_states.get_grid_points(loaded_data=loaded_data, all_heights=False, height=self.ref_height)
+                self.ref_points = self.meso_states.get_grid_points(
+                    loaded_data=loaded_data, all_heights=False, height=self.ref_height
+                )
                 self.ref_height = self.ref_points[0, 2]
                 if verbosity > 0:
                     print(
@@ -228,26 +228,28 @@ class MesoMicroField(States):
                 (self.REF_POINT, FC.XYH),
                 self.ref_points,
             )
-            
+
             if verbosity > 0:
                 print(
                     f"States '{self.name}': Computing states '{self.micro_states.name}' at {n_points} reference points"
                 )
 
-            assert self.micro_states.load_mode == "preload", f"States '{self.name}': micro_states must be in 'preload' mode, got '{self.micro_states.load_mode}'"
+            assert self.micro_states.load_mode == "preload", (
+                f"States '{self.name}': micro_states must be in 'preload' mode, got '{self.micro_states.load_mode}'"
+            )
             if self.micro_states.initialized:
-                self.micro_states.finalize(algo=algo, verbosity=verbosity-1)
+                self.micro_states.finalize(algo=algo, verbosity=verbosity - 1)
 
             # create local algorithm for loading field states:
             farm = WindFarm(name="farm plus ref points")
             for t in algo.farm.turbines:
                 farm.add_turbine(
-                    Turbine(xy=t.xy, turbine_models=["null_type"]), 
+                    Turbine(xy=t.xy, turbine_models=["null_type"]),
                     verbosity=verbosity - 1,
                 )
             for rp in self.ref_points:
                 farm.add_turbine(
-                    Turbine(xy=rp[:2], turbine_models=["null_type"], H=self.ref_height), 
+                    Turbine(xy=rp[:2], turbine_models=["null_type"], H=self.ref_height),
                     verbosity=verbosity - 1,
                 )
             halgo = Downwind(
@@ -325,7 +327,7 @@ class MesoMicroField(States):
             if self.output_vars is None:
                 self.output_vars = list(results.keys())
             del halgo, mdata, fdata, tdata
-            
+
             assert FV.WD in results.keys(), (
                 f"States '{self.name}': Field states '{self.micro_states.name}' must provide '{FV.WD}', got {list(results.keys())}"
             )
@@ -341,9 +343,13 @@ class MesoMicroField(States):
                         )
 
             # find wind direction bins at reference point:
-            wd_bin_data = np.zeros((n_states, n_points, 3), dtype=config.dtype_double) #  centre, minus, plus
+            wd_bin_data = np.zeros(
+                (n_states, n_points, 3), dtype=config.dtype_double
+            )  #  centre, minus, plus
             for pi in range(n_points):
-                wd_sorted, wd_map, wd_imap = np.unique(results[FV.WD][:, pi, 0], return_index=True, return_inverse=True)
+                wd_sorted, wd_map, wd_imap = np.unique(
+                    results[FV.WD][:, pi, 0], return_index=True, return_inverse=True
+                )
                 if not np.all(wd_map == np.arange(len(wd_map))):
                     for k in results.keys():
                         if k != FV.WD:
@@ -364,8 +370,12 @@ class MesoMicroField(States):
 
                 del wdp, wdm, wd_sorted, wd_map, wd_imap
             del results[FV.WD]
-                
-            loaded_data["coords"][self.WD_BIN_DATA_VARS] = ["wd_centre", "wd_minus", "wd_plus"]
+
+            loaded_data["coords"][self.WD_BIN_DATA_VARS] = [
+                "wd_centre",
+                "wd_minus",
+                "wd_plus",
+            ]
             loaded_data["data_vars"][self.WD_BIN_DATA] = (
                 (self.STATE0, self.REF_POINT, self.WD_BIN_DATA_VARS),
                 wd_bin_data,
@@ -376,7 +386,7 @@ class MesoMicroField(States):
             loaded_data["coords"][self.REF_VARS] = list(results.keys())
             loaded_data["data_vars"][self.REF_DATA] = (
                 (self.STATE0, self.REF_POINT, self.REF_VARS),
-                np.stack([d[:, :, 0] for d in results.values()], axis=-1)
+                np.stack([d[:, :, 0] for d in results.values()], axis=-1),
             )
 
             if verbosity > 0:
@@ -523,7 +533,13 @@ class MesoMicroField(States):
         ovars = self.output_point_vars(algo)
         out = {v: np.zeros_like(tdata[v]) for v in ovars}
 
-        assert FV.WD in ovars and FV.WS in ovars and FV.U not in ovars and FV.V not in ovars and FV.UV not in ovars, (
+        assert (
+            FV.WD in ovars
+            and FV.WS in ovars
+            and FV.U not in ovars
+            and FV.V not in ovars
+            and FV.UV not in ovars
+        ), (
             f"States '{self.name}': Output variables must include '{FV.WD}', '{FV.WS}' and '{FV.UV}', and must not include '{FV.U}' or '{FV.V}', got {ovars}"
         )
 
@@ -544,15 +560,21 @@ class MesoMicroField(States):
                         f"States '{self.name}': Reference point states '{self.meso_states.name}' output variable '{k}' contains {np.sum(np.isnan(v))} NaN values"
                     )
 
-        assert FV.WD in ref_results.keys(), f"States '{self.name}': Reference point states '{self.meso_states.name}' must provide '{FV.WD}', got {list(ref_results.keys())}"
-        assert FV.WS in ref_results.keys(), f"States '{self.name}': Reference point states '{self.meso_states.name}' must provide '{FV.WS}', got {list(ref_results.keys())}"
+        assert FV.WD in ref_results.keys(), (
+            f"States '{self.name}': Reference point states '{self.meso_states.name}' must provide '{FV.WD}', got {list(ref_results.keys())}"
+        )
+        assert FV.WS in ref_results.keys(), (
+            f"States '{self.name}': Reference point states '{self.meso_states.name}' must provide '{FV.WS}', got {list(ref_results.keys())}"
+        )
 
         def _print_wd_error_info(statesw):
             us = np.unique(statesw[0])
             up = np.unique(statesw[1])
             print(f"\nWD MISMATCH STATES: {len(us)}, [{us[0]} - {us[-1]}]")
             print(f"WD MISMATCH POINTS: {len(up)}, [{up[0]} - {up[-1]}]")
-            print(f"--> ({statesw[0][0]}, {statesw[1][0]}) - ({statesw[0][-1]}, {statesw[1][-1]})\n")
+            print(
+                f"--> ({statesw[0][0]}, {statesw[1][0]}) - ({statesw[0][-1]}, {statesw[1][-1]})\n"
+            )
 
         # find field data in same sector as reference point data and average weights:
         dwd = delta_wd(wd_bin_centre[None, ...], ref_results[FV.WD][:, None, ...])
@@ -570,7 +592,7 @@ class MesoMicroField(States):
 
         print("HERE MESOMICRO CALC")
         quit()
-        
+
         # create mdata:
         mdict = {c: mdata[c] for c in field_coords0}
         mdims = {c: (c,) for c in field_coords0}
@@ -592,9 +614,13 @@ class MesoMicroField(States):
         hfdata = FData.from_sizes(n_states=n_bins, n_turbines=algo.n_turbines)
 
         # create tdata:
-        tpoints = np.zeros((n_bins, tdata.n_targets, tdata.n_tpoints, 3), dtype=config.dtype_double)
+        tpoints = np.zeros(
+            (n_bins, tdata.n_targets, tdata.n_tpoints, 3), dtype=config.dtype_double
+        )
         tpoints[:] = tdata[FC.TARGETS][0, None, ...]
-        htdata = TData.from_tpoints(tpoints=tpoints, tweights=tdata[FC.TWEIGHTS], mdata=hmdata)
+        htdata = TData.from_tpoints(
+            tpoints=tpoints, tweights=tdata[FC.TWEIGHTS], mdata=hmdata
+        )
         del tpoints
 
         # run field states calculation:
@@ -603,7 +629,6 @@ class MesoMicroField(States):
 
         # evaluate sectors:
         for bi, fs2s in enumerate(sector_maps):
-
             # sector weight:
             weight = bf0 if bi == 0 else (1.0 - bf0)
 
@@ -614,7 +639,7 @@ class MesoMicroField(States):
                     i = field_ref_vars.index(v)
                     fres = field_ref_results[fs2s, i]
                     speedups[v] = np.where(
-                        np.abs(fres) > 1.e-10,
+                        np.abs(fres) > 1.0e-10,
                         ref_results[v] / fres,
                         0.0,
                     )
@@ -627,7 +652,7 @@ class MesoMicroField(States):
                     raise KeyError(
                         f"States '{self.name}': Reference point states '{self.meso_states.name}' output variable '{v}' not found in field states variables {field_ref_vars} or output variables {ovars}"
                     )
-                
+
             def _get_data(v):
                 if v in field_results.keys():
                     return field_results[v][fs2s, :, :]
@@ -645,10 +670,20 @@ class MesoMicroField(States):
                 elif v in field_results.keys():
                     if v in speedups.keys():
                         if v != FV.WS or not self.apply_blending:
-                            out[v][:] += weight[:, None, None] * speedups[v][:, None, None] * field_results[v][fs2s, :, :]
+                            out[v][:] += (
+                                weight[:, None, None]
+                                * speedups[v][:, None, None]
+                                * field_results[v][fs2s, :, :]
+                            )
                         else:
-                            uv = wd2uv(field_results[FV.WD], field_results[FV.WS])[fs2s, :, :]
-                            out[FV.UV][:] += weight[:, None, None, None] * speedups[FV.WS][:, None, None, None] * uv
+                            uv = wd2uv(field_results[FV.WD], field_results[FV.WS])[
+                                fs2s, :, :
+                            ]
+                            out[FV.UV][:] += (
+                                weight[:, None, None, None]
+                                * speedups[FV.WS][:, None, None, None]
+                                * uv
+                            )
                             del uv
                     else:
                         raise KeyError(
@@ -656,12 +691,18 @@ class MesoMicroField(States):
                         )
                 elif v in ref_results.keys():
                     out[v][:] = ref_results[v][:, None, None]
-                elif v == FV.TI and (FV.TKE in field_results.keys() or FV.TKE in ref_results.keys()):
+                elif v == FV.TI and (
+                    FV.TKE in field_results.keys() or FV.TKE in ref_results.keys()
+                ):
                     tke = _get_data(FV.TKE)
                     ws = _get_data(FV.WS)
                     out[v][:] += weight[:, None, None] * np.sqrt(2.0 / 3.0 * tke) / ws
                     del tke, ws
-                elif v == FV.RHO and (FV.P in field_results.keys() or FV.P in ref_results.keys()) and (FV.T in field_results.keys() or FV.T in ref_results.keys()):
+                elif (
+                    v == FV.RHO
+                    and (FV.P in field_results.keys() or FV.P in ref_results.keys())
+                    and (FV.T in field_results.keys() or FV.T in ref_results.keys())
+                ):
                     p = _get_data(FV.P)
                     T = _get_data(FV.T)
                     out[v][:] += weight[:, None, None] * p / (FC.Rd * T)
@@ -670,6 +711,5 @@ class MesoMicroField(States):
                     raise KeyError(
                         f"States '{self.name}': Output variable '{v}' not found in field states variables {list(field_results.keys())} or reference point states variables {list(ref_results.keys())}"
                     )
-                    
 
         return out

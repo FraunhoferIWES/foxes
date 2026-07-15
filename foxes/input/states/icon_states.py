@@ -166,15 +166,66 @@ class ICONStates(LatLonFieldData):
             verbosity=verbosity,
         )
 
-    def _update_dims(self, dims, coords, vrs, d, fdata):
-        """Helper function for dimension adjustment, if needed"""
-        if self.H_TKE in dims:
-            assert FV.H not in dims, (
-                f"States {self.name}: Cannot have both {FV.H} and {self.H_TKE} in dims for variables {vrs}, got dims = {dims}"
+    def _get_calc_data(self, mdata, fdata):
+        """
+        Gathers data for calculations.
+
+        Parameters
+        ----------
+        mdata: foxes.core.MData
+            The mdata object
+        fdata: foxes.core.FData
+            The fdata object
+
+        Returns
+        -------
+        data: dict
+            The extracted data, keys are dimension tuples,
+            values are tuples (variables, data_array)
+            where variables is a list of variable names, and
+            data_array is a numpy.ndarray with the data values,
+            the last dimension corresponds to the variables
+        weights: numpy.ndarray or None
+            The weights array, if only state dependent, otherwise
+            weights are among data. Shape: (n_states,)
+
+        """
+        data, weights = super()._get_calc_data(mdata, fdata)
+        dmlst = list(data.keys())
+        for dims in dmlst:
+            if self.H_TKE in dims:
+                vrs, d = data.pop(dims)
+                assert FV.H not in dims, (
+                    f"States {self.name}: Cannot have both {FV.H} and {self.H_TKE} in dims for variables {vrs}, got dims = {dims}"
+                )
+                dims_new = list(dims)
+                dims_new[dims.index(self.H_TKE)] = FV.H
+                dims_new = tuple(dims_new)
+                data[dims_new] = (vrs, d)
+        return data, weights
+
+    def get_interpolation_coords(self, mdata, idims):
+        """
+        Extracts interpolation coordinates from chunk model data.
+
+        Parameters
+        ----------
+        mdata: foxes.core.MData
+            The model data
+        idims: list of str
+            The input dimensions, e.g. [x, y, height]
+
+        Returns
+        -------
+        icoords: dict
+            The extracted interpolation coordinates, keys are dimension names,
+            values are 1D numpy.ndarray with the coordinate values
+
+        """
+        icoords = super().get_interpolation_coords(mdata, idims)
+        if self.H_TKE in idims:
+            assert FV.H not in idims, (
+                f"States {self.name}: Cannot have both {FV.H} and {self.H_TKE} in idims for interpolation, got idims = {idims}"
             )
-            dims_new = list(dims)
-            dims_new[dims.index(self.H_TKE)] = FV.H
-            dims = tuple(dims_new)
-            coords = coords.copy()
-            coords[FV.H] = coords[self.H_TKE]
-        return dims, coords
+            icoords[FV.H] = icoords.pop(self.H_TKE)
+        return icoords

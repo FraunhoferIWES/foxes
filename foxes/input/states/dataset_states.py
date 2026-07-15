@@ -1239,12 +1239,9 @@ class DatasetStates(States):
 
         return gpts
 
-    def get_calc_data(self, mdata, fdata):
+    def _get_calc_data(self, mdata, fdata):
         """
         Gathers data for calculations.
-
-        Call this function from the calculate function of the
-        derived class.
 
         Parameters
         ----------
@@ -1255,13 +1252,10 @@ class DatasetStates(States):
 
         Returns
         -------
-        coords: dict
-            keys: Foxes variable names, values: 1D coordinate value arrays
         data: dict
             The extracted data, keys are dimension tuples,
-            values are tuples (DATA key, variables, data_array)
-            where DATA key is the name in the mdata object,
-            variables is a list of variable names, and
+            values are tuples (variables, data_array)
+            where variables is a list of variable names, and
             data_array is a numpy.ndarray with the data values,
             the last dimension corresponds to the variables
         weights: numpy.ndarray or None
@@ -1279,7 +1273,6 @@ class DatasetStates(States):
         # extract data from mdata
         weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
         data = {}
-        coords = {}
         for DATA in data_keys:
             dims = mdata.dims[DATA]
             vrs = (
@@ -1291,10 +1284,7 @@ class DatasetStates(States):
             for c in dims[:-1]:
                 c0 = self.unvar(c) if c not in [FC.STATE, FC.TURBINE] else c
                 dms.append(c0)
-                if c0 not in coords:
-                    coords[c0] = mdata[c]
             dms = tuple(dms + [dims[-1]])
-            coords[dims[-1]] = vrs
             data[dms] = (vrs, mdata[DATA].copy())
 
         # adjust turbine order for purely turbine dependent data:
@@ -1321,49 +1311,107 @@ class DatasetStates(States):
                     d = np.concatenate((data[dims][1], d), axis=-1)
                 data[dims] = (vrs, d)
 
-        return coords, data, weights
+        return data, weights
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+    def get_interpolation_grid_data(self, mdata, idims):
         """
-        Interpolates data to points.
-
-        This function should be implemented in derived classes.
+        Extracts interpolation grid data from chunk model data.
 
         Parameters
         ----------
+        mdata: foxes.core.MData
+            The model data
         idims: list of str
-            The input dimensions, e.g. [x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (ni,)
-            where ni is the number of grid points in dimension i
+            The dimensions for interpolation, e.g. ['x', 'y', 'height']
+
+        Returns
+        -------
+        gpts: tuple of numpy.ndarray or numpy.ndarray
+            Either a list of length n_idims of 1D arrays for each dimension,
+            or a single 2D array with shape (n_points, n_idims)
+
+        """
+        gpts = []
+        for c in idims:
+            cc = self.var(c) if c not in [FC.STATE, FC.TURBINE] else c
+            assert cc in mdata, (
+                f"States '{self.name}': Missing coordinate '{cc}' in mdata, got {list(mdata.keys())}"
+            )
+            gpts.append(mdata[cc])
+        return tuple(gpts)
+
+    def interpolate_data(
+        self,
+        mdata,
+        idims,
+        d,
+        pts,
+        vrs,
+        state_indices=None,
+        gpts=None,
+    ):
+        """
+        Interpolates data to points.
+
+        Parameters
+        ----------
+        mdata: foxes.core.MData
+            The model data
+        idims: list of str
+            The input dimensions, e.g. ['x', 'y', 'height']
         d: numpy.ndarray
             The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
+            where ni represents the dimension sizes of the ordered
+            icoords keys, and nv is the number of variables
         pts: numpy.ndarray
             The points to interpolate to, with shape (n_pts, n_idims)
         vrs: list of str
             The variable names, length nv
-        times: numpy.ndarray
-            The time coordinates of the states, with shape (n_states,)
+        state_indices: numpy.ndarray, optional
+            The indices of the states, with shape (n_states,)
+        gpts: tuple of numpy.ndarray or numpy.ndarray
+            Either a list of 1D arrays for each dimension, or a single 2D array
+            with shape (n_points, n_dims). If None, the grid points are extracted
+            from mdata.
+
         Returns
         -------
         d_interp: numpy.ndarray
             The interpolated data array with shape (n_pts, nv)
 
         """
-        gvars = tuple(icrds)
+        if gpts is None:
+            gpts = self.get_interpolation_grid_data(mdata, idims)
+        else:
+            assert isinstance(gpts, (tuple, list)) and len(gpts) == len(idims), (
+                f"States '{self.name}': gpts must be a tuple or list of length {len(idims)}, got {type(gpts)} with length {len(gpts) if isinstance(gpts, (tuple, list)) else 'N/A'}"
+            )
+
+        assert (
+            isinstance(pts, np.ndarray) and pts.ndim == 2 and pts.shape[1] == len(idims)
+        ), (
+            f"States '{self.name}': pts must be a 2D numpy array with shape (n_pts, {len(idims)}), got {pts.shape}"
+        )
+        assert (
+            isinstance(d, np.ndarray)
+            and d.ndim >= len(gpts) + 1
+            and d.shape[-1] == len(vrs)
+            and d.shape[: len(gpts)] == tuple(len(g) for g in gpts)
+        ), (
+            f"States '{self.name}': d must be a numpy array with shape {tuple([len(g) for g in gpts] + ['...', len(vrs)])}, got {d.shape}"
+        )
+
         try:
             ipars = dict(bounds_error=True, fill_value=None)
             ipars.update(self.interp_pars)
-            d = interpn(gvars, d, pts, **ipars)
+            d = interpn(gpts, d, pts, **ipars)
         except ValueError as e:
             print(f"\nStates '{self.name}': Interpolation error")
-            print(f"INPUT VARS: {idims}")
+            print(f"INTERPOLATION DIMENSIONS: {idims}")
             print(
                 "DATA BOUNDS:",
-                [float(np.min(d)) for d in gvars],
-                [float(np.max(d)) for d in gvars],
+                [float(np.min(g)) for g in gpts],
+                [float(np.max(g)) for g in gpts],
             )
             print(
                 "EVAL BOUNDS:",
@@ -1373,8 +1421,8 @@ class DatasetStates(States):
             print(
                 "INSIDE     :",
                 [
-                    float(np.min(p)) >= float(np.min(gvars[i]))
-                    and float(np.max(p)) <= float(np.max(gvars[i]))
+                    float(np.min(p)) >= float(np.min(gpts[i]))
+                    and float(np.max(p)) <= float(np.max(gpts[i]))
                     for i, p in enumerate(pts.T)
                 ],
             )
@@ -1384,10 +1432,6 @@ class DatasetStates(States):
             raise e
 
         return d
-
-    def _update_dims(self, dims, coords, vrs, d, fdata):
-        """Helper function for dimension adjustment, if needed"""
-        return dims, coords
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -1427,10 +1471,10 @@ class DatasetStates(States):
         points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
         n_pts = points.shape[1]
         times = mdata[FC.STATE]
+        sinds = np.arange(n_states, dtype=config.dtype_int)
 
         # get data for calculation
-        coords, data, weights = self.get_calc_data(mdata, fdata)
-        coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
+        data, weights = self._get_calc_data(mdata, fdata)
 
         # check if points are state dependent
         _points_data = None
@@ -1483,9 +1527,6 @@ class DatasetStates(States):
         # interpolate data to points:
         out = {}
         for dims, (vrs, d) in data.items():
-            # update dims, if necessary:
-            dims, hcoords = self._update_dims(dims, coords, vrs, d, fdata)
-
             # replace (WD, WS) by (U, V):
             iwd = None
             if FV.WD in vrs or FV.WS in vrs:
@@ -1508,9 +1549,10 @@ class DatasetStates(States):
                 iws = vrs.index(FV.V)
 
             # move state dimension to second last position:
-            if dims[0] == FC.STATE and not (
-                FC.TURBINE in hcoords and len(hcoords[FC.TURBINE].shape) == 3
-            ):
+            if dims[0] == FC.STATE:
+                # and not (
+                #    FC.TURBINE in hcoords and len(hcoords[FC.TURBINE].shape) == 3
+                # ):
                 d = np.moveaxis(d, 0, -2)
                 dims = dims[1:-1] + (FC.STATE,) + (dims[-1],)
                 idims = list(dims[:-2])
@@ -1544,6 +1586,7 @@ class DatasetStates(States):
                         pts.append(points_data["up"][..., 0])
                         pts.append(points_data["up"][..., 1])
                     elif c == FC.TURBINE:
+                        raise NotImplementedError()
                         points_data = _analyze_points(has_p, has_h, hcoords)
                         pts.append(points_data["up"][..., 0])
                         pts.append(points_data["up"][..., 1])
@@ -1558,8 +1601,7 @@ class DatasetStates(States):
                 pts = np.stack(pts, axis=-1) if len(pts) > 0 else None
 
                 # interpolate:
-                icrds = [hcoords[c] for c in idims]
-                d = self.interpolate_data(idims, icrds, d, pts, vrs, times)
+                d = self.interpolate_data(mdata, idims, d, pts, vrs, times)
 
                 # move state dimension back to front:
                 if dims[0] == FC.STATE:
@@ -1575,17 +1617,17 @@ class DatasetStates(States):
                     shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
                     d = d[:, points_data["up2p"], :].reshape(shp)
                     if FC.STATE in dims:
-                        d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
+                        d = d[sinds, sinds, ...]
                     else:
                         d = d[0, ...]
                 elif has_h and points_data["heights_vary"]:
                     shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
                     d = d[:, points_data["uh2h"], :].reshape(shp)
                     if FC.STATE in dims:
-                        d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
+                        d = d[sinds, sinds, ...]
                     else:
                         d = d[0, ...]
-                del pts, icrds
+                del pts
 
             # case no interpolation needed:
             else:
@@ -1594,7 +1636,6 @@ class DatasetStates(States):
                     d = d[:, None, :]
                 else:
                     d = d[None, None, :]
-            del hcoords
 
             # translate (U, V) into (WD, WS):
             if iwd is not None:
