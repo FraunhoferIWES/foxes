@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.config import config
 from foxes.core import States, MData, FData, TData, run_with_engine, WindFarm, Turbine
-from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv
+from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv, uv2wd
 from foxes.algorithms import Downwind
 import foxes.constants as FC
 import foxes.variables as FV
@@ -519,11 +519,11 @@ class MesoMicroField(States):
         # prepare
         super().calculate(algo, mdata, fdata, tdata)
         n_states = mdata.n_states
-        field_coords0 = mdata.extra_data[self.COORDS0]
-        field_vars0 = mdata.extra_data[self.VARS0]
-        field_extra0 = mdata.extra_data[self.EXTRA0]
-        field_ref_vars = mdata[self.REF_VARS].tolist()
-        field_ref_results = mdata[self.REF_DATA]
+        micro_coords0 = mdata.extra_data[self.COORDS0]
+        micro_vars0 = mdata.extra_data[self.VARS0]
+        micro_extra0 = mdata.extra_data[self.EXTRA0]
+        micro_ref_vars = mdata[self.REF_VARS].tolist()
+        micro_ref_results = mdata[self.REF_DATA]
         wd_bin_centre = mdata[self.WD_BIN_DATA][:, :, 0]
         wd_bin_minus = mdata[self.WD_BIN_DATA][:, :, 1]
         wd_bin_plus = mdata[self.WD_BIN_DATA][:, :, 2]
@@ -531,7 +531,6 @@ class MesoMicroField(States):
         n_bins = wd_bin_centre.shape[0]
         n_points = len(ref_points)
         ovars = self.output_point_vars(algo)
-        out = {v: np.zeros_like(tdata[v]) for v in ovars}
 
         assert (
             FV.WD in ovars
@@ -578,7 +577,7 @@ class MesoMicroField(States):
 
         # find field data in same sector as reference point data and average weights:
         dwd = delta_wd(wd_bin_centre[None, ...], ref_results[FV.WD][:, None, ...])
-        sel = (dwd > wd_bin_minus) & (dwd <= wd_bin_plus)
+        sel = (dwd > wd_bin_minus[None, ...]) & (dwd <= wd_bin_plus[None, ...])
         if np.max(np.sum(sel, axis=1)) > 1:
             _print_wd_error_info(np.where(np.sum(sel, axis=1) > 1))
             raise ValueError(
@@ -591,13 +590,35 @@ class MesoMicroField(States):
             )
 
         print("HERE MESOMICRO CALC")
-        quit()
+
+        # map meso to micro states:
+        fstates = np.where(np.any(sel, axis=(0, 2)))[0]
+        fs2s = [np.where(sel[:, fstates, pi])[1] for pi in range(n_points)]
+        micro_ref_results = micro_ref_results[fstates, :, :]
+
+        # compute speedups:
+        speedups = {}
+        for v in ref_results.keys():
+            if v in micro_ref_vars:
+                i = micro_ref_vars.index(v)
+                speedups[v] = []
+                for pi in range(n_points):
+                    mires = micro_ref_results[fs2s[pi], pi, i]
+                    speedups[v].append(
+                        np.where(
+                            np.abs(mires) > 1.0e-10,
+                            ref_results[v][:, pi] / mires,
+                            0.0,
+                        )
+                    )
+                    del mires
+                # speedups[v] = np.stack(speedups[v], axis=-1)
 
         # create mdata:
-        mdict = {c: mdata[c] for c in field_coords0}
-        mdims = {c: (c,) for c in field_coords0}
-        mdict.update({v: mdata[v] for v in field_vars0})
-        mdims.update({v: mdata.dims[v] for v in field_vars0})
+        mdict = {c: mdata[c] for c in micro_coords0}
+        mdims = {c: (c,) for c in micro_coords0}
+        mdict.update({v: mdata[v] for v in micro_vars0})
+        mdims.update({v: mdata.dims[v] for v in micro_vars0})
         for k in mdims.keys():
             if len(mdims[k]) > 0 and mdims[k][0] == self.STATE0:
                 mdims[k] = (FC.STATE,) + mdims[k][1:]
@@ -605,7 +626,7 @@ class MesoMicroField(States):
             data=mdict,
             dims=mdims,
             states_i0=0,
-            extra_data=field_extra0,
+            extra_data=micro_extra0,
             name="mdata_field",
         )
         del mdict, mdims
@@ -624,92 +645,171 @@ class MesoMicroField(States):
         del tpoints
 
         # run field states calculation:
-        field_results = self.micro_states.calculate(algo, hmdata, hfdata, htdata)
+        micro_results = self.micro_states.calculate(algo, hmdata, hfdata, htdata)
         del hmdata, hfdata, htdata
 
-        # evaluate sectors:
-        for bi, fs2s in enumerate(sector_maps):
-            # sector weight:
-            weight = bf0 if bi == 0 else (1.0 - bf0)
-
-            # compute speedups:
-            speedups = {}
-            for v in ref_results.keys():
-                if v in field_ref_vars:
-                    i = field_ref_vars.index(v)
-                    fres = field_ref_results[fs2s, i]
-                    speedups[v] = np.where(
-                        np.abs(fres) > 1.0e-10,
-                        ref_results[v] / fres,
-                        0.0,
+        # apply speedups wrt each reference point:
+        n_tpts = tdata.n_targets * tdata.n_tpoints
+        micro_results_vrs = list(micro_results.keys())
+        for v in micro_results_vrs:
+            d = micro_results.pop(v).reshape(n_bins, n_tpts)
+            micro_results[v] = np.zeros((n_states, n_tpts, n_points), dtype=d.dtype)
+            for pi in range(n_points):
+                micro_results[v][:, :, pi] = d[fs2s[pi], :]
+                if v in speedups.keys():
+                    print(
+                        "HERE APPLY SPPEDUP",
+                        v,
+                        pi,
+                        micro_results[v][..., pi].shape,
+                        speedups[v][pi][:, None].shape,
                     )
-                    del fres
-                elif v in out:
-                    out[v][:] = ref_results[v][:, None, None]
-                elif self.apply_blending and v == FV.WD:
-                    pass
-                else:
-                    raise KeyError(
-                        f"States '{self.name}': Reference point states '{self.meso_states.name}' output variable '{v}' not found in field states variables {field_ref_vars} or output variables {ovars}"
-                    )
+                    micro_results[v][:, :, pi] *= speedups[v][pi][:, None]
+            del d
+        del speedups
+        micro_results = np.stack(list(micro_results.values()), axis=-1)
+        print("HERE MICRO RES A", micro_results_vrs, micro_results.shape)
 
-            def _get_data(v):
-                if v in field_results.keys():
-                    return field_results[v][fs2s, :, :]
-                elif v in ref_results.keys():
-                    return ref_results[v][:, None, None]
-                else:
-                    raise KeyError(
-                        f"States '{self.name}': Output variable '{v}' not found in field states variables {list(field_results.keys())} or reference point states variables {list(ref_results.keys())}"
-                    )
+        # replace WS, WD by U, V:
+        if FV.U in micro_results_vrs or FV.V in micro_results_vrs:
+            assert FV.U in micro_results_vrs and FV.V in micro_results_vrs, (
+                f"States '{self.name}': Field states '{self.micro_states.name}' must provide both '{FV.U}' and '{FV.V}', got {micro_results_vrs}"
+            )
+        else:
+            assert FV.WS in micro_results_vrs and FV.WD in micro_results_vrs, (
+                f"States '{self.name}': Field states '{self.micro_states.name}' must provide both '{FV.WS}' and '{FV.WD}', got {micro_results_vrs}"
+            )
+            iwd = micro_results_vrs.index(FV.WD)
+            iws = micro_results_vrs.index(FV.WS)
+            iu = iws
+            iv = iwd
+            uv = wd2uv(
+                micro_results[..., iwd],
+                micro_results[..., iws],
+            )
+            micro_results[..., iu] = uv[..., 0]
+            micro_results[..., iv] = uv[..., 1]
+            micro_results_vrs[iu] = FV.U
+            micro_results_vrs[iv] = FV.V
+            del uv
+        print("HERE MICRO RES B", micro_results_vrs, micro_results.shape)
 
-            # add to output variables:
-            for v in ovars:
+        # prepare ref point selection:
+        refw = np.zeros((n_points, n_points), dtype=config.dtype_double)
+        np.fill_diagonal(refw, 1.0)
+        refv = [f"ref_point_{pi}" for pi in range(n_points)]
+
+        # prepare target points for interpolation:
+        points = tdata[FC.TARGETS][..., :2].reshape((n_states, n_tpts, 2))
+        pmin = np.min(points, axis=0)
+        pmax = np.max(points, axis=0)
+        if np.any(pmax - pmin > 1e-4):
+            points, up2p = np.unique(
+                points.reshape(n_states * n_tpts, 2), axis=0, return_inverse=True
+            )
+        else:
+            points = points[0, :, :]
+            up2p = None
+
+        # interpolate to target points:
+        refw = self.meso_states.interpolate_data(
+            mdata=mdata,
+            idims=[FV.X, FV.Y],
+            d=refw,
+            pts=points,
+            vrs=refv,
+            state_indices=mdata.get(FC.STATE, None),
+        )
+        print(
+            "HERE B",
+            refw.shape,
+            points.shape,
+            refw[up2p, :].shape,
+            (n_states, n_tpts, 2),
+        )
+        if up2p is not None:
+            refw = refw[up2p, :].reshape(n_states, n_tpts, n_points)
+            sinds = np.arange(n_states)
+            refw = refw[sinds, ...]
+            del sinds, up2p
+        else:
+            refw = refw[None, ...]
+        print("HERE B", refw.shape)
+        print(refw[0, 0], np.sum(refw, axis=-1))
+
+        # apply mixing weights:
+        micro_results = np.einsum("sprv,spr->spv", micro_results, refw)
+        print("HERE MICRO RES C", micro_results_vrs, micro_results.shape)
+
+        def _get_data(v, out):
+            """Helper function for output data extraction"""
+            if v in out.keys():
+                return out[v]
+            elif v in micro_results_vrs:
+                i = micro_results_vrs.index(v)
+                return micro_results[..., i].reshape(
+                    n_states, tdata.n_targets, tdata.n_tpoints
+                )
+            elif v in [FV.WS, FV.WD]:
+                uv = np.stack([micro_results[..., iu], micro_results[..., iv]], axis=-1)
                 if v == FV.WD:
-                    pass
-                elif v in field_results.keys():
-                    if v in speedups.keys():
-                        if v != FV.WS or not self.apply_blending:
-                            out[v][:] += (
-                                weight[:, None, None]
-                                * speedups[v][:, None, None]
-                                * field_results[v][fs2s, :, :]
-                            )
-                        else:
-                            uv = wd2uv(field_results[FV.WD], field_results[FV.WS])[
-                                fs2s, :, :
-                            ]
-                            out[FV.UV][:] += (
-                                weight[:, None, None, None]
-                                * speedups[FV.WS][:, None, None, None]
-                                * uv
-                            )
-                            del uv
-                    else:
-                        raise KeyError(
-                            f"States '{self.name}': Field states variable '{v}' not found in speedups, got {list(speedups.keys())}"
-                        )
-                elif v in ref_results.keys():
-                    out[v][:] = ref_results[v][:, None, None]
-                elif v == FV.TI and (
-                    FV.TKE in field_results.keys() or FV.TKE in ref_results.keys()
-                ):
-                    tke = _get_data(FV.TKE)
-                    ws = _get_data(FV.WS)
-                    out[v][:] += weight[:, None, None] * np.sqrt(2.0 / 3.0 * tke) / ws
-                    del tke, ws
-                elif (
-                    v == FV.RHO
-                    and (FV.P in field_results.keys() or FV.P in ref_results.keys())
-                    and (FV.T in field_results.keys() or FV.T in ref_results.keys())
-                ):
-                    p = _get_data(FV.P)
-                    T = _get_data(FV.T)
-                    out[v][:] += weight[:, None, None] * p / (FC.Rd * T)
-                    del p, T
+                    return uv2wd(uv).reshape(n_states, tdata.n_targets, tdata.n_tpoints)
                 else:
-                    raise KeyError(
-                        f"States '{self.name}': Output variable '{v}' not found in field states variables {list(field_results.keys())} or reference point states variables {list(ref_results.keys())}"
+                    return np.linalg.norm(uv, axis=-1).reshape(
+                        n_states, tdata.n_targets, tdata.n_tpoints
                     )
+            elif v in ref_results.keys():
+                d = np.einsum("sr,spr->sp", ref_results[v], refw)
+                return d.reshape(n_states, tdata.n_targets, tdata.n_tpoints)
+            else:
+                raise KeyError(
+                    f"States '{self.name}': Output variable '{v}' not found in field states variables {list(micro_results.keys())} or reference point states variables {list(ref_results.keys())}"
+                )
+
+        # collect output:
+        out = {}
+        for v in ovars:
+            print("ADDING TO OUT", v)
+            if v in out:
+                pass
+            elif v in micro_results_vrs:
+                i = micro_results_vrs.index(v)
+                out[v] = micro_results[..., i].reshape(
+                    n_states, tdata.n_targets, tdata.n_tpoints
+                )
+            elif v in [FV.WS, FV.WD]:
+                uv = np.stack([micro_results[..., iu], micro_results[..., iv]], axis=-1)
+                out[FV.WD] = uv2wd(uv).reshape(
+                    n_states, tdata.n_targets, tdata.n_tpoints
+                )
+                out[FV.WS] = np.linalg.norm(uv, axis=-1).reshape(
+                    n_states, tdata.n_targets, tdata.n_tpoints
+                )
+                del uv
+            elif v in ref_results.keys():
+                out[v] = _get_data(v, out)
+            elif v == FV.TI and (
+                FV.TKE in micro_results_vrs or FV.TKE in ref_results.keys()
+            ):
+                tke = _get_data(FV.TKE, out)
+                ws = _get_data(FV.WS, out)
+                out[v] = np.sqrt(2.0 / 3.0 * tke) / ws
+                del tke, ws
+            elif (
+                v == FV.RHO
+                and (FV.P in micro_results_vrs or FV.P in ref_results.keys())
+                and (FV.T in micro_results_vrs or FV.T in ref_results.keys())
+            ):
+                p = _get_data(FV.P, out)
+                T = _get_data(FV.T, out)
+                out[v] = p / (FC.Rd * T)
+                del p, T
+            else:
+                raise KeyError(
+                    f"States '{self.name}': Output variable '{v}' not found in field states variables {micro_results_vrs} or reference point states variables {list(ref_results.keys())}"
+                )
+
+        print("\nDONE", {v: d.shape for v, d in out.items()})
+        quit()
 
         return out

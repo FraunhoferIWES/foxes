@@ -522,14 +522,15 @@ class NEWAStates(DatasetStates):
                 f"States '{self.name}': gpts must be a 2D numpy array with shape (n_points, {len(idims)}), got {gpts.shape}"
             )
 
-        # check and reshape d:
+        # check and reshape d, data is on a non-regular grid:
         n_gpts, n_dms = gpts.shape
-        try:
-            d = d.reshape((n_gpts,) + d.shape[n_dms:])
-        except Exception as e:
-            raise ValueError(
-                f"States '{self.name}': Cannot reshape d with shape {d.shape} to match gpts with shape {gpts.shape} and vrs with length {len(vrs)}"
-            ) from e
+        if d.shape[0] != n_gpts:
+            try:
+                d = d.reshape((n_gpts,) + d.shape[n_dms:])
+            except Exception as e:
+                raise ValueError(
+                    f"States '{self.name}': Cannot reshape d with shape {d.shape} to match gpts with shape {gpts.shape} and vrs with length {len(vrs)}"
+                ) from e
 
         def _check_nan(gpts, d, pts, idims, results):
             """Checks for NaN results and raises errors."""

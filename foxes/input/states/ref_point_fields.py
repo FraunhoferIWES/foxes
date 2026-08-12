@@ -462,7 +462,7 @@ class SectorSimRefPointField(States):
 
         # find field data in same sector as reference point data and average weights:
         dwd = delta_wd(wd_bin_centre[None, :], ref_results[FV.WD][:, None])
-        sel = (dwd > wd_bin_minus) & (dwd <= wd_bin_plus)
+        sel = (dwd > wd_bin_minus[None, :]) & (dwd <= wd_bin_plus[None, :])
         if np.max(np.sum(sel, axis=1)) > 1:
             _print_wd_error_info(np.where(np.sum(sel, axis=1) > 1)[0])
             raise ValueError(

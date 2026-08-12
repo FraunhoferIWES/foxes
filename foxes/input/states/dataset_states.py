@@ -1390,7 +1390,7 @@ class DatasetStates(States):
         assert (
             isinstance(pts, np.ndarray) and pts.ndim == 2 and pts.shape[1] == len(idims)
         ), (
-            f"States '{self.name}': pts must be a 2D numpy array with shape (n_pts, {len(idims)}), got {pts.shape}"
+            f"States '{self.name}': pts must be a 2D numpy array with shape (n_pts, {len(idims)}) for idims = {idims}, got {pts.shape}"
         )
         assert (
             isinstance(d, np.ndarray)
@@ -1484,8 +1484,8 @@ class DatasetStates(States):
             nonlocal _points_data
 
             if _points_data is None:
-                pmin = np.min(points, axis=(0, 1))
-                pmax = np.max(points, axis=(0, 1))
+                pmin = np.min(points, axis=0)
+                pmax = np.max(points, axis=0)
                 _points_data = {}
                 _points_data["pmin"] = pmin
                 _points_data["pmax"] = pmax
@@ -1501,7 +1501,7 @@ class DatasetStates(States):
                 ):
                     _points_data["up"] = points
                     _points_data["points_vary"] = False
-                elif np.max(pmax - pmin) > 1e-4:
+                elif np.any(pmax - pmin > 1e-4):
                     _points_data["up"], _points_data["up2p"] = np.unique(
                         points.reshape(n_states * n_pts, 3), axis=0, return_inverse=True
                     )
@@ -1512,7 +1512,7 @@ class DatasetStates(States):
                     _points_data["points_vary"] = False
 
             if has_h and "heights_vary" not in _points_data:
-                if np.max(pmax[2] - pmin[2]) > 1e-4:
+                if np.any(pmax[:, 2] - pmin[:, 2] > 1e-4):
                     _points_data["uh"], _points_data["uh2h"] = np.unique(
                         points[:, :, 2].reshape(n_states * n_pts), return_inverse=True
                     )
