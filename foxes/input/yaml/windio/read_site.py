@@ -226,20 +226,18 @@ def _get_WeibullSectors(
 
         data = {}
         fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
-        c = dims[FV.WEIBULL_A][0]
         for v, d in fields.items():
-            if dims[v] == (c,):
-                data[v] = d
+            if dims[v] == (FV.WD,) or dims[v] == (FV.WS,):
+                data[v] = (dims[v], d)
             elif len(dims[v]) == 0:
                 fix[v] = d
             elif verbosity > 2:
                 print(f"        ignoring field '{v}' with dims {dims[v]}")
 
-        if FV.WD in coords:
-            data[FV.WD] = coords[FV.WD]
-
-        sdata = pd.DataFrame(index=range(len(fields[FV.WEIBULL_A])), data=data)
-        sdata.index.name = "sector"
+        sdata = Dataset(
+            coords=coords,
+            data_vars=data,
+        )
         states_dict.update(
             dict(
                 states_type="WeibullSectors",

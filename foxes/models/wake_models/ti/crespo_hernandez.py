@@ -289,32 +289,35 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         # get D:
         D = np.asarray(
             self.get_data(
-            FV.D,
-            FC.STATE_TARGET,
-            lookup="w",
-            algo=algo,
-            fdata=fdata,
-            tdata=tdata,
-            downwind_index=downwind_index,
-            upcast=False,
-            selection=st_sel,
+                FV.D,
+                FC.STATE_TARGET,
+                lookup="w",
+                algo=algo,
+                fdata=fdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
+                upcast=False,
+                selection=st_sel,
             )
         )
 
         # get TI:
         ti = np.asarray(
             self.get_data(
-            TI,
-            FC.STATE_TARGET,
-            lookup="w",
-            algo=algo,
-            fdata=fdata,
-            tdata=tdata,
-            downwind_index=downwind_index,
-            upcast=False,
-            selection=st_sel,
+                TI,
+                FC.STATE_TARGET,
+                lookup="w",
+                algo=algo,
+                fdata=fdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
+                upcast=False,
+                selection=st_sel,
             )
         )
+
+        # avoid zero ti values:
+        ti = np.maximum(ti, 1e-10)
 
         # calculate induction factor:
         twoa = np.asarray(2 * self.induction.ct2a(ct))

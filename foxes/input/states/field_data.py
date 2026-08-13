@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Any
+from foxes.core import MData
 
 from foxes.utils import weibull_weights, get_utm_zone, to_lonlat, from_lonlat
 from foxes.config import config, get_output_path
@@ -120,8 +120,9 @@ class FieldData(DatasetStates):
         self,
         algo,
         data,
-        bounds_extra_space,
-        height_bounds,
+        bounds_extra_space=None,
+        height_bounds=None,
+        loaded_data=None,
         verbosity=0,
     ):
         """
@@ -137,7 +138,10 @@ class FieldData(DatasetStates):
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/-
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        loaded_data: dict, optional
+            If given, optionally add to this loaded data dict with entries
+            {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -148,6 +152,7 @@ class FieldData(DatasetStates):
             data,
             bounds_extra_space=bounds_extra_space,
             height_bounds=height_bounds,
+            loaded_data=loaded_data,
             verbosity=verbosity,
         )
 
@@ -283,7 +288,7 @@ class LatLonFieldData(DatasetStates):
         if self.h_coord is not None:
             self._cmap[FV.H] = self.h_coord
 
-    def _find_xy_bounds(self, algo, bounds_extra_space) -> Any:
+    def _find_xy_bounds(self, algo, bounds_extra_space):
         """Helper function to determine x/y bounds with extra space."""
         return algo.farm.get_xy_bounds(
             extra_space=bounds_extra_space, algo=algo, lonlat=True
@@ -293,8 +298,9 @@ class LatLonFieldData(DatasetStates):
         self,
         algo,
         data,
-        bounds_extra_space,
-        height_bounds,
+        bounds_extra_space=None,
+        height_bounds=None,
+        loaded_data=None,
         verbosity=0,
     ):
         """
@@ -310,7 +316,10 @@ class LatLonFieldData(DatasetStates):
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/-
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        loaded_data: dict, optional
+            If given, optionally add to this loaded data dict with entries
+            {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -353,7 +362,14 @@ class LatLonFieldData(DatasetStates):
                 f"States '{self.name}': config.utm_zone = {config.utm_zone} differs from determined zone {zone}"
             )
 
-        super().preproc_first(algo, data, bounds_extra_space, height_bounds, verbosity)
+        super().preproc_first(
+            algo,
+            data,
+            bounds_extra_space,
+            height_bounds,
+            loaded_data=loaded_data,
+            verbosity=verbosity,
+        )
 
         if self.grid_point_plot is not None:
             try:
@@ -398,29 +414,40 @@ class LatLonFieldData(DatasetStates):
                 fig.savefig(fpath, bbox_inches="tight")
                 plt.close()
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times) -> np.ndarray:
+    def interpolate_data(
+        self,
+        mdata: MData,
+        idims: list[str],
+        d: np.ndarray,
+        pts: np.ndarray,
+        vrs: list[str],
+        state_indices: np.ndarray | None = None,
+        gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
+    ) -> np.ndarray:
         """
         Interpolates data to points.
 
-        This function should be implemented in derived classes.
-
         Parameters
         ----------
+        mdata: foxes.core.MData
+            The model data
         idims: list of str
-            The input dimensions, e.g. [x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
+            The input dimensions, e.g. ['x', 'y', 'height']
         d: numpy.ndarray
             The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
+            where ni represents the dimension sizes of the ordered
+            icoords keys, and nv is the number of variables
         pts: numpy.ndarray
             The points to interpolate to, with shape (n_pts, n_idims)
         vrs: list of str
             The variable names, length nv
-        times: numpy.ndarray
-            The time coordinates of the states, with shape (n_states,)
+        state_indices: numpy.ndarray, optional
+            The indices of the states, with shape (n_states,)
+        gpts: tuple of numpy.ndarray or numpy.ndarray
+            Either a list of 1D arrays for each dimension, or a single 2D array
+            with shape (n_points, n_dims). If None, the grid points are extracted
+            from mdata.
+
         Returns
         -------
         d_interp: numpy.ndarray
@@ -435,7 +462,9 @@ class LatLonFieldData(DatasetStates):
             )
             pts[:, ix : ix + 2] = to_lonlat(pts[:, ix : ix + 2])
 
-        return super().interpolate_data(idims, icrds, d, pts, vrs, times)
+        return super().interpolate_data(
+            mdata, idims, d, pts, vrs, state_indices=state_indices, gpts=gpts
+        )
 
 
 class WeibullField(FieldData):
@@ -523,12 +552,10 @@ class WeibullField(FieldData):
         self._n_wd = None
         self._n_ws = None
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(
-        self, ds, cmap=None, verbosity: int = 0
-    ) -> tuple[dict[str, np.ndarray], dict[str, tuple[tuple[str, ...], np.ndarray]]]:
+    def _read_ds(self, ds, cmap=None, verbosity=0):
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -610,19 +637,19 @@ class WeibullField(FieldData):
                     dms.append(c)
                     shp.append(data0[v][1].shape[data0[v][0].index(c)])
                     break
-        dms_t = tuple(dms)
-        shp_t = tuple(shp)
-        if data0[FV.WEIGHT][0] == dms_t:
+        dms = tuple(dms)
+        shp = tuple(shp)
+        if data0[FV.WEIGHT][0] == dms:
             w = data0.pop(FV.WEIGHT)[1]
         else:
-            s_w = tuple([np.s_[:] if c in data0[FV.WEIGHT][0] else None for c in dms_t])
-            w = np.zeros(shp_t, dtype=config.dtype_double)
+            s_w = tuple([np.s_[:] if c in data0[FV.WEIGHT][0] else None for c in dms])
+            w = np.zeros(shp, dtype=config.dtype_double)
             w[:] = data0.pop(FV.WEIGHT)[1][s_w]
-        s_ws = tuple([np.s_[:], None] + [None] * (len(dms_t) - 2))
-        s_A = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms_t])
-        s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms_t])
+        s_ws = tuple([np.s_[:], None] + [None] * (len(dms) - 2))
+        s_A = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
+        s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
         data0[FV.WEIGHT] = (
-            dms_t,
+            dms,
             w
             * weibull_weights(
                 ws=wss[s_ws],
@@ -635,7 +662,7 @@ class WeibullField(FieldData):
 
         # translate binned data to states
         self._N = n_ws * n_wd
-        self._inds = None
+        self._inds = np.arange(self._N, dtype=config.dtype_int)
         data = {
             FV.WS: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
             FV.WD: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
@@ -647,15 +674,15 @@ class WeibullField(FieldData):
         for v in list(data0.keys()):
             dims, d = data0.pop(v)
             if dims[0] == FV.WD:
-                dms_out = tuple([FC.STATE] + list(dims[1:]))
+                dms = tuple([FC.STATE] + list(dims[1:]))
                 shp = [n_ws] + list(d.shape)
                 data[v] = np.zeros(shp, dtype=config.dtype_double)
                 data[v][:] = d[None, ...]
-                data[v] = (dms_out, data[v].reshape([self._N] + shp[2:]))
+                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
             elif len(dims) >= 2 and dims[:2] == (FV.WS, FV.WD):
-                dms_out = tuple([FC.STATE] + list(dims[2:]))
+                dms = tuple([FC.STATE] + list(dims[2:]))
                 shp = [self._N] + list(d.shape[2:])
-                data[v] = (dms_out, d.reshape(shp))
+                data[v] = (dms, d.reshape(shp))
             else:
                 data[v] = (dims, d)
         data0 = data

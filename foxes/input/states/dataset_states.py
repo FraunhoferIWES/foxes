@@ -5,9 +5,9 @@ import threading
 from copy import copy
 from scipy.interpolate import interpn
 from contextlib import nullcontext
-from typing import Any, Generator, cast
+from typing import Any
 
-from foxes.core import States, map_with_engine
+from foxes.core import Algorithm, FData, MData, States, TData, map_with_engine
 from foxes.utils import import_module
 from foxes.data import STATES, StaticData
 from foxes.utils.wind_dir import uv2wd, wd2uv
@@ -277,7 +277,7 @@ class DatasetStates(States):
         self.__data_source = data_source
 
     @property
-    def data_source(self) -> Any:
+    def data_source(self):
         """
         The data source
 
@@ -293,9 +293,7 @@ class DatasetStates(States):
             )
         return self.__data_source
 
-    def _read_ds(
-        self, ds, cmap=None, verbosity: int = 0
-    ) -> tuple[dict[str, Any], dict[str, tuple[tuple[str, ...], np.ndarray]]]:
+    def _read_ds(self, ds, cmap=None, verbosity=0):
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -361,9 +359,7 @@ class DatasetStates(States):
 
         return coords, data
 
-    def _get_data(
-        self, ds, bounds_extra_space=None, height_bounds=None, verbosity: int = 0
-    ) -> tuple[dict[str, Any], dict[tuple[str, ...], list[Any]], np.ndarray | None]:
+    def _get_data(self, ds, bounds_extra_space=None, height_bounds=None, verbosity=0):
         """
         Gets the data from the Dataset and prepares it for calculations.
 
@@ -403,12 +399,11 @@ class DatasetStates(States):
                 f"States '{self.name}': Missing weights variable '{FV.WEIGHT}' in data, found {sorted(list(data0.keys()))}"
             )
             if self.weight_factor is not None:
-                wdims, wdata = data0[FV.WEIGHT]
-                data0[FV.WEIGHT] = (wdims, wdata * self.weight_factor)
+                data0[FV.WEIGHT][1] *= self.weight_factor
             if data0[FV.WEIGHT][0] == (FC.STATE,):
                 weights = data0.pop(FV.WEIGHT)[1]
 
-        data: dict[tuple[str, ...], list[Any]] = {}
+        data = {}  # dim: [DATA key, variables, data array]
         for v, (dims, d) in data0.items():
             if dims not in data:
                 i = len(data)
@@ -424,9 +419,27 @@ class DatasetStates(States):
 
         return coords, data, weights
 
-    def _find_xy_bounds(self, algo, bounds_extra_space) -> Any:
+    def _find_xy_bounds(self, algo, bounds_extra_space):
         """Helper function to determine x/y bounds with extra space."""
         return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
+
+    def _find_xy_bounds(self, algo, bounds_extra_space):
+        """Helper function to determine x/y bounds with extra space."""
+        return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
+
+    def _update_loaded_state_indices(self, loaded_data):
+        """Store only non-default state indices in loaded data."""
+        if self._inds is None:
+            return
+
+        inds = np.asarray(self._inds)
+        is_default = np.issubdtype(inds.dtype, np.number) and np.array_equal(
+            inds, np.arange(self._N, dtype=inds.dtype)
+        )
+        if is_default:
+            loaded_data["coords"].pop(FC.STATE, None)
+        else:
+            loaded_data["coords"][FC.STATE] = self._inds
 
     def preproc_first(
         self,
@@ -434,6 +447,7 @@ class DatasetStates(States):
         data,
         bounds_extra_space=None,
         height_bounds=None,
+        loaded_data=None,
         verbosity=0,
     ):
         """
@@ -450,6 +464,9 @@ class DatasetStates(States):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        loaded_data: dict, optional
+            If given, optionally add to this loaded data dict with entries
+            {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -548,11 +565,25 @@ class DatasetStates(States):
                         f"States '{self.name}': Selected {self._cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
                     )
 
+        # optionally add coordinates to loaded data:
+        if loaded_data is not None:
+            for c in (FV.X, FV.Y, FV.H):
+                if c in self._cmap:
+                    cc = self._cmap[c]
+                    d = (
+                        data[cc].isel({cc: self.isel[cc]})
+                        if cc in self.isel
+                        else data[cc]
+                    )
+                    loaded_data["coords"][cc] = d.to_numpy()
+                    del d
+
     def __load_files(
         self,
         algo,
         bounds_extra_space,
         height_bounds,
+        loaded_data=None,
         verbosity=0,
     ):
         """Initial loading of all files, as needed by load mode"""
@@ -638,6 +669,7 @@ class DatasetStates(States):
                 data=data_first,
                 bounds_extra_space=bounds_extra_space,
                 height_bounds=height_bounds,
+                loaded_data=loaded_data,
                 verbosity=verbosity,
             )
             del data_first
@@ -673,7 +705,7 @@ class DatasetStates(States):
                 preprocess=self.preprocess_nc,
             )
 
-            def _len_ds(ds) -> int:
+            def _len_ds(ds):
                 """Helper function to get the number of states"""
                 return ds.sizes[states_coord] if isinstance(ds, xr.Dataset) else len(ds)
 
@@ -705,7 +737,14 @@ class DatasetStates(States):
                         join="exact",
                         combine_attrs="drop",
                     )
-                self._inds = data[states_coord].to_numpy()
+                if self._inds is None or len(self._inds) != data.sizes[states_coord]:
+                    self._inds = (
+                        np.arange(self._N)
+                        if self._N is not None
+                        else data[states_coord].to_numpy()
+                    )
+                else:
+                    self._inds = data[states_coord].to_numpy()
                 self._N = len(self._inds)
 
             elif self.load_mode == "fly":
@@ -743,15 +782,23 @@ class DatasetStates(States):
                 data=data,
                 bounds_extra_space=bounds_extra_space,
                 height_bounds=height_bounds,
+                loaded_data=loaded_data,
                 verbosity=verbosity,
             )
-            self._inds = data[states_coord].to_numpy()
+            if self._inds is None or len(self._inds) != data.sizes[states_coord]:
+                self._inds = (
+                    np.arange(self._N)
+                    if self._N is not None
+                    else data[states_coord].to_numpy()
+                )
+            else:
+                self._inds = data[states_coord].to_numpy()
             self._N = len(self._inds)
             self._vars = {v: self.var2ncvar.get(v, v) for v in self.variables}
             self._vars = _update_vars(data, self._vars)
 
         # make sure state indices are sorted ascending:
-        def _is_sorted(a) -> bool:
+        def _is_sorted(a):
             return np.all(a[:-1] <= a[1:])
 
         if self.check_times and not _is_sorted(self._inds):
@@ -766,9 +813,11 @@ class DatasetStates(States):
                 f"States '{self.name}': State indices are not sorted ascending: {self._inds[i - 1]} > {self._inds[i]} at position {i - 1}"
             )
 
+        self._update_loaded_state_indices(loaded_data)
+
         return data
 
-    def gen_states_split_size(self) -> Generator[int | None, None, None]:
+    def gen_states_split_size(self):
         """
         Generator for suggested states split sizes for output writing.
 
@@ -837,6 +886,7 @@ class DatasetStates(States):
             algo,
             bounds_extra_space=bounds_extra_space,
             height_bounds=height_bounds,
+            loaded_data=loaded_data,
             verbosity=verbosity,
         )
 
@@ -849,8 +899,9 @@ class DatasetStates(States):
                 verbosity=verbosity,
             )
 
-            vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
+            self._update_loaded_state_indices(loaded_data)
 
+            vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
             for c, d in coords.items():
                 c = self.var(c) if c not in [FC.STATE, FC.TURBINE] else c
                 if isinstance(d, tuple):
@@ -873,7 +924,7 @@ class DatasetStates(States):
         elif self.load_mode == "lazy":
             self.__lazy_data = data
 
-    def load_chunk_data(self, algo, mdata, fdata, tdata) -> None:  # type: ignore[override]
+    def load_chunk_data(self, algo, mdata, fdata, tdata):
         """
         Load chunk data according to load mode.
 
@@ -1082,7 +1133,7 @@ class DatasetStates(States):
             if self.load_mode == "preload":
                 self.__data_source = data.pop("data_source")
 
-    def output_point_vars(self, algo) -> list[str]:
+    def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
 
@@ -1099,7 +1150,7 @@ class DatasetStates(States):
         """
         return self.ovars
 
-    def size(self) -> int:
+    def size(self):
         """
         The total number of states.
 
@@ -1111,7 +1162,7 @@ class DatasetStates(States):
         """
         return self._N
 
-    def index(self) -> Any:
+    def index(self):
         """
         The index list
 
@@ -1125,18 +1176,103 @@ class DatasetStates(States):
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self._inds
 
-    def get_calc_data(
-        self, mdata, fdata
-    ) -> tuple[
-        dict[str, Any],
-        dict[tuple[str, ...], tuple[list[str], np.ndarray]],
-        np.ndarray | None,
-    ]:
+    def get_grid_points(
+        self,
+        loaded_data: dict[str, dict[str, Any]] | None = None,
+        mdata: MData | None = None,
+        all_heights: bool = True,
+        height: float | None = None,
+    ) -> np.ndarray:
+        """
+        Returns the grid points from the mdata object.
+
+        Parameters
+        ----------
+        loaded_data: dict, optional
+            The loaded data dictionary
+        mdata: foxes.core.MData, optional
+            The model data
+        all_heights: bool, optional
+            If True, return all heights, otherwise only the highest.
+        height: float, optional
+            The height to use. If None, the highest height is used if
+            all_heights is False.
+
+        Returns
+        -------
+        grid_points: numpy.ndarray
+            The grid points, shape (n_points, 3)
+
+        """
+        assert loaded_data is not None or mdata is not None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided"
+        )
+        assert loaded_data is None or mdata is None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided, not both"
+        )
+
+        X = self.var(FV.X)
+        Y = self.var(FV.Y)
+        H = self.var(FV.H)
+
+        if mdata is not None:
+            assert X in mdata and Y in mdata, (
+                f"States '{self.name}': Missing coordinates '{X}' and/or '{Y}' in mdata, got {list(mdata.keys())}"
+            )
+            x = mdata[X]
+            y = mdata[Y]
+
+            if all_heights or height is None:
+                assert H in mdata, (
+                    f"States '{self.name}': Missing heights '{H}' in mdata, got {list(mdata.keys())}"
+                )
+                h = mdata[H]
+                if height is None:
+                    h = np.atleast_1d(np.max(h))
+                elif all_heights:
+                    raise ValueError(
+                        f"States '{self.name}': Cannot specify both all_heights and height, got all_heights={all_heights}, height={height}"
+                    )
+            else:
+                h = np.atleast_1d(height)
+
+        else:
+            assert X in loaded_data["coords"] and Y in loaded_data["coords"], (
+                f"States '{self.name}': Missing coordinates '{X}' and/or '{Y}' in loaded_data, got {list(loaded_data['coords'].keys())}"
+            )
+            x = loaded_data["coords"][X]
+            y = loaded_data["coords"][Y]
+
+            if all_heights or height is None:
+                assert H in loaded_data["coords"], (
+                    f"States '{self.name}': Missing heights '{H}' in loaded_data, got {list(loaded_data['coords'].keys())}"
+                )
+                h = loaded_data["coords"][H]
+                if height is None:
+                    h = np.atleast_1d(np.max(h))
+                elif all_heights:
+                    raise ValueError(
+                        f"States '{self.name}': Cannot specify both all_heights and height, got all_heights={all_heights}, height={height}"
+                    )
+            else:
+                h = np.atleast_1d(height)
+
+        nx = len(x)
+        ny = len(y)
+        nh = len(h)
+        gpts = np.zeros((nx, ny, nh, 3), dtype=x.dtype)
+        gpts[..., 0] = x[:, None, None]
+        gpts[..., 1] = y[None, :, None]
+        gpts[..., 2] = h[None, None, :]
+        gpts = gpts.reshape(nx * ny * nh, 3)
+
+        return gpts
+
+    def _get_calc_data(
+        self, mdata: MData, fdata: FData
+    ) -> tuple[dict[tuple[str, ...], tuple[list[str], np.ndarray]], np.ndarray | None]:
         """
         Gathers data for calculations.
-
-        Call this function from the calculate function of the
-        derived class.
 
         Parameters
         ----------
@@ -1147,13 +1283,10 @@ class DatasetStates(States):
 
         Returns
         -------
-        coords: dict
-            keys: Foxes variable names, values: 1D coordinate value arrays
         data: dict
             The extracted data, keys are dimension tuples,
-            values are tuples (DATA key, variables, data_array)
-            where DATA key is the name in the mdata object,
-            variables is a list of variable names, and
+            values are tuples (variables, data_array)
+            where variables is a list of variable names, and
             data_array is a numpy.ndarray with the data values,
             the last dimension corresponds to the variables
         weights: numpy.ndarray or None
@@ -1170,26 +1303,20 @@ class DatasetStates(States):
 
         # extract data from mdata
         weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
-        data: dict[tuple[str, ...], tuple[list[str], np.ndarray]] = {}
-        coords: dict[str, Any] = {}
+        data = {}
         for DATA in data_keys:
             dims = mdata.dims[DATA]
-            vrs0 = (
+            vrs = (
                 mdata[dims[-1]]
                 if isinstance(mdata[dims[-1]], list)
                 else mdata[dims[-1]].tolist()
             )
-            vrs = list(vrs0)
-            dms: list[str] = []
+            dms = []
             for c in dims[:-1]:
                 c0 = self.unvar(c) if c not in [FC.STATE, FC.TURBINE] else c
-                c0s = cast(str, c0)
-                dms.append(c0s)
-                if c0s not in coords:
-                    coords[c0s] = mdata[c]
-            dms_t = tuple(dms + [cast(str, dims[-1])])
-            coords[cast(str, dims[-1])] = vrs
-            data[dms_t] = (vrs, mdata[DATA].copy())
+                dms.append(c0)
+            dms = tuple(dms + [dims[-1]])
+            data[dms] = (vrs, mdata[DATA].copy())
 
         # adjust turbine order for purely turbine dependent data:
         mvd = []
@@ -1215,49 +1342,109 @@ class DatasetStates(States):
                     d = np.concatenate((data[dims][1], d), axis=-1)
                 data[dims] = (vrs, d)
 
-        return coords, data, weights
+        return data, weights
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times) -> np.ndarray:
+    def get_interpolation_grid_data(
+        self, mdata: MData, idims: list[str]
+    ) -> tuple[np.ndarray, ...]:
         """
-        Interpolates data to points.
-
-        This function should be implemented in derived classes.
+        Extracts interpolation grid data from chunk model data.
 
         Parameters
         ----------
+        mdata: foxes.core.MData
+            The model data
         idims: list of str
-            The input dimensions, e.g. [x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
+            The dimensions for interpolation, e.g. ['x', 'y', 'height']
+
+        Returns
+        -------
+        gpts: tuple of numpy.ndarray or numpy.ndarray
+            Either a list of length n_idims of 1D arrays for each dimension,
+            or a single 2D array with shape (n_points, n_idims)
+
+        """
+        gpts = []
+        for c in idims:
+            cc = self.var(c) if c not in [FC.STATE, FC.TURBINE] else c
+            assert cc in mdata, (
+                f"States '{self.name}': Missing coordinate '{cc}' in mdata, got {list(mdata.keys())}"
+            )
+            gpts.append(mdata[cc])
+        return tuple(gpts)
+
+    def interpolate_data(
+        self,
+        mdata: MData,
+        idims: list[str],
+        d: np.ndarray,
+        pts: np.ndarray,
+        vrs: list[str],
+        state_indices: np.ndarray | None = None,
+        gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
+    ) -> np.ndarray:
+        """
+        Interpolates data to points.
+
+        Parameters
+        ----------
+        mdata: foxes.core.MData
+            The model data
+        idims: list of str
+            The input dimensions, e.g. ['x', 'y', 'height']
         d: numpy.ndarray
             The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
+            where ni represents the dimension sizes of the ordered
+            icoords keys, and nv is the number of variables
         pts: numpy.ndarray
             The points to interpolate to, with shape (n_pts, n_idims)
         vrs: list of str
             The variable names, length nv
-        times: numpy.ndarray
-            The time coordinates of the states, with shape (n_states,)
+        state_indices: numpy.ndarray, optional
+            The indices of the states, with shape (n_states,)
+        gpts: tuple of numpy.ndarray or numpy.ndarray
+            Either a list of 1D arrays for each dimension, or a single 2D array
+            with shape (n_points, n_dims). If None, the grid points are extracted
+            from mdata.
+
         Returns
         -------
         d_interp: numpy.ndarray
             The interpolated data array with shape (n_pts, nv)
 
         """
-        gvars = tuple(icrds)
+        if gpts is None:
+            gpts = self.get_interpolation_grid_data(mdata, idims)
+        else:
+            assert isinstance(gpts, (tuple, list)) and len(gpts) == len(idims), (
+                f"States '{self.name}': gpts must be a tuple or list of length {len(idims)}, got {type(gpts)} with length {len(gpts) if isinstance(gpts, (tuple, list)) else 'N/A'}"
+            )
+
+        assert (
+            isinstance(pts, np.ndarray) and pts.ndim == 2 and pts.shape[1] == len(idims)
+        ), (
+            f"States '{self.name}': pts must be a 2D numpy array with shape (n_pts, {len(idims)}) for idims = {idims}, got {pts.shape}"
+        )
+        assert (
+            isinstance(d, np.ndarray)
+            and d.ndim >= len(gpts) + 1
+            and d.shape[-1] == len(vrs)
+            and d.shape[: len(gpts)] == tuple(len(g) for g in gpts)
+        ), (
+            f"States '{self.name}': d must be a numpy array with shape {tuple([len(g) for g in gpts] + ['...', len(vrs)])}, got {d.shape}"
+        )
+
         try:
             ipars = dict(bounds_error=True, fill_value=None)
             ipars.update(self.interp_pars)
-            d = interpn(gvars, d, pts, **ipars)
+            d = interpn(gpts, d, pts, **ipars)
         except ValueError as e:
             print(f"\nStates '{self.name}': Interpolation error")
-            print(f"INPUT VARS: {idims}")
+            print(f"INTERPOLATION DIMENSIONS: {idims}")
             print(
                 "DATA BOUNDS:",
-                [float(np.min(d)) for d in gvars],
-                [float(np.max(d)) for d in gvars],
+                [float(np.min(g)) for g in gpts],
+                [float(np.max(g)) for g in gpts],
             )
             print(
                 "EVAL BOUNDS:",
@@ -1267,8 +1454,8 @@ class DatasetStates(States):
             print(
                 "INSIDE     :",
                 [
-                    float(np.min(p)) >= float(np.min(gvars[i]))
-                    and float(np.max(p)) <= float(np.max(gvars[i]))
+                    float(np.min(p)) >= float(np.min(gpts[i]))
+                    and float(np.max(p)) <= float(np.max(gpts[i]))
                     for i, p in enumerate(pts.T)
                 ],
             )
@@ -1279,11 +1466,9 @@ class DatasetStates(States):
 
         return d
 
-    def _update_dims(self, dims, coords, vrs, d, fdata) -> tuple[Any, Any]:
-        """Helper function for dimension adjustment, if needed"""
-        return dims, coords
-
-    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
+    def calculate(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -1309,6 +1494,7 @@ class DatasetStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
+
         # load data on the fly, if necessary:
         super().calculate(algo, mdata, fdata, tdata)
 
@@ -1320,16 +1506,22 @@ class DatasetStates(States):
         points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
         n_pts = points.shape[1]
         times = mdata[FC.STATE]
+        sinds = np.arange(n_states, dtype=config.dtype_int)
 
         # get data for calculation
-        coords, data, weights = self.get_calc_data(mdata, fdata)
-        coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
-        _points_data: dict[str, Any] = {}
+        data, weights = self._get_calc_data(mdata, fdata)
+
+        # check if points are state dependent
+        _points_data = None
 
         def _analyze_points(has_p, has_h, hcoords=None):
-            if len(_points_data) == 0:
-                pmin = np.min(points, axis=(0, 1))
-                pmax = np.max(points, axis=(0, 1))
+            """Helper function for points analysis."""
+            nonlocal _points_data
+
+            if _points_data is None:
+                pmin = np.min(points, axis=0)
+                pmax = np.max(points, axis=0)
+                _points_data = {}
                 _points_data["pmin"] = pmin
                 _points_data["pmax"] = pmax
             else:
@@ -1344,7 +1536,7 @@ class DatasetStates(States):
                 ):
                     _points_data["up"] = points
                     _points_data["points_vary"] = False
-                elif np.max(pmax - pmin) > 1e-4:
+                elif np.any(pmax - pmin > 1e-4):
                     _points_data["up"], _points_data["up2p"] = np.unique(
                         points.reshape(n_states * n_pts, 3), axis=0, return_inverse=True
                     )
@@ -1355,7 +1547,7 @@ class DatasetStates(States):
                     _points_data["points_vary"] = False
 
             if has_h and "heights_vary" not in _points_data:
-                if np.max(pmax[2] - pmin[2]) > 1e-4:
+                if np.any(pmax[:, 2] - pmin[:, 2] > 1e-4):
                     _points_data["uh"], _points_data["uh2h"] = np.unique(
                         points[:, :, 2].reshape(n_states * n_pts), return_inverse=True
                     )
@@ -1370,9 +1562,6 @@ class DatasetStates(States):
         # interpolate data to points:
         out = {}
         for dims, (vrs, d) in data.items():
-            # update dims, if necessary:
-            dims, hcoords = self._update_dims(dims, coords, vrs, d, fdata)
-
             # replace (WD, WS) by (U, V):
             iwd = None
             if FV.WD in vrs or FV.WS in vrs:
@@ -1395,9 +1584,10 @@ class DatasetStates(States):
                 iws = vrs.index(FV.V)
 
             # move state dimension to second last position:
-            if dims[0] == FC.STATE and not (
-                FC.TURBINE in hcoords and len(hcoords[FC.TURBINE].shape) == 3
-            ):
+            if dims[0] == FC.STATE:
+                # and not (
+                #    FC.TURBINE in hcoords and len(hcoords[FC.TURBINE].shape) == 3
+                # ):
                 d = np.moveaxis(d, 0, -2)
                 dims = dims[1:-1] + (FC.STATE,) + (dims[-1],)
                 idims = list(dims[:-2])
@@ -1431,10 +1621,10 @@ class DatasetStates(States):
                         pts.append(points_data["up"][..., 0])
                         pts.append(points_data["up"][..., 1])
                     elif c == FC.TURBINE:
-                        points_data = _analyze_points(has_p, has_h, hcoords)
+                        points_data = _analyze_points(has_p, has_h)
                         pts.append(points_data["up"][..., 0])
                         pts.append(points_data["up"][..., 1])
-                        if hcoords[FC.TURBINE].shape[-1] == 3:
+                        if points_data["up"].shape[-1] >= 3:
                             pts.append(points_data["up"][..., 2])
                     elif c == FC.STATE:
                         idims.remove(FC.STATE)
@@ -1442,11 +1632,10 @@ class DatasetStates(States):
                         raise NotImplementedError(
                             f"States '{self.name}': Unsupported dimension '{c}' in {dims} for interpolation of variables {vrs}"
                         )
-                pts_eval = np.stack(pts, axis=-1) if len(pts) > 0 else None
+                pts = np.stack(pts, axis=-1) if len(pts) > 0 else None
 
                 # interpolate:
-                icrds = [hcoords[c] for c in idims]
-                d = self.interpolate_data(idims, icrds, d, pts_eval, vrs, times)
+                d = self.interpolate_data(mdata, idims, d, pts, vrs, times)
 
                 # move state dimension back to front:
                 if dims[0] == FC.STATE:
@@ -1462,17 +1651,17 @@ class DatasetStates(States):
                     shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
                     d = d[:, points_data["up2p"], :].reshape(shp)
                     if FC.STATE in dims:
-                        d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
+                        d = d[sinds, sinds, ...]
                     else:
                         d = d[0, ...]
                 elif has_h and points_data["heights_vary"]:
                     shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
                     d = d[:, points_data["uh2h"], :].reshape(shp)
                     if FC.STATE in dims:
-                        d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
+                        d = d[sinds, sinds, ...]
                     else:
                         d = d[0, ...]
-                del pts, pts_eval, icrds
+                del pts
 
             # case no interpolation needed:
             else:
@@ -1481,7 +1670,6 @@ class DatasetStates(States):
                     d = d[:, None, :]
                 else:
                     d = d[None, None, :]
-            del hcoords
 
             # translate (U, V) into (WD, WS):
             if iwd is not None:

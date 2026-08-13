@@ -1008,7 +1008,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Extended chunk/state metadata propagation in data containers and algorithm data construction
   - Completed repository-wide type-annotation cleanup and aligned full-codebase `mypy` checks
 - Input:
+  - Fix for bug with ka, kb in `windio` interpretation
+  - Extending `windio` support to multiple wind farms
   - Generalized `DatasetStates` on-the-fly/lazy loading behavior and hardened threaded NetCDF reading
+  - New states class `SectorSimRefPointField`, combining a wind direction sector based field with timeseries data at a reference point to a timeseries of fields
 - Algorithms:
   - Reworked `PopulationStates` chunk-loading behavior and recovery paths
 - Utils:

@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import numpy as np
+from foxes.core import MData
 from scipy.interpolate import griddata
 from scipy.spatial import QhullError
-from typing import Any, cast
 
 from foxes.config import config
 from foxes.utils import weibull_weights
@@ -128,12 +126,58 @@ class PointCloudData(DatasetStates):
             FC.POINT: self.point_coord,
         }
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         return f"{type(self).__name__}(n_pt={self._n_pt}, n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(
-        self, ds, cmap=None, verbosity: int = 0
-    ) -> tuple[dict[str, Any], dict[str, tuple[tuple[str, ...], np.ndarray]]]:
+    def get_grid_points(
+        self,
+        loaded_data: dict[str, dict[str, object]] | None = None,
+        mdata: MData | None = None,
+        all_heights: bool = True,
+        height: float | None = None,
+    ) -> np.ndarray:
+        """
+        Returns explicit point-cloud coordinates.
+
+        Parameters
+        ----------
+        loaded_data: dict, optional
+            The loaded data dictionary.
+        mdata: foxes.core.MData, optional
+            The model data.
+        all_heights: bool, optional
+            Must be True because point-cloud states do not expose a separate
+            height axis.
+        height: float, optional
+            Must be None because point-cloud states contain explicit points.
+
+        Returns
+        -------
+        grid_points: numpy.ndarray
+            The explicit point coordinates, shape ``(n_points, n_coordinates)``.
+
+        """
+        assert loaded_data is not None or mdata is not None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided"
+        )
+        assert loaded_data is None or mdata is None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided, not both"
+        )
+        assert all_heights and height is None, (
+            f"States '{self.name}': Point-cloud states do not support height selection"
+        )
+
+        source = mdata if mdata is not None else loaded_data
+        point_coord = self.var(FC.POINT)
+        if point_coord not in source and FC.POINT in source:
+            point_coord = FC.POINT
+        assert point_coord in source, (
+            f"States '{self.name}': Missing point coordinates '{point_coord}'"
+        )
+        points = np.asarray(source[point_coord])
+        return points.reshape(-1, points.shape[-1])
+
+    def _read_ds(self, ds, cmap=None, verbosity=0):
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -183,7 +227,7 @@ class PointCloudData(DatasetStates):
 
         return coords, data
 
-    def _check_nan(self, ipars, gpts, d, pts, idims, vrs, results) -> None:
+    def _check_nan(self, ipars, gpts, d, pts, idims, vrs, results):
         """Checks for NaN results and raises errors."""
         if np.isnan(ipars.get("fill_value", np.nan)):
             sel = np.isnan(results)
@@ -226,36 +270,42 @@ class PointCloudData(DatasetStates):
                         f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
                     )
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times) -> np.ndarray:
+    def interpolate_data(
+        self,
+        mdata: MData,
+        idims: list[str],
+        d: np.ndarray,
+        pts: np.ndarray,
+        vrs: list[str],
+        state_indices: np.ndarray | None = None,
+        gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
+    ) -> np.ndarray:
         """
-        Interpolates data to points.
-
-        This function should be implemented in derived classes.
+        Interpolates point-cloud data to evaluation points.
 
         Parameters
         ----------
+        mdata: foxes.core.MData
+            The model data.
         idims: list of str
-            The input dimensions, e.g. [x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
+            The input dimensions, typically ``[FC.POINT]``.
         d: numpy.ndarray
-            The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
+            The data array to interpolate.
         pts: numpy.ndarray
-            The points to interpolate to, with shape (n_pts, n_idims)
+            The points to interpolate to, shape ``(n_pts, n_idims)``.
         vrs: list of str
-            The variable names, length nv
-        times: numpy.ndarray
-            The time coordinates of the states, with shape (n_states,)
+            Variable names.
+        state_indices: numpy.ndarray, optional
+            State indices, unused here.
+        gpts: tuple or numpy.ndarray, optional
+            Explicit grid points.
+
         Returns
         -------
-        d_interp: numpy.ndarray
-            The interpolated data array with shape (n_pts, nv)
+        numpy.ndarray
+            Interpolated data, shape ``(n_pts, ...)``.
 
         """
-
         # prepare interpolation parameters:
         ipars = dict(
             method="linear",
@@ -269,11 +319,24 @@ class PointCloudData(DatasetStates):
                 f"States '{self.name}': Interpolation with state dimension not implemented."
             )
 
-        # prepare grid points:
         assert len(idims) == 1 and idims[0] == FC.POINT, (
             f"States '{self.name}': Only point cloud interpolation supported, got dimensions {idims}"
         )
-        gpts = icrds[0]
+
+        if gpts is None:
+            gpts = self.get_interpolation_grid_data(mdata, idims)
+        if isinstance(gpts, (tuple, list)):
+            assert len(gpts) == 1, (
+                f"States '{self.name}': Expecting one point-cloud coordinate array, got {gpts}"
+            )
+            gpts = gpts[0]
+        gpts = np.asarray(gpts)
+        pts = np.asarray(pts)
+
+        if gpts.ndim == 1:
+            gpts = gpts[:, None]
+        if pts.ndim == 1:
+            pts = pts[None, :]
 
         # remove NaN data points:
         if not self.check_input_nans:
@@ -283,7 +346,14 @@ class PointCloudData(DatasetStates):
                 d = d[~sel]
 
         # interpolate
-        results = griddata(gpts, d, pts, **ipars)
+        try:
+            results = griddata(gpts, d, pts, **ipars)
+        except QhullError:
+            if ipars.get("method", "linear") == "nearest":
+                raise
+            fpars = dict(ipars)
+            fpars["method"] = "nearest"
+            results = griddata(gpts, d, pts, **fpars)
 
         # check for NaN results:
         self._check_nan(ipars, gpts, d, pts, idims, vrs, results)
@@ -392,12 +462,10 @@ class WeibullPointCloud(PointCloudData):
         self._n_wd = None
         self._n_ws = None
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(
-        self, ds, cmap=None, verbosity: int = 0
-    ) -> tuple[dict[str, Any], dict[str, tuple[tuple[str, ...], np.ndarray]]]:
+    def _read_ds(self, ds, cmap=None, verbosity=0):
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -481,19 +549,19 @@ class WeibullPointCloud(PointCloudData):
                 dms.append(FC.POINT)
                 shp.append(data0[v][1].shape[data0[v][0].index(FC.POINT)])
                 break
-        dms_t = tuple(dms)
-        shp_t = tuple(shp)
-        if data0[FV.WEIGHT][0] == dms_t:
+        dms = tuple(dms)
+        shp = tuple(shp)
+        if data0[FV.WEIGHT][0] == dms:
             w = data0.pop(FV.WEIGHT)[1]
         else:
-            s_w = tuple([np.s_[:] if c in data0[FV.WEIGHT][0] else None for c in dms_t])
-            w = np.zeros(shp_t, dtype=config.dtype_double)
+            s_w = tuple([np.s_[:] if c in data0[FV.WEIGHT][0] else None for c in dms])
+            w = np.zeros(shp, dtype=config.dtype_double)
             w[:] = data0.pop(FV.WEIGHT)[1][s_w]
-        s_ws = tuple([np.s_[:], None] + [None] * (len(dms_t) - 2))
-        s_A = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms_t])
-        s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms_t])
+        s_ws = tuple([np.s_[:], None] + [None] * (len(dms) - 2))
+        s_A = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
+        s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
         data0[FV.WEIGHT] = (
-            dms_t,
+            dms,
             w
             * weibull_weights(
                 ws=wss[s_ws],
@@ -506,7 +574,7 @@ class WeibullPointCloud(PointCloudData):
 
         # translate binned data to states
         self._N = n_ws * n_wd
-        self._inds = None
+        self._inds = np.arange(self._N, dtype=config.dtype_int)
         data = {
             FV.WS: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
             FV.WD: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
@@ -518,21 +586,21 @@ class WeibullPointCloud(PointCloudData):
         for v in list(data0.keys()):
             dims, d = data0.pop(v)
             if len(dims) >= 2 and dims[:2] == (FV.WS, FV.WD):
-                dms2 = tuple([FC.STATE] + list(dims[2:]))
+                dms = tuple([FC.STATE] + list(dims[2:]))
                 shp = [self._N] + list(d.shape[2:])
-                data[v] = (dms2, d.reshape(shp))
+                data[v] = (dms, d.reshape(shp))
             elif dims[0] == FV.WD:
-                dms2 = tuple([FC.STATE] + list(dims[1:]))
+                dms = tuple([FC.STATE] + list(dims[1:]))
                 shp = [n_ws] + list(d.shape)
                 data[v] = np.zeros(shp, dtype=config.dtype_double)
                 data[v][:] = d[None, ...]
-                data[v] = (dms2, data[v].reshape([self._N] + shp[2:]))
+                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
             elif dims[0] == FV.WS:
-                dms2 = tuple([FC.STATE] + list(dims[1:]))
+                dms = tuple([FC.STATE] + list(dims[1:]))
                 shp = [n_ws, n_wd] + list(d.shape[2:])
                 data[v] = np.zeros(shp, dtype=config.dtype_double)
                 data[v][:] = d[:, None, ...]
-                data[v] = (dms2, data[v].reshape([self._N] + shp[2:]))
+                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
             else:
                 data[v] = (dims, d)
 
@@ -618,15 +686,7 @@ class TurbinePointCloud(DatasetStates):
             FC.TURBINE: self.turbine_coord,
         }
 
-    def load_data(  # type: ignore[override]
-        self,
-        algo,
-        loaded_data,
-        force: bool = False,
-        bounds_extra_space=None,
-        height_bounds=None,
-        verbosity: int = 0,
-    ) -> None:
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -653,59 +713,140 @@ class TurbinePointCloud(DatasetStates):
             algo,
             loaded_data,
             force=force,
-            bounds_extra_space=bounds_extra_space,
-            height_bounds=height_bounds,
+            bounds_extra_space=None,
             verbosity=verbosity,
         )
 
-    def _update_dims(self, dims, coords, vrs, d, fdata) -> tuple[Any, Any]:
+    def _update_dims(self, dims, coords, vrs, d, fdata):
         """Helper function for dimension adjustment, if needed"""
         coords[FC.TURBINE] = fdata[FV.TXYH]
         return dims, coords
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times) -> np.ndarray:
+    def get_grid_points(
+        self,
+        loaded_data: dict[str, dict[str, object]] | None = None,
+        mdata: MData | None = None,
+        all_heights: bool = True,
+        height: float | None = None,
+    ) -> np.ndarray:
         """
-        Interpolates data to points.
-
-        This function should be implemented in derived classes.
+        Returns explicit turbine point-cloud coordinates.
 
         Parameters
         ----------
-        idims: list of str
-            The input dimensions, e.g. [x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
-        d: numpy.ndarray
-            The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
-        pts: numpy.ndarray
-            The points to interpolate to, with shape (n_pts, n_idims)
-        vrs: list of str
-            The variable names, length nv
-        times: numpy.ndarray
-            The time coordinates of the states, with shape (n_states,)
+        loaded_data: dict, optional
+            The loaded data dictionary.
+        mdata: foxes.core.MData, optional
+            The model data.
+        all_heights: bool, optional
+            Must be True because turbine point-cloud states do not expose a
+            separate height axis.
+        height: float, optional
+            Must be None because turbine heights are part of the explicit
+            turbine coordinates.
+
         Returns
         -------
-        d_interp: numpy.ndarray
-            The interpolated data array with shape (n_pts, nv)
+        grid_points: numpy.ndarray
+            The explicit turbine coordinates, shape
+            ``(n_states * n_turbines, 3)``.
 
         """
+        assert loaded_data is not None or mdata is not None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided"
+        )
+        assert loaded_data is None or mdata is None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided, not both"
+        )
+        assert all_heights and height is None, (
+            f"States '{self.name}': Turbine point-cloud states do not support height selection"
+        )
 
+        source = mdata if mdata is not None else loaded_data
+        if FV.TXYH in source:
+            points = np.asarray(source[FV.TXYH])
+        else:
+            turbine_coord = self.var(FC.TURBINE)
+            if turbine_coord not in source and FC.TURBINE in source:
+                turbine_coord = FC.TURBINE
+            assert turbine_coord in source, (
+                f"States '{self.name}': Missing turbine coordinates '{turbine_coord}'"
+            )
+            points = np.asarray(source[turbine_coord])
+        return points.reshape(-1, points.shape[-1])
+
+    def interpolate_data(
+        self,
+        mdata: MData,
+        idims: list[str],
+        d: np.ndarray,
+        pts: np.ndarray,
+        vrs: list[str],
+        state_indices: np.ndarray | None = None,
+        gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
+    ) -> np.ndarray:
+        """
+        Interpolates turbine point-cloud data to the evaluation points.
+
+        Parameters
+        ----------
+        mdata: foxes.core.MData
+            The model data.
+        idims: list of str
+            The input dimensions, typically ``[FC.TURBINE]``.
+        d: numpy.ndarray
+            The turbine data array.
+        pts: numpy.ndarray
+            The evaluation points, shape ``(n_pts, n_idims)``.
+        vrs: list of str
+            Variable names.
+        state_indices: numpy.ndarray, optional
+            State indices, unused here.
+        gpts: tuple or numpy.ndarray, optional
+            Explicit grid points.
+
+        Returns
+        -------
+        numpy.ndarray
+            Interpolated values, shape ``(n_states, n_turbines, n_vars)``.
+
+        """
         # special case of time-only data:
         if len(idims) == 0:
             assert pts is None, (
                 f"States '{self.name}': Expecting no points for time-only data, got {pts}"
             )
             return d[:, None, ...]
-        else:
-            assert len(idims) == 1 and idims[0] == FC.TURBINE, (
-                f"States '{self.name}': Only turbine point cloud interpolation supported, got dimensions {idims}"
+
+        assert len(idims) == 1 and idims[0] == FC.TURBINE, (
+            f"States '{self.name}': Only turbine point cloud interpolation supported, got dimensions {idims}"
+        )
+
+        if gpts is None:
+            gpts = (self.get_grid_points(mdata=mdata),)
+        if isinstance(gpts, (tuple, list)):
+            assert len(gpts) == 1, (
+                f"States '{self.name}': Expecting one turbine coordinate array, got {gpts}"
             )
+            gpts = gpts[0]
+        gpts = np.asarray(gpts)
+        pts = np.asarray(pts)
+
+        if gpts.ndim == 1:
+            gpts = gpts[:, None]
+        if pts.ndim == 1:
+            pts = pts[None, :]
+
+        if (
+            gpts.ndim == 2
+            and gpts.shape[0] == 1
+            and pts.ndim == 2
+            and gpts.shape[1] == pts.shape[0]
+        ):
+            return d
 
         # special case of evaluation at turbine locations:
-        if np.all(icrds[0] == pts):
+        if np.allclose(gpts, pts):
             return d
 
         # prepare interpolation parameters:
@@ -716,51 +857,62 @@ class TurbinePointCloud(DatasetStates):
         )
         ipars.update(self.interp_pars)
 
-        # prepare grid points:
-        n_states, n_turbines = icrds[0].shape[:2]
-        gpts = np.concatenate(
-            [np.zeros((n_states, n_turbines, 1)), icrds[0]],
-            axis=-1,
-        )
-        gpts[..., 0] = np.arange(n_states)[:, None]
+        # normalize point shapes to the state-aware turbine grid:
+        if gpts.ndim == 2 and gpts.shape[-1] == 3:
+            gpts = gpts[None, ...]
+        if pts.ndim == 2 and pts.shape[-1] == 3:
+            pts = pts[None, ...]
+        if gpts.ndim == 3 and pts.ndim == 2:
+            pts = np.broadcast_to(pts[None, ...], gpts.shape)
+        elif (
+            gpts.ndim == 3 and pts.ndim == 3 and pts.shape[0] == 1 and gpts.shape[0] > 1
+        ):
+            pts = np.broadcast_to(pts, gpts.shape)
 
-        # prepare evaluation points:
-        epts = np.concatenate(
-            [np.zeros((n_states, n_turbines, 1)), pts],
+        n_states, n_turbines = gpts.shape[:2]
+        if pts.shape != gpts.shape:
+            raise ValueError(
+                f"States '{self.name}': Expecting evaluation points shape {gpts.shape}, got {pts.shape}"
+            )
+
+        gpts2 = np.concatenate(
+            [
+                np.arange(n_states)[:, None, None] * np.ones((n_states, n_turbines, 1)),
+                gpts,
+            ],
             axis=-1,
         )
-        epts[..., 0] = np.arange(n_states)[:, None]
+        epts = np.concatenate(
+            [
+                np.arange(n_states)[:, None, None] * np.ones((n_states, n_turbines, 1)),
+                pts,
+            ],
+            axis=-1,
+        )
 
         # check redundant dimensions:
         rmvd = []
-        for i in range(1, gpts.shape[-1]):
-            if np.abs(np.min(gpts[..., i]) - np.max(gpts[..., i])) < 1e-12:
+        for i in range(1, gpts2.shape[-1]):
+            if np.abs(np.min(gpts2[..., i]) - np.max(gpts2[..., i])) < 1e-12:
                 rmvd.append(i)
         if len(rmvd) > 0:
-            gpts = np.delete(gpts, rmvd, axis=-1)
+            gpts2 = np.delete(gpts2, rmvd, axis=-1)
             epts = np.delete(epts, rmvd, axis=-1)
 
         # interpolate:
-        gpts = gpts.reshape(n_states * n_turbines, gpts.shape[-1])
+        gpts2 = gpts2.reshape(n_states * n_turbines, gpts2.shape[-1])
         epts = epts.reshape(n_states * n_turbines, epts.shape[-1])
-        d = d.reshape(n_states * n_turbines, d.shape[-1])
+        d2 = np.asarray(d).reshape(n_states * n_turbines, d.shape[-1])
         try:
-            results = griddata(gpts, d, epts, **ipars)
+            results = griddata(gpts2, d2, epts, **ipars)
         except QhullError:
-            # Small/degenerate per-chunk geometries can fail linear Delaunay interpolation.
-            # Fall back to nearest-neighbour interpolation to keep point calculations robust.
             if ipars.get("method", "linear") == "nearest":
                 raise
             fpars = dict(ipars)
             fpars["method"] = "nearest"
-            results = griddata(gpts, d, epts, **fpars)
+            results = griddata(gpts2, d2, epts, **fpars)
 
-        # check for NaN results:
-        PointCloudData._check_nan(
-            cast(PointCloudData, self), ipars, gpts, d, epts, idims, vrs, results
-        )
+        PointCloudData._check_nan(self, ipars, gpts2, d2, epts, idims, vrs, results)
 
-        # reshape results to (n_states, n_turbines, n_vars):
         results = results.reshape(n_states, n_turbines, results.shape[-1])
-
         return results
