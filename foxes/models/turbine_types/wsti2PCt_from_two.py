@@ -160,7 +160,7 @@ class WsTI2PCtFromTwo(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -172,15 +172,15 @@ class WsTI2PCtFromTwo(TurbineType):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         # read power curve:
@@ -221,7 +221,7 @@ class WsTI2PCtFromTwo(TurbineType):
         self._ti_ct = np.sort(data.columns.to_numpy())
         self._ct = data[self._ti_ct].to_numpy(config.dtype_double)
 
-        return super().load_data(algo, verbosity)
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
     def _bounds_info(self, target, qts):
         """Helper function for printing bounds info"""
@@ -268,6 +268,10 @@ class WsTI2PCtFromTwo(TurbineType):
         """
         # prepare:
         self.ensure_output_vars(algo, fdata)
+        if not isinstance(st_sel, np.ndarray):
+            stmp = np.zeros_like(fdata[self.WSP], dtype=bool)
+            stmp[st_sel] = True
+            st_sel = stmp
 
         # calculate P:
         st_sel_P = (

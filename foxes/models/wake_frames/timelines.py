@@ -77,10 +77,10 @@ class Timelines(WakeFrame):
             dt = np.full(n, dt, dtype="timedelta64[s]").astype(config.dtype_int)
 
         # prepare mdata:
-        data = algo.get_model_data(states)["coords"]
+        data = algo.loaded_data["coords"]
         mdict = {v: np.array(d) for v, d in data.items()}
         mdims = {v: (v,) for v in data.keys()}
-        data = algo.get_model_data(states)["data_vars"]
+        data = algo.loaded_data["data_vars"]
         mdict.update({v: d[1] for v, d in data.items()})
         mdims.update({v: d[0] for v, d in data.items()})
         mdata = MData(mdict, mdims, loop_dims=[FC.STATE], states_i0=0)
@@ -167,7 +167,7 @@ class Timelines(WakeFrame):
 
         return weight_data
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -175,17 +175,32 @@ class Timelines(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
         if not isinstance(algo, Iterative):
             raise TypeError(
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Iterative.__name__}"
             )
-        super().initialize(algo, verbosity, force=force)
+        loaded_data = super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
         # disable subset state selection in iterative algo:
         algo.conv_crit.disable_subsets()
@@ -205,6 +220,7 @@ class Timelines(WakeFrame):
             self._precalc_data(algo, algo.states.base_states, heights, verbosity)
         else:
             self._precalc_data(algo, algo.states, heights, verbosity)
+        return loaded_data
 
     def set_running(
         self,

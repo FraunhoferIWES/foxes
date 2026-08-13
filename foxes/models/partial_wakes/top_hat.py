@@ -62,7 +62,7 @@ class PartialTopHat(PartialCentre):
         super().__init__()
         self.rotor_model = rotor_model
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -70,20 +70,36 @@ class PartialTopHat(PartialCentre):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
         if self.rotor_model is None:
             self.rotor_model = algo.rotor_model
 
-        super().initialize(algo, verbosity, force=force)
+        loaded_data = super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
         self.WCOOS_ID = self.var("WCOOS_ID")
         self.WCOOS_X = self.var("WCOOS_X")
         self.WCOOS_R = self.var("WCOOS_R")
+        return loaded_data
 
     def sub_models(self):
         """

@@ -83,7 +83,7 @@ class OpFlagController(FarmController):
         vrs.update([FV.OPERATING])
         return list(vrs)
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -95,19 +95,19 @@ class OpFlagController(FarmController):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
 
-        idata = super().load_data(algo, verbosity)
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
         if isinstance(self.data_source, np.ndarray):
             self._op_flags = self.data_source
@@ -131,20 +131,26 @@ class OpFlagController(FarmController):
         op_flags = self._op_flags.astype(bool)
 
         off = np.where(~op_flags)
-        tmsels = idata["data_vars"][FC.TMODEL_SELS][1]
-        tmsels[off[0], off[1], :] = False
-        self._tmall = [np.all(t) for t in tmsels]
+        for mi in range(len(self.turbine_model_names)):
+            vsel = self._tmodel_sels_var(mi)
+            if vsel in loaded_data["data_vars"]:
+                tsel = loaded_data["data_vars"][vsel][1]
+            else:
+                tsel = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
+            tsel[off[0], off[1]] = False
 
-        idata["data_vars"][FC.TMODEL_SELS] = (
-            (FC.STATE, FC.TURBINE, FC.TMODELS),
-            tmsels,
-        )
-        idata["data_vars"][FV.OPERATING] = (
+            if np.all(tsel):
+                loaded_data["data_vars"].pop(vsel, None)
+                self._tmall[mi] = True
+            else:
+                loaded_data["data_vars"][vsel] = ((FC.STATE, FC.TURBINE), tsel)
+                self._tmall[mi] = False
+
+        loaded_data["data_vars"].pop(FC.TMODEL_SELS, None)
+        loaded_data["data_vars"][FV.OPERATING] = (
             (FC.STATE, FC.TURBINE),
             op_flags,
         )
-
-        return idata
 
     def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
         """

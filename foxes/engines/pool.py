@@ -2,133 +2,9 @@ import numpy as np
 from xarray import Dataset
 from abc import abstractmethod
 
-from foxes.config import config, get_output_path
+from foxes.config import config
 from foxes.core import Engine
-from foxes.utils import write_nc as write_nc_file
-from foxes.output import write_chunk_ani_xy
 import foxes.constants as FC
-
-
-def _write_chunk_results(algo, results, write_nc, out_dims, mdata):
-    """Helper function for optionally writing chunk results to netCDF file"""
-    ret_data = True
-    if write_nc is not None and write_nc["split"] == "chunks":
-        ret_data = write_nc.get("ret_data", False)
-        out_dir = get_output_path(write_nc.get("out_dir", "."))
-        base_name = write_nc["base_name"]
-        ret_data = write_nc.get("ret_data", False)
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        coords = {}
-        if FC.STATE in out_dims and FC.STATE in mdata:
-            coords[FC.STATE] = mdata[FC.STATE]
-
-        dvars = {}
-        for v, d in results.items():
-            if (
-                out_dims == (FC.STATE, FC.TURBINE)
-                and d.shape[1] == 1
-                and algo.n_turbines > 1
-            ):
-                dvars[v] = ((FC.STATE,), d[:, 0])
-            else:
-                dvars[v] = (out_dims, d)
-
-        ds = Dataset(coords=coords, data_vars=dvars)
-
-        i0 = mdata.chunki_states
-        t0 = mdata.chunki_points
-        vrb = max(algo.verbosity - 1, 0)
-        if out_dims == (FC.STATE, FC.TURBINE):
-            fpath = out_dir / f"{base_name}_{i0:06d}.nc"
-        else:
-            fpath = out_dir / f"{base_name}_{i0:06d}_{t0:06d}.nc"
-        write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
-
-    return results if ret_data else None
-
-
-def _write_ani(algo, chunk_key, write_chunk_ani, *data):
-    """Helper function for optionally writing chunk flow animations to file"""
-    if write_chunk_ani is not None:
-        pars = write_chunk_ani.copy()
-        chk = pars.pop("chunk")
-
-        def _do_run(chk):
-            if isinstance(chk, list):
-                for c in chk:
-                    if _do_run(c):
-                        return True
-                return False
-            else:
-                return (
-                    chk == chunk_key if isinstance(chk, tuple) else chk == chunk_key[0]
-                )
-
-        if _do_run(chk):
-            write_chunk_ani_xy(algo, *data, **pars)
-
-
-def _run(
-    algo,
-    model,
-    *data,
-    chunk_store,
-    chunk_key,
-    out_dims,
-    write_nc,
-    write_chunk_ani=None,
-    utm_zone=None,
-    **cpars,
-):
-    """Helper function for running in a single process"""
-
-    """
-    # For debugging: Check memory usage at the start of the calculation
-    import psutil
-    print(psutil.Process().pid, f"{algo.name} MEMORY ENTERING _RUN:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
-    """
-
-    if utm_zone is not None:  # needed in some cases for mpi engine TODO investigate
-        config.set_utm_zone(*utm_zone)
-    algo.reset_chunk_store(chunk_store.copy())
-
-    """
-    # For debugging: Check object sizes in memory
-    import psutil
-    import objsize
-    print(psutil.Process().pid, f"{algo.name} OBJECT SIZES ENTERING _RUN:", {k: objsize.get_deep_size(v) / 1024 ** 2 for k, v in {"algo": algo, "model": model, "data": data}.items()}, "MB")
-    """
-
-    results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store()
-    cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
-    _write_ani(algo, chunk_key, write_chunk_ani, *data)
-    results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
-    return results, cstore
-
-
-def _run_shared(
-    algo,
-    model,
-    *data,
-    chunk_key,
-    out_dims,
-    write_nc,
-    write_chunk_ani=None,
-    **cpars,
-):
-    """Helper function for running in a single process"""
-
-    results = model.calculate(algo, *data, **cpars)
-    cstore = (
-        {chunk_key: algo.chunk_store[chunk_key]}
-        if chunk_key in algo.chunk_store
-        else {}
-    )
-    _write_ani(algo, chunk_key, write_chunk_ani, *data)
-    results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
-    return results, cstore
 
 
 def _run_map(func, inputs, *args, **kwargs):
@@ -143,15 +19,29 @@ class PoolEngine(Engine):
     Parameters
     ----------
     share_cstore: bool
-        Share chunk store between chunks
+        Whether to share the chunk store between chunks.
     pool_args: dict
         Arguments for the pool constructor
+    supports_shared_data: bool
+        Flag for whether this engine supports shared data for chunk calculations.
+    min_shared_array_bytes: int
+        Minimum array size in bytes for placing model data into process
+        shared memory. Arrays with ``nbytes`` less than or equal to this
+        threshold are transferred inline to workers.
 
     :group: engines
 
     """
 
-    def __init__(self, *args, share_cstore=False, pool_args={}, **kwargs):
+    def __init__(
+        self,
+        *args,
+        share_cstore=False,
+        pool_args={},
+        supports_shared_data=True,
+        min_shared_array_bytes=65536,
+        **kwargs,
+    ):
         """
         Constructor.
 
@@ -159,10 +49,16 @@ class PoolEngine(Engine):
         ----------
         args: tuple, optional
             Arguments for the base class
-        share_cstore: bool
-            Share chunk store between chunks
         pool_args: dict
             Arguments for the pool constructor
+        share_cstore: bool
+            Whether to share the chunk store between chunks.
+        supports_shared_data: bool
+            Flag for whether this engine supports shared data for chunk calculations.
+        min_shared_array_bytes: int
+            Minimum array size in bytes for placing model data into process
+            shared memory. Arrays with ``nbytes`` less than or equal to this
+            threshold are transferred inline to workers.
         kwargs: dict, optional
             Additional arguments for the base class
 
@@ -170,6 +66,8 @@ class PoolEngine(Engine):
         super().__init__(*args, **kwargs)
         self.share_cstore = share_cstore
         self.pool_args = pool_args
+        self.supports_shared_data = supports_shared_data
+        self.min_shared_array_bytes = int(min_shared_array_bytes)
 
     @abstractmethod
     def _create_pool(self):
@@ -180,6 +78,17 @@ class PoolEngine(Engine):
     def _shutdown_pool(self):
         """Shuts down the pool"""
         pass
+
+    def _print_shared_data(self, shared_mdata, verbosity):
+        """Print diagnostics for data that is actually backed by shared storage."""
+        if (
+            verbosity > 1
+            and shared_mdata is not None
+            and (len(shared_mdata) > 0 or len(shared_mdata.extra_data) > 0)
+        ):
+            print(f"\n\n{type(self).__name__} shared data:\n")
+            print(shared_mdata)
+            print()
 
     def __enter__(self):
         self._create_pool()
@@ -238,6 +147,7 @@ class PoolEngine(Engine):
         model_data,
         farm_data=None,
         point_data=None,
+        extra_data={},
         out_vars=[],
         chunk_store={},
         sel=None,
@@ -263,6 +173,8 @@ class PoolEngine(Engine):
             The initial farm data
         point_data: xarray.Dataset, optional
             The initial point data
+        extra_data: dict
+            Additional non-array input data from the models
         out_vars: list of str, optional
             Names of the output variables
         chunk_store: foxes.utils.Dict
@@ -311,15 +223,19 @@ class PoolEngine(Engine):
             new_chunk_store = {}
 
         # subset selection:
-        model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel
+        (model_data, farm_data, point_data), n_states = self.select_subsets(
+            model_data,
+            farm_data,
+            point_data,
+            sel=sel,
+            isel=isel,
+            default_n_states=algo.n_states,
         )
 
         # basic checks:
         super().run_calculation(algo, model, model_data, farm_data, point_data)
 
         # prepare:
-        n_states = model_data.sizes[FC.STATE]
         out_dims = model.output_coords()
         coords = {}
         if FC.STATE in out_dims and FC.STATE in model_data.coords:
@@ -346,76 +262,90 @@ class PoolEngine(Engine):
         )
 
         # start calculation:
-        with self.new_chunk_results_manager(
-            algo,
-            chunk_store=new_chunk_store,
-            goal_data=goal_data,
-            n_chunks_states=n_chunks_states,
-            n_chunks_targets=n_chunks_targets,
-            out_vars=out_vars,
-            out_dims=out_dims,
-            coords=coords,
-            iterative=iterative,
-            write_nc=write_nc,
-        ) as results_mgr:
-            futures = {}
-            results = {}
-            i0_states = 0
-            for chunki_states in range(n_chunks_states):
-                i1_states = i0_states + chunk_sizes_states[chunki_states]
-                i0_targets = 0
-                for chunki_points in range(n_chunks_targets):
-                    key = (chunki_states, chunki_points)
-                    i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
+        runner = self.new_runner()
+        shared_memory = []
+        shared_handle = None
+        try:
+            with self.new_chunk_results_manager(
+                algo,
+                chunk_store=new_chunk_store,
+                goal_data=goal_data,
+                n_chunks_states=n_chunks_states,
+                n_chunks_targets=n_chunks_targets,
+                out_vars=out_vars,
+                out_dims=out_dims,
+                coords=coords,
+                iterative=iterative,
+                write_nc=write_nc,
+            ) as results_mgr:
+                futures = {}
+                results = {}
+                i0_states = 0
+                for chunki_states in range(n_chunks_states):
+                    i1_states = i0_states + chunk_sizes_states[chunki_states]
+                    i0_targets = 0
+                    for chunki_points in range(n_chunks_targets):
+                        key = (chunki_states, chunki_points)
+                        i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
-                    # get this chunk's data:
-                    data = self.get_chunk_input_data(
-                        algo=algo,
-                        model_data=model_data,
-                        farm_data=farm_data,
-                        point_data=point_data,
-                        states_i0_i1=(i0_states, i1_states),
-                        targets_i0_i1=(i0_targets, i1_targets),
-                        out_vars=out_vars,
-                        chunki_states=chunki_states,
-                        chunki_points=chunki_points,
-                        n_chunks_states=n_chunks_states,
-                        n_chunks_points=n_chunks_targets,
-                    )
-
-                    """
-                    # For debugging: Check memory usage of main process before submitting the chunk calculation
-                    import psutil
-                    print(psutil.Process().pid, f"{algo.name} SUBMITTING {key} MEMORY:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
-                    """
-
-                    """
-                    # For debugging: Check object sizes in memory
-                    import psutil
-                    import objsize
-                    print(psutil.Process().pid, f"{algo.name} OBJECT SIZES BEFORE SUBMIT:", key, {k: objsize.get_deep_size(v) / 1024 ** 2 for k, v in {"algo": algo, "chunk_store": chunk_store}.items()}, "MB")
-                    """
-
-                    # submit model calculation:
-                    if self.share_cstore:
-                        futures[(chunki_states, chunki_points)] = self.submit(
-                            _run_shared,
-                            algo,
-                            model,
-                            *data,
-                            chunk_key=key,
-                            out_dims=out_dims,
-                            write_nc=write_nc,
-                            write_chunk_ani=write_chunk_ani,
-                            **calc_pars,
+                        # get this chunk's data:
+                        data = self.get_chunk_input_data(
+                            algo=algo,
+                            model_data=model_data,
+                            farm_data=farm_data,
+                            point_data=point_data,
+                            states_i0_i1=(i0_states, i1_states),
+                            targets_i0_i1=(i0_targets, i1_targets),
+                            out_vars=out_vars,
+                            chunki_states=chunki_states,
+                            chunki_points=chunki_points,
+                            n_chunks_states=n_chunks_states,
+                            n_chunks_points=n_chunks_targets,
                         )
-                    else:
+
+                        if len(extra_data) > 0:
+                            data[0].extra_data.update(extra_data)
+
+                        if self.supports_shared_data:
+                            if shared_handle is None and (
+                                len(data[0]) > 0 or len(extra_data) > 0
+                            ):
+                                shared_mdata = data[0].pop_shared(
+                                    min_shared_array_bytes=self.min_shared_array_bytes
+                                )
+                                shared_handle = self.init_shared_memory(
+                                    shared_memory,
+                                    mdata=data[0],
+                                    shared_mdata=shared_mdata,
+                                    verbosity=max(self.verbosity, algo.verbosity),
+                                )
+                                del shared_mdata
+                            elif shared_handle is not None:
+                                self.prepare_chunk_mdata_for_shared(
+                                    data[0], shared_handle
+                                )
+
+                        """
+                        # For debugging: Check memory usage of main process before submitting the chunk calculation
+                        import psutil
+                        print(psutil.Process().pid, f"{algo.name} SUBMITTING {key} MEMORY:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
+                        """
+
+                        """
+                        # For debugging: Check object sizes in memory
+                        import psutil
+                        import objsize
+                        print(psutil.Process().pid, f"{algo.name} OBJECT SIZES BEFORE SUBMIT:", key, {k: objsize.get_deep_size(v) / 1024 ** 2 for k, v in {"algo": algo, "chunk_store": chunk_store, "shared": shared}.items()}, "MB")
+                        """
+
+                        # submit model calculation:
                         utm_zone = config.utm_zone if config.utm_zone_set else None
                         futures[(chunki_states, chunki_points)] = self.submit(
-                            _run,
+                            runner.run,
                             algo,
                             model,
                             *data,
+                            shared=shared_handle,
                             chunk_store=chunk_store,
                             chunk_key=key,
                             out_dims=out_dims,
@@ -424,25 +354,79 @@ class PoolEngine(Engine):
                             utm_zone=utm_zone,
                             **calc_pars,
                         )
-                    del data
+                        del data
 
-                    while len(futures) > self.n_workers * 3:
-                        k = next(iter(futures))
-                        results[k] = self.await_result(futures.pop(k))
-                        results_mgr.update(results, futures)
+                        while len(futures) > self.n_workers * 3:
+                            k = next(iter(futures))
+                            results[k] = self.await_result(futures.pop(k))
+                            results_mgr.update(results, futures)
 
-                    i0_targets = i1_targets
-                i0_states = i1_states
+                        i0_targets = i1_targets
+                    i0_states = i1_states
 
-            fkeys = list(futures.keys())
-            for k in fkeys:
-                results[k] = self.await_result(futures.pop(k))
-                results_mgr.update(results, futures)
+                fkeys = list(futures.keys())
+                for k in fkeys:
+                    results[k] = self.await_result(futures.pop(k))
+                    results_mgr.update(results, futures)
 
-            del calc_pars, farm_data, results, futures
+                del calc_pars, farm_data, results, futures
+        finally:
+            self.release_shared_memory(shared_memory, shared_handle)
+            del shared_memory, shared_handle
 
         # update chunk store:
         chunk_store.update(new_chunk_store)
         algo.reset_chunk_store(chunk_store)
 
         return results_mgr.results
+
+    def init_shared_memory(self, shared_memory, mdata, shared_mdata, verbosity=0):
+        """
+        Sets the shared memory for the chunk calculation
+
+        Parameters
+        ----------
+        shared_memory: list
+            The shared memory object for the chunk calculation
+        mdata: foxes.core.MData
+            The mdata to be used in the chunk calculation
+        shared_mdata: foxes.core.MData
+            The shared mdata to be used in the chunk calculation
+        verbosity: int
+            The verbosity level, 0=silent
+
+        Returns
+        -------
+        handle: object
+            The handle for accessing the shared data
+
+        """
+        mdata.recombine_with_shared(shared_mdata)
+        return None
+
+    def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
+        """Hook for engine-specific mdata adjustments before worker submission.
+
+        Parameters
+        ----------
+        mdata: foxes.core.MData
+            The chunk model data that will be sent to workers.
+        shared_handle: object
+            The handle that describes shared data for worker recombination.
+
+        """
+        pass
+
+    def release_shared_memory(self, shared_memory, shared_handle):
+        """
+        Releases the shared memory after the chunk calculation
+
+        Parameters
+        ----------
+        shared_memory: list
+            The shared memory object for the chunk calculation
+        shared_handle: object
+            The handle for accessing the shared data
+
+        """
+        pass

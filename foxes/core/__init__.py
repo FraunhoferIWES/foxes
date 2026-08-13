@@ -25,6 +25,7 @@ from .data import FData as FData
 from .data import TData as TData
 
 from .engine import Engine as Engine
+from .engine import EngineRunner as EngineRunner
 from .engine import get_engine as get_engine
 from .engine import has_engine as has_engine
 from .engine import run_with_engine as run_with_engine

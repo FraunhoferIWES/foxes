@@ -1,5 +1,6 @@
 from foxes.utils import import_module
 
+from .process import ProcessEngineRunner
 from .pool import PoolEngine
 
 
@@ -10,6 +11,18 @@ class MultiprocessEngine(PoolEngine):
     :group: engines
 
     """
+
+    def new_runner(self):
+        """
+        Creates a new EngineRunner for running calculations in this engine
+
+        Returns
+        -------
+        runner: foxes.core.EngineRunner
+            The engine runner
+
+        """
+        return ProcessEngineRunner()
 
     def _create_pool(self):
         """Creates the pool"""

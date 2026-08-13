@@ -49,13 +49,15 @@ class SetUniformData(PointDataModel):
             pandas file reading parameters
 
         """
+        super().__init__()
+
         self.data_source = data_source
         self.ovars = output_vars
         self.var2col = var2col
 
         self._rpars = pd_read_pars
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -67,15 +69,15 @@ class SetUniformData(PointDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         self.VARS = self.var("VARS")
@@ -86,7 +88,7 @@ class SetUniformData(PointDataModel):
                 [self.var2col.get(v, v) for v in self.ovars]
             ].to_numpy(config.dtype_double)
         elif isinstance(self.data_source, dict):
-            pass
+            data = None
         else:
             if verbosity:
                 print(f"States '{self.name}': Reading file {self.data_source}")
@@ -97,11 +99,10 @@ class SetUniformData(PointDataModel):
                 config.dtype_double
             )
 
-        idata = super().load_data(algo, verbosity)
-        idata["coords"][self.VARS] = self.ovars
-        idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
-
-        return idata
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+        if data is not None:
+            loaded_data["coords"][self.VARS] = self.ovars
+            loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
     def output_point_vars(self, algo):
         """
@@ -147,8 +148,13 @@ class SetUniformData(PointDataModel):
         """
         for v in self.ovars:
             if self.DATA in mdata:
-                pdata[v][:] = mdata[v][None, self.ovars.index(v)]
+                values = mdata[self.DATA][:, self.ovars.index(v)]
+                pdata[v][:] = values[:, None]
             else:
-                pdata[v][:] = self.data_source[v]
+                values = self.data_source[v]
+                if hasattr(values, "ndim") and values.ndim == 1:
+                    pdata[v][:] = values[:, None]
+                else:
+                    pdata[v][:] = values
 
         return {v: pdata[v] for v in self.ovars}

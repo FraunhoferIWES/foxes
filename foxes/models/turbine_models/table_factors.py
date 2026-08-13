@@ -89,7 +89,7 @@ class TableFactors(TurbineModel):
         """
         return self.ovars
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -97,13 +97,28 @@ class TableFactors(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
-        super().initialize(algo, verbosity, force=force)
+        loaded_data = super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
         if isinstance(self.data_source, pd.DataFrame):
             self._data = self.data_source
@@ -118,6 +133,7 @@ class TableFactors(TurbineModel):
         self._rvals = self._data.index.to_numpy(config.dtype_double)
         self._cvals = self._data.columns.to_numpy(config.dtype_double)
         self._data = self._data.to_numpy(config.dtype_double)
+        return loaded_data
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """
@@ -147,10 +163,10 @@ class TableFactors(TurbineModel):
         """
         self.ensure_output_vars(algo, fdata)
 
-        n_sel = np.sum(st_sel)
+        n_sel = np.size(fdata[self.row_var][st_sel])
         qts = np.zeros((n_sel, 2), dtype=config.dtype_double)
-        qts[:, 0] = fdata[self.row_var][st_sel]
-        qts[:, 1] = fdata[self.col_var][st_sel]
+        qts[:, 0] = np.asarray(fdata[self.row_var][st_sel]).reshape(n_sel)
+        qts[:, 1] = np.asarray(fdata[self.col_var][st_sel]).reshape(n_sel)
 
         try:
             factors = interpn(

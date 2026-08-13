@@ -65,7 +65,7 @@ class SetFarmVars(TurbineModel):
         self.vars = []
         self.__vdata = []
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -73,14 +73,22 @@ class SetFarmVars(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
 
         """
-        super().initialize(algo, verbosity, force)
+        loaded_data = super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
         self.__once_done = set()
+        return loaded_data
 
     def output_farm_vars(self, algo):
         """
@@ -99,7 +107,7 @@ class SetFarmVars(TurbineModel):
         """
         return self.vars
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -111,18 +119,18 @@ class SetFarmVars(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
-        idata = super().load_data(algo, verbosity)
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
         for i, v in enumerate(self.vars):
             data = np.full(
@@ -144,7 +152,7 @@ class SetFarmVars(TurbineModel):
                 vdata = vdata.reshape(n_pop * n_ost, n_trb)
 
             data[:] = vdata
-            idata["data_vars"][self.var(v)] = ((FC.STATE, FC.TURBINE), data)
+            loaded_data["data_vars"][self.var(v)] = ((FC.STATE, FC.TURBINE), data)
 
             # special case of turbine positions:
             if v in [FV.X, FV.Y]:
@@ -171,8 +179,6 @@ class SetFarmVars(TurbineModel):
                         x[:] = t.H
                         t.H = x
                     x[:] = np.where(np.isnan(data[:, ti]), x, data[:, ti])
-
-        return idata
 
     def set_running(
         self,

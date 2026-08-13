@@ -59,8 +59,8 @@ class Algorithm(Model):
         self.__farm = farm
         self.__mbook = mbook
         self.__dbook = StaticData() if dbook is None else dbook
-        self.__idata_mem = Dict(_name="idata_mem")
         self.__chunk_store = Dict(_name="chunk_store")
+        self.__loaded_data = None
 
     @property
     def farm(self):
@@ -110,23 +110,6 @@ class Algorithm(Model):
         return self.__dbook
 
     @property
-    def idata_mem(self):
-        """
-        The current idata memory
-
-        Returns
-        -------
-        dict :
-            Keys: model name, value: idata dict
-
-        """
-        if self.running:
-            raise ValueError(
-                f"Algorithm '{self.name}': Cannot access idata_mem while running"
-            )
-        return self.__idata_mem
-
-    @property
     def chunk_store(self):
         """
         The current chunk store
@@ -138,6 +121,58 @@ class Algorithm(Model):
 
         """
         return self.__chunk_store
+
+    @property
+    def loaded_data(self):
+        """
+        The data loaded during initialization
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+
+        """
+        if self.__loaded_data is None:
+            self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+        return self.__loaded_data
+
+    def clear_loaded_data(self):
+        """
+        Clear the loaded data
+
+        Returns
+        -------
+        None
+
+        """
+        self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+
+    def get_model_data(self, pop=False):
+        """
+        Get the model data.
+
+        Parameters
+        ----------
+        pop: bool
+            Pop the model data from loaded_data
+
+        Returns
+        -------
+        model_data: xarray.Dataset
+            The model data, containing all coords and data_vars from loaded_data
+        extra_data: dict
+            The extra data from loaded_data
+
+        """
+        ld = self.loaded_data
+        ed = ld["extra_data"]
+        if pop:
+            self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+        return xr.Dataset(coords=ld["coords"], data_vars=ld["data_vars"]), ed
 
     def print(self, *args, vlim=1, **kwargs):
         """
@@ -193,68 +228,19 @@ class Algorithm(Model):
                 f"Algorithm '{self.name}': Cannot initialize while running"
             )
 
-        super().initialize(self, self.verbosity - 1, force=force)
-
-    def store_model_data(self, model, idata, force=False):
-        """
-        Store model data
-
-        Parameters
-        ----------
-        model: foxes.core.Model
-            The model
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-        force: bool
-            Overwrite existing data
-
-        """
-        mname = f"{type(model).__name__}_{model.name}"
-        if force:
-            self.__idata_mem[mname] = idata
-        elif mname in self.idata_mem:
-            raise KeyError(f"Attempt to overwrite stored data for model '{mname}'")
-        else:
-            self.idata_mem[mname] = idata
-
-    def get_model_data(self, model):
-        """
-        Gets model data from memory
-
-        Parameters
-        ----------
-        model: foxes.core.Model
-            The model
-
-        """
-        mname = f"{type(model).__name__}_{model.name}"
-        try:
-            return self.idata_mem[mname]
-        except KeyError:
-            raise KeyError(
-                f"Key '{mname}' not found in idata_mem, available keys: {sorted(list(self.idata_mem.keys()))}"
-            )
-
-    def del_model_data(self, model):
-        """
-        Remove stored model data
-
-        Parameters
-        ----------
-        model: foxes.core.Model
-            The model
-
-        """
-        mname = f"{type(model).__name__}_{model.name}"
-        if mname in self.idata_mem:
-            del self.idata_mem[mname]
+        self.__loaded_data = super().initialize(
+            algo=self,
+            loaded_data=self.__loaded_data,
+            force=force,
+            verbosity=self.verbosity - 1,
+        )
 
     def update_n_turbines(self):
         """
         Reset the number of turbines,
         according to self.farm
+        """
+        raise NotImplementedError()
         """
         if self.n_turbines != self.farm.n_turbines:
             self.n_turbines = self.farm.n_turbines
@@ -265,7 +251,7 @@ class Algorithm(Model):
                 if mname[:2] == "__":
                     continue
                 for dname, d in idata["data_vars"].items():
-                    k = f"__{mname}_{dname}_turbinv"
+                    k = f"__{mname}_{dname}_turbine"
                     if k in self.idata_mem:
                         ok = self.idata_mem[k]
                     else:
@@ -305,61 +291,7 @@ class Algorithm(Model):
                             )
 
             self.idata_mem.update(newk)
-
-    def get_models_idata(self):
-        """
-        Returns idata object of models
-
-        Returns
-        -------
-        idata: dict, optional
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`.
-            Take algorithm's idata object by default.
-
-        """
-        if not self.initialized:
-            raise ValueError(
-                f"Algorithm '{self.name}': get_models_idata called before initialization"
-            )
-        idata = {"coords": {}, "data_vars": {}}
-        for k, hidata in self.idata_mem.items():
-            if len(k) < 3 or k[:2] != "__":
-                idata["coords"].update(hidata["coords"])
-                idata["data_vars"].update(hidata["data_vars"])
-        return idata
-
-    def get_models_data(self, idata=None, sel=None, isel=None):
-        """
-        Creates xarray from model input data.
-
-        Parameters
-        ----------
-        idata: dict, optional
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`.
-            Take algorithm's idata object by default.
-        sel: dict, optional
-            Selection of coordinates in dataset
-        isel: dict, optional
-            Selection of coordinates in dataset
-
-        Returns
-        -------
-        ds: xarray.Dataset
-            The model input data
-
-        """
-        if idata is None:
-            idata = self.get_models_idata()
-        ds = xr.Dataset(**idata)
-        if isel is not None:
-            ds = ds.isel(isel)
-        if sel is not None:
-            ds = ds.sel(sel)
-        return ds
+            """
 
     def new_point_data(self, points, states_indices=None, n_states=None):
         """
@@ -691,11 +623,10 @@ class Algorithm(Model):
                 dict(
                     mbook=self.__mbook,
                     dbook=self.__dbook,
-                    idata_mem=self.__idata_mem,
+                    loaded_data=self.__loaded_data,
                 )
             )
-        del self.__mbook, self.__dbook
-        self.__idata_mem = {}
+        del self.__mbook, self.__dbook, self.__loaded_data
 
     def unset_running(
         self,
@@ -732,7 +663,7 @@ class Algorithm(Model):
             data = data_stash[self.name]
             self.__mbook = data.pop("mbook")
             self.__dbook = data.pop("dbook")
-            self.__idata_mem = data.pop("idata_mem")
+            self.__loaded_data = data.pop("loaded_data")
         else:
             self.reset_chunk_store()
 
@@ -894,7 +825,7 @@ class Algorithm(Model):
             raise ValueError(f"Algorithm '{self.name}': Cannot finalize while running")
         super().finalize(self, self.verbosity - 1)
         if clear_mem:
-            self.__idata_mem = Dict()
+            pass
             # self.reset_chunk_store()
 
     @classmethod

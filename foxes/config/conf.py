@@ -23,7 +23,7 @@ class Config(Dict):
                 FC.WORK_DIR: Path("."),
                 FC.INPUT_DIR: None,
                 FC.OUTPUT_DIR: None,
-                FC.NC_ENGINE: "netcdf4",
+                FC.NC_ENGINE: "h5netcdf",
             },
             name="config",
         )

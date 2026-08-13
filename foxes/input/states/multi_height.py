@@ -42,6 +42,10 @@ class MultiHeightStates(States):
         States subset selection
     states_loc: list
         State index selection via pandas loc function
+    check_nans: bool
+        Whether to check for NaN values in the data
+    interpolate_nans_pars: dict, optional
+        Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
     RDICT: dict
         Default pandas file reading parameters
 
@@ -61,6 +65,8 @@ class MultiHeightStates(States):
         read_pars={},
         states_sel=None,
         states_loc=None,
+        check_nans=True,
+        interpolate_nans_pars=None,
         **ipars,
     ):
         """
@@ -85,6 +91,10 @@ class MultiHeightStates(States):
             States subset selection
         states_loc: list, optional
             State index selection via pandas loc function
+        check_nans: bool, optional
+            Whether to check for NaN values in the data
+        interpolate_nans_pars: dict, optional
+            Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
         ipars: dict, optional
             Parameters for scipy.interpolate.interp1d
 
@@ -99,6 +109,8 @@ class MultiHeightStates(States):
         self.ipars = ipars
         self.states_sel = states_sel
         self.states_loc = states_loc
+        self.check_nans = check_nans
+        self.interpolate_nans_pars = interpolate_nans_pars
 
         self._data_source = data_source
         self._solo = None
@@ -156,24 +168,39 @@ class MultiHeightStates(States):
         """
         c0 = self.var2col.get(v, v)
         if v in self.fixed_vars:
-            return []
+            return {}
         elif c0 in cols:
-            return [c0]
+            return {v: [c0]}
         else:
-            cls = []
+            cls = {v: []}
             for h in self.heights:
                 hh = int(h) if int(h) == h else h
                 c = f"{c0}-{hh}"
                 oc = self.var2col.get(c, c)
                 if oc in cols:
-                    cls.append(oc)
+                    cls[v].append(oc)
+                elif v == FV.TI:
+                    try:
+                        cls = self._find_cols(FV.TKE, cols)
+                    except KeyError:
+                        raise KeyError(
+                            f"Missing: '{v}' in fixed_vars, or '{c0}' or '{oc}' in columns (same for '{FV.TKE}'). Maybe make use of var2col?"
+                        )
+                elif v == FV.RHO:
+                    try:
+                        cls = self._find_cols(FV.T, cols)
+                        cls.update(self._find_cols(FV.p, cols))
+                    except KeyError:
+                        raise KeyError(
+                            f"Missing: '{v}' in fixed_vars, or '{c0}' or '{oc}' in columns (same for '{FV.T}' and/or '{FV.p}'). Maybe make use of var2col?"
+                        )
                 else:
                     raise KeyError(
                         f"Missing: '{v}' in fixed_vars, or '{c0}' or '{oc}' in columns. Maybe make use of var2col?"
                     )
             return cls
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -185,17 +212,25 @@ class MultiHeightStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        self.H = self.var(FV.H)
+        self.VARS = self.var("vars")
+        self.DATA = self.var("data")
+        self.WEIGHT = self.var(FV.WEIGHT)
+
+        if self.DATA in loaded_data["data_vars"] and not force:
+            return
+
         if not isinstance(self.data_source, pd.DataFrame):
             self._data_source = get_input_path(self.data_source)
             if not self.data_source.is_file():
@@ -220,6 +255,17 @@ class MultiHeightStates(States):
         elif self.states_loc is not None:
             data = data.loc[self.states_loc]
 
+        if self.check_nans:
+            for c in data.columns:
+                if np.any(np.isnan(data[c].to_numpy())):
+                    raise ValueError(
+                        f"States '{self.name}': Column '{c}' contains {np.sum(np.isnan(data[c].to_numpy()))} NaN values, state indices: {data.index[np.isnan(data[c].to_numpy())].tolist()}"
+                    )
+        elif self.interpolate_nans_pars is not None and np.any(
+            np.isnan(data.to_numpy())
+        ):
+            data.interpolate(inplace=True, **self.interpolate_nans_pars)
+
         self._N = len(data.index)
         self._inds = data.index.to_numpy()
 
@@ -238,37 +284,34 @@ class MultiHeightStates(States):
         for v in self.ovars:
             if v != FV.WEIGHT:
                 vcols = self._find_cols(v, data.columns)
-                if len(vcols) == 1:
-                    self._solo[v] = data[vcols[0]].to_numpy()
-                elif len(vcols) > 1:
-                    cmap[v] = (len(cols), len(cols) + len(vcols))
-                    cols += vcols
+                for w, c in vcols.items():
+                    if len(c) == 1:
+                        self._solo[w] = data[c[0]].to_numpy()
+                    elif len(c) > 1:
+                        cmap[w] = (len(cols), len(cols) + len(c))
+                        cols += c
         data = data[cols]
 
-        self.H = self.var(FV.H)
-        self.VARS = self.var("vars")
-        self.DATA = self.var("data")
-        self.WEIGHT = self.var(FV.WEIGHT)
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
-        idata = super().load_data(algo, verbosity)
-
-        idata["coords"][self.H] = self.heights
-        idata["coords"][self.VARS] = list(cmap.keys())
+        loaded_data["coords"][self.H] = self.heights
+        loaded_data["coords"][self.VARS] = list(cmap.keys())
 
         n_hts = len(self.heights)
         n_vrs = int(len(data.columns) / n_hts)
         dims = (FC.STATE, self.VARS, self.H)
-        idata["data_vars"][self.DATA] = (
+        loaded_data["data_vars"][self.DATA] = (
             dims,
             data.to_numpy().reshape(self._N, n_vrs, n_hts),
         )
         if weights is not None:
-            idata["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
+            loaded_data["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
         for v, d in self._solo.items():
-            idata["data_vars"][self.var(v)] = ((FC.STATE,), d)
+            loaded_data["data_vars"][self.var(v)] = ((FC.STATE,), d)
         self._solo = list(self._solo.keys())
 
-        return idata
+        if not np.all(np.arange(self._N) == self._inds):
+            loaded_data["coords"][FC.STATE] = self._inds
 
     def set_running(
         self,
@@ -412,7 +455,7 @@ class MultiHeightStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
-        self.ensure_output_vars(algo, tdata)
+        super().calculate(algo, mdata, fdata, tdata)
 
         n_states = tdata.n_states
         n_targets = tdata.n_targets
@@ -499,22 +542,6 @@ class MultiHeightStates(States):
 
         return results
 
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level
-
-        """
-        super().finalize(algo, verbosity)
-        self._solo = None
-        self._N = None
-
 
 class MultiHeightNCStates(MultiHeightStates):
     """
@@ -557,7 +584,7 @@ class MultiHeightNCStates(MultiHeightStates):
         h_coord=FV.H,
         heights=None,
         format_times_func="default",
-        xr_read_pars={},
+        xr_read_pars=None,
         **kwargs,
     ):
         """
@@ -596,10 +623,11 @@ class MultiHeightNCStates(MultiHeightStates):
         self.state_coord = state_coord
         self.heights = heights
         self.h_coord = h_coord
-        self.xr_read_pars = xr_read_pars
+        self.xr_read_pars = {} if xr_read_pars is None else dict(xr_read_pars)
+        self.xr_read_pars.setdefault("engine", config.nc_engine)
         self._format_times_func = format_times_func
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -611,17 +639,26 @@ class MultiHeightNCStates(MultiHeightStates):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+
+        self.H = self.var(FV.H)
+        self.VARS = self.var("vars")
+        self.DATA = self.var("data")
+        self.WEIGHT = self.var(FV.WEIGHT)
+
+        if self.DATA in loaded_data["data_vars"] and not force:
+            return
+
         if not isinstance(self.data_source, Dataset):
             self._data_source = get_input_path(self.data_source)
             if not self.data_source.is_file():
@@ -658,6 +695,8 @@ class MultiHeightNCStates(MultiHeightStates):
             format_times_func = self._format_times_func
         if format_times_func is not None:
             self._inds = format_times_func(self._inds)
+
+        loaded_data["coords"][FC.STATE] = self._inds
 
         w_name = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         weights = None
@@ -699,32 +738,25 @@ class MultiHeightNCStates(MultiHeightStates):
         else:
             self.heights = data[self.h_coord].to_numpy()
 
-        self.H = self.var(FV.H)
-        self.VARS = self.var("vars")
-        self.DATA = self.var("data")
-        self.WEIGHT = self.var(FV.WEIGHT)
-
-        idata = States.load_data(self, algo, verbosity)
-        idata["coords"][self.H] = self.heights
-        idata["coords"][self.VARS] = list(cols.keys())
+        States.load_data(self, algo, loaded_data, force=force, verbosity=verbosity)
+        loaded_data["coords"][self.H] = self.heights
+        loaded_data["coords"][self.VARS] = list(cols.keys())
 
         dims = (FC.STATE, self.VARS, self.H)
-        idata["data_vars"][self.DATA] = (
+        loaded_data["data_vars"][self.DATA] = (
             dims,
             np.stack(
                 [data.data_vars[c].to_numpy() for c in cols.values()], axis=1
             ).astype(config.dtype_double),
         )
         if weights is not None:
-            idata["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
+            loaded_data["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
         for v, d in self._solo.items():
-            idata["data_vars"][self.var(v)] = (
+            loaded_data["data_vars"][self.var(v)] = (
                 (FC.STATE,),
                 d.astype(config.dtype_double),
             )
         self._solo = list(self._solo.keys())
-
-        return idata
 
 
 class MultiHeightTimeseries(MultiHeightStates):
@@ -736,6 +768,27 @@ class MultiHeightTimeseries(MultiHeightStates):
     """
 
     RDICT = {"index_col": 0, "parse_dates": [0]}
+
+    def __init__(
+        self,
+        *args,
+        interpolate_nans_pars={},
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Parameters for the base class
+        interpolate_nans_pars: dict, optional
+            Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
+        kwargs: dict, optional
+            Parameters for the base class
+
+        """
+        super().__init__(*args, interpolate_nans_pars=interpolate_nans_pars, **kwargs)
 
 
 class MultiHeightNCTimeseries(MultiHeightNCStates):

@@ -1,12 +1,18 @@
 import numpy as np
+from xarray import Dataset
 
 from foxes.utils import Dict
+from foxes.utils.memory_utils import (
+    deep_split_by_nbytes,
+    deep_update,
+    get_object_nbytes,
+)
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
 
-class Data(Dict):
+class Data(Dict[str, np.ndarray]):
     """
     Container for numpy array data and
     the associated meta data.
@@ -25,6 +31,8 @@ class Data(Dict):
         The index of the states chunk
     chunki_points: int, optional
         The index of the points chunk
+    extra_data: dict, optional
+        Additional data that is not dimensioned
 
     :group: core
 
@@ -40,6 +48,8 @@ class Data(Dict):
         chunki_points=None,
         n_chunks_states=None,
         n_chunks_points=None,
+        extra_data={},
+        raw=False,
         name="data",
     ):
         """
@@ -65,6 +75,10 @@ class Data(Dict):
             The number of states chunks
         n_chunks_points: int, optional
             The number of points chunks
+        extra_data: dict, optional
+            Additional data that is not dimensioned
+        raw: bool
+            If True, skip the data checks and auto update
         name: str
             The data container name
 
@@ -74,6 +88,7 @@ class Data(Dict):
         self.update(data)
         self.dims = dims
         self.loop_dims = loop_dims
+        self.extra_data = extra_data
 
         self.__states_i0 = states_i0
         self.__chunki_states = chunki_states
@@ -82,10 +97,146 @@ class Data(Dict):
         self.__n_chunks_points = n_chunks_points
 
         self.sizes = {}
-        for v, d in data.items():
-            self._run_entry_checks(v, d, dims[v])
+        if not raw:
+            for v, d in data.items():
+                self._run_entry_checks(v, d, dims[v])
+            self._auto_update()
 
-        self._auto_update()
+    def to_dataset(self):
+        """
+        Convert to xarray.Dataset
+
+        Returns
+        -------
+        ds: xarray.Dataset
+            The dataset
+
+        """
+        return Dataset(
+            data_vars={
+                v: (self.dims[v], self[v]) for v in self.keys() if v not in self.sizes
+            },
+            coords={c: self[c] for c in self.sizes.keys()},
+            attrs=self.extra_data,
+        )
+
+    def __str__(self):
+        def _fmt_size(nbytes):
+            units = ("B", "KB", "MB", "GB", "TB", "PB")
+            size = float(nbytes)
+            ui = 0
+            while size >= 1024.0 and ui < len(units) - 1:
+                size /= 1024.0
+                ui += 1
+            if ui == 0:
+                return f"{int(size)}{units[ui]}"
+            return f"{size:.2f}{units[ui]}"
+
+        def _summary(value, level=0):
+            if isinstance(value, np.ndarray):
+                return f"array {value.dtype} {tuple(value.shape)}"
+            if isinstance(value, dict):
+                if level >= 1:
+                    return f"dict(len={len(value)})"
+                keys = sorted(value.keys(), key=lambda x: str(x))
+                items = []
+                max_items = 5
+                for k in keys[:max_items]:
+                    items.append(f"{k}: {_summary(value[k], level=level + 1)}")
+                if len(keys) > max_items:
+                    items.append("...")
+                return f"dict(len={len(value)}){{{', '.join(items)}}}"
+            if isinstance(value, (list, tuple, set)):
+                return f"{type(value).__name__}(len={len(value)})"
+            if isinstance(value, str):
+                return f"str(len={len(value)})"
+            if isinstance(value, np.generic):
+                return f"{type(value).__name__}({value.item()})"
+            return type(value).__name__
+
+        def _dims_text(dims):
+            if dims is None:
+                return ""
+            return f"({', '.join(dims)})"
+
+        def _edge_preview(value):
+            if isinstance(value, np.ndarray):
+                if value.size == 0:
+                    return "[]"
+                flat = value.reshape(-1)
+                first = flat[0].item() if isinstance(flat[0], np.generic) else flat[0]
+                if value.size == 1:
+                    return f"[{first}]"
+                last = flat[-1].item() if isinstance(flat[-1], np.generic) else flat[-1]
+                return f"[{first}...{last}]"
+
+            if isinstance(value, (list, tuple)):
+                if len(value) == 0:
+                    return "[]"
+                if len(value) == 1:
+                    return f"[{value[0]}]"
+                return f"[{value[0]}...{value[-1]}]"
+
+            return ""
+
+        def _iter_extra_entries(data, level=0):
+            for k in sorted(data.keys(), key=lambda x: str(x)):
+                key = str(k)
+                value = data[k]
+                yield level, key, value
+                if isinstance(value, dict):
+                    yield from _iter_extra_entries(value, level=level + 1)
+
+        total_nbytes = (
+            get_object_nbytes(self)
+            + get_object_nbytes(self.dims)
+            + get_object_nbytes(self.sizes)
+            + get_object_nbytes(self.extra_data)
+        )
+
+        lines = [
+            f"<foxes.core.{type(self).__name__}> {self.name} {_fmt_size(total_nbytes)}",
+        ]
+
+        if self.sizes:
+            dim_text = ", ".join([f"{k}: {v}" for k, v in sorted(self.sizes.items())])
+            lines.append(f"Dimensions: ({dim_text})")
+        else:
+            lines.append("Dimensions: ()")
+
+        coord_keys = sorted([k for k in self.keys() if k in self.sizes])
+        if coord_keys:
+            lines.append("Coordinates:")
+            for k in coord_keys:
+                vsize = _fmt_size(get_object_nbytes(self[k]))
+                vedges = _edge_preview(self[k])
+                vedges = f" {vedges}" if vedges else ""
+                lines.append(f"  * {k:<12} {_summary(self[k])}{vedges} {vsize}")
+
+        data_keys = sorted([k for k in self.keys() if k not in self.sizes])
+        if data_keys:
+            lines.append("Data variables:")
+            for k in data_keys:
+                vsize = _fmt_size(get_object_nbytes(self[k]))
+                vedges = _edge_preview(self[k])
+                vedges = f" {vedges}" if vedges else ""
+                lines.append(
+                    f"    {k:<12} {_dims_text(self.dims.get(k, None)):<16} {_summary(self[k])}{vedges} {vsize}"
+                )
+
+        lines.append("Extra data:")
+        if self.extra_data:
+            for level, k, v in _iter_extra_entries(self.extra_data):
+                vedges = _edge_preview(v)
+                vedges = f" {vedges}" if vedges else ""
+                vsize = _fmt_size(get_object_nbytes(v))
+                s = _summary(v, level=1) if isinstance(v, dict) else _summary(v)
+                indent = "    " + "  " * level
+                lines.append(f"{indent}{k}  {s}{vedges}  {vsize}")
+        else:
+            lines.append("    (none)")
+
+        return "\n".join(lines)
 
     @property
     def n_states(self):
@@ -346,8 +497,87 @@ class Data(Dict):
                 n_chunks_points=self.n_chunks_points,
             )
 
+    def pop_shared(self, min_shared_array_bytes=65536):
+        """
+        Pop the shared data, i.e. the data that is independent of the loop variables.
+
+        Parameters
+        ----------
+        min_shared_array_bytes: int
+            Minimum array size in bytes for moving loop-independent arrays into
+            the shared data container. Smaller arrays stay in the current data
+            object. The threshold is also applied recursively to ``extra_data``
+            values.
+
+        Returns
+        -------
+        shared: Data
+            The shared data
+
+        """
+        data = {}
+        dims = {}
+        vrs = set(self.keys())
+        for v in vrs:
+            d = self.dims[v]
+            if (
+                d is not None
+                and all([dd not in self.loop_dims for dd in d])
+                and self[v].nbytes > min_shared_array_bytes
+            ):
+                data[v] = self.pop(v)
+                dims[v] = self.dims.pop(v)
+
+        # split extra data by size:
+        self.extra_data, extra_data = deep_split_by_nbytes(
+            self.extra_data,
+            max_nbytes=min_shared_array_bytes + 1,
+            fill_None=True,
+        )
+
+        shared = type(self)(
+            data,
+            dims,
+            extra_data=extra_data,
+            raw=True,
+            name=self.name + "_shared",
+        )
+
+        return shared
+
+    def recombine_with_shared(self, shared):
+        """
+        Recombine with shared data, i.e. add the shared data entries to the current data.
+
+        Parameters
+        ----------
+        shared: Data
+            The shared data
+
+        """
+
+        for v in shared.keys():
+            if v in self:
+                raise KeyError(
+                    f"Cannot recombine with shared data, entry '{v}' already exists in data"
+                )
+            self[v] = shared[v]
+            self.dims[v] = shared.dims[v]
+
+        self.extra_data = deep_update(self.extra_data, shared.extra_data)
+
     @classmethod
-    def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):
+    def from_dataset(
+        cls,
+        ds,
+        *args,
+        callback=None,
+        s_states=None,
+        copy=True,
+        n_states=None,
+        n_turbines=None,
+        **kwargs,
+    ):
         """
         Create Data object from a dataset
 
@@ -364,6 +594,10 @@ class Data(Dict):
             Slice object for states
         copy: bool
             Flag for copying data
+        n_states: int, optional
+            The number of states, if not found in the dataset
+        n_turbines: int, optional
+            The number of turbines, if not found in the dataset
         kwargs: dict, optional
             Additional parameters for the constructor
 
@@ -375,6 +609,8 @@ class Data(Dict):
         """
         data = {}
         dims = {}
+        if n_states == 0:
+            raise ValueError("Cannot create Data object with n_states=0")
 
         for c, d in ds.coords.items():
             if c == FC.STATE:
@@ -384,17 +620,23 @@ class Data(Dict):
                 data[c] = d.to_numpy().copy() if copy else d.to_numpy()
             dims[c] = d.dims
 
-        n_states = None
         for v, d in ds.data_vars.items():
             if FC.STATE in d.dims:
                 if d.dims[0] != FC.STATE:
                     raise ValueError(
                         f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v}', got {d.dims}"
                     )
-                n_states = d.shape[0]
                 s = np.s_[:] if s_states is None else s_states
                 data[v] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
                 dims[v] = d.dims
+                if n_states is None or n_states == 1:
+                    n_states = data[v].shape[0]
+                elif data[v].shape[0] == 1:
+                    pass
+                else:
+                    assert n_states == data[v].shape[0], (
+                        f"Expecting {n_states} states, got {data[v].shape[0]} in data variable '{v}'"
+                    )
                 if v == FV.WEIGHT and d.dims == (FC.STATE,):
                     data[v] = data[v][:, None]
                     dims[v] = (FC.STATE, FC.TURBINE)
@@ -402,14 +644,64 @@ class Data(Dict):
                 data[v] = d.to_numpy().copy() if copy else d.to_numpy()
                 dims[v] = d.dims
 
+        if FC.TURBINE not in data and n_turbines is not None:
+            data[FC.TURBINE] = np.arange(n_turbines)
+            dims[FC.TURBINE] = (FC.TURBINE,)
+
         if callback is not None:
             callback(data, dims)
 
-        if FC.STATE not in data and s_states is not None and n_states is not None:
-            data[FC.STATE] = np.arange(n_states)[s_states]
+        if FC.STATE not in data and n_states is not None:
+            data[FC.STATE] = np.arange(n_states)
             dims[FC.STATE] = (FC.STATE,)
 
         return cls(*args, data=data, dims=dims, **kwargs)
+
+    @classmethod
+    def from_data(cls, base_data, *args, callback=None, **kwargs):
+        """
+        Create Data object from another data object.
+
+        Parameters
+        ----------
+        base_data: Data
+            The source data
+        args: tuple, optional
+            Additional parameters for the constructor
+        callback: Function, optional
+            Function f(data, dims) that manipulates
+            the data and dims dicts before construction
+        kwargs: dict, optional
+            Additional parameters for the constructor
+
+        Returns
+        -------
+        data: Data
+            The data object
+
+        """
+        ctor_kwargs = dict(kwargs)
+        if "states_i0" not in ctor_kwargs:
+            try:
+                ctor_kwargs["states_i0"] = base_data.states_i0(counter=True)
+            except KeyError:
+                ctor_kwargs["states_i0"] = None
+        ctor_kwargs.setdefault("chunki_states", base_data.chunki_states)
+        ctor_kwargs.setdefault("chunki_points", base_data.chunki_points)
+        ctor_kwargs.setdefault("n_chunks_states", base_data.n_chunks_states)
+        ctor_kwargs.setdefault("n_chunks_points", base_data.n_chunks_points)
+
+        out = cls(*args, **ctor_kwargs)
+
+        for v in base_data.loop_dims:
+            out[v] = base_data[v]
+            out.dims[v] = base_data.dims[v]
+            out.sizes[v] = base_data.sizes[v]
+
+        if callback is not None:
+            callback(out, out.dims)
+
+        return out
 
 
 class MData(Data):
@@ -526,49 +818,16 @@ class FData(Data):
         return data
 
     @classmethod
-    def from_mdata(cls, mdata, *args, callback=None, **kwargs):
-        """
-        Create Data object from model data
-
-        Parameters
-        ----------
-        mdata: MData
-            The model data
-        args: tuple, optional
-            Additional parameters for the constructor
-        callback: Function, optional
-            Function f(data, dims) that manipulates
-            the data and dims dicts before construction
-        kwargs: dict, optional
-            Additional parameters for the constructor
-
-        Returns
-        -------
-        data: Data
-            The data object
-
-        """
-        data = cls(
-            *args,
-            chunki_states=mdata.chunki_states,
-            chunki_points=mdata.chunki_points,
-            n_chunks_states=mdata.n_chunks_states,
-            n_chunks_points=mdata.n_chunks_points,
-            **kwargs,
-        )
-
-        for v in [FC.STATE, FC.TURBINE]:
-            data[v] = mdata[v]
-            data.dims[v] = mdata.dims[v]
-            data.sizes[v] = mdata.sizes[v]
-
-        if callback is not None:
-            callback(data, data.dims)
-
-        return data
-
-    @classmethod
-    def from_dataset(cls, ds, *args, mdata=None, callback=None, **kwargs):
+    def from_dataset(
+        cls,
+        ds,
+        *args,
+        mdata=None,
+        callback=None,
+        n_states=None,
+        n_turbines=None,
+        **kwargs,
+    ):
         """
         Create Data object from a dataset
 
@@ -583,6 +842,10 @@ class FData(Data):
         callback: Function, optional
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
+        n_states: int, optional
+            The number of states, if not found in the dataset
+        n_turbines: int, optional
+            The number of turbines, if not found in the dataset
         kwargs: dict, optional
             Additional parameters for the constructor
 
@@ -598,11 +861,26 @@ class FData(Data):
 
             def cb(data, dims):
                 if FC.STATE not in data:
-                    data[FC.STATE] = mdata[FC.STATE]
-                    dims[FC.STATE] = mdata.dims[FC.STATE]
+                    if FC.STATE in mdata:
+                        data[FC.STATE] = mdata[FC.STATE]
+                        dims[FC.STATE] = mdata.dims[FC.STATE]
+                    else:
+                        assert n_states is not None, (
+                            "n_states must be provided if not found in mdata"
+                        )
+                        i0 = mdata.states_i0(counter=True)
+                        data[FC.STATE] = np.arange(i0, i0 + n_states)
+                        dims[FC.STATE] = (FC.STATE,)
                 if FC.TURBINE not in data:
-                    data[FC.TURBINE] = mdata[FC.TURBINE]
-                    dims[FC.TURBINE] = mdata.dims[FC.TURBINE]
+                    if FC.TURBINE in mdata:
+                        data[FC.TURBINE] = mdata[FC.TURBINE]
+                        dims[FC.TURBINE] = mdata.dims[FC.TURBINE]
+                    else:
+                        assert n_turbines is not None, (
+                            "n_turbines must be provided if not found in mdata"
+                        )
+                        data[FC.TURBINE] = np.arange(n_turbines)
+                        dims[FC.TURBINE] = (FC.TURBINE,)
                 if callback is not None:
                     callback(data, dims)
 

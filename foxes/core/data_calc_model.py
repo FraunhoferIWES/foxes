@@ -6,19 +6,33 @@ from .model import Model
 class DataCalcModel(Model):
     """
     Abstract base class for models
-    that run calculation on xarray Dataset
-    data.
+    that run calculations based on model data.
 
-    The calculations are run via xarray's
-    `apply_ufunc` function, i.e., they run in
-    parallel depending on the dask settings.
-
-    For each individual data chunk the `calculate`
-    function is called.
+    Attributes
+    ----------
+    load_mode: str
+        The data loading mode
 
     :group: core
 
     """
+
+    def __init__(self, *args, load_mode="preload", **kwargs):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional parameters for constructor
+        load_mode: str
+            The data loading mode, e.g. 'preload'
+        kwargs: dict, optional
+            Additional parameters for constructor
+
+        """
+        super().__init__(*args, **kwargs)
+        self.load_mode = load_mode
 
     @abstractmethod
     def output_coords(self):
@@ -32,6 +46,25 @@ class DataCalcModel(Model):
 
         """
         pass
+
+    def load_chunk_data(self, algo, *data):
+        """
+        Load chunk data according to load mode.
+
+        This function adds data to mdata.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data: tuple of foxes.core.Data, optional
+            The input data, typically either (mdata, fdata) in
+            the case of farm calculations, or (mdata, fdata, tdata)
+            for point data calculations
+
+        """
+        for m in self.sub_models():
+            m.load_chunk_data(algo, *data)
 
     @abstractmethod
     def calculate(self, algo, *data, **parameters):
@@ -59,4 +92,4 @@ class DataCalcModel(Model):
             Values: numpy.ndarray
 
         """
-        pass
+        self.load_chunk_data(algo, *data)

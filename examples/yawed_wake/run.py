@@ -141,7 +141,7 @@ if __name__ == "__main__":
             plot_data_yz = o.get_states_data_yz(
                 args.var,
                 resolution=5,
-                x=750,
+                x=1500,
                 ymin=-200,
                 ymax=200,
                 zmin=0,

@@ -13,8 +13,9 @@ class DummyInduction:
     running = False
     name = "DummyInduction"
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         self.initialized = True
+        return loaded_data
 
     def ct2a(self, ct):
         return np.full_like(ct, 0.2, dtype=float)

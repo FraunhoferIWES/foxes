@@ -162,7 +162,7 @@ class FromLookupTable(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -170,16 +170,32 @@ class FromLookupTable(TurbineType):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
-        super().initialize(algo, verbosity, force)
+        loaded_data = super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
         if self.P_nominal is None:
             col_P = self._lookup.varmap.get(FV.P, FV.P)
             self.P_nominal = np.max(self._lookup._data[col_P].to_numpy())
+        return loaded_data
 
     def modify_cutin(
         self,
@@ -250,7 +266,6 @@ class FromLookupTable(TurbineType):
         fdata_lookup = FData(
             data={v: fdata[v] for v in input_vars},
             dims={v: fdata.dims[v] for v in input_vars},
-            loop_dims=fdata.loop_dims,
         )
         for v in self.output_farm_vars(algo):
             fdata_lookup.add(v, fdata[v], fdata.dims[v])

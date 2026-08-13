@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.interpolate import griddata
+from scipy.spatial import QhullError
 
 from foxes.config import config
 from foxes.utils import weibull_weights
@@ -167,10 +168,13 @@ class PointCloudData(DatasetStates):
                 f"States '{self.name}': Expecting variable '{FV.H}' to have dimensions '({FC.POINT},)', got {data[FV.H][0]}"
             )
 
+        point_axes = [FV.X, FV.Y]
         points = [data.pop(FV.X)[1], data.pop(FV.Y)[1]]
         if FV.H in data:
+            point_axes.append(FV.H)
             points.append(data.pop(FV.H)[1])
-        coords[FC.POINT] = np.stack(points, axis=-1)
+        coords[FC.XYH] = np.asarray(point_axes)
+        coords[FC.POINT] = ((FC.POINT, FC.XYH), np.stack(points, axis=-1))
 
         return coords, data
 
@@ -568,7 +572,14 @@ class TurbinePointCloud(DatasetStates):
             Keyword arguments for the base class
 
         """
-        super().__init__(*args, load_mode="preload", **kwargs)
+        # Turbine-point-cloud data is indexed by turbine, not by global X/Y grids.
+        # Disable XY-bound filtering from DatasetStates to avoid requiring X/Y cmap.
+        super().__init__(
+            *args,
+            load_mode="preload",
+            bounds_extra_space=None,
+            **kwargs,
+        )
 
         self.states_coord = states_coord
         self.turbine_coord = turbine_coord
@@ -600,7 +611,7 @@ class TurbinePointCloud(DatasetStates):
             FC.TURBINE: self.turbine_coord,
         }
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -612,19 +623,21 @@ class TurbinePointCloud(DatasetStates):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
-        return super().load_data(
+        super().load_data(
             algo,
+            loaded_data,
+            force=force,
             bounds_extra_space=None,
             verbosity=verbosity,
         )
@@ -657,6 +670,7 @@ class TurbinePointCloud(DatasetStates):
             The variable names, length nv
         times: numpy.ndarray
             The time coordinates of the states, with shape (n_states,)
+
         Returns
         -------
         d_interp: numpy.ndarray
@@ -715,7 +729,16 @@ class TurbinePointCloud(DatasetStates):
         gpts = gpts.reshape(n_states * n_turbines, gpts.shape[-1])
         epts = epts.reshape(n_states * n_turbines, epts.shape[-1])
         d = d.reshape(n_states * n_turbines, d.shape[-1])
-        results = griddata(gpts, d, epts, **ipars)
+        try:
+            results = griddata(gpts, d, epts, **ipars)
+        except QhullError:
+            # Small/degenerate per-chunk geometries can fail linear Delaunay interpolation.
+            # Fall back to nearest-neighbour interpolation to keep point calculations robust.
+            if ipars.get("method", "linear") == "nearest":
+                raise
+            fpars = dict(ipars)
+            fpars["method"] = "nearest"
+            results = griddata(gpts, d, epts, **fpars)
 
         # check for NaN results:
         PointCloudData._check_nan(self, ipars, gpts, d, epts, idims, vrs, results)

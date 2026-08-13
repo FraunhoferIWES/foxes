@@ -47,6 +47,12 @@ from .exec_python import eval_dict_values as eval_dict_values
 from .ti_utils import tke2ti as tke2ti
 from .ti_utils import ustar2ti as ustar2ti
 
+from .memory_utils import print_mem as print_mem
+from .memory_utils import get_object_nbytes as get_object_nbytes
+from .memory_utils import deep_split as deep_split
+from .memory_utils import deep_split_by_nbytes as deep_split_by_nbytes
+from .memory_utils import deep_update as deep_update
+
 from .pandas_utils import PandasFileHelper as PandasFileHelper
 from .dict import Dict as Dict
 from .data_book import DataBook as DataBook
@@ -54,7 +60,6 @@ from .cubic_roots import cubic_roots as cubic_roots
 from .regularize import sqrt_reg as sqrt_reg
 from .tab_files import read_tab_file as read_tab_file
 from .random_xy import random_xy_square as random_xy_square
-from .dev_utils import print_mem as print_mem
 from .wrg_utils import ReaderWRG as ReaderWRG
 from .weibull import weibull_weights as weibull_weights
 from .download import download_file as download_file

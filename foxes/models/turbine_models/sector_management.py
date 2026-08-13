@@ -74,7 +74,7 @@ class SectorManagement(TurbineModel):
         self._tdata = None
         self._trbs = None
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -82,13 +82,28 @@ class SectorManagement(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
-        super().initialize(algo, verbosity, force=force)
+        loaded_data = super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
         if isinstance(self.source, pd.DataFrame):
             data = self.source
@@ -147,6 +162,8 @@ class SectorManagement(TurbineModel):
         for vi, v in enumerate(self._rvars):
             if v in self._perds:
                 self._rdata[:, vi] = np.mod(self._rdata[:, vi], self._perds[v])
+
+        return loaded_data
 
     def output_farm_vars(self, algo):
         """

@@ -14,6 +14,81 @@ from .data import MData, FData, TData
 __global_engine_data__ = dict(engine=None)
 
 
+class EngineRunner(ABC):
+    """
+    Helper class for running calculations in engines
+
+    :group: core
+    """
+
+    def _write_chunk_results(self, algo, results, write_nc, out_dims, mdata):
+        """Helper function for optionally writing chunk results to netCDF file"""
+        ret_data = True
+        if write_nc is not None and write_nc["split"] == "chunks":
+            ret_data = write_nc.get("ret_data", False)
+            out_dir = get_output_path(write_nc.get("out_dir", "."))
+            base_name = write_nc["base_name"]
+            ret_data = write_nc.get("ret_data", False)
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            coords = {}
+            if FC.STATE in out_dims and FC.STATE in mdata:
+                coords[FC.STATE] = mdata[FC.STATE]
+
+            dvars = {}
+            for v, d in results.items():
+                if (
+                    out_dims == (FC.STATE, FC.TURBINE)
+                    and d.shape[1] == 1
+                    and algo.n_turbines > 1
+                ):
+                    dvars[v] = ((FC.STATE,), d[:, 0])
+                else:
+                    dvars[v] = (out_dims, d)
+
+            ds = Dataset(coords=coords, data_vars=dvars)
+
+            i0 = mdata.chunki_states
+            t0 = mdata.chunki_points
+            vrb = max(algo.verbosity - 1, 0)
+            if out_dims == (FC.STATE, FC.TURBINE):
+                fpath = out_dir / f"{base_name}_{i0:06d}.nc"
+            else:
+                fpath = out_dir / f"{base_name}_{i0:06d}_{t0:06d}.nc"
+            write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
+
+        return results if ret_data else None
+
+    def _write_ani(self, algo, chunk_key, write_chunk_ani, *data):
+        """Helper function for optionally writing chunk flow animations to file"""
+        if write_chunk_ani is not None:
+            from foxes.output import write_chunk_ani_xy
+
+            pars = write_chunk_ani.copy()
+            chk = pars.pop("chunk")
+
+            def _do_run(chk):
+                if isinstance(chk, list):
+                    for c in chk:
+                        if _do_run(c):
+                            return True
+                    return False
+                else:
+                    return (
+                        chk == chunk_key
+                        if isinstance(chk, tuple)
+                        else chk == chunk_key[0]
+                    )
+
+            if _do_run(chk):
+                write_chunk_ani_xy(algo, *data, **pars)
+
+    @abstractmethod
+    def run(self, *args, **kwargs):
+        """Runs the chunk calculation"""
+        pass
+
+
 class Engine(ABC):
     """
     Abstract base clas for foxes calculation engines
@@ -320,7 +395,7 @@ class Engine(ABC):
         else:
             return [FC.STATE, FC.TARGET]
 
-    def select_subsets(self, *datasets, sel=None, isel=None):
+    def select_subsets(self, *datasets, sel=None, isel=None, default_n_states=None):
         """
         Takes subsets of datasets
 
@@ -332,11 +407,17 @@ class Engine(ABC):
             The selection dictionary
         isel: dict, optional
             The index selection dictionary
+        default_n_states: int, optional
+            Fallback number of states if no dataset has
+            state dimension
 
         Returns
         -------
         subsets: list
             The subsets of the input data
+        n_states: int or None
+            The number of states after subset selection,
+            or fallback value
 
         """
         if sel is not None:
@@ -353,13 +434,19 @@ class Engine(ABC):
             new_datasets = []
             for data in datasets:
                 if data is not None:
-                    s = {c: u for c, u in isel.items() if c in data.coords}
-                    new_datasets.append(data.isel(s) if len(s) else data)
+                    s = {c: u for c, u in isel.items() if c in data.dims}
+                    new_datasets.append(data.isel(s) if len(s) > 0 else data)
                 else:
                     new_datasets.append(data)
             datasets = new_datasets
 
-        return datasets
+        n_states = default_n_states
+        for data in datasets:
+            if data is not None and FC.STATE in data.sizes:
+                n_states = data.sizes[FC.STATE]
+                break
+
+        return datasets, n_states
 
     def calc_chunk_sizes(self, n_states, n_targets=1):
         """
@@ -487,6 +574,7 @@ class Engine(ABC):
         i0_targets, i1_targets = targets_i0_i1
         s_states = np.s_[i0_states:i1_states]
         s_targets = np.s_[i0_targets:i1_targets]
+        n_states = i1_states - i0_states
 
         # special case for sequential algo:
         if hasattr(algo, "states_i0"):
@@ -503,6 +591,8 @@ class Engine(ABC):
             chunki_points=chunki_points,
             n_chunks_states=n_chunks_states,
             n_chunks_points=n_chunks_points,
+            n_states=n_states,
+            n_turbines=algo.n_turbines,
         )
 
         # create fdata:
@@ -513,11 +603,13 @@ class Engine(ABC):
                 s_states=s_states,
                 callback=None,
                 states_i0=i0_states,
+                n_states=n_states,
+                n_turbines=algo.n_turbines,
                 copy=True,
             )
         else:
-            fdata = FData.from_mdata(
-                mdata=mdata,
+            fdata = FData.from_data(
+                base_data=mdata,
                 states_i0=i0_states,
             )
 
@@ -530,6 +622,8 @@ class Engine(ABC):
                 s_targets=s_targets,
                 callback=None,
                 states_i0=i0_states,
+                n_states=n_states,
+                n_turbines=algo.n_turbines,
                 copy=True,
             )
             if point_data is not None
@@ -588,7 +682,7 @@ class Engine(ABC):
             The model results
 
         """
-        n_states = model_data.sizes[FC.STATE]
+        n_states = algo.n_states
         if point_data is None:
             self.print(
                 f"{self.name}: Calculating {n_states} states for {algo.n_turbines} turbines"
@@ -599,6 +693,19 @@ class Engine(ABC):
             )
         if not model.initialized:
             raise ValueError(f"Model '{model.name}' not initialized")
+
+    @abstractmethod
+    def new_runner(self):
+        """
+        Creates a new EngineRunner for running calculations in this engine
+
+        Returns
+        -------
+        runner: foxes.core.EngineRunner
+            The engine runner
+
+        """
+        pass
 
     def new_chunk_results_manager(self, algo, **kwargs):
         """

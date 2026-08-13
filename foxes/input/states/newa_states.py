@@ -159,6 +159,7 @@ class NEWAStates(DatasetStates):
         data,
         bounds_extra_space=None,
         height_bounds=None,
+        loaded_data=None,
         verbosity=0,
     ):
         """
@@ -175,6 +176,9 @@ class NEWAStates(DatasetStates):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        loaded_data: dict, optional
+            If given, optionally add to this loaded data dict with entries
+            {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -185,6 +189,7 @@ class NEWAStates(DatasetStates):
             data,
             bounds_extra_space=None,
             height_bounds=height_bounds,
+            loaded_data=None,
             verbosity=verbosity,
         )
 
@@ -199,9 +204,13 @@ class NEWAStates(DatasetStates):
         lonlat = np.moveaxis(lonlat, 0, 1)  # (y, x, 2) to (x, y, 2)
         nx, ny = lonlat.shape[:2]
         lonlat = lonlat.reshape((nx * ny, 2))
-        xy = from_lonlat(lonlat)
-        xy = xy.reshape((nx, ny, 2))
+        _xy = from_lonlat(lonlat)
+        _xy = _xy.reshape((nx, ny, 2))
         nh = len(self._heights)
+        self.XY = self.var(f"{FV.X}{FV.Y}")
+        self.X = self.var(FV.X)
+        self.Y = self.var(FV.Y)
+        self.H = self.var(FV.H)
 
         # find horizontal bounds:
         if bounds_extra_space is not None:
@@ -227,10 +236,10 @@ class NEWAStates(DatasetStates):
                 )
 
             inds = np.argwhere(
-                (xy[..., 0] >= x0)
-                & (xy[..., 0] <= x1)
-                & (xy[..., 1] >= y0)
-                & (xy[..., 1] <= y1)
+                (_xy[..., 0] >= x0)
+                & (_xy[..., 0] <= x1)
+                & (_xy[..., 1] >= y0)
+                & (_xy[..., 1] <= y1)
             )
             assert len(inds) > 0, (
                 f"States '{self.name}': No grid points found within bounds (x0, x1)=({x0}, {x1}), (y0, y1)=({y0}, {y1})"
@@ -240,18 +249,18 @@ class NEWAStates(DatasetStates):
             j0 = inds[:, 1].min()
             j1 = inds[:, 1].max()
             while True:
-                self._xy = xy[i0 : i1 + 1, j0 : j1 + 1]
-                if i0 > 0 and x0 < np.min(self._xy[..., 0]):
+                xy = _xy[i0 : i1 + 1, j0 : j1 + 1]
+                if i0 > 0 and x0 < np.min(xy[..., 0]):
                     i0 -= 1
-                elif i1 < nx - 1 and x1 > np.max(self._xy[..., 0]):
+                elif i1 < nx - 1 and x1 > np.max(xy[..., 0]):
                     i1 += 1
-                elif j0 > 0 and y0 < np.min(self._xy[..., 1]):
+                elif j0 > 0 and y0 < np.min(xy[..., 1]):
                     j0 -= 1
-                elif j1 < ny - 1 and y1 > np.max(self._xy[..., 1]):
+                elif j1 < ny - 1 and y1 > np.max(xy[..., 1]):
                     j1 += 1
                 else:
                     break
-            nx, ny = self._xy.shape[:2]
+            nx, ny = xy.shape[:2]
 
             if self.isel is None:
                 self.isel = {}
@@ -263,20 +272,24 @@ class NEWAStates(DatasetStates):
             )
             if verbosity > 0:
                 print(
-                    f"States '{self.name}': Selected {FV.X} = {np.min(self._xy[..., 0]):.2f} - {np.max(self._xy[..., 0]):.2f} ({nx} points)"
+                    f"States '{self.name}': Selected {FV.X} = {np.min(xy[..., 0]):.2f} - {np.max(xy[..., 0]):.2f} ({nx} points)"
                 )
                 print(
-                    f"States '{self.name}': Selected {FV.Y} = {np.min(self._xy[..., 1]):.2f} - {np.max(self._xy[..., 1]):.2f} ({ny} points)"
+                    f"States '{self.name}': Selected {FV.Y} = {np.min(xy[..., 1]):.2f} - {np.max(xy[..., 1]):.2f} ({ny} points)"
                 )
                 print(
-                    f"States '{self.name}': Selected {self._xy.shape[:2] + (nh,)} grid points"
+                    f"States '{self.name}': Selected {xy.shape[:2] + (nh,)} grid points"
                 )
         else:
-            self._xy = xy
+            xy = _xy
             if verbosity > 0:
                 print(
-                    f"States '{self.name}': Selecting all {self._xy.shape[:2] + (nh,)} grid points"
+                    f"States '{self.name}': Selecting all {xy.shape[:2] + (nh,)} grid points"
                 )
+
+        if loaded_data is not None:
+            loaded_data["data_vars"][self.XY] = ((self.X, self.Y, FC.XY), xy)
+            loaded_data["coords"][self.H] = self._heights
 
         if self.wrf_point_plot is not None:
             fpath = get_output_path(self.wrf_point_plot)
@@ -284,8 +297,8 @@ class NEWAStates(DatasetStates):
                 print(f"States '{self.name}': Writing WRF grid point plot to '{fpath}'")
             fig, ax = plt.subplots(figsize=(8, 8))
             ax.plot(
-                self._xy[..., 0].flatten(),
-                self._xy[..., 1].flatten(),
+                xy[..., 0].flatten(),
+                xy[..., 1].flatten(),
                 c="blue",
                 alpha=0.2,
                 marker=".",
@@ -302,35 +315,192 @@ class NEWAStates(DatasetStates):
             fig.savefig(fpath, bbox_inches="tight")
             plt.close()
 
-    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
+    def get_grid_points(
+        self, loaded_data=None, mdata=None, all_heights=True, height=None
+    ):
         """
-        Interpolates data to points.
-
-        This function should be implemented in derived classes.
+        Returns the grid points from the mdata object.
 
         Parameters
         ----------
+        loaded_data: dict, optional
+            The loaded data dictionary
+        mdata: foxes.core.MData, optional
+            The model data
+        all_heights: bool, optional
+            If True, return all heights, otherwise only the highest.
+        height: float, optional
+            The height to use. If None, the highest height is used if
+            all_heights is False.
+
+        Returns
+        -------
+        grid_points: numpy.ndarray
+            The grid points, shape (n_points, 3)
+
+        """
+        assert loaded_data is not None or mdata is not None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided"
+        )
+        assert loaded_data is None or mdata is None, (
+            f"States '{self.name}': Either loaded_data or mdata must be provided, not both"
+        )
+
+        if mdata is not None:
+            assert self.XY in mdata, (
+                f"States '{self.name}': Missing grid points '{self.XY}' in mdata, got {list(mdata.keys())}"
+            )
+            xy = mdata[self.XY]
+
+            if all_heights or height is None:
+                assert self.H in mdata, (
+                    f"States '{self.name}': Missing heights '{self.H}' in mdata, got {list(mdata.keys())}"
+                )
+                h = mdata[self.H]
+                if height is None:
+                    h = np.atleast_1d(np.max(h))
+                elif all_heights:
+                    raise ValueError(
+                        f"States '{self.name}': Cannot specify both all_heights and height, got all_heights={all_heights}, height={height}"
+                    )
+            else:
+                h = np.atleast_1d(height)
+
+        else:
+            assert self.XY in loaded_data["data_vars"], (
+                f"States '{self.name}': Missing coordinates '{self.XY}' in loaded_data, got {list(loaded_data['data_vars'].keys())}"
+            )
+            xy = loaded_data["data_vars"][self.XY][1]
+
+            if all_heights or height is None:
+                assert self.H in loaded_data["coords"], (
+                    f"States '{self.name}': Missing heights '{self.H}' in loaded_data, got {list(loaded_data['coords'].keys())}"
+                )
+                h = loaded_data["coords"][self.H]
+                if height is None:
+                    h = np.atleast_1d(np.max(h))
+                elif all_heights:
+                    raise ValueError(
+                        f"States '{self.name}': Cannot specify both all_heights and height, got all_heights={all_heights}, height={height}"
+                    )
+            else:
+                h = np.atleast_1d(height)
+
+        nx, ny = xy.shape[:2]
+        nh = len(h)
+        gpts = np.zeros((nx * ny, nh, 3), dtype=config.dtype_double)
+        gpts[:, :, :2] = xy.reshape((nx * ny, 1, 2))
+        gpts[:, :, 2] = h.reshape((1, nh))
+        gpts = gpts.reshape((nx * ny * nh, 3))
+
+        return gpts
+
+    def get_interpolation_grid_data(self, mdata, idims):
+        """
+        Extracts interpolation grid data from chunk model data.
+
+        Parameters
+        ----------
+        mdata: foxes.core.MData
+            The model data
         idims: list of str
-            The input dimensions, e.g. [x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
+            The dimensions for interpolation, e.g. ['x', 'y', 'height']
+
+        Returns
+        -------
+        gpts: tuple of numpy.ndarray or numpy.ndarray
+            Either a list of length n_idims of 1D arrays for each dimension,
+            or a single 2D array with shape (n_points, n_idims)
+
+        """
+        # get coordinates:
+        icrds = []
+        for c in idims:
+            cc = self.var(c) if c not in [FC.STATE, FC.TURBINE] else c
+            assert cc in mdata, (
+                f"States '{self.name}': Missing coordinate '{cc}' in mdata, got {list(mdata.keys())}"
+            )
+            icrds.append(mdata[cc])
+
+        # prepare grid points:
+        n_dms = len(idims)
+        gpts = np.zeros(
+            tuple([len(c) for c in icrds]) + (n_dms,), dtype=config.dtype_double
+        )
+        n_gpts = 1
+        ix = None
+        for i, c in enumerate(icrds):
+            if idims[i] not in (FV.X, FV.Y):
+                shp = [1] * n_dms
+                shp[i] = c.shape[0]
+                gpts[..., i] = c.reshape(shp)
+                n_gpts *= c.shape[0]
+            elif idims[i] == FV.X:
+                assert FV.Y in idims, (
+                    f"States '{self.name}': {FV.X} found in dims {idims} but not {FV.Y}"
+                )
+                ix = i
+            else:
+                assert ix == i - 1, (
+                    f"States '{self.name}': Unexpected dimension order {idims}, expected {FV.X} before {FV.Y}"
+                )
+
+        # sneak in xy instead of west_east and south_north coords:
+        if ix is not None:
+            xy = mdata[self.XY]
+            shp = [1] * len(gpts.shape)
+            shp[ix : ix + 2] = xy.shape[:2]
+            shp[-1] = 2
+            gpts[..., ix : ix + 2] = xy.reshape(shp)
+            n_gpts *= xy.shape[0] * xy.shape[1]
+
+        # reshape:
+        return gpts.reshape((n_gpts, n_dms))
+
+    def interpolate_data(
+        self,
+        mdata,
+        idims,
+        d,
+        pts,
+        vrs,
+        state_indices=None,
+        gpts=None,
+    ):
+        """
+        Interpolates data to points.
+
+        Parameters
+        ----------
+        mdata: foxes.core.MData
+            The model data
+        idims: list of str
+            The input dimensions, e.g. ['x', 'y', 'height']
         d: numpy.ndarray
             The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
+            where ni represents the dimension sizes of the ordered
+            icoords keys, and nv is the number of variables
         pts: numpy.ndarray
             The points to interpolate to, with shape (n_pts, n_idims)
         vrs: list of str
             The variable names, length nv
-        times: numpy.ndarray
-            The time coordinates of the states, with shape (n_states,)
+        state_indices: numpy.ndarray, optional
+            The indices of the states, with shape (n_states,)
+        gpts: tuple of numpy.ndarray or numpy.ndarray
+            Either a list of 1D arrays for each dimension, or a single 2D array
+            with shape (n_points, n_dims). If None, the grid points are extracted
+            from mdata.
+
         Returns
         -------
         d_interp: numpy.ndarray
             The interpolated data array with shape (n_pts, nv)
 
         """
+        if FC.STATE in idims:
+            raise NotImplementedError(
+                f"States '{self.name}': Interpolation with state dimension not implemented."
+            )
 
         # prepare interpolation parameters:
         ipars = dict(
@@ -340,13 +510,38 @@ class NEWAStates(DatasetStates):
         )
         ipars.update(self.interp_pars)
 
+        # get grid points if not provided:
+        if gpts is None:
+            gpts = self.get_interpolation_grid_data(mdata, idims)
+        else:
+            assert (
+                isinstance(gpts, np.ndarray)
+                and gpts.ndim == 2
+                and gpts.shape[1] == len(idims)
+            ), (
+                f"States '{self.name}': gpts must be a 2D numpy array with shape (n_points, {len(idims)}), got {gpts.shape}"
+            )
+
+        # check and reshape d, data is on a non-regular grid:
+        n_gpts, n_dms = gpts.shape
+        if d.shape[0] != n_gpts:
+            try:
+                d = d.reshape((n_gpts,) + d.shape[n_dms:])
+            except Exception as e:
+                raise ValueError(
+                    f"States '{self.name}': Cannot reshape d with shape {d.shape} to match gpts with shape {gpts.shape} and vrs with length {len(vrs)}"
+                ) from e
+
         def _check_nan(gpts, d, pts, idims, results):
             """Checks for NaN results and raises errors."""
             if np.isnan(ipars.get("fill_value", np.nan)):
+                assert state_indices is not None, (
+                    f"States '{self.name}': state_indices must be provided for NaN check, got None"
+                )
                 sel = np.isnan(results)
                 if np.any(sel):
                     i = [j[0] for j in np.where(sel)]
-                    t = times[i.pop(-2)] if len(results.shape) == 3 else None
+                    t = state_indices[i.pop(-2)] if len(results.shape) == 3 else None
                     p = pts[tuple(i[:-1])]
                     qmin = np.min(gpts, axis=0)
                     qmax = np.max(gpts, axis=0)
@@ -385,44 +580,6 @@ class NEWAStates(DatasetStates):
                         raise ValueError(
                             f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
                         )
-
-        if FC.STATE in idims:
-            raise NotImplementedError(
-                f"States '{self.name}': Interpolation with state dimension not implemented."
-            )
-
-        # prepare grid points:
-        n_dms = len(idims)
-        gpts = np.zeros(d.shape[:n_dms] + (n_dms,), dtype=config.dtype_double)
-        n_gpts = 1
-        ix = None
-        for i, c in enumerate(icrds):
-            if idims[i] not in (FV.X, FV.Y):
-                shp = [1] * n_dms
-                shp[i] = c.shape[0]
-                gpts[..., i] = c.reshape(shp)
-                n_gpts *= c.shape[0]
-            elif idims[i] == FV.X:
-                assert FV.Y in idims, (
-                    f"States '{self.name}': {FV.X} found in dims {idims} but not {FV.Y}"
-                )
-                ix = i
-            else:
-                assert ix == i - 1, (
-                    f"States '{self.name}': Unexpected dimension order {idims}, expected {FV.X} before {FV.Y}"
-                )
-
-        # sneak in self._xy instead of west_east and south_north coords:
-        if ix is not None:
-            shp = [1] * len(gpts.shape)
-            shp[ix : ix + 2] = self._xy.shape[:2]
-            shp[-1] = 2
-            gpts[..., ix : ix + 2] = self._xy.reshape(shp)
-            n_gpts *= self._xy.shape[0] * self._xy.shape[1]
-
-        # reshape:
-        gpts = gpts.reshape((n_gpts, n_dms))
-        d = d.reshape((n_gpts,) + d.shape[n_dms:])
 
         # remove NaN data points:
         if not self.check_input_nans:

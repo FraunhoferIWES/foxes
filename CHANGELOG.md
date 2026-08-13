@@ -59,6 +59,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved `Downwind`: Now with option for ambient runs (no wakes)
 - Utils
   - New utility: `show_plotly_fig`, opens a window that shows a plotly figure (instead of browser)
+- Dependencies:
   - New runners: `DefaultRunner`, `DaskRunner`. The latter features parallel runs via dask
 - Examples
   - Introducing two sub-folders of examples: `foxes` and `foxes.opt`
@@ -182,6 +183,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Algorithms:
   - New: `Iterative`, iterative wind farm calculation until convergence has been reached
 - Input:
+  - Added `AreaGeometry.from_shp(...)` as a direct geom2d entry point for reading `.shp` polygon data into an `AreaGeometry`
+  - New utility: `show_plotly_fig`, opens a window that shows a plotly figure (instead of browser)
+
   - Improved: `FieldDataNC` now accepts xarray Dataset or file pattern str as input
   - New: `ShearedProfile`, Vertical WS profile can be determined with shear exponent
 - Output:
@@ -271,12 +275,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.0
 
-- Models:
   - Improved: New option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
   - New turbine model: `LookupTable`, interpolates data based on a multi-dimensional lookup table
-- Utils:
   - Improved `DaskRunner`: Now supports clusters that run the Slurm queueing system
-- Examples:
   - New: `timeseries_slurm`, shows how to run foxes on a HPC with Slurm queueing system
 - Optimization:
   - Improved: `foxes.opt` is now able to optimize for flow variables (at selected points in space) in addition to turbine variables
@@ -349,9 +350,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5
 
-- Dependencies:
   - Dropping support for Python 3.7, due to `netcdf4` dependency
-- Core:
   - Simplified model initialization/finalization. Removing the `keep_models` idea, instead all models are now kept in the algorithm's idata memory until finalization. Adding a new model now mostly requires that the `sub_models` and the `load_data` functions are overloaded, if applicable. The `initialize` and `finalize` only need to be addressed explicitly in non-standard cases.
 - Algorithms:
   - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
@@ -999,10 +998,46 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.3](https://github.com/FraunhoferIWES/foxes/commits/v1.8.3)
 
-## v1.8.4
+## v1.9.0
 
-- Inputs:
+- Engines:
+  - Refactored shared-memory handling across `DaskEngine`, `DefaultEngine`, `NumpyEngine`, and pool-based execution
+  - Added and stabilized `ProcessEngine`, `RayEngine`, and `ThreadsEngine` execution paths
+  - Updated `LocalClusterEngine`/`SlurmClusterEngine` to futureize large ndarray payloads before distributed task submission, reducing per-task graph transfer pressure for large chunk payloads
+- Core:
+  - Extended chunk/state metadata propagation in data containers and algorithm data construction
+- Input:
   - Fix for bug with ka, kb in `windio` interpretation
   - Extending `windio` support to multiple wind farms
+  - Generalized `DatasetStates` on-the-fly/lazy loading behavior and hardened threaded NetCDF reading
+  - New states class `SectorSimRefPointField`, combining a wind direction sector based field with timeseries data at a reference point to a timeseries of fields
+- Algorithms:
+  - Reworked `PopulationStates` chunk-loading behavior and recovery paths
+- Utils:
+  - Added `AreaGeometry.from_shp(...)` as a direct geom2d entry point for reading `.shp` polygon data into an `AreaGeometry`
+  - Extended `shp2geom2d` (and therefore `AreaGeometry.from_shp(...)`) to accept glob patterns and return a union geometry of all matched shapefiles
+  - Enabled `ret_utm_zone=True` for glob-based shapefile loading in `shp2geom2d`/`AreaGeometry.from_shp(...)`
+  - Added `combine_mode` (`"union"` or `"intersection"`) to `shp2geom2d`/`AreaGeometry.from_shp(...)` for combining multiple areas
+- Dependencies:
+  - Dropped Python 3.9 support; project now requires Python >=3.10
+  - Added optional dependency group `shp` with `geopandas>=0.14.4` for shapefile workflows
+  - Raised optional dependency lower bound to `multiprocess>=0.70.17` to align with Python 3.13 support in this release line
+  - Raised core dependency lower bounds to `h5netcdf>=1.8.1` and `h5py>=3.11.0` for stable Python 3.13 NetCDF backend behavior
+- Tests:
+  - Added consistency coverage for engines, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
+- Bugs:
+  - Removed Python 3.9 from GitHub CI test matrix to align workflow runners with project support policy (`requires-python >=3.10`) and avoid unsupported-job noise
+  - Gated MPI subprocess smoke coverage behind explicit `FOXES_RUN_MPI_TESTS=1` opt-in so constrained CI targets (e.g. conda-forge feedstock) remain deterministic
+  - Fixed `TurbinePointCloud` initialization for turbine-indexed data by disabling XY bounds filtering, preventing `Downwind.calc_farm` assertion failures about missing `X`/`Y` in coordinate mapping
+  - Fixed `TurbinePointCloud` point interpolation for single-state/two-turbine chunks by falling back from linear to nearest interpolation when Qhull cannot construct a simplex, preventing `calc_points` smoke failures under Python 3.13 thread chunking
+  - Fixed `SingleStateField` interpolation for NaN-only target points by skipping invalid points before calling xarray interpolation, preventing `All-NaN slice encountered` runtime warnings in `Streamlines2D` smoke runs
+  - Updated `SingleStateField` and `MultiHeightNCStates` NetCDF reads to use configured backend defaults, avoiding implicit `netCDF4` fallback imports in smoke tests
+  - Fixed yaw-correction power/ct scaling in `TurbineType` for >90 degree misalignment by clipping negative cosine projection before fractional exponentiation, preventing `invalid value encountered` runtime warnings
+  - Switched default NetCDF backend configuration to `h5netcdf` and added `h5netcdf` as a core dependency, avoiding `netCDF4` import-time ABI/runtime warnings and backend deprecation warnings in Python 3.13 smoke environments
+  - Fixed `Downwind.calc_points` state-subset handling for point calculations by propagating `states_sel`/`states_isel` to engine-level dataset subsetting, preventing shape mismatch crashes for multi-height states
+  - Reduced farm-controller model-selection memory by storing turbine-model selection masks only for models that need filtering, and as per-model arrays instead of one stacked 3D mask
+  - Fixed `Sequential` state-count handling during per-step evaluation, which could flatten `OnePointFlowTimeseries`-driven ambient signals and lead to incorrect `YawController` behavior in `sequential_yawcontroller`
+  - Improved rotor rendering in `FlowPlots2D` vertical slice plots (`xz`/`yz`) by drawing explicit edge-on rotor lines for near-zero projected disk width and ellipse/circle otherwise
+  - Fixed non-recursive payload-size estimation for collection-valued `extra_data` in memory splitting utilities, preventing `ProcessEngine` chunk execution failures with `SetFarmVars`
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.8.4](https://github.com/FraunhoferIWES/foxes/commits/v1.8.4)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)

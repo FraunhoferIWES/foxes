@@ -1,0 +1,11 @@
+default exit=0
+process exit=0
+threads exit=0
+numpy exit=0
+single exit=0
+multiprocess exit=0
+dask exit=0
+local_cluster exit=0
+ray exit=1
+mpi exit=0
+slurm_cluster exit=1

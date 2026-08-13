@@ -12,6 +12,27 @@ class VerticalProfile(Model):
 
     """
 
+    def load_chunk_data(self, algo, mdata, fdata, tdata):
+        """
+        Load chunk-local data required for calculations.
+
+        Vertical profiles operate on the provided chunk data directly and do
+        not contribute additional chunk-local arrays.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+
+        """
+        return None
+
     @abstractmethod
     def input_vars(self):
         """

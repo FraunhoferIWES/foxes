@@ -62,7 +62,7 @@ class WakeModel(Model):
         """
         return self._has_uv
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -70,15 +70,33 @@ class WakeModel(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
         if self.affects_ws and algo.wake_deflection.has_uv:
             self._has_uv = True
-        super().initialize(algo, verbosity, force)
+        return super().initialize(
+            algo=algo,
+            loaded_data=loaded_data,
+            force=force,
+            verbosity=verbosity,
+        )
 
     @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
@@ -273,7 +291,7 @@ class SingleTurbineWakeModel(WakeModel):
         w = [self.vec_superp] if self.vec_superp is not None else []
         return w + list(self.superp.values())
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -281,10 +299,23 @@ class SingleTurbineWakeModel(WakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
         self.superp = {
@@ -303,7 +334,12 @@ class SingleTurbineWakeModel(WakeModel):
                 self.superp[FV.WS] = self.vec_superp
                 self.vec_superp = None
 
-        super().initialize(algo, verbosity, force)
+        return super().initialize(
+            algo=algo,
+            loaded_data=loaded_data,
+            force=force,
+            verbosity=verbosity,
+        )
 
     def finalize_wake_deltas(
         self,

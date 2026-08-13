@@ -80,7 +80,7 @@ class Bastankhah2016Model(Model):
         """
         return [self.induction]
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -88,15 +88,30 @@ class Bastankhah2016Model(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
         if isinstance(self.induction, str):
             self.induction = algo.mbook.axial_induction[self.induction]
-        super().initialize(algo, verbosity, force)
+        return super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
     @property
     def pars(self):
@@ -489,7 +504,7 @@ class Bastankhah2016(DistSlicedWakeModel):
         """
         return super().sub_models() + [self.wake_k, self.model]
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initializes the model.
 
@@ -497,17 +512,32 @@ class Bastankhah2016(DistSlicedWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
 
         """
         if not self.initialized:
             self.model = Bastankhah2016Model(
                 alpha=self.alpha, beta=self.beta, induction=self.induction
             )
-        super().initialize(algo, verbosity, force)
+        return super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
     def calc_wakes_x_yz(
         self,

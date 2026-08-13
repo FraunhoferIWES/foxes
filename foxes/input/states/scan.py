@@ -36,7 +36,7 @@ class ScanStates(States):
         super().__init__(**kwargs)
         self.scans = {v: np.asarray(d) for v, d in scans.items()}
 
-    def load_data(self, algo, verbosity=0):
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -48,15 +48,15 @@ class ScanStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         n_v = len(self.scans)
@@ -74,11 +74,9 @@ class ScanStates(States):
 
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
-        idata = super().load_data(algo, verbosity)
-        idata["coords"][self.VARS] = self._vars
-        idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
-
-        return idata
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+        loaded_data["coords"][self.VARS] = self._vars
+        loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
     def set_running(
         self,

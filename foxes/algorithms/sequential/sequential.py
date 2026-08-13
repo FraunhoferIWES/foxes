@@ -122,12 +122,12 @@ class Sequential(Iterative):
         """
         return self._i is not None
 
-    def get_models_data(self, sel=None, isel=None):
-        if sel is not None and len(sel):
-            raise ValueError(f"calc_points does not support sel, got sel={sel}")
-        if isel is not None and len(isel):
-            raise ValueError(f"calc_points does not support isel, got isel={isel}")
-        return self._model_data.isel({FC.STATE: [self.counter]})
+    def get_model_data(self, pop=False):
+        if self._model_data is None:
+            return super().get_model_data(pop=pop)
+        return self._model_data.isel({FC.STATE: [self.counter]}), self.loaded_data[
+            "extra_data"
+        ]
 
     def __iter__(self):
         """Initialize the iterator"""
@@ -154,7 +154,7 @@ class Sequential(Iterative):
             self._calc_farm_vars(mlist)
             self._it = None
 
-            self._model_data = Dataset(**super().get_models_idata())
+            self._model_data, _ = super().get_model_data(pop=False)
 
             if self._verbo0 > 0:
                 print("\nInput data:\n")
@@ -162,14 +162,14 @@ class Sequential(Iterative):
                 print("\nOutput farm variables:", ", ".join(self.farm_vars))
                 print()
 
-            sts = self._model_data[FC.STATE].to_numpy()
             self._farm_results = Dataset(
-                coords={FC.STATE: sts},
+                coords={FC.STATE: self._inds},
                 data_vars={
                     v: (
                         (FC.STATE, FC.TURBINE),
                         np.zeros(
-                            (len(sts), self.n_turbines), dtype=config.dtype_double
+                            (len(self._inds), self.n_turbines),
+                            dtype=config.dtype_double,
                         ),
                     )
                     for v in self.farm_vars
@@ -211,8 +211,8 @@ class Sequential(Iterative):
 
             for v in self._farm_results.data_vars.keys():
                 if FC.STATE in self._farm_results[v].dims:
-                    self._farm_results[v].loc[{FC.STATE: [self.index]}] = fres[v]
-                    self._farm_results_dwnd[v].loc[{FC.STATE: [self.index]}] = (
+                    self._farm_results[v].loc[{FC.STATE: [self.states._indx]}] = fres[v]
+                    self._farm_results_dwnd[v].loc[{FC.STATE: [self.states._indx]}] = (
                         fres_dnwnd[v]
                     )
 
@@ -248,7 +248,7 @@ class Sequential(Iterative):
 
                 for v in self._point_results.data_vars.keys():
                     if FC.STATE in self._point_results[v].dims:
-                        self._point_results[v].loc[{FC.STATE: [self.index]}] = pres[v]
+                        self._point_results[v].loc[{FC.STATE: [self.counter]}] = pres[v]
 
                 for p in self.plugins:
                     p.update(self, fres, pres)

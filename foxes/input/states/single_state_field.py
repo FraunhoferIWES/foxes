@@ -150,7 +150,7 @@ class SingleStateField(States):
         """
         return self._data
 
-    def load_data(self, algo=None, verbosity=1):
+    def load_data(self, algo, loaded_data, force=False, verbosity=1):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -162,21 +162,24 @@ class SingleStateField(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        loaded_data: dict
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
-        if self._data is None:
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+
+        self.DATA = self.var("data")
+        if self.DATA not in loaded_data["extra_data"] or force:
             # read NetCDF data file, if not given as Dataset already:
             if isinstance(self.data_source, Dataset):
-                self._data = self.data_source
+                data = self.data_source
             else:
                 fpath = get_input_path(self.data_source)
                 if not fpath.is_file():
@@ -196,16 +199,16 @@ class SingleStateField(States):
                         print(f"Path: {fpath}")
                 elif verbosity:
                     print(f"States '{self.name}': Reading file {fpath}")
-                self._data = open_dataset(fpath)
+                data = open_dataset(fpath, engine=config.nc_engine)
 
             # remove unnecessary variables:
-            self._vars = {
+            vrs = {
                 var: self.var2ncvar.get(var, var)
                 for var in self.output_vars
                 if var not in self.fixed_vars
             }
             try:
-                self._data = self._data[list(self._vars.values())]
+                data = data[list(vrs.values())]
             except KeyError as e:
                 raise KeyError(
                     f"States '{self.name}': Variable '{e.args[0]}' not found in dataset {fpath.name}."
@@ -213,48 +216,48 @@ class SingleStateField(States):
 
             # check coordinates:
             for c in self._cmap.values():
-                if c not in self._data:
+                if c not in data:
                     raise KeyError(
                         f"States '{self.name}': Coordinate '{c}' not found in dataset {fpath.name}."
                     )
-            if set(self._data.sizes) != set(self._cmap.values()):
+            if set(data.sizes) != set(self._cmap.values()):
                 raise ValueError(
-                    f"States '{self.name}': Dataset {fpath.name} has unexpected dimensions {self._data.sizes}, expected {set(self._cmap.values())}."
+                    f"States '{self.name}': Dataset {fpath.name} has unexpected dimensions {data.sizes}, expected {set(self._cmap.values())}."
                 )
 
             # reorder dimensions:
-            self._data = self._data.transpose(*self._cmap.values())
+            data = data.transpose(*self._cmap.values())
 
             # reduce dimensions:
             if algo is not None:
                 DatasetStates.preproc_first(
                     self,
                     algo,
-                    data=self._data,
-                    cmap=self._cmap,
-                    vars=None,
+                    data=data,
                     bounds_extra_space=self.bounds_extra_space,
                     height_bounds=self.height_bounds,
+                    loaded_data=loaded_data,
                     verbosity=verbosity,
                 )
             if self.isel is not None and len(self.isel):
-                isel = {c: s for c, s in self.isel.items() if c in self._data.sizes}
-                self._data = self._data.isel(**isel)
+                isel = {c: s for c, s in self.isel.items() if c in data.sizes}
+                data = data.isel(**isel)
             if self.sel is not None and len(self.sel):
-                sel = {c: s for c, s in self.sel.items() if c in self._data.sizes}
-                self._data = self._data.sel(**sel)
+                sel = {c: s for c, s in self.sel.items() if c in data.sizes}
+                data = data.sel(**sel)
 
             # rename:
-            self._data = self._data.rename(
-                {ncv: v for v, ncv in {**self._vars, **self._cmap}.items()}
-            )
+            data = data.rename({ncv: v for v, ncv in {**vrs, **self._cmap}.items()})
+
+            # store data:
+            self.VARS = self.var("vrs")
+            loaded_data["extra_data"][self.VARS] = list(vrs.keys())
+            loaded_data["extra_data"][self.DATA] = data
 
             if verbosity > 1:
                 print(f"\nStates '{self.name}': Data loaded")
-                print(self._data)
+                print(data)
                 print()
-
-        return super().load_data(algo, verbosity=verbosity)
 
     def size(self):
         """
@@ -307,7 +310,9 @@ class SingleStateField(States):
 
         """
         # prepare
-        self.ensure_output_vars(algo, tdata)
+        super().calculate(algo, mdata, fdata, tdata)
+        vrs = mdata.extra_data[self.VARS]
+        data = mdata.extra_data[self.DATA]
         n_targets = tdata.n_targets
         n_tpoints = tdata.n_tpoints
         points = tdata[FC.TARGETS][0, ...].reshape(n_targets * n_tpoints, 3)
@@ -318,17 +323,30 @@ class SingleStateField(States):
             if c in self._cmap:
                 pts[c] = points[:, i]
 
+        valid = np.ones(n_targets * n_tpoints, dtype=bool)
+        for c in self._cmap:
+            valid &= np.isfinite(pts[c])
+
+        out = {
+            v: np.full(n_targets * n_tpoints, np.nan, dtype=config.dtype_double)
+            for v in vrs
+        }
+
         # interpolate through Dataset.interp():
-        pts = DataFrame(pts).to_xarray()
-        results = self.data.interp(
-            **{c: pts[c] for c in self._cmap.keys()},
-            **self.interp_pars,
-        )
-        del pts
+        if np.any(valid):
+            pvalid = DataFrame({c: pts[c][valid] for c in self._cmap}).to_xarray()
+            results = data.interp(
+                **{c: pvalid[c] for c in self._cmap.keys()},
+                **self.interp_pars,
+            )
+            del pvalid
+
+            for v in vrs:
+                out[v][valid] = results[v].to_numpy()
 
         # set interpolated values:
-        for v in self._vars.keys():
-            tdata[v] = results[v].to_numpy().reshape(1, n_targets, n_tpoints)
+        for v in vrs:
+            tdata[v] = out[v].reshape(1, n_targets, n_tpoints)
 
         # set fixed values:
         for v, d in self.fixed_vars.items():

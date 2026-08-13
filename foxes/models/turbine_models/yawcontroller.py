@@ -34,7 +34,7 @@ class YawController(TurbineModel):
         """The variables modified by this model."""
         return [FV.YAW, FV.YAWM]
 
-    def initialize(self, algo, verbosity=0, force=False):
+    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
         """
         Initialize the controller before iterations start.
 
@@ -42,8 +42,27 @@ class YawController(TurbineModel):
         ----------
         algo : foxes.algorithms.sequential.Sequential
             The sequential algorithm instance
+        loaded_data: dict, optional
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
+        force: bool
+            Overwrite existing data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        loaded_data: dict
+            The loaded data, containing keys "coords", "data_vars", and "extra_data".
+            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
+            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and "extra_data", a dict with non-array additional data.
         """
-        super().initialize(algo, verbosity=verbosity, force=force)
+        loaded_data = super().initialize(
+            algo, loaded_data=loaded_data, force=force, verbosity=verbosity
+        )
 
         n_turbines = algo.n_turbines
 
@@ -55,6 +74,7 @@ class YawController(TurbineModel):
         self._targetyaw = np.full((n_turbines), np.nan, dtype=config.dtype_double)
         self._windowstart = np.zeros((n_turbines), dtype=config.dtype_int)
         # self.__once_done = set()
+        return loaded_data
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """
