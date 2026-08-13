@@ -54,6 +54,7 @@ class MesoMicroField(States):
         output_vars=None,
         fixed_vars={},
         check_nans=True,
+        apply_blending=True,
         **kwargs,
     ):
         """
@@ -97,6 +98,7 @@ class MesoMicroField(States):
         self.fixed_vars = fixed_vars
         self.check_nans = check_nans
         self.ref_height = ref_height
+        self.apply_blending = apply_blending
 
         self.ref_points = None
         if ref_points is not None:
@@ -530,16 +532,13 @@ class MesoMicroField(States):
         ref_points = mdata[self.REF_POINTS]
         n_bins = wd_bin_centre.shape[0]
         n_points = len(ref_points)
+        n_tpts = tdata.n_targets * tdata.n_tpoints
         ovars = self.output_point_vars(algo)
 
         assert (
-            FV.WD in ovars
-            and FV.WS in ovars
-            and FV.U not in ovars
-            and FV.V not in ovars
-            and FV.UV not in ovars
-        ), (
-            f"States '{self.name}': Output variables must include '{FV.WD}', '{FV.WS}' and '{FV.UV}', and must not include '{FV.U}' or '{FV.V}', got {ovars}"
+            (FV.WD in ovars and FV.WS in ovars) or (FV.U in ovars and FV.V in ovars)
+        ) and FV.UV not in ovars, (
+            f"States '{self.name}': Output variables must include either '{FV.WD}' and '{FV.WS}' or '{FV.U}' and '{FV.V}', and must not include '{FV.UV}', got {ovars}"
         )
 
         # evaluate reference point:
@@ -589,39 +588,59 @@ class MesoMicroField(States):
                 f"States '{self.name}': Reference point states '{self.meso_states.name}' have states that do not match any local wind direction sectors of field states '{self.micro_states.name}'"
             )
 
-        print("HERE MESOMICRO CALC")
+        # prepare states mapping, either with or without blending between wind direction sectors:
+        if self.apply_blending:
+            # compute blending weights:
+            bs, b0, bp = np.where(sel)
+            dwd_sel = dwd[sel]
+            b1 = (
+                b0 + np.where(dwd_sel >= 0.0, 1, -1).astype(config.dtype_int)
+            ) % n_bins
+            dbins = np.abs(delta_wd(wd_bin_centre[b0, bp], wd_bin_centre[b1, bp]))
+            blend = np.zeros_like(dwd_sel, dtype=config.dtype_double)
+            np.divide(np.abs(dwd_sel), dbins, out=blend, where=dbins > 0.0)
+            bf0 = np.zeros((n_states, n_points), dtype=config.dtype_double)
+            bf0[bs, bp] = 1.0 - blend
+            del dwd_sel, dbins, blend, dwd, b0
+
+            # select second sector states:
+            sel2 = np.zeros_like(sel)
+            sel2[bs, b1, bp] = True
+            del bs, b1, bp
+
+            # blending requires evaluation of two sectors:
+            fstates = np.where(np.any(sel | sel2, axis=(0, 2)))[0]
+            fs2s_0 = [np.where(sel[:, fstates, pi])[1] for pi in range(n_points)]
+            fs2s_1 = [np.where(sel2[:, fstates, pi])[1] for pi in range(n_points)]
+            sector_maps = [fs2s_0, fs2s_1]
+            del fs2s_0, fs2s_1, sel, sel2
+
+        else:
+            # single sector case:
+            fstates = np.where(np.any(sel, axis=(0, 2)))[0]
+            fs2s = [np.where(sel[:, fstates, pi])[1] for pi in range(n_points)]
+            sector_maps = [fs2s]
+            bf0 = 1.0
+            del dwd, sel, fs2s
 
         # map meso to micro states:
-        fstates = np.where(np.any(sel, axis=(0, 2)))[0]
-        fs2s = [np.where(sel[:, fstates, pi])[1] for pi in range(n_points)]
         micro_ref_results = micro_ref_results[fstates, :, :]
-
-        # compute speedups:
-        speedups = {}
-        for v in ref_results.keys():
-            if v in micro_ref_vars:
-                i = micro_ref_vars.index(v)
-                speedups[v] = []
-                for pi in range(n_points):
-                    mires = micro_ref_results[fs2s[pi], pi, i]
-                    speedups[v].append(
-                        np.where(
-                            np.abs(mires) > 1.0e-10,
-                            ref_results[v][:, pi] / mires,
-                            0.0,
-                        )
-                    )
-                    del mires
-                # speedups[v] = np.stack(speedups[v], axis=-1)
+        n_bins = len(fstates)
 
         # create mdata:
         mdict = {c: mdata[c] for c in micro_coords0}
         mdims = {c: (c,) for c in micro_coords0}
         mdict.update({v: mdata[v] for v in micro_vars0})
         mdims.update({v: mdata.dims[v] for v in micro_vars0})
+        if FC.STATE in mdict:
+            mdict[FC.STATE] = mdict[FC.STATE][fstates]
+        else:
+            mdict[FC.STATE] = fstates
+        mdims[FC.STATE] = (FC.STATE,)
         for k in mdims.keys():
             if len(mdims[k]) > 0 and mdims[k][0] == self.STATE0:
                 mdims[k] = (FC.STATE,) + mdims[k][1:]
+                mdict[k] = mdict[k][fstates, ...]
         hmdata = MData(
             data=mdict,
             dims=mdims,
@@ -646,35 +665,20 @@ class MesoMicroField(States):
 
         # run field states calculation:
         micro_results = self.micro_states.calculate(algo, hmdata, hfdata, htdata)
-        del hmdata, hfdata, htdata
-
-        # apply speedups wrt each reference point:
-        n_tpts = tdata.n_targets * tdata.n_tpoints
         micro_results_vrs = list(micro_results.keys())
-        for v in micro_results_vrs:
-            d = micro_results.pop(v).reshape(n_bins, n_tpts)
-            micro_results[v] = np.zeros((n_states, n_tpts, n_points), dtype=d.dtype)
-            for pi in range(n_points):
-                micro_results[v][:, :, pi] = d[fs2s[pi], :]
-                if v in speedups.keys():
-                    print(
-                        "HERE APPLY SPPEDUP",
-                        v,
-                        pi,
-                        micro_results[v][..., pi].shape,
-                        speedups[v][pi][:, None].shape,
-                    )
-                    micro_results[v][:, :, pi] *= speedups[v][pi][:, None]
-            del d
-        del speedups
-        micro_results = np.stack(list(micro_results.values()), axis=-1)
-        print("HERE MICRO RES A", micro_results_vrs, micro_results.shape)
+        micro_results = np.stack(
+            list(micro_results.values()), axis=-1
+        )  # dims (n_bins, n_tpts, n_points, n_vrs)
+        n_vrs = len(micro_results_vrs)
+        del hmdata, hfdata, htdata
 
         # replace WS, WD by U, V:
         if FV.U in micro_results_vrs or FV.V in micro_results_vrs:
             assert FV.U in micro_results_vrs and FV.V in micro_results_vrs, (
                 f"States '{self.name}': Field states '{self.micro_states.name}' must provide both '{FV.U}' and '{FV.V}', got {micro_results_vrs}"
             )
+            iu = micro_results_vrs.index(FV.U)
+            iv = micro_results_vrs.index(FV.V)
         else:
             assert FV.WS in micro_results_vrs and FV.WD in micro_results_vrs, (
                 f"States '{self.name}': Field states '{self.micro_states.name}' must provide both '{FV.WS}' and '{FV.WD}', got {micro_results_vrs}"
@@ -692,7 +696,47 @@ class MesoMicroField(States):
             micro_results_vrs[iu] = FV.U
             micro_results_vrs[iv] = FV.V
             del uv
-        print("HERE MICRO RES B", micro_results_vrs, micro_results.shape)
+
+        # evaluate sectors:
+        mires = np.zeros((n_states, n_tpts, n_points, n_vrs), dtype=config.dtype_double)
+        for bi, fs2s in enumerate(sector_maps):
+            # sector weight:
+            weight = bf0 if bi == 0 else (1.0 - bf0)
+
+            # compute speedups:
+            speedups = {}
+            for v in ref_results.keys():
+                if v in micro_ref_vars:
+                    i = micro_ref_vars.index(v)
+                    speedups[v] = []
+                    for pi in range(n_points):
+                        mres = micro_ref_results[fs2s[pi], pi, i]
+                        speedups[v].append(
+                            np.where(
+                                np.abs(mres) > 1.0e-10,
+                                ref_results[v][:, pi] / mres,
+                                0.0,
+                            )
+                        )
+                        del mres
+            if FV.WS in speedups.keys():
+                speedups[FV.U] = speedups[FV.WS]
+                speedups[FV.V] = speedups[FV.WS]
+
+            # apply speedups wrt each reference point:
+            for i, v in enumerate(micro_results_vrs):
+                d = micro_results[..., i].reshape(n_bins, n_tpts)
+                for pi in range(n_points):
+                    a = d[fs2s[pi], :]
+                    if v in speedups.keys():
+                        a *= speedups[v][pi][:, None]
+                    w = weight[:, pi, None] if self.apply_blending else weight
+                    mires[:, :, pi, i] += w * a
+                    del a, w
+                del d
+            del speedups
+        micro_results = mires  # now with dims (n_states, n_tpts, n_points, n_vrs)
+        del mires
 
         # prepare ref point selection:
         refw = np.zeros((n_points, n_points), dtype=config.dtype_double)
@@ -720,13 +764,6 @@ class MesoMicroField(States):
             vrs=refv,
             state_indices=mdata.get(FC.STATE, None),
         )
-        print(
-            "HERE B",
-            refw.shape,
-            points.shape,
-            refw[up2p, :].shape,
-            (n_states, n_tpts, 2),
-        )
         if up2p is not None:
             refw = refw[up2p, :].reshape(n_states, n_tpts, n_points)
             sinds = np.arange(n_states)
@@ -734,12 +771,9 @@ class MesoMicroField(States):
             del sinds, up2p
         else:
             refw = refw[None, ...]
-        print("HERE B", refw.shape)
-        print(refw[0, 0], np.sum(refw, axis=-1))
 
         # apply mixing weights:
         micro_results = np.einsum("sprv,spr->spv", micro_results, refw)
-        print("HERE MICRO RES C", micro_results_vrs, micro_results.shape)
 
         def _get_data(v, out):
             """Helper function for output data extraction"""
@@ -769,7 +803,6 @@ class MesoMicroField(States):
         # collect output:
         out = {}
         for v in ovars:
-            print("ADDING TO OUT", v)
             if v in out:
                 pass
             elif v in micro_results_vrs:
@@ -808,8 +841,5 @@ class MesoMicroField(States):
                 raise KeyError(
                     f"States '{self.name}': Output variable '{v}' not found in field states variables {micro_results_vrs} or reference point states variables {list(ref_results.keys())}"
                 )
-
-        print("\nDONE", {v: d.shape for v, d in out.items()})
-        quit()
 
         return out

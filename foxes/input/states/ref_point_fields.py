@@ -486,10 +486,15 @@ class SectorSimRefPointField(States):
 
             # compute blending weights:
             b0 = np.where(sel)[1]
-            b1 = (b0 + np.sign(dwd[sel]).astype(config.dtype_int)) % n_bins
-            bf0 = np.abs(dwd[sel]) / np.abs(
-                delta_wd(wd_bin_centre[b0], wd_bin_centre[b1])
-            )
+            dwd_sel = dwd[sel]
+            b1 = (
+                b0 + np.where(dwd_sel >= 0.0, 1, -1).astype(config.dtype_int)
+            ) % n_bins
+            dbins = np.abs(delta_wd(wd_bin_centre[b0], wd_bin_centre[b1]))
+            blend = np.zeros_like(dwd_sel, dtype=config.dtype_double)
+            np.divide(np.abs(dwd_sel), dbins, out=blend, where=dbins > 0.0)
+            bf0 = 1.0 - blend
+            del dwd_sel, dbins, blend
             del dwd, b0
 
             # select second sector states:
@@ -639,6 +644,10 @@ class SectorSimRefPointField(States):
                     ):
                         tke = _get_data(FV.TKE)
                         ws = _get_data(FV.WS)
+                        if FV.TKE in speedups.keys():
+                            tke = speedups[FV.TKE][:, None, None] * tke
+                        if FV.WS in speedups.keys():
+                            ws = speedups[FV.WS][:, None, None] * ws
                         w = (
                             weight[:, None, None]
                             if isinstance(weight, np.ndarray)
@@ -653,6 +662,10 @@ class SectorSimRefPointField(States):
                     ):
                         p = _get_data(FV.P)
                         T = _get_data(FV.T)
+                        if FV.P in speedups.keys():
+                            p = speedups[FV.P][:, None, None] * p
+                        if FV.T in speedups.keys():
+                            T = speedups[FV.T][:, None, None] * T
                         w = (
                             weight[:, None, None]
                             if isinstance(weight, np.ndarray)
