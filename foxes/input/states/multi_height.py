@@ -3,7 +3,7 @@ import pandas as pd
 from xarray import Dataset, open_dataset
 from scipy.interpolate import interp1d
 
-from foxes.core import Algorithm, FData, MData, States, TData
+from foxes.core import Algorithm, FData, LoadedData, MData, States, TData
 from foxes.utils import PandasFileHelper
 from foxes.data import STATES
 from foxes.config import config, get_input_path
@@ -46,14 +46,14 @@ class MultiHeightStates(States):
         Whether to check for NaN values in the data
     interpolate_nans_pars: dict, optional
         Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
-    RDICT: dict
+    RDICT: dict[str, int | list[int]]
         Default pandas file reading parameters
 
     :group: input.states
 
     """
 
-    RDICT = {"index_col": 0}
+    RDICT: dict[str, int | list[int]] = {"index_col": 0}
 
     def __init__(
         self,
@@ -200,7 +200,7 @@ class MultiHeightStates(States):
                     )
             return cls
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(self, algo, loaded_data: LoadedData, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -212,7 +212,7 @@ class MultiHeightStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -278,7 +278,7 @@ class MultiHeightStates(States):
                 f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {data.columns}"
             )
 
-        cols = []
+        cols: list[str] = []
         cmap = {}
         self._solo = {}
         for v in self.ovars:
@@ -429,9 +429,9 @@ class MultiHeightStates(States):
         """
         return self.ovars
 
-    def calculate(
+    def calculate(  # type: ignore[override]
         self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
-    ) -> dict[str, np.ndarray]:
+    ) -> dict[str, np.ndarray]:  # type: ignore[override]
         """
         The main model calculation.
 
@@ -629,7 +629,7 @@ class MultiHeightNCStates(MultiHeightStates):
         self.xr_read_pars.setdefault("engine", config.nc_engine)
         self._format_times_func = format_times_func
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(self, algo, loaded_data: LoadedData, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -641,7 +641,7 @@ class MultiHeightNCStates(MultiHeightStates):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;

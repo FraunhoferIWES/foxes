@@ -1,7 +1,16 @@
 import numpy as np
 
 from foxes.config import config
-from foxes.core import States, MData, FData, TData, run_with_engine, WindFarm, Turbine
+from foxes.core import (
+    LoadedData,
+    States,
+    MData,
+    FData,
+    TData,
+    run_with_engine,
+    WindFarm,
+    Turbine,
+)
 from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv, uv2wd
 from foxes.algorithms import Downwind
 import foxes.constants as FC
@@ -154,7 +163,7 @@ class SectorSimRefPointField(States):
                 f"States '{self.name}': ref_point_is_lonlat is False, but utm_zone is given: {self.__utm_zone}. This is not allowed."
             )
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(self, algo, loaded_data: LoadedData, force=False, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -166,7 +175,7 @@ class SectorSimRefPointField(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -265,6 +274,7 @@ class SectorSimRefPointField(States):
 
             # create fdata and tdata:
             n_states = mdata.n_states
+            assert n_states is not None
             fdata = FData.from_sizes(n_states=n_states, n_turbines=halgo.n_turbines)
             points = np.zeros((n_states, 1, 3), dtype=self.ref_point.dtype)
             points[:] = self.ref_point[None, None, :]

@@ -1,5 +1,6 @@
 import numpy as np
-from foxes.core import MData
+from typing import Any, cast
+from foxes.core import LoadedData, MData
 from scipy.interpolate import griddata
 from scipy.spatial import QhullError
 
@@ -131,7 +132,7 @@ class PointCloudData(DatasetStates):
 
     def get_grid_points(
         self,
-        loaded_data: dict[str, dict[str, object]] | None = None,
+        loaded_data: LoadedData | None = None,
         mdata: MData | None = None,
         all_heights: bool = True,
         height: float | None = None,
@@ -141,7 +142,7 @@ class PointCloudData(DatasetStates):
 
         Parameters
         ----------
-        loaded_data: dict, optional
+        loaded_data: LoadedData, optional
             The loaded data dictionary.
         mdata: foxes.core.MData, optional
             The model data.
@@ -167,7 +168,7 @@ class PointCloudData(DatasetStates):
             f"States '{self.name}': Point-cloud states do not support height selection"
         )
 
-        source = mdata if mdata is not None else loaded_data
+        source = cast(dict[str, Any], mdata if mdata is not None else loaded_data)
         point_coord = self.var(FC.POINT)
         if point_coord not in source and FC.POINT in source:
             point_coord = FC.POINT
@@ -330,11 +331,11 @@ class PointCloudData(DatasetStates):
                 f"States '{self.name}': Expecting one point-cloud coordinate array, got {gpts}"
             )
             gpts = gpts[0]
-        gpts = np.asarray(gpts)
+        gpts_array: np.ndarray = np.asarray(gpts)
         pts = np.asarray(pts)
 
-        if gpts.ndim == 1:
-            gpts = gpts[:, None]
+        if gpts_array.ndim == 1:
+            gpts_array = gpts_array[:, None]
         if pts.ndim == 1:
             pts = pts[None, :]
 
@@ -342,21 +343,21 @@ class PointCloudData(DatasetStates):
         if not self.check_input_nans:
             sel = np.any(np.isnan(d), axis=tuple(range(1, d.ndim)))
             if np.any(sel):
-                gpts = gpts[~sel]
+                gpts_array = gpts_array[~sel]
                 d = d[~sel]
 
         # interpolate
         try:
-            results = griddata(gpts, d, pts, **ipars)
+            results = griddata(gpts_array, d, pts, **ipars)
         except QhullError:
             if ipars.get("method", "linear") == "nearest":
                 raise
             fpars = dict(ipars)
             fpars["method"] = "nearest"
-            results = griddata(gpts, d, pts, **fpars)
+            results = griddata(gpts_array, d, pts, **fpars)
 
         # check for NaN results:
-        self._check_nan(ipars, gpts, d, pts, idims, vrs, results)
+        self._check_nan(ipars, gpts_array, d, pts, idims, vrs, results)
 
         return results
 
@@ -686,7 +687,15 @@ class TurbinePointCloud(DatasetStates):
             FC.TURBINE: self.turbine_coord,
         }
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(  # type: ignore[override]
+        self,
+        algo,
+        loaded_data: LoadedData,
+        force=False,
+        bounds_extra_space=None,
+        height_bounds=None,
+        verbosity=0,
+    ):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -698,8 +707,10 @@ class TurbinePointCloud(DatasetStates):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData,
             Data that has already been loaded, to be extended by this function.
+        bounds_extra_space=None,
+        height_bounds=None,
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
@@ -724,7 +735,7 @@ class TurbinePointCloud(DatasetStates):
 
     def get_grid_points(
         self,
-        loaded_data: dict[str, dict[str, object]] | None = None,
+        loaded_data: LoadedData | None = None,
         mdata: MData | None = None,
         all_heights: bool = True,
         height: float | None = None,
@@ -762,7 +773,7 @@ class TurbinePointCloud(DatasetStates):
             f"States '{self.name}': Turbine point-cloud states do not support height selection"
         )
 
-        source = mdata if mdata is not None else loaded_data
+        source = cast(dict[str, Any], mdata if mdata is not None else loaded_data)
         if FV.TXYH in source:
             points = np.asarray(source[FV.TXYH])
         else:
@@ -829,24 +840,24 @@ class TurbinePointCloud(DatasetStates):
                 f"States '{self.name}': Expecting one turbine coordinate array, got {gpts}"
             )
             gpts = gpts[0]
-        gpts = np.asarray(gpts)
+        gpts_array: np.ndarray = np.asarray(gpts)
         pts = np.asarray(pts)
 
-        if gpts.ndim == 1:
-            gpts = gpts[:, None]
+        if gpts_array.ndim == 1:
+            gpts_array = gpts_array[:, None]
         if pts.ndim == 1:
             pts = pts[None, :]
 
         if (
-            gpts.ndim == 2
-            and gpts.shape[0] == 1
+            gpts_array.ndim == 2
+            and gpts_array.shape[0] == 1
             and pts.ndim == 2
-            and gpts.shape[1] == pts.shape[0]
+            and gpts_array.shape[1] == pts.shape[0]
         ):
             return d
 
         # special case of evaluation at turbine locations:
-        if np.allclose(gpts, pts):
+        if np.allclose(gpts_array, pts):
             return d
 
         # prepare interpolation parameters:
@@ -858,27 +869,30 @@ class TurbinePointCloud(DatasetStates):
         ipars.update(self.interp_pars)
 
         # normalize point shapes to the state-aware turbine grid:
-        if gpts.ndim == 2 and gpts.shape[-1] == 3:
-            gpts = gpts[None, ...]
+        if gpts_array.ndim == 2 and gpts_array.shape[-1] == 3:
+            gpts_array = gpts_array[None, ...]
         if pts.ndim == 2 and pts.shape[-1] == 3:
             pts = pts[None, ...]
-        if gpts.ndim == 3 and pts.ndim == 2:
-            pts = np.broadcast_to(pts[None, ...], gpts.shape)
+        if gpts_array.ndim == 3 and pts.ndim == 2:
+            pts = np.broadcast_to(pts[None, ...], gpts_array.shape)
         elif (
-            gpts.ndim == 3 and pts.ndim == 3 and pts.shape[0] == 1 and gpts.shape[0] > 1
+            gpts_array.ndim == 3
+            and pts.ndim == 3
+            and pts.shape[0] == 1
+            and gpts_array.shape[0] > 1
         ):
-            pts = np.broadcast_to(pts, gpts.shape)
+            pts = np.broadcast_to(pts, gpts_array.shape)
 
-        n_states, n_turbines = gpts.shape[:2]
-        if pts.shape != gpts.shape:
+        n_states, n_turbines = gpts_array.shape[:2]
+        if pts.shape != gpts_array.shape:
             raise ValueError(
-                f"States '{self.name}': Expecting evaluation points shape {gpts.shape}, got {pts.shape}"
+                f"States '{self.name}': Expecting evaluation points shape {gpts_array.shape}, got {pts.shape}"
             )
 
         gpts2 = np.concatenate(
             [
                 np.arange(n_states)[:, None, None] * np.ones((n_states, n_turbines, 1)),
-                gpts,
+                gpts_array,
             ],
             axis=-1,
         )
@@ -912,7 +926,9 @@ class TurbinePointCloud(DatasetStates):
             fpars["method"] = "nearest"
             results = griddata(gpts2, d2, epts, **fpars)
 
-        PointCloudData._check_nan(self, ipars, gpts2, d2, epts, idims, vrs, results)
+        PointCloudData._check_nan(
+            cast(PointCloudData, self), ipars, gpts2, d2, epts, idims, vrs, results
+        )
 
         results = results.reshape(n_states, n_turbines, results.shape[-1])
         return results

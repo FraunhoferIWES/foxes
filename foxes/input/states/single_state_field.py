@@ -5,7 +5,7 @@ from pandas import DataFrame
 from xarray import Dataset, open_dataset
 from typing import Any, cast
 
-from foxes.core import States
+from foxes.core import LoadedData, States
 from foxes.config import config, get_input_path
 from foxes.data import STATES
 import foxes.variables as FV
@@ -154,7 +154,7 @@ class SingleStateField(States):
         return self._data
 
     def load_data(
-        self, algo, loaded_data, force: bool = False, verbosity: int = 1
+        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 1
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
@@ -167,7 +167,7 @@ class SingleStateField(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;

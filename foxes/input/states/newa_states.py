@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from foxes.core import MData
+from foxes.core import LoadedData, MData
 from scipy.interpolate import griddata
 
 from foxes.utils.utm_utils import from_lonlat
@@ -160,7 +160,7 @@ class NEWAStates(DatasetStates):
         data,
         bounds_extra_space=None,
         height_bounds=None,
-        loaded_data=None,
+        loaded_data: LoadedData | None = None,
         verbosity=0,
     ):
         """
@@ -177,7 +177,7 @@ class NEWAStates(DatasetStates):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        loaded_data: dict, optional
+        loaded_data: LoadedData, optional
             If given, optionally add to this loaded data dict with entries
             {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
@@ -318,7 +318,7 @@ class NEWAStates(DatasetStates):
 
     def get_grid_points(
         self,
-        loaded_data: dict | None = None,
+        loaded_data: LoadedData | None = None,
         mdata: MData | None = None,
         all_heights: bool = True,
         height: float | None = None,
@@ -328,7 +328,7 @@ class NEWAStates(DatasetStates):
 
         Parameters
         ----------
-        loaded_data: dict, optional
+        loaded_data: LoadedData, optional
             The loaded data dictionary
         mdata: foxes.core.MData, optional
             The model data
@@ -372,6 +372,7 @@ class NEWAStates(DatasetStates):
                 h = np.atleast_1d(height)
 
         else:
+            assert loaded_data is not None
             assert self.XY in loaded_data["data_vars"], (
                 f"States '{self.name}': Missing coordinates '{self.XY}' in loaded_data, got {list(loaded_data['data_vars'].keys())}"
             )

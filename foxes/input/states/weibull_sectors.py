@@ -8,6 +8,7 @@ from xarray import Dataset, open_dataset
 from typing import Any
 
 from foxes.data import STATES
+from foxes.core import LoadedData
 from foxes.utils import PandasFileHelper, weibull_weights
 from foxes.config import config, get_input_path
 import foxes.variables as FV
@@ -297,7 +298,7 @@ class WeibullSectors(StatesTable):
         return data
 
     def load_data(
-        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
@@ -310,7 +311,7 @@ class WeibullSectors(StatesTable):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;

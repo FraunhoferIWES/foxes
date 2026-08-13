@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from typing import Any
 
-from foxes.core import Model, States, VerticalProfile
+from foxes.core import LoadedData, Model, States, VerticalProfile
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -94,7 +94,11 @@ class SingleStateStates(States):
         return list(self._profiles.values())
 
     def initialize(
-        self, algo, loaded_data=None, force: bool = False, verbosity: int = 0
+        self,
+        algo,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
     ):
         """
         Initializes the model.
@@ -103,7 +107,7 @@ class SingleStateStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data: LoadedData, optional
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -115,7 +119,7 @@ class SingleStateStates(States):
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data: LoadedData
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;

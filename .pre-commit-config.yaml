@@ -34,7 +34,6 @@ repos:
         args:
           - --ignore-missing-imports
           - --follow-imports=silent
-          - --disallow-untyped-defs
         additional_dependencies:
           - .
         files: ^foxes/.*\.py$

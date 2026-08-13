@@ -6,7 +6,7 @@ from xarray import Dataset
 from pathlib import Path
 from typing import Any
 
-from foxes.core import States, VerticalProfile, Model
+from foxes.core import LoadedData, States, VerticalProfile, Model
 from foxes.utils import PandasFileHelper, read_tab_file
 from foxes.data import STATES
 from foxes.config import config, get_input_path
@@ -147,7 +147,11 @@ class StatesTable(States):
         self.states_loc = states_loc
 
     def initialize(
-        self, algo, loaded_data=None, force: bool = False, verbosity: int = 0
+        self,
+        algo,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
     ):
         """
         Initializes the model.
@@ -156,7 +160,7 @@ class StatesTable(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data: LoadedData, optional
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -196,7 +200,7 @@ class StatesTable(States):
         return list(self._profiles.values())
 
     def load_data(
-        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
     ) -> None:
         """
         Load and/or create all data required for model calculations.
@@ -207,7 +211,7 @@ class StatesTable(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -546,7 +550,7 @@ class TabStates(StatesTable):
         )
 
     def load_data(
-        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.

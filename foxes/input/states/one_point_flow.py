@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import interpn
 from typing import Any, cast
 
-from foxes.core import States, Model
+from foxes.core import LoadedData, States, Model
 from foxes.utils import uv2wd
 from foxes.models.wake_frames.timelines import Timelines
 from foxes.config import config
@@ -106,7 +106,7 @@ class OnePointFlowStates(States):
         return [self.base_states]
 
     def load_data(
-        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
@@ -119,7 +119,7 @@ class OnePointFlowStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -145,7 +145,7 @@ class OnePointFlowStates(States):
         # pre-calc data:
         self.WEIGHT = self.var(FV.WEIGHT)
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
-        loaded_data["data_vars"][self.WEIGHT] = Timelines._precalc_data(
+        precalc_data = Timelines._precalc_data(
             cast(Timelines, self),
             algo,
             self.base_states,
@@ -153,6 +153,8 @@ class OnePointFlowStates(States):
             verbosity,
             needs_res=True,
         )
+        assert precalc_data is not None
+        loaded_data["data_vars"][self.WEIGHT] = precalc_data
 
     def size(self) -> int:
         """

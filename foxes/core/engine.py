@@ -171,12 +171,7 @@ class Engine(ABC):
         self.progress_bar = progress_bar
         self.verbosity = verbosity
 
-        try:
-            self._n_procs = (
-                n_procs if n_procs is not None else os.process_cpu_count() or 1
-            )
-        except AttributeError:
-            self._n_procs = os.cpu_count() or 1
+        self._n_procs = n_procs if n_procs is not None else os.cpu_count() or 1
         self._n_workers = max(self._n_procs - 1, 1)
 
         self.__name = type(self).__name__

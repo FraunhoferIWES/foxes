@@ -93,8 +93,12 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
         counter = algo.counter
         N = counter + 1
+        assert wframe._dt is not None
         dt = wframe._dt[counter] if counter < len(wframe._dt) else wframe._dt[-1]
 
+        assert wframe._traces_p is not None
+        assert wframe._traces_v is not None
+        assert self._data is not None
         self._data.append(
             (
                 dt,
@@ -117,6 +121,7 @@ class SeqWakeDebugPlugin(SequentialPlugin):
             The (figure, artists) tuple
 
         """
+        assert self._data is not None
         while len(self._data):
             dt, pts, v = self._data.pop(0)
 

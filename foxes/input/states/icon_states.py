@@ -1,6 +1,6 @@
 import numpy as np
 from pandas import read_csv
-from foxes.core import FData, MData
+from foxes.core import FData, LoadedData, MData
 
 from foxes.data import MODEL_DATA
 import foxes.variables as FV
@@ -125,7 +125,15 @@ class ICONStates(LatLonFieldData):
             ds = ds.assign_coords({self._cmap[self.H_TKE]: self.__icon_heights_TKE[c]})
         return self._prepr0(ds) if self._prepr0 is not None else ds
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(  # type: ignore[override]
+        self,
+        algo,
+        loaded_data: LoadedData,
+        force=False,
+        bounds_extra_space=None,
+        height_bounds=None,
+        verbosity=0,
+    ):
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -137,7 +145,7 @@ class ICONStates(LatLonFieldData):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -202,9 +210,7 @@ class ICONStates(LatLonFieldData):
                 assert FV.H not in dims, (
                     f"States {self.name}: Cannot have both {FV.H} and {self.H_TKE} in dims for variables {vrs}, got dims = {dims}"
                 )
-                dims_new = list(dims)
-                dims_new[dims.index(self.H_TKE)] = FV.H
-                dims_new = tuple(dims_new)
+                dims_new = tuple(FV.H if dim == self.H_TKE else dim for dim in dims)
                 data[dims_new] = (vrs, d)
         return data, weights
 

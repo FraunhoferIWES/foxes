@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from foxes.core import MData
+from foxes.core import LoadedData, MData
 
 from foxes.utils import weibull_weights, get_utm_zone, to_lonlat, from_lonlat
 from foxes.config import config, get_output_path
@@ -122,7 +122,7 @@ class FieldData(DatasetStates):
         data,
         bounds_extra_space=None,
         height_bounds=None,
-        loaded_data=None,
+        loaded_data: LoadedData | None = None,
         verbosity=0,
     ):
         """
@@ -139,7 +139,7 @@ class FieldData(DatasetStates):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        loaded_data: dict, optional
+        loaded_data: LoadedData, optional
             If given, optionally add to this loaded data dict with entries
             {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
@@ -300,7 +300,7 @@ class LatLonFieldData(DatasetStates):
         data,
         bounds_extra_space=None,
         height_bounds=None,
-        loaded_data=None,
+        loaded_data: LoadedData | None = None,
         verbosity=0,
     ):
         """
@@ -317,7 +317,7 @@ class LatLonFieldData(DatasetStates):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        loaded_data: dict, optional
+        loaded_data: LoadedData, optional
             If given, optionally add to this loaded data dict with entries
             {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int

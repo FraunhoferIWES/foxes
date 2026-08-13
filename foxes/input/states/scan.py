@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from typing import Any
 
-from foxes.core import States
+from foxes.core import LoadedData, States
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -40,7 +40,7 @@ class ScanStates(States):
         self.scans = {v: np.asarray(d) for v, d in scans.items()}
 
     def load_data(
-        self, algo, loaded_data, force: bool = False, verbosity: int = 0
+        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
@@ -53,7 +53,7 @@ class ScanStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;

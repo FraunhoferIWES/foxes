@@ -3,6 +3,7 @@ Abstract classes and core functionality.
 """
 
 from .model import Model as Model
+from .model import LoadedData as LoadedData
 from .data_calc_model import DataCalcModel as DataCalcModel
 from .wind_farm import WindFarm as WindFarm
 from .algorithm import Algorithm as Algorithm

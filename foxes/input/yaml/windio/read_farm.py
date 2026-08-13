@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
@@ -15,7 +17,7 @@ def read_turbine_types(
     ws_exp_P: int,
     ws_exp_ct: int,
     verbosity: int,
-) -> dict[int, TurbineType]:
+) -> dict[int, str]:
     """
     Reads the turbine type from windio
 
@@ -154,9 +156,9 @@ def read_turbine_types(
 
 def read_layout(
     lname: str,
-    ldict: dict,
+    ldict: Dict[str, Any],
     farm: WindFarm,
-    ttypes: dict[int, TurbineType],
+    ttypes: dict[int, str],
     fname: str | None = None,
     verbosity: int = 1,
 ) -> None:
@@ -270,10 +272,12 @@ def read_farm(wio_dict: dict, mbook: ModelBook, verbosity: int) -> WindFarm:
         if isinstance(wfarm, dict):
             if "coordinates" in wfarm:
                 wfarm = {"0": wfarm}
-            layouts = Dict(wfarm, _name=wio_farm.name + ".layouts")
+            layouts: Dict[str, Any] = Dict(wfarm, _name=wio_farm.name + ".layouts")
         else:
-            layouts = {str(i): lf for i, lf in enumerate(wfarm)}
-            layouts = Dict(layouts, _name=wio_farm.name + ".layouts")
+            layouts = Dict(
+                {str(i): lf for i, lf in enumerate(wfarm)},
+                _name=wio_farm.name + ".layouts",
+            )
         if verbosity > 2:
             print("    Reading layouts")
             print("      Contents:", [k for k in layouts.keys()])
@@ -312,13 +316,16 @@ def read_n_turbines(wio_dict: dict) -> int:
     """
     wio_farm = wio_dict["wind_farm"]
     wfarm = wio_farm["layouts"]
+    layouts: Dict[str, Any]
     if isinstance(wfarm, dict):
         if "coordinates" in wfarm:
             wfarm = {"0": wfarm}
         layouts = Dict(wfarm, _name=wio_farm.name + ".layouts")
     else:
-        layouts = {str(i): lf for i, lf in enumerate(wfarm)}
-        layouts = Dict(layouts, _name=wio_farm.name + ".layouts")
+        layouts = Dict(
+            {str(i): lf for i, lf in enumerate(wfarm)},
+            _name=wio_farm.name + ".layouts",
+        )
     n_turbines = 0
     for ldict in layouts.values():
         n_turbines += len(ldict["coordinates"]["x"])

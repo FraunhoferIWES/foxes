@@ -5,9 +5,17 @@ import threading
 from copy import copy
 from scipy.interpolate import interpn
 from contextlib import nullcontext
-from typing import Any
+from typing import cast
 
-from foxes.core import Algorithm, FData, MData, States, TData, map_with_engine
+from foxes.core import (
+    Algorithm,
+    FData,
+    LoadedData,
+    MData,
+    States,
+    TData,
+    map_with_engine,
+)
 from foxes.utils import import_module
 from foxes.data import STATES, StaticData
 from foxes.utils.wind_dir import uv2wd, wd2uv
@@ -423,10 +431,6 @@ class DatasetStates(States):
         """Helper function to determine x/y bounds with extra space."""
         return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
 
-    def _find_xy_bounds(self, algo, bounds_extra_space):
-        """Helper function to determine x/y bounds with extra space."""
-        return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
-
     def _update_loaded_state_indices(self, loaded_data):
         """Store only non-default state indices in loaded data."""
         if self._inds is None:
@@ -447,7 +451,7 @@ class DatasetStates(States):
         data,
         bounds_extra_space=None,
         height_bounds=None,
-        loaded_data=None,
+        loaded_data: LoadedData | None = None,
         verbosity=0,
     ):
         """
@@ -464,7 +468,7 @@ class DatasetStates(States):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        loaded_data: dict, optional
+        loaded_data: LoadedData, optional
             If given, optionally add to this loaded data dict with entries
             {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity: int
@@ -830,10 +834,10 @@ class DatasetStates(States):
         for size in self._input_sizes:
             yield size
 
-    def load_data(
+    def load_data(  # type: ignore[override]
         self,
         algo,
-        loaded_data,
+        loaded_data: LoadedData,
         force=False,
         bounds_extra_space=None,
         height_bounds=None,
@@ -848,7 +852,7 @@ class DatasetStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: dict
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -1178,7 +1182,7 @@ class DatasetStates(States):
 
     def get_grid_points(
         self,
-        loaded_data: dict[str, dict[str, Any]] | None = None,
+        loaded_data: LoadedData | None = None,
         mdata: MData | None = None,
         all_heights: bool = True,
         height: float | None = None,
@@ -1237,6 +1241,7 @@ class DatasetStates(States):
                 h = np.atleast_1d(height)
 
         else:
+            assert loaded_data is not None
             assert X in loaded_data["coords"] and Y in loaded_data["coords"], (
                 f"States '{self.name}': Missing coordinates '{X}' and/or '{Y}' in loaded_data, got {list(loaded_data['coords'].keys())}"
             )
@@ -1299,14 +1304,16 @@ class DatasetStates(States):
             f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {self._cmap}"
         )
         n_states = mdata.n_states
-        data_keys = mdata.extra_data[self.META]["data_keys"]
+        metadata = mdata.extra_data[self.META]
+        assert metadata is not None
+        data_keys = metadata["data_keys"]
 
         # extract data from mdata
         weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
-        data = {}
+        data: dict[tuple[str, ...], tuple[list[str], np.ndarray]] = {}
         for DATA in data_keys:
             dims = mdata.dims[DATA]
-            vrs = (
+            vrs: list[str] = (
                 mdata[dims[-1]]
                 if isinstance(mdata[dims[-1]], list)
                 else mdata[dims[-1]].tolist()
@@ -1315,8 +1322,8 @@ class DatasetStates(States):
             for c in dims[:-1]:
                 c0 = self.unvar(c) if c not in [FC.STATE, FC.TURBINE] else c
                 dms.append(c0)
-            dms = tuple(dms + [dims[-1]])
-            data[dms] = (vrs, mdata[DATA].copy())
+            dims_new = cast(tuple[str, ...], tuple(dms + [dims[-1]]))
+            data[dims_new] = (vrs, mdata[DATA].copy())
 
         # adjust turbine order for purely turbine dependent data:
         mvd = []
@@ -1466,9 +1473,9 @@ class DatasetStates(States):
 
         return d
 
-    def calculate(
+    def calculate(  # type: ignore[override]
         self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
-    ) -> dict[str, np.ndarray]:
+    ) -> dict[str, np.ndarray]:  # type: ignore[override]
         """
         The main model calculation.
 
@@ -1632,10 +1639,14 @@ class DatasetStates(States):
                         raise NotImplementedError(
                             f"States '{self.name}': Unsupported dimension '{c}' in {dims} for interpolation of variables {vrs}"
                         )
-                pts = np.stack(pts, axis=-1) if len(pts) > 0 else None
+                interpolation_points: np.ndarray | None = (
+                    np.stack(pts, axis=-1) if len(pts) > 0 else None
+                )
 
                 # interpolate:
-                d = self.interpolate_data(mdata, idims, d, pts, vrs, times)
+                d = self.interpolate_data(
+                    mdata, idims, d, interpolation_points, vrs, times
+                )
 
                 # move state dimension back to front:
                 if dims[0] == FC.STATE:
