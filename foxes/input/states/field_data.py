@@ -661,7 +661,7 @@ class WeibullField(FieldData):
 
         # translate binned data to states
         self._N = n_ws * n_wd
-        self._inds = None
+        self._inds = np.arange(self._N, dtype=config.dtype_int)
         data = {
             FV.WS: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
             FV.WD: np.zeros((n_ws, n_wd), dtype=config.dtype_double),

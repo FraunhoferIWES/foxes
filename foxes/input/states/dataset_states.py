@@ -426,6 +426,20 @@ class DatasetStates(States):
         """Helper function to determine x/y bounds with extra space."""
         return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
 
+    def _update_loaded_state_indices(self, loaded_data):
+        """Store only non-default state indices in loaded data."""
+        if self._inds is None:
+            return
+
+        inds = np.asarray(self._inds)
+        is_default = np.issubdtype(inds.dtype, np.number) and np.array_equal(
+            inds, np.arange(self._N, dtype=inds.dtype)
+        )
+        if is_default:
+            loaded_data["coords"].pop(FC.STATE, None)
+        else:
+            loaded_data["coords"][FC.STATE] = self._inds
+
     def preproc_first(
         self,
         algo,
@@ -722,7 +736,14 @@ class DatasetStates(States):
                         join="exact",
                         combine_attrs="drop",
                     )
-                self._inds = data[states_coord].to_numpy()
+                if self._inds is None or len(self._inds) != data.sizes[states_coord]:
+                    self._inds = (
+                        np.arange(self._N)
+                        if self._N is not None
+                        else data[states_coord].to_numpy()
+                    )
+                else:
+                    self._inds = data[states_coord].to_numpy()
                 self._N = len(self._inds)
 
             elif self.load_mode == "fly":
@@ -763,7 +784,14 @@ class DatasetStates(States):
                 loaded_data=loaded_data,
                 verbosity=verbosity,
             )
-            self._inds = data[states_coord].to_numpy()
+            if self._inds is None or len(self._inds) != data.sizes[states_coord]:
+                self._inds = (
+                    np.arange(self._N)
+                    if self._N is not None
+                    else data[states_coord].to_numpy()
+                )
+            else:
+                self._inds = data[states_coord].to_numpy()
             self._N = len(self._inds)
             self._vars = {v: self.var2ncvar.get(v, v) for v in self.variables}
             self._vars = _update_vars(data, self._vars)
@@ -784,13 +812,7 @@ class DatasetStates(States):
                 f"States '{self.name}': State indices are not sorted ascending: {self._inds[i - 1]} > {self._inds[i]} at position {i - 1}"
             )
 
-        # store state indices, if not already present:
-        if (
-            FC.STATE not in loaded_data["coords"].keys()
-            and self._inds is not None
-            and not np.all(self._inds == np.arange(self._N))
-        ):
-            loaded_data["coords"][FC.STATE] = self._inds
+        self._update_loaded_state_indices(loaded_data)
 
         return data
 
@@ -875,6 +897,8 @@ class DatasetStates(States):
                 height_bounds=height_bounds,
                 verbosity=verbosity,
             )
+
+            self._update_loaded_state_indices(loaded_data)
 
             vmap = {FC.STATE: FC.STATE, FC.TURBINE: FC.TURBINE}
             for c, d in coords.items():
@@ -1586,11 +1610,10 @@ class DatasetStates(States):
                         pts.append(points_data["up"][..., 0])
                         pts.append(points_data["up"][..., 1])
                     elif c == FC.TURBINE:
-                        raise NotImplementedError()
-                        points_data = _analyze_points(has_p, has_h, hcoords)
+                        points_data = _analyze_points(has_p, has_h)
                         pts.append(points_data["up"][..., 0])
                         pts.append(points_data["up"][..., 1])
-                        if hcoords[FC.TURBINE].shape[-1] == 3:
+                        if points_data["up"].shape[-1] >= 3:
                             pts.append(points_data["up"][..., 2])
                     elif c == FC.STATE:
                         idims.remove(FC.STATE)
