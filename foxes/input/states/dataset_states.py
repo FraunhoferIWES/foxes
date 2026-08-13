@@ -3,8 +3,10 @@ import pandas as pd
 import xarray as xr
 import threading
 from copy import copy
+from collections.abc import Callable, Generator
 from scipy.interpolate import interpn
 from contextlib import nullcontext
+from pathlib import Path
 from typing import cast
 
 from foxes.core import (
@@ -27,20 +29,26 @@ import foxes.constants as FC
 # Serialize netcdf4 file opens to avoid HDF5 attribute access errors in threaded reads.
 _NETCDF4_OPEN_LOCK = threading.Lock()
 
+DatasetSelection = dict[str, object]
+PreprocessDataset = Callable[[xr.Dataset], xr.Dataset]
+InterpolationParameters = dict[str, bool | float | str | None]
+DataGroup = tuple[str, list[str], list[np.ndarray]]
+PreparedDataGroup = tuple[str, list[str], np.ndarray]
+
 
 def _read_nc_file(
-    fpath,
-    coords,
-    vars,
-    nc_engine,
-    sel,
-    isel,
-    mode,
-    drop_vars=None,
-    sort=False,
-    check_input_nans=True,
-    preprocess=None,
-):
+    fpath: Path,
+    coords: list[str],
+    vars: list[str] | None,
+    nc_engine: str | None,
+    sel: DatasetSelection | None,
+    isel: DatasetSelection | None,
+    mode: str,
+    drop_vars: list[str] | None = None,
+    sort: bool | list[str] | None = False,
+    check_input_nans: bool = True,
+    preprocess: PreprocessDataset | None = None,
+) -> xr.Dataset | np.ndarray | None:
     """Helper function for nc file reading"""
     open_lock = _NETCDF4_OPEN_LOCK if nc_engine == "netcdf4" else nullcontext()
     with open_lock:
@@ -111,9 +119,9 @@ def _read_nc_file(
 
     if data is not None and mode != "minimal" and check_input_nans:
         for v, d in data.data_vars.items():
-            sel = np.isnan(d.to_numpy())
-            if sel.any():
-                i = tuple([j[0] for j in np.where(sel)])
+            nan_mask = np.isnan(d.to_numpy())
+            if nan_mask.any():
+                i = tuple([j[0] for j in np.where(nan_mask)])
                 print("\n\nError: NaN data found in input data:")
                 print(f"  File: {fpath}\n")
                 print(f"  Variable: {v}")
@@ -134,15 +142,15 @@ class DatasetStates(States):
 
     Attributes
     ----------
-    data_source: str or xarray.Dataset
+    data_source: str or pathlib.Path or xarray.Dataset
         The data or the file search pattern, should end with
         suffix '.nc'. One or many files.
     ovars: list of str
         The output variables
-    var2ncvar: dict
+    var2ncvar: dict[str, str]
         Mapping from variable names to variable names
         in the nc file
-    fixed_vars: dict
+    fixed_vars: dict[str, float]
         Uniform values for output variables, instead
         of reading from data
     time_format: str
@@ -150,11 +158,11 @@ class DatasetStates(States):
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-    height_bounds: tuple
+    height_bounds: tuple[float, float]
         The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-    sel: dict, optional
+    sel: dict[str, object], optional
         Subset selection via xr.Dataset.sel()
-    isel: dict, optional
+    isel: dict[str, object], optional
         Subset selection via xr.Dataset.isel()
     weight_factor: float
         The factor to multiply the weights with
@@ -168,7 +176,7 @@ class DatasetStates(States):
         A function to preprocess the netcdf Dataset before use
     force_keep_vars: list of str
         Variables to remove from the drop_vars list when reading the nc files
-    interp_pars: dict
+    interp_pars: dict[str, bool or float or str or None]
         Additional parameters the interpolation
 
     :group: input.states
@@ -177,39 +185,39 @@ class DatasetStates(States):
 
     def __init__(
         self,
-        data_source,
-        output_vars,
-        var2ncvar={},
-        fixed_vars={},
-        load_mode="preload",
-        time_format=None,
-        bounds_extra_space=100.0,
-        height_bounds=None,
-        sel=None,
-        isel=None,
-        weight_factor=None,
-        check_times=True,
-        check_input_nans=True,
-        sort=False,
-        preprocess_nc=None,
-        force_keep_vars=None,
-        interp_pars={},
-        **kwargs,
-    ):
+        data_source: str | Path | xr.Dataset,
+        output_vars: list[str],
+        var2ncvar: dict[str, str] = {},
+        fixed_vars: dict[str, float] = {},
+        load_mode: str = "preload",
+        time_format: str | None = None,
+        bounds_extra_space: float | str | None = 100.0,
+        height_bounds: tuple[float, float] | None = None,
+        sel: DatasetSelection | None = None,
+        isel: DatasetSelection | None = None,
+        weight_factor: float | None = None,
+        check_times: bool = True,
+        check_input_nans: bool = True,
+        sort: bool | list[str] = False,
+        preprocess_nc: PreprocessDataset | None = None,
+        force_keep_vars: list[str] | None = None,
+        interp_pars: InterpolationParameters = {},
+        **kwargs: object,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str or xarray.Dataset
+        data_source: str or pathlib.Path or xarray.Dataset
             The data or the file search pattern, should end with
             suffix '.nc'. One or many files.
         output_vars: list of str
             The output variables
-        var2ncvar: dict, optional
+        var2ncvar: dict[str, str], optional
             Mapping from variable names to variable names
             in the nc file
-        fixed_vars: dict, optional
+        fixed_vars: dict[str, float], optional
             Uniform values for output variables, instead
             of reading from data
         load_mode: str
@@ -221,15 +229,15 @@ class DatasetStates(States):
             the chunk calculation
         time_format: str, optional
             The datetime parsing format string
-        bounds_extra_space: float or str, optional
+        bounds_extra_space: float or str or None, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'. If None,
             all points from the input data are used
-        height_bounds: tuple, optional
+        height_bounds: tuple[float, float], optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        sel: dict, optional
+        sel: dict[str, object], optional
             Subset selection via xr.Dataset.sel()
-        isel: dict, optional
+        isel: dict[str, object], optional
             Subset selection via xr.Dataset.isel()
         weight_factor: float, optional
             The factor to multiply the weights with
@@ -239,13 +247,13 @@ class DatasetStates(States):
             Whether to check input data for NaNs, otherwise NaNs are removed
         sort: bool or list of str, optional
             Whether to sort the data by the state coordinate, or list of coordinates to sort by
-        preprocess_nc: callable, optional
+        preprocess_nc: Callable[[xarray.Dataset], xarray.Dataset] or None, optional
             A function to preprocess the netcdf Dataset before use
         force_keep_vars: list of str, optional
             Variables to remove from the drop_vars list when reading the nc files
-        interp_pars: dict, optional
+        interp_pars: dict[str, bool or float or str or None], optional
             Additional parameters the interpolation
-        kwargs: dict, optional
+        kwargs: object
             Additional arguments for the base class
 
         """
@@ -279,19 +287,21 @@ class DatasetStates(States):
             self.ovars[self.ovars.index(FV.U)] = FV.WS
             self.ovars[self.ovars.index(FV.V)] = FV.WD
 
-        self._N = None
-        self._inds = None
-        self._cmap = {}
+        self._N: int | None = None
+        self._inds: np.ndarray | None = None
+        self._cmap: dict[str, str] = {}
+        self._files_maxi: dict[Path, int] = {}
+        self._input_sizes: list[int] = []
         self.__data_source = data_source
 
     @property
-    def data_source(self):
+    def data_source(self) -> str | Path | xr.Dataset:
         """
         The data source
 
         Returns
         -------
-        s: object
+        s: str or pathlib.Path or xarray.Dataset
             The data source
 
         """
@@ -301,7 +311,15 @@ class DatasetStates(States):
             )
         return self.__data_source
 
-    def _read_ds(self, ds, cmap=None, verbosity=0):
+    def _read_ds(
+        self,
+        ds: xr.Dataset,
+        cmap: dict[str, str] | None = None,
+        verbosity: int = 0,
+    ) -> tuple[
+        dict[str, np.ndarray],
+        dict[str, tuple[tuple[str, ...], np.ndarray]],
+    ]:
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -309,16 +327,16 @@ class DatasetStates(States):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        cmap: dict, optional
+        cmap: dict[str, str], optional
             A mapping from foxes variable names to Dataset dimension names, if None, use self._cmap
         verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        coords: dict
+        coords: dict[str, numpy.ndarray]
             keys: Foxes variable names, values: 1D coordinate value arrays
-        data: dict
+        data: dict[str, tuple[tuple[str, ...], numpy.ndarray]]
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
             where dims is a tuple of dimension names and
@@ -367,7 +385,17 @@ class DatasetStates(States):
 
         return coords, data
 
-    def _get_data(self, ds, bounds_extra_space=None, height_bounds=None, verbosity=0):
+    def _get_data(
+        self,
+        ds: xr.Dataset,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
+        verbosity: int = 0,
+    ) -> tuple[
+        dict[str, np.ndarray],
+        dict[tuple[str, ...], PreparedDataGroup],
+        np.ndarray | None,
+    ]:
         """
         Gets the data from the Dataset and prepares it for calculations.
 
@@ -375,19 +403,19 @@ class DatasetStates(States):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        bounds_extra_space: float or str, optional
+        bounds_extra_space: float or str or None, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
+        height_bounds: tuple[float, float], optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        coords: dict
+        coords: dict[str, numpy.ndarray]
             keys: Foxes variable names, values: 1D coordinate value arrays
-        data: dict
+        data: dict[tuple[str, ...], tuple[str, list[str], numpy.ndarray]]
             The extracted data, keys are dimension tuples,
             values are tuples (DATA key, variables, data_array)
             where DATA key is the name in the mdata object,
@@ -407,33 +435,40 @@ class DatasetStates(States):
                 f"States '{self.name}': Missing weights variable '{FV.WEIGHT}' in data, found {sorted(list(data0.keys()))}"
             )
             if self.weight_factor is not None:
-                data0[FV.WEIGHT][1] *= self.weight_factor
+                dims, values = data0[FV.WEIGHT]
+                data0[FV.WEIGHT] = (dims, values * self.weight_factor)
             if data0[FV.WEIGHT][0] == (FC.STATE,):
                 weights = data0.pop(FV.WEIGHT)[1]
 
-        data = {}  # dim: [DATA key, variables, data array]
+        data_groups: dict[tuple[str, ...], DataGroup] = {}
         for v, (dims, d) in data0.items():
-            if dims not in data:
-                i = len(data)
-                data[dims] = [self.var(f"data{i}"), [], []]
-            data[dims][1].append(v)
-            data[dims][2].append(d)
-        for dims in data.keys():
-            data[dims][2] = np.stack(data[dims][2], axis=-1)
-        data = {
-            tuple(list(dims) + [f"vars{i}"]): d
-            for i, (dims, d) in enumerate(data.items())
+            if dims not in data_groups:
+                i = len(data_groups)
+                data_groups[dims] = (self.var(f"data{i}"), [], [])
+            data_groups[dims][1].append(v)
+            data_groups[dims][2].append(d)
+        data: dict[tuple[str, ...], PreparedDataGroup] = {
+            tuple(list(dims) + [f"vars{i}"]): (
+                data_key,
+                variables,
+                np.stack(arrays, axis=-1),
+            )
+            for i, (dims, (data_key, variables, arrays)) in enumerate(
+                data_groups.items()
+            )
         }
 
         return coords, data, weights
 
-    def _find_xy_bounds(self, algo, bounds_extra_space):
+    def _find_xy_bounds(
+        self, algo: Algorithm, bounds_extra_space: float | str
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Helper function to determine x/y bounds with extra space."""
         return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
 
-    def _update_loaded_state_indices(self, loaded_data):
+    def _update_loaded_state_indices(self, loaded_data: LoadedData | None) -> None:
         """Store only non-default state indices in loaded data."""
-        if self._inds is None:
+        if loaded_data is None or self._inds is None:
             return
 
         inds = np.asarray(self._inds)
@@ -447,13 +482,13 @@ class DatasetStates(States):
 
     def preproc_first(
         self,
-        algo,
-        data,
-        bounds_extra_space=None,
-        height_bounds=None,
+        algo: Algorithm,
+        data: xr.Dataset,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
         loaded_data: LoadedData | None = None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Preprocesses the first file.
 
@@ -463,10 +498,10 @@ class DatasetStates(States):
             The calculation algorithm
         data: xarray.Dataset
             The dataset to preprocess
-        bounds_extra_space: float or str, optional
+        bounds_extra_space: float or str or None, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
+        height_bounds: tuple[float, float], optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         loaded_data: LoadedData, optional
             If given, optionally add to this loaded data dict with entries
@@ -576,7 +611,7 @@ class DatasetStates(States):
                     cc = self._cmap[c]
                     d = (
                         data[cc].isel({cc: self.isel[cc]})
-                        if cc in self.isel
+                        if self.isel is not None and cc in self.isel
                         else data[cc]
                     )
                     loaded_data["coords"][cc] = d.to_numpy()
@@ -584,12 +619,12 @@ class DatasetStates(States):
 
     def __load_files(
         self,
-        algo,
-        bounds_extra_space,
-        height_bounds,
-        loaded_data=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        bounds_extra_space: float | str | None,
+        height_bounds: tuple[float, float] | None,
+        loaded_data: LoadedData | None = None,
+        verbosity: int = 0,
+    ) -> xr.Dataset:
         """Initial loading of all files, as needed by load mode"""
 
         assert FC.STATE in self._cmap, (
@@ -597,7 +632,7 @@ class DatasetStates(States):
         )
         states_coord = self._cmap[FC.STATE]
 
-        def _update_vars(ds, vars):
+        def _update_vars(ds: xr.Dataset, vars: dict[str, str]) -> dict[str, str]:
             """Helper function to automatically update variables"""
             # automatically switch TI to TKE, if TI not provided:
             if FV.TI in vars:
@@ -617,9 +652,11 @@ class DatasetStates(States):
             fpath = get_input_path(self.data_source)
             if "*" not in str(self.data_source):
                 if not fpath.is_file():
-                    fpath = StaticData().get_file_path(
+                    static_path = StaticData().get_file_path(
                         STATES, fpath.name, check_raw=False
                     )
+                    assert static_path is not None
+                    fpath = static_path
 
             # find files:
             prt = fpath.resolve().parent
@@ -653,6 +690,7 @@ class DatasetStates(States):
             assert data_first is not None, (
                 f"States '{self.name}': No valid data sources found."
             )
+            assert isinstance(data_first, xr.Dataset)
             if verbosity > 0:
                 print(f"States '{self.name}': Preprocessing file", fpath.name)
             vars = _update_vars(data_first, vars)
@@ -713,13 +751,13 @@ class DatasetStates(States):
                 """Helper function to get the number of states"""
                 return ds.sizes[states_coord] if isinstance(ds, xr.Dataset) else len(ds)
 
-            files, data = zip(
-                *[
-                    (f, ds)
-                    for f, ds in zip(files, data)
-                    if ds is not None and _len_ds(ds) > 0
-                ]
-            )
+            file_data = [
+                (f, ds)
+                for f, ds in zip(files, data)
+                if ds is not None and _len_ds(ds) > 0
+            ]
+            files = [f for f, _ in file_data]
+            data = [ds for _, ds in file_data]
             assert len(data) > 0, f"States '{self.name}': No valid data sources found."
 
             if self.load_mode in ["preload", "lazy"]:
@@ -821,7 +859,7 @@ class DatasetStates(States):
 
         return data
 
-    def gen_states_split_size(self):
+    def gen_states_split_size(self) -> Generator[int | None, None, None]:
         """
         Generator for suggested states split sizes for output writing.
 
@@ -836,13 +874,13 @@ class DatasetStates(States):
 
     def load_data(  # type: ignore[override]
         self,
-        algo,
+        algo: Algorithm,
         loaded_data: LoadedData,
-        force=False,
-        bounds_extra_space=None,
-        height_bounds=None,
-        verbosity=0,
-    ):
+        force: bool = False,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all data required for model calculations.
 
@@ -859,9 +897,9 @@ class DatasetStates(States):
             and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
-        bounds_extra_space: float, optional
+        bounds_extra_space: float or str or None, optional
             The extra space in meters to add to the horizontal wind farm bounds
-        height_bounds: tuple, optional
+        height_bounds: tuple[float, float], optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         verbosity: int
             The verbosity level, 0 = silent
@@ -928,7 +966,9 @@ class DatasetStates(States):
         elif self.load_mode == "lazy":
             self.__lazy_data = data
 
-    def load_chunk_data(self, algo, mdata, fdata, tdata):
+    def load_chunk_data(  # type: ignore[override]
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> None:
         """
         Load chunk data according to load mode.
 
@@ -956,6 +996,7 @@ class DatasetStates(States):
         )
         states_coord = self._cmap[FC.STATE]
         n_states = mdata.n_states
+        assert n_states is not None
         edata = mdata.extra_data
 
         # preloading already done:
@@ -965,6 +1006,7 @@ class DatasetStates(States):
         # lazy loading:
         elif self.load_mode == "lazy":
             i0 = mdata.states_i0(counter=True)
+            assert i0 is not None
             s = slice(i0, i0 + n_states)
             data = self.__lazy_data.isel({states_coord: s}).load()
 
@@ -972,6 +1014,7 @@ class DatasetStates(States):
         elif self.load_mode == "fly":
             data = []
             i0 = mdata.states_i0(counter=True)
+            assert i0 is not None
             i1 = i0 + n_states
             j0 = 0
             for fpath, n in self._files_maxi.items():
@@ -1062,12 +1105,12 @@ class DatasetStates(States):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: DatasetSelection | None = None,
+        isel: DatasetSelection | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -1079,12 +1122,12 @@ class DatasetStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash: dict[str, dict[str, object]] or None
             Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel: dict[str, object], optional
             The subset selection dictionary
-        isel: dict, optional
+        isel: dict[str, object], optional
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
@@ -1103,12 +1146,12 @@ class DatasetStates(States):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: DatasetSelection | None = None,
+        isel: DatasetSelection | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -1117,12 +1160,12 @@ class DatasetStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash: dict[str, dict[str, object]] or None
             Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel: dict[str, object], optional
             The subset selection dictionary
-        isel: dict, optional
+        isel: dict[str, object], optional
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
@@ -1137,7 +1180,7 @@ class DatasetStates(States):
             if self.load_mode == "preload":
                 self.__data_source = data.pop("data_source")
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -1154,7 +1197,7 @@ class DatasetStates(States):
         """
         return self.ovars
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -1164,9 +1207,10 @@ class DatasetStates(States):
             The total number of states
 
         """
+        assert self._N is not None
         return self._N
 
-    def index(self):
+    def index(self) -> np.ndarray | None:
         """
         The index list
 
@@ -1192,7 +1236,7 @@ class DatasetStates(States):
 
         Parameters
         ----------
-        loaded_data: dict, optional
+        loaded_data: LoadedData, optional
             The loaded data dictionary
         mdata: foxes.core.MData, optional
             The model data
@@ -1288,7 +1332,7 @@ class DatasetStates(States):
 
         Returns
         -------
-        data: dict
+        data: dict[tuple[str, ...], tuple[list[str], numpy.ndarray]]
             The extracted data, keys are dimension tuples,
             values are tuples (variables, data_array)
             where variables is a list of variable names, and
@@ -1366,9 +1410,8 @@ class DatasetStates(States):
 
         Returns
         -------
-        gpts: tuple of numpy.ndarray or numpy.ndarray
-            Either a list of length n_idims of 1D arrays for each dimension,
-            or a single 2D array with shape (n_points, n_idims)
+        gpts: tuple[numpy.ndarray, ...]
+            A tuple of length n_idims containing one 1D array per dimension.
 
         """
         gpts = []
@@ -1409,10 +1452,9 @@ class DatasetStates(States):
             The variable names, length nv
         state_indices: numpy.ndarray, optional
             The indices of the states, with shape (n_states,)
-        gpts: tuple of numpy.ndarray or numpy.ndarray
-            Either a list of 1D arrays for each dimension, or a single 2D array
-            with shape (n_points, n_dims). If None, the grid points are extracted
-            from mdata.
+        gpts: tuple[numpy.ndarray, ...] or numpy.ndarray or None, optional
+            A tuple of 1D arrays for each dimension, a 2D array with shape
+            (n_points, n_dims), or None to extract the grid points from mdata.
 
         Returns
         -------
@@ -1442,8 +1484,8 @@ class DatasetStates(States):
         )
 
         try:
-            ipars = dict(bounds_error=True, fill_value=None)
-            ipars.update(self.interp_pars)
+            ipars: dict[str, bool | None] = dict(bounds_error=True, fill_value=None)
+            ipars.update(self.interp_pars)  # type: ignore[arg-type]
             d = interpn(gpts, d, pts, **ipars)
         except ValueError as e:
             print(f"\nStates '{self.name}': Interpolation error")
@@ -1495,7 +1537,7 @@ class DatasetStates(States):
 
         Returns
         -------
-        results: dict
+        results: dict[str, numpy.ndarray]
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
@@ -1716,6 +1758,7 @@ class DatasetStates(States):
                 n_states, n_targets, n_tpoints
             )
         else:
+            assert self._N is not None and self._N > 0
             tdata[FV.WEIGHT] = np.full(
                 (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
             )

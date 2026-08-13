@@ -1,6 +1,7 @@
 import numpy as np
+import xarray as xr
 from typing import Any, cast
-from foxes.core import LoadedData, MData
+from foxes.core import Algorithm, FData, LoadedData, MData
 from scipy.interpolate import griddata
 from scipy.spatial import QhullError
 
@@ -127,7 +128,7 @@ class PointCloudData(DatasetStates):
             FC.POINT: self.point_coord,
         }
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(n_pt={self._n_pt}, n_wd={self._n_wd}, n_ws={self._n_ws})"
 
     def get_grid_points(
@@ -178,7 +179,15 @@ class PointCloudData(DatasetStates):
         points = np.asarray(source[point_coord])
         return points.reshape(-1, points.shape[-1])
 
-    def _read_ds(self, ds, cmap=None, verbosity=0):
+    def _read_ds(
+        self,
+        ds: xr.Dataset,
+        cmap: dict[str, str] | None = None,
+        verbosity: int = 0,
+    ) -> tuple[
+        dict[str, np.ndarray],
+        dict[str, tuple[tuple[str, ...], np.ndarray]],
+    ]:
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -186,16 +195,16 @@ class PointCloudData(DatasetStates):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        cmap: dict, optional
+        cmap: dict[str, str], optional
             A mapping from foxes variable names to Dataset dimension names, if not given self._cmap will be used
         verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        coords: dict
+        coords: dict[str, numpy.ndarray]
             keys: Foxes variable names, values: 1D coordinate value arrays
-        data: dict
+        data: dict[str, tuple[tuple[str, ...], numpy.ndarray]]
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
             where dims is a tuple of dimension names and
@@ -228,7 +237,16 @@ class PointCloudData(DatasetStates):
 
         return coords, data
 
-    def _check_nan(self, ipars, gpts, d, pts, idims, vrs, results):
+    def _check_nan(
+        self,
+        ipars: dict[str, bool | float | str | None],
+        gpts: np.ndarray,
+        d: np.ndarray,
+        pts: np.ndarray,
+        idims: list[str],
+        vrs: list[str],
+        results: np.ndarray,
+    ) -> None:
         """Checks for NaN results and raises errors."""
         if np.isnan(ipars.get("fill_value", np.nan)):
             sel = np.isnan(results)
@@ -463,10 +481,18 @@ class WeibullPointCloud(PointCloudData):
         self._n_wd = None
         self._n_ws = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, cmap=None, verbosity=0):
+    def _read_ds(
+        self,
+        ds: xr.Dataset,
+        cmap: dict[str, str] | None = None,
+        verbosity: int = 0,
+    ) -> tuple[
+        dict[str, np.ndarray],
+        dict[str, tuple[tuple[str, ...], np.ndarray]],
+    ]:
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -474,16 +500,16 @@ class WeibullPointCloud(PointCloudData):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        cmap: dict, optional
+        cmap: dict[str, str], optional
             A mapping from foxes variable names to Dataset dimension names, if not given self._cmap will be used
         verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        coords: dict
+        coords: dict[str, numpy.ndarray]
             keys: Foxes variable names, values: 1D coordinate value arrays
-        data: dict
+        data: dict[str, tuple[tuple[str, ...], numpy.ndarray]]
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
             where dims is a tuple of dimension names and
@@ -543,15 +569,15 @@ class WeibullPointCloud(PointCloudData):
         del wsb
 
         # calculate Weibull weights
-        dms = [FV.WS, FV.WD]
-        shp = [n_ws, n_wd]
+        dimension_names: list[str] = [FV.WS, FV.WD]
+        shape: list[int] = [n_ws, n_wd]
         for v in [FV.WEIBULL_A, FV.WEIBULL_k]:
             if FC.POINT in data0[v][0]:
-                dms.append(FC.POINT)
-                shp.append(data0[v][1].shape[data0[v][0].index(FC.POINT)])
+                dimension_names.append(FC.POINT)
+                shape.append(data0[v][1].shape[data0[v][0].index(FC.POINT)])
                 break
-        dms = tuple(dms)
-        shp = tuple(shp)
+        dms = tuple(dimension_names)
+        shp = tuple(shape)
         if data0[FV.WEIGHT][0] == dms:
             w = data0.pop(FV.WEIGHT)[1]
         else:
@@ -576,36 +602,41 @@ class WeibullPointCloud(PointCloudData):
         # translate binned data to states
         self._N = n_ws * n_wd
         self._inds = np.arange(self._N, dtype=config.dtype_int)
-        data = {
-            FV.WS: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
-            FV.WD: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
-        }
-        data[FV.WS][:] = wss[:, None]
-        data[FV.WD][:] = wd[None, :]
-        data[FV.WS] = ((FC.STATE,), data[FV.WS].reshape(self._N))
-        data[FV.WD] = ((FC.STATE,), data[FV.WD].reshape(self._N))
+        translated_data: dict[str, tuple[tuple[str, ...], np.ndarray]] = {}
+        ws_data = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+        wd_data = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+        ws_data[:] = wss[:, None]
+        wd_data[:] = wd[None, :]
+        translated_data[FV.WS] = ((FC.STATE,), ws_data.reshape(self._N))
+        translated_data[FV.WD] = ((FC.STATE,), wd_data.reshape(self._N))
         for v in list(data0.keys()):
             dims, d = data0.pop(v)
             if len(dims) >= 2 and dims[:2] == (FV.WS, FV.WD):
                 dms = tuple([FC.STATE] + list(dims[2:]))
-                shp = [self._N] + list(d.shape[2:])
-                data[v] = (dms, d.reshape(shp))
+                shape = [self._N] + list(d.shape[2:])
+                translated_data[v] = (dms, d.reshape(shape))
             elif dims[0] == FV.WD:
                 dms = tuple([FC.STATE] + list(dims[1:]))
-                shp = [n_ws] + list(d.shape)
-                data[v] = np.zeros(shp, dtype=config.dtype_double)
-                data[v][:] = d[None, ...]
-                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
+                shape = [n_ws] + list(d.shape)
+                expanded_data = np.zeros(shape, dtype=config.dtype_double)
+                expanded_data[:] = d[None, ...]
+                translated_data[v] = (
+                    dms,
+                    expanded_data.reshape([self._N] + shape[2:]),
+                )
             elif dims[0] == FV.WS:
                 dms = tuple([FC.STATE] + list(dims[1:]))
-                shp = [n_ws, n_wd] + list(d.shape[2:])
-                data[v] = np.zeros(shp, dtype=config.dtype_double)
-                data[v][:] = d[:, None, ...]
-                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
+                shape = [n_ws, n_wd] + list(d.shape[2:])
+                expanded_data = np.zeros(shape, dtype=config.dtype_double)
+                expanded_data[:] = d[:, None, ...]
+                translated_data[v] = (
+                    dms,
+                    expanded_data.reshape([self._N] + shape[2:]),
+                )
             else:
-                data[v] = (dims, d)
+                translated_data[v] = (dims, d)
 
-        return coords, data
+        return coords, translated_data
 
 
 class TurbinePointCloud(DatasetStates):
@@ -689,13 +720,13 @@ class TurbinePointCloud(DatasetStates):
 
     def load_data(  # type: ignore[override]
         self,
-        algo,
+        algo: Algorithm,
         loaded_data: LoadedData,
-        force=False,
-        bounds_extra_space=None,
-        height_bounds=None,
-        verbosity=0,
-    ):
+        force: bool = False,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -707,10 +738,12 @@ class TurbinePointCloud(DatasetStates):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        loaded_data: LoadedData,
+        loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
-        bounds_extra_space=None,
-        height_bounds=None,
+        bounds_extra_space: float or str or None, optional
+            Extra horizontal bounds; unsupported for turbine point-cloud data.
+        height_bounds: tuple[float, float] or None, optional
+            Height bounds; unsupported for turbine point-cloud data.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
@@ -728,7 +761,14 @@ class TurbinePointCloud(DatasetStates):
             verbosity=verbosity,
         )
 
-    def _update_dims(self, dims, coords, vrs, d, fdata):
+    def _update_dims(
+        self,
+        dims: tuple[str, ...],
+        coords: dict[str, np.ndarray],
+        vrs: list[str],
+        d: np.ndarray,
+        fdata: FData,
+    ) -> tuple[tuple[str, ...], dict[str, np.ndarray]]:
         """Helper function for dimension adjustment, if needed"""
         coords[FC.TURBINE] = fdata[FV.TXYH]
         return dims, coords

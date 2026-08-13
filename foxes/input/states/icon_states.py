@@ -1,6 +1,9 @@
 import numpy as np
+import xarray as xr
 from pandas import read_csv
-from foxes.core import FData, LoadedData, MData
+from pathlib import Path
+
+from foxes.core import Algorithm, FData, LoadedData, MData
 
 from foxes.data import MODEL_DATA
 import foxes.variables as FV
@@ -18,28 +21,28 @@ class ICONStates(LatLonFieldData):
 
     def __init__(
         self,
-        data_source,
-        height_coord_default="height",
-        height_coord_tke="height_2",
-        time_coord="time",
-        lat_coord="lat",
-        lon_coord="lon",
-        output_vars=None,
-        var2ncvar=None,
-        load_mode="fly",
-        **kwargs,
-    ):
+        data_source: str | Path | xr.Dataset,
+        height_coord_default: str | None = "height",
+        height_coord_tke: str | None = "height_2",
+        time_coord: str = "time",
+        lat_coord: str = "lat",
+        lon_coord: str = "lon",
+        output_vars: list[str] | None = None,
+        var2ncvar: dict[str, str] | None = None,
+        load_mode: str = "fly",
+        **kwargs: object,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str
+        data_source: str or pathlib.Path or xarray.Dataset
             The input netcdf file(s) containing, can contain
             wildcards, e.g. '2025*_icon.nc'
-        height_coord_default: str, optional
+        height_coord_default: str or None, optional
             The default height level coordinate name in the data
-        height_coord_tke: str, optional
+        height_coord_tke: str or None, optional
             The height level coordinate name for TKE in the data
         time_coord: str
             The time coordinate name in the data
@@ -51,7 +54,7 @@ class ICONStates(LatLonFieldData):
             The output variables to load, if None,
             the default variables are loaded
             (FV.WS, FV.WD, FV.TI, FV.RHO)
-        var2ncvar: dict, optional
+        var2ncvar: dict[str, str], optional
             A dictionary mapping foxes variable names
             to the corresponding netcdf variable names.
         load_mode: str
@@ -61,7 +64,7 @@ class ICONStates(LatLonFieldData):
             reads only states index and weights during initialization
             and then opens the relevant files again within
             the chunk calculations.
-        kwargs: dict, optional
+        kwargs: object
             Additional parameters for the base class
 
         """
@@ -115,8 +118,20 @@ class ICONStates(LatLonFieldData):
             self.H_TKE = FV.H + "_tke"
             self._cmap[self.H_TKE] = height_coord_tke
 
-    def _preproc_icon_nc(self, ds):
-        """Preprocess ICON netcdf dataset."""
+    def _preproc_icon_nc(self, ds: xr.Dataset) -> xr.Dataset:
+        """Preprocess ICON netcdf dataset.
+
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The dataset to preprocess.
+
+        Returns
+        -------
+        dataset: xarray.Dataset
+            The preprocessed dataset.
+
+        """
         if FV.H in self._cmap and self._cmap[FV.H] in ds.sizes:
             c = ds[self._cmap[FV.H]].values.astype(int)
             ds = ds.assign_coords({self._cmap[FV.H]: self.__icon_heights_default[c]})
@@ -127,13 +142,13 @@ class ICONStates(LatLonFieldData):
 
     def load_data(  # type: ignore[override]
         self,
-        algo,
+        algo: Algorithm,
         loaded_data: LoadedData,
-        force=False,
-        bounds_extra_space=None,
-        height_bounds=None,
-        verbosity=0,
-    ):
+        force: bool = False,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -152,6 +167,10 @@ class ICONStates(LatLonFieldData):
             and "extra_data", a dict with non-array additional data.
         force: bool
             Overwrite existing data
+        bounds_extra_space: float or str or None, optional
+            The extra space to add to the horizontal wind farm bounds.
+        height_bounds: tuple[float, float], optional
+            The height bounds in m.
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -191,7 +210,7 @@ class ICONStates(LatLonFieldData):
 
         Returns
         -------
-        data: dict
+        data: dict[tuple[str, ...], tuple[list[str], numpy.ndarray]]
             The extracted data, keys are dimension tuples,
             values are tuples (variables, data_array)
             where variables is a list of variable names, and
@@ -214,7 +233,9 @@ class ICONStates(LatLonFieldData):
                 data[dims_new] = (vrs, d)
         return data, weights
 
-    def get_interpolation_coords(self, mdata, idims):
+    def get_interpolation_coords(
+        self, mdata: MData, idims: list[str]
+    ) -> dict[str, np.ndarray]:
         """
         Extracts interpolation coordinates from chunk model data.
 
@@ -227,12 +248,12 @@ class ICONStates(LatLonFieldData):
 
         Returns
         -------
-        icoords: dict
+        icoords: dict[str, numpy.ndarray]
             The extracted interpolation coordinates, keys are dimension names,
             values are 1D numpy.ndarray with the coordinate values
 
         """
-        icoords = super().get_interpolation_coords(mdata, idims)
+        icoords = super().get_interpolation_coords(mdata, idims)  # type: ignore[misc]
         if self.H_TKE in idims:
             assert FV.H not in idims, (
                 f"States {self.name}: Cannot have both {FV.H} and {self.H_TKE} in idims for interpolation, got idims = {idims}"

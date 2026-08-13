@@ -1,12 +1,15 @@
 import numpy as np
+from typing import cast
 
 from foxes.config import config
 from foxes.core import (
+    Algorithm,
     LoadedData,
     States,
     MData,
     FData,
     TData,
+    Model,
     run_with_engine,
     WindFarm,
     Turbine,
@@ -15,6 +18,8 @@ from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv, uv2wd
 from foxes.algorithms import Downwind
 import foxes.constants as FC
 import foxes.variables as FV
+
+from .dataset_states import DatasetStates
 
 
 class SectorSimRefPointField(States):
@@ -45,17 +50,17 @@ class SectorSimRefPointField(States):
 
     def __init__(
         self,
-        field_states,
-        ref_point_states,
-        ref_point,
-        ref_point_is_lonlat=False,
-        utm_zone=None,
-        output_vars=None,
-        fixed_vars={},
-        apply_blending=True,
-        check_nans=True,
-        **kwargs,
-    ):
+        field_states: DatasetStates,
+        ref_point_states: States,
+        ref_point: np.ndarray | list[float],
+        ref_point_is_lonlat: bool = False,
+        utm_zone: str | tuple[float, float] | None = None,
+        output_vars: list[str] | None = None,
+        fixed_vars: dict[str, float] = {},
+        apply_blending: bool = True,
+        check_nans: bool = True,
+        **kwargs: object,
+    ) -> None:
         """
         Constructor.
 
@@ -75,7 +80,7 @@ class SectorSimRefPointField(States):
             or automatic detection based on the reference point coordinates.
         output_vars: list of str, optional
             The output variables, if None, all field_states variables are used
-        fixed_vars: dict, optional
+        fixed_vars: dict[str, float], optional
             Fixed variables, e.g. {"var_name": var_value}
         apply_blending: bool, optional
             Whether to blend between wind direction sectors
@@ -83,7 +88,7 @@ class SectorSimRefPointField(States):
             Whether to check for NaN values
 
         """
-        super().__init__(**kwargs)
+        super().__init__(**kwargs)  # type: ignore[arg-type]
         self.field_states = field_states
         self.ref_point_states = ref_point_states
         self.ref_point = np.asarray(ref_point)
@@ -99,7 +104,7 @@ class SectorSimRefPointField(States):
         self.__ref_point_is_lonlat = ref_point_is_lonlat
         self.__utm_zone = utm_zone
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -114,9 +119,10 @@ class SectorSimRefPointField(States):
             The output variable names
 
         """
+        assert self.output_vars is not None
         return self.output_vars
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -128,7 +134,7 @@ class SectorSimRefPointField(States):
         """
         return [self.ref_point_states]  # keep field_states out of the loop
 
-    def _lonlat_to_utm(self, verbosity=0):
+    def _lonlat_to_utm(self, verbosity: int = 0) -> None:
         """Helper function to convert lonlat reference point to UTM coordinates"""
         if self.__ref_point_is_lonlat:
             if not config.utm_zone_set and self.__utm_zone is None:
@@ -163,7 +169,13 @@ class SectorSimRefPointField(States):
                 f"States '{self.name}': ref_point_is_lonlat is False, but utm_zone is given: {self.__utm_zone}. This is not allowed."
             )
 
-    def load_data(self, algo, loaded_data: LoadedData, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -354,7 +366,7 @@ class SectorSimRefPointField(States):
                     f"States '{self.name}': Finished computing states '{self.field_states.name}' at reference point, results: {list(results.keys())}"
                 )
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -366,7 +378,7 @@ class SectorSimRefPointField(States):
         """
         return self.ref_point_states.size()
 
-    def index(self):
+    def index(self) -> np.ndarray | None:
         """
         The index list
 
@@ -378,7 +390,9 @@ class SectorSimRefPointField(States):
         """
         return self.ref_point_states.index()
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(  # type: ignore[override]
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -398,7 +412,7 @@ class SectorSimRefPointField(States):
 
         Returns
         -------
-        results: dict
+        results: dict[str, numpy.ndarray]
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
@@ -434,7 +448,12 @@ class SectorSimRefPointField(States):
         points = np.zeros((n_states, 1, 3), dtype=self.ref_point.dtype)
         points[:] = self.ref_point[None, None, :]
         htdata = TData.from_points(points=points, mdata=mdata)
-        ref_results = self.ref_point_states.calculate(algo, mdata, fdata, htdata)
+        ref_results = self.ref_point_states.calculate(
+            algo,
+            mdata,
+            fdata,
+            htdata,  # type: ignore[arg-type]
+        )
         ref_results = {k: d[:, 0, 0] for k, d in ref_results.items()}
         tdata[FV.WEIGHT] = htdata[FV.WEIGHT]
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
@@ -573,7 +592,12 @@ class SectorSimRefPointField(States):
             del tpoints
 
             # run field states calculation:
-            field_results = self.field_states.calculate(algo, hmdata, hfdata, htdata)
+            field_results = self.field_states.calculate(
+                algo,
+                hmdata,
+                cast(FData, hfdata),
+                cast(TData, htdata),
+            )
             del hmdata, hfdata, htdata
 
             # evaluate sectors:

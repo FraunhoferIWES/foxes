@@ -2,18 +2,19 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 from os import PathLike
 from pathlib import Path
 from xarray import Dataset, open_dataset
-from typing import Any
 
 from foxes.data import STATES
-from foxes.core import LoadedData
+from foxes.core import Algorithm, LoadedData
 from foxes.utils import PandasFileHelper, weibull_weights
 from foxes.config import config, get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
 
+from .dataset_states import DatasetSelection
 from .states_table import StatesTable
 
 
@@ -27,14 +28,14 @@ class WeibullSectors(StatesTable):
     ws_bins: numpy.ndarray
         The wind speed bins, including
         lower and upper bounds, shape: (n_ws_bins+1,)
-    var2ncvar: dict
+    var2ncvar: dict[str, str]
         Mapping from variable names to variable names
         in the nc file
-    sel: dict
+    sel: dict[str, object]
         Subset selection via xr.Dataset.sel()
-    isel: dict
+    isel: dict[str, object]
         Subset selection via xr.Dataset.isel()
-    rpars: dict
+    rpars: dict[str, object]
         Additional parameters for reading the file
     RDICT: dict
         Default xarray file reading parameters
@@ -47,41 +48,41 @@ class WeibullSectors(StatesTable):
 
     def __init__(
         self,
-        data_source,
-        output_vars,
-        ws_bins=None,
+        data_source: str | Path | Dataset | pd.DataFrame,
+        output_vars: list[str],
+        ws_bins: ArrayLike | None = None,
         var2ncvar: dict[str, str] | None = None,
-        sel=None,
-        isel=None,
-        read_pars: dict[str, Any] | None = None,
-        **kwargs: Any,
+        sel: DatasetSelection | None = None,
+        isel: DatasetSelection | None = None,
+        read_pars: dict[str, object] | None = None,
+        **kwargs: object,
     ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str or xarray.Dataset or pandas.DataFrame
+        data_source: str or pathlib.Path or xarray.Dataset or pandas.DataFrame
             Either path to NetCDF or csv file or data
         output_vars: list of str
             The output variables
-        ws_bins: list of float, optional
+        ws_bins: numpy.typing.ArrayLike, optional
             The wind speed bins, including
             lower and upper bounds
-        var2ncvar: dict
+        var2ncvar: dict[str, str], optional
             Mapping from variable names to variable names
             in the nc file
-        sel: dict, optional
+        sel: dict[str, object], optional
             Subset selection via xr.Dataset.sel()
-        isel: dict, optional
+        isel: dict[str, object], optional
             Subset selection via xr.Dataset.isel()
-        read_pars: dict
+        read_pars: dict[str, object], optional
             Additional parameters for reading the file
-        kwargs: dict, optional
+        kwargs: object
             Additional arguments for the base class
 
         """
-        super().__init__(data_source, output_vars, var2col={}, **kwargs)
+        super().__init__(data_source, output_vars, var2col={}, **kwargs)  # type: ignore[arg-type]
         self.ws_bins = None if ws_bins is None else np.asarray(ws_bins)
         self.var2ncvar = {} if var2ncvar is None else var2ncvar
         self.sel = sel if sel is not None else {}
@@ -104,7 +105,10 @@ class WeibullSectors(StatesTable):
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
     def _read_data(
-        self, algo, point_coord: str | None = None, verbosity: int = 0
+        self,
+        algo: Algorithm,
+        point_coord: str | None = None,
+        verbosity: int = 0,
     ) -> Dataset:
         """
         Extracts data from file or Dataset.
@@ -298,7 +302,11 @@ class WeibullSectors(StatesTable):
         return data
 
     def load_data(
-        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
@@ -323,6 +331,7 @@ class WeibullSectors(StatesTable):
 
         """
         self._read_data(algo, verbosity=0)
+        assert isinstance(self._data, Dataset)
 
         tmp = {}
         for v, d in self._data.data_vars.items():
@@ -335,7 +344,8 @@ class WeibullSectors(StatesTable):
         self._data = tmp
         del tmp
 
-        self._data = pd.DataFrame(data=self._data, index=np.arange(self._N))
-        self._data.index.name = FC.STATE
+        state_data = pd.DataFrame(data=self._data, index=np.arange(self._N))
+        state_data.index.name = FC.STATE
+        self._data = state_data
 
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)

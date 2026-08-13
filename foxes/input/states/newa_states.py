@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from foxes.core import LoadedData, MData
+import xarray as xr
+from pathlib import Path
+
+from foxes.core import Algorithm, LoadedData, MData
 from scipy.interpolate import griddata
 
 from foxes.utils.utm_utils import from_lonlat
@@ -9,7 +12,7 @@ from foxes.output import FarmLayoutOutput
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .dataset_states import DatasetStates
+from .dataset_states import DatasetStates, InterpolationParameters
 
 
 class NEWAStates(DatasetStates):
@@ -53,27 +56,27 @@ class NEWAStates(DatasetStates):
 
     def __init__(
         self,
-        input_files_nc,
-        time_coord="time",
-        west_east_coord="west_east",
-        south_north_coord="south_north",
-        height_coord="height",
-        xlat_coord="XLAT",
-        xlon_coord="XLON",
-        output_vars=None,
-        var2ncvar=None,
-        load_mode="fly",
-        time_format=None,
-        interp_pars={},
-        wrf_point_plot=None,
-        **kwargs,
-    ):
+        input_files_nc: str | Path | xr.Dataset,
+        time_coord: str = "time",
+        west_east_coord: str = "west_east",
+        south_north_coord: str = "south_north",
+        height_coord: str = "height",
+        xlat_coord: str = "XLAT",
+        xlon_coord: str = "XLON",
+        output_vars: list[str] | None = None,
+        var2ncvar: dict[str, str] | None = None,
+        load_mode: str = "fly",
+        time_format: str | None = None,
+        interp_pars: InterpolationParameters = {},
+        wrf_point_plot: str | Path | None = None,
+        **kwargs: object,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        input_files_nc: str
+        input_files_nc: str or pathlib.Path or xarray.Dataset
             The input netcdf file(s), can contain
             wildcards, e.g. 'wrfout_2025*.nc'
         time_coord: str
@@ -92,7 +95,7 @@ class NEWAStates(DatasetStates):
             The output variables to load, if None,
             the default variables are loaded
             (FV.WS, FV.WD, FV.TI, FV.RHO)
-        var2ncvar: dict, optional
+        var2ncvar: dict[str, str], optional
             A dictionary mapping foxes variable names
             to the corresponding netcdf variable names.
         load_mode: str
@@ -102,15 +105,15 @@ class NEWAStates(DatasetStates):
             reads only states index and weights during initialization
             and then opens the relevant files again within
             the chunk calculations.
-        time_format: str
+        time_format: str or None, optional
             The datetime parsing format string
-        interp_pars: dict, optional
+        interp_pars: dict[str, bool or float or str or None], optional
             Additional parameters for scipy.interpolate.griddata,
             e.g. {'method': 'linear', 'fill_value': None, 'rescale': True}
-        wrf_point_plot: str, optional
+        wrf_point_plot: str or pathlib.Path or None, optional
             Path to a plot file, e.g. wrf_points.png, to visualize the
             selected WRF grid points and the layout of the farm.
-        kwargs: dict, optional
+        kwargs: object
             Additional parameters for the base class
 
         """
@@ -135,7 +138,7 @@ class NEWAStates(DatasetStates):
             load_mode=load_mode,
             weight_factor=None,
             interp_pars=interp_pars,
-            **kwargs,
+            **kwargs,  # type: ignore[arg-type]
         )
 
         self.time_coord = time_coord
@@ -156,13 +159,13 @@ class NEWAStates(DatasetStates):
 
     def preproc_first(
         self,
-        algo,
-        data,
-        bounds_extra_space=None,
-        height_bounds=None,
+        algo: Algorithm,
+        data: xr.Dataset,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
         loaded_data: LoadedData | None = None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Preprocesses the first file.
 
@@ -172,10 +175,10 @@ class NEWAStates(DatasetStates):
             The calculation algorithm
         data: xarray.Dataset
             The dataset to preprocess
-        bounds_extra_space: float or str, optional
+        bounds_extra_space: float or str or None, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
+        height_bounds: tuple[float, float], optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         loaded_data: LoadedData, optional
             If given, optionally add to this loaded data dict with entries
@@ -305,7 +308,9 @@ class NEWAStates(DatasetStates):
                 marker=".",
                 linestyle="None",
             )
-            anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+            wind_farm_names = algo.farm.wind_farm_names
+            assert wind_farm_names is not None
+            anno = 3 if len(wind_farm_names) > 1 else 0
             FarmLayoutOutput(farm=algo.farm).get_figure(
                 fig=fig, ax=ax, annotate=anno, fontsize=12
             )
@@ -414,9 +419,8 @@ class NEWAStates(DatasetStates):
 
         Returns
         -------
-        gpts: tuple of numpy.ndarray or numpy.ndarray
-            Either a list of length n_idims of 1D arrays for each dimension,
-            or a single 2D array with shape (n_points, n_idims)
+        gpts: numpy.ndarray
+            A 2D array with shape (n_points, n_idims).
 
         """
         # get coordinates:
@@ -492,10 +496,9 @@ class NEWAStates(DatasetStates):
             The variable names, length nv
         state_indices: numpy.ndarray, optional
             The indices of the states, with shape (n_states,)
-        gpts: tuple of numpy.ndarray or numpy.ndarray
-            Either a list of 1D arrays for each dimension, or a single 2D array
-            with shape (n_points, n_dims). If None, the grid points are extracted
-            from mdata.
+        gpts: numpy.ndarray or None, optional
+            A 2D array with shape (n_points, n_dims), or None to extract the
+            grid points from mdata.
 
         Returns
         -------
@@ -538,7 +541,13 @@ class NEWAStates(DatasetStates):
                     f"States '{self.name}': Cannot reshape d with shape {d.shape} to match gpts with shape {gpts.shape} and vrs with length {len(vrs)}"
                 ) from e
 
-        def _check_nan(gpts, d, pts, idims, results):
+        def _check_nan(
+            gpts: np.ndarray,
+            d: np.ndarray,
+            pts: np.ndarray,
+            idims: list[str],
+            results: np.ndarray,
+        ) -> None:
             """Checks for NaN results and raises errors."""
             if np.isnan(ipars.get("fill_value", np.nan)):
                 assert state_indices is not None, (

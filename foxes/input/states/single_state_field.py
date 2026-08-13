@@ -3,15 +3,16 @@ from __future__ import annotations
 import numpy as np
 from pandas import DataFrame
 from xarray import Dataset, open_dataset
-from typing import Any, cast
+from pathlib import Path
+from typing import cast
 
-from foxes.core import LoadedData, States
+from foxes.core import Algorithm, FData, LoadedData, MData, States, TData
 from foxes.config import config, get_input_path
 from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .dataset_states import DatasetStates
+from .dataset_states import DatasetSelection, DatasetStates, InterpolationParameters
 
 
 class SingleStateField(States):
@@ -20,13 +21,13 @@ class SingleStateField(States):
 
     Attributes
     ----------
-    data_source: xarray.Dataset or str
+    data_source: xarray.Dataset or str or pathlib.Path
         The NetCDF dataset to read from, or a path to it.
     output_vars: list of str
         List of variable names to read.
-    var2ncvar: dict
+    var2ncvar: dict[str, str]
         Mapping from variable names to netCDF variable names.
-    fixed_vars: dict
+    fixed_vars: dict[str, float]
         Mapping from variable names to fixed values.
     x_coord: str
         Name of the x coordinate.
@@ -34,16 +35,16 @@ class SingleStateField(States):
         Name of the y coordinate.
     h_coord: str
         Name of the height coordinate.
-    sel: dict
+    sel: dict[str, object]
         Subset selection via xr.Dataset.sel()
-    isel: dict
+    isel: dict[str, object]
         Subset selection via xr.Dataset.isel()
-    interp_pars: dict
+    interp_pars: dict[str, bool or float or str or None]
         Interpolation parameters, passed to the interpolation function.
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-    height_bounds: tuple
+    height_bounds: tuple[float, float]
         The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
 
     :group: input.states
@@ -52,55 +53,55 @@ class SingleStateField(States):
 
     def __init__(
         self,
-        data_source,
-        output_vars,
+        data_source: str | Path | Dataset,
+        output_vars: list[str],
         var2ncvar: dict[str, str] | None = None,
-        fixed_vars: dict[str, Any] | None = None,
+        fixed_vars: dict[str, float] | None = None,
         x_coord: str = "x",
         y_coord: str = "y",
         h_coord: str | None = "height",
-        sel=None,
-        isel=None,
-        interp_pars: dict[str, Any] | None = None,
-        bounds_extra_space=1000,
-        height_bounds=None,
-        **kwargs: Any,
+        sel: DatasetSelection | None = None,
+        isel: DatasetSelection | None = None,
+        interp_pars: InterpolationParameters | None = None,
+        bounds_extra_space: float | str | None = 1000,
+        height_bounds: tuple[float, float] | None = None,
+        **kwargs: object,
     ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: xarray.Dataset or str
+        data_source: xarray.Dataset or str or pathlib.Path
             The NetCDF dataset to read from, or a path to it.
         output_vars: list of str
             List of variable names to read.
-        var2ncvar: dict
+        var2ncvar: dict[str, str], optional
             Mapping from variable names to netCDF variable names.
-        fixed_vars: dict
+        fixed_vars: dict[str, float], optional
             Mapping from variable names to fixed values.
         x_coord: str
             Name of the x coordinate.
         y_coord: str
             Name of the y coordinate.
-        h_coord: str
+        h_coord: str or None
             Name of the height coordinate.
-        sel: dict, optional
+        sel: dict[str, object], optional
             Subset selection via xr.Dataset.sel()
-        isel: dict, optional
+        isel: dict[str, object], optional
             Subset selection via xr.Dataset.isel()
-        interp_pars: dict
+        interp_pars: dict[str, bool or float or str or None], optional
             Interpolation parameters, passed to the interpolation function.
-        bounds_extra_space: float or str, optional
+        bounds_extra_space: float or str or None, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
+        height_bounds: tuple[float, float], optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        kwargs: dict
+        kwargs: object
             Keyword arguments passed to the base class.
 
         """
-        super().__init__(**kwargs)
+        super().__init__(**kwargs)  # type: ignore[arg-type]
         self.data_source = data_source
         self.output_vars = output_vars
         self.var2ncvar = {} if var2ncvar is None else var2ncvar
@@ -121,9 +122,9 @@ class SingleStateField(States):
         if self.h_coord is not None:
             self._cmap[FV.H] = self.h_coord
 
-        self._data = None
+        self._data: Dataset | None = None
 
-    def output_point_vars(self, algo) -> list[str]:
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -154,7 +155,11 @@ class SingleStateField(States):
         return self._data
 
     def load_data(
-        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 1
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 1,
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
@@ -236,7 +241,7 @@ class SingleStateField(States):
             # reduce dimensions:
             if algo is not None:
                 DatasetStates.preproc_first(
-                    cast(Any, self),
+                    cast(DatasetStates, self),
                     algo,
                     data=data,
                     bounds_extra_space=self.bounds_extra_space,
@@ -288,7 +293,9 @@ class SingleStateField(States):
         """
         return [0]
 
-    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
+    def calculate(  # type: ignore[override]
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -308,7 +315,7 @@ class SingleStateField(States):
 
         Returns
         -------
-        results: dict
+        results: dict[str, numpy.ndarray]
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)

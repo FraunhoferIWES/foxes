@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.interpolate import interpn
-from typing import Any
 
-from foxes.core import LoadedData
+from foxes.core import Algorithm, FData, LoadedData, MData, TData
 from foxes.core.states import States
 from foxes.config import config, get_input_path
 from foxes.utils import ReaderWRG, weibull_weights
@@ -24,13 +24,13 @@ class WRGStates(States):
     ws_bins: numpy.ndarray
         The wind speed bins, including
         lower and upper bounds, shape: (n_ws_bins+1,)
-    fixed_vars: dict
+    fixed_vars: dict[str, float]
         Fixed uniform variable values, instead of
         reading from data
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-    interp_pars: dict
+    interp_pars: dict[str, object]
         Additional parameters for scipy.interpolate.interpn
 
     :group: input.states
@@ -40,10 +40,10 @@ class WRGStates(States):
     def __init__(
         self,
         wrg_fname: str,
-        ws_bins,
-        fixed_vars: dict[str, Any] | None = None,
+        ws_bins: ArrayLike,
+        fixed_vars: dict[str, float] | None = None,
         bounds_extra_space: float | str = "1D",
-        **interp_pars: Any,
+        **interp_pars: object,
     ) -> None:
         """
         Constructor
@@ -52,16 +52,16 @@ class WRGStates(States):
         ----------
         wrg_fname: str
             Name of the WRG file
-        ws_bins: list of float
+        ws_bins: numpy.typing.ArrayLike
             The wind speed bins, including
             lower and upper bounds
-        fixed_vars: dict
+        fixed_vars: dict[str, float], optional
             Fixed uniform variable values, instead of
             reading from data
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        interp_pars: dict, optional
+        interp_pars: object
             Additional parameters for scipy.interpolate.interpn
 
         """
@@ -73,7 +73,11 @@ class WRGStates(States):
         self.interp_pars = interp_pars
 
     def load_data(
-        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
@@ -188,7 +192,7 @@ class WRGStates(States):
         """
         return self._N
 
-    def output_point_vars(self, algo) -> list[str]:
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -207,7 +211,9 @@ class WRGStates(States):
         ovars.update(self.fixed_vars.keys())
         return list(ovars)
 
-    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
+    def calculate(  # type: ignore[override]
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -227,7 +233,7 @@ class WRGStates(States):
 
         Returns
         -------
-        results: dict
+        results: dict[str, numpy.ndarray]
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
@@ -236,6 +242,7 @@ class WRGStates(States):
         # prepare:
         self.ensure_output_vars(algo, tdata)
         n_states = tdata.n_states
+        assert n_states is not None
         n_targets = tdata.n_targets
         n_tpoints = tdata.n_tpoints
         n_pts = n_states * n_targets * n_tpoints
@@ -263,7 +270,7 @@ class WRGStates(States):
         gvars = (self._x, self._y, self._wds)
         try:
             ipars = dict(bounds_error=True, fill_value=None)
-            ipars.update(self.interp_pars)
+            ipars.update(self.interp_pars)  # type: ignore[arg-type]
             data = interpn(gvars, self._data, pts, **ipars).reshape(
                 n_states, n_targets, n_tpoints, 3
             )

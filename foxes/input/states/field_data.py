@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from foxes.core import LoadedData, MData
+import xarray as xr
+from foxes.core import Algorithm, LoadedData, MData
 
 from foxes.utils import weibull_weights, get_utm_zone, to_lonlat, from_lonlat
 from foxes.config import config, get_output_path
@@ -118,13 +119,13 @@ class FieldData(DatasetStates):
 
     def preproc_first(
         self,
-        algo,
-        data,
-        bounds_extra_space=None,
-        height_bounds=None,
+        algo: Algorithm,
+        data: xr.Dataset,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
         loaded_data: LoadedData | None = None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Preprocesses the first file.
 
@@ -134,10 +135,10 @@ class FieldData(DatasetStates):
             The calculation algorithm
         data: xarray.Dataset
             The dataset to preprocess
-        bounds_extra_space: float or str, optional
+        bounds_extra_space: float or str or None, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
+        height_bounds: tuple[float, float], optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         loaded_data: LoadedData, optional
             If given, optionally add to this loaded data dict with entries
@@ -187,7 +188,9 @@ class FieldData(DatasetStates):
                     marker=".",
                     linestyle="None",
                 )
-                anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+                wind_farm_names = algo.farm.wind_farm_names
+                assert wind_farm_names is not None
+                anno = 3 if len(wind_farm_names) > 1 else 0
                 FarmLayoutOutput(farm=algo.farm).get_figure(
                     fig=fig, ax=ax, annotate=anno, fontsize=12
                 )
@@ -288,7 +291,9 @@ class LatLonFieldData(DatasetStates):
         if self.h_coord is not None:
             self._cmap[FV.H] = self.h_coord
 
-    def _find_xy_bounds(self, algo, bounds_extra_space):
+    def _find_xy_bounds(
+        self, algo: Algorithm, bounds_extra_space: float | str
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Helper function to determine x/y bounds with extra space."""
         return algo.farm.get_xy_bounds(
             extra_space=bounds_extra_space, algo=algo, lonlat=True
@@ -296,13 +301,13 @@ class LatLonFieldData(DatasetStates):
 
     def preproc_first(
         self,
-        algo,
-        data,
-        bounds_extra_space=None,
-        height_bounds=None,
+        algo: Algorithm,
+        data: xr.Dataset,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
         loaded_data: LoadedData | None = None,
-        verbosity=0,
-    ):
+        verbosity: int = 0,
+    ) -> None:
         """
         Preprocesses the first file.
 
@@ -312,10 +317,10 @@ class LatLonFieldData(DatasetStates):
             The calculation algorithm
         data: xarray.Dataset
             The dataset to preprocess
-        bounds_extra_space: float or str, optional
+        bounds_extra_space: float or str or None, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
+        height_bounds: tuple[float, float], optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         loaded_data: LoadedData, optional
             If given, optionally add to this loaded data dict with entries
@@ -403,7 +408,9 @@ class LatLonFieldData(DatasetStates):
                     marker=".",
                     linestyle="None",
                 )
-                anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+                wind_farm_names = algo.farm.wind_farm_names
+                assert wind_farm_names is not None
+                anno = 3 if len(wind_farm_names) > 1 else 0
                 FarmLayoutOutput(farm=algo.farm).get_figure(
                     fig=fig, ax=ax, annotate=anno, fontsize=12
                 )
@@ -552,10 +559,18 @@ class WeibullField(FieldData):
         self._n_wd = None
         self._n_ws = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, cmap=None, verbosity=0):
+    def _read_ds(
+        self,
+        ds: xr.Dataset,
+        cmap: dict[str, str] | None = None,
+        verbosity: int = 0,
+    ) -> tuple[
+        dict[str, np.ndarray],
+        dict[str, tuple[tuple[str, ...], np.ndarray]],
+    ]:
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
@@ -563,16 +578,16 @@ class WeibullField(FieldData):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        cmap: dict, optional
+        cmap: dict[str, str], optional
             A mapping from foxes variable names to Dataset dimension names, if not given self._cmap will be used
         verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        coords: dict
+        coords: dict[str, numpy.ndarray]
             keys: Foxes variable names, values: 1D coordinate value arrays
-        data: dict
+        data: dict[str, tuple[tuple[str, ...], numpy.ndarray]]
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
             where dims is a tuple of dimension names and
@@ -629,16 +644,16 @@ class WeibullField(FieldData):
         del wsb, ds
 
         # calculate Weibull weights
-        dms = [FV.WS, FV.WD]
-        shp = [n_ws, n_wd]
+        dimension_names: list[str] = [FV.WS, FV.WD]
+        shape: list[int] = [n_ws, n_wd]
         for c in [FV.X, FV.Y, FV.H]:
             for v in [FV.WEIBULL_A, FV.WEIBULL_k]:
                 if c in data0[v][0]:
-                    dms.append(c)
-                    shp.append(data0[v][1].shape[data0[v][0].index(c)])
+                    dimension_names.append(c)
+                    shape.append(data0[v][1].shape[data0[v][0].index(c)])
                     break
-        dms = tuple(dms)
-        shp = tuple(shp)
+        dms = tuple(dimension_names)
+        shp = tuple(shape)
         if data0[FV.WEIGHT][0] == dms:
             w = data0.pop(FV.WEIGHT)[1]
         else:
@@ -663,28 +678,29 @@ class WeibullField(FieldData):
         # translate binned data to states
         self._N = n_ws * n_wd
         self._inds = np.arange(self._N, dtype=config.dtype_int)
-        data = {
-            FV.WS: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
-            FV.WD: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
-        }
-        data[FV.WS][:] = wss[:, None]
-        data[FV.WD][:] = wd[None, :]
-        data[FV.WS] = ((FC.STATE,), data[FV.WS].reshape(self._N))
-        data[FV.WD] = ((FC.STATE,), data[FV.WD].reshape(self._N))
+        translated_data: dict[str, tuple[tuple[str, ...], np.ndarray]] = {}
+        ws_data = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+        wd_data = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+        ws_data[:] = wss[:, None]
+        wd_data[:] = wd[None, :]
+        translated_data[FV.WS] = ((FC.STATE,), ws_data.reshape(self._N))
+        translated_data[FV.WD] = ((FC.STATE,), wd_data.reshape(self._N))
         for v in list(data0.keys()):
             dims, d = data0.pop(v)
             if dims[0] == FV.WD:
                 dms = tuple([FC.STATE] + list(dims[1:]))
-                shp = [n_ws] + list(d.shape)
-                data[v] = np.zeros(shp, dtype=config.dtype_double)
-                data[v][:] = d[None, ...]
-                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
+                shape = [n_ws] + list(d.shape)
+                expanded_data = np.zeros(shape, dtype=config.dtype_double)
+                expanded_data[:] = d[None, ...]
+                translated_data[v] = (
+                    dms,
+                    expanded_data.reshape([self._N] + shape[2:]),
+                )
             elif len(dims) >= 2 and dims[:2] == (FV.WS, FV.WD):
                 dms = tuple([FC.STATE] + list(dims[2:]))
-                shp = [self._N] + list(d.shape[2:])
-                data[v] = (dms, d.reshape(shp))
+                shape = [self._N] + list(d.shape[2:])
+                translated_data[v] = (dms, d.reshape(shape))
             else:
-                data[v] = (dims, d)
-        data0 = data
+                translated_data[v] = (dims, d)
 
-        return coords, data
+        return coords, translated_data

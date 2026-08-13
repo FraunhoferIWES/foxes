@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Any
+from numpy.typing import ArrayLike
+from typing import cast
 
-from foxes.core import LoadedData, States
+from foxes.core import Algorithm, FData, LoadedData, MData, States, TData
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -15,7 +16,7 @@ class ScanStates(States):
 
     Parameters
     ----------
-    scans: dict
+    scans: dict[str, numpy.typing.ArrayLike]
         The scans, key: variable name,
         value: scan values
 
@@ -23,24 +24,28 @@ class ScanStates(States):
 
     """
 
-    def __init__(self, scans: dict[str, Any], **kwargs: Any) -> None:
+    def __init__(self, scans: dict[str, ArrayLike], **kwargs: object) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        scans: dict
+        scans: dict[str, numpy.typing.ArrayLike]
             The scans, key: variable name,
             value: scan values
-        kwargs: dict, optional
+        kwargs: object
             Parameters for the base class
 
         """
-        super().__init__(**kwargs)
+        super().__init__(**kwargs)  # type: ignore[arg-type]
         self.scans = {v: np.asarray(d) for v, d in scans.items()}
 
     def load_data(
-        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
@@ -66,7 +71,7 @@ class ScanStates(States):
         """
         n_v = len(self.scans)
         shp = [len(v) for v in self.scans.values()]
-        self._N = np.prod(shp)
+        self._N = int(np.prod(shp))
         self._vars = list(self.scans.keys())
 
         data = np.zeros(shp + [n_v], dtype=config.dtype_double)
@@ -85,10 +90,10 @@ class ScanStates(States):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -102,12 +107,12 @@ class ScanStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash: dict[str, dict[str, object]] or None
             Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel: dict[str, object], optional
             The subset selection dictionary
-        isel: dict, optional
+        isel: dict[str, object], optional
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
@@ -121,10 +126,10 @@ class ScanStates(States):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -135,12 +140,12 @@ class ScanStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash: dict[str, dict[str, object]] or None
             Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel: dict[str, object], optional
             The subset selection dictionary
-        isel: dict, optional
+        isel: dict[str, object], optional
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
@@ -150,7 +155,7 @@ class ScanStates(States):
 
         if data_stash is not None:
             data = data_stash[self.name]
-            self.scans = data.pop("scans")
+            self.scans = cast(dict[str, np.ndarray], data.pop("scans"))
 
     def size(self) -> int:
         """
@@ -164,7 +169,7 @@ class ScanStates(States):
         """
         return self._N
 
-    def output_point_vars(self, algo) -> list[str]:
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -181,7 +186,9 @@ class ScanStates(States):
         """
         return self._vars
 
-    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
+    def calculate(  # type: ignore[override]
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -201,7 +208,7 @@ class ScanStates(States):
 
         Returns
         -------
-        results: dict
+        results: dict[str, numpy.ndarray]
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)

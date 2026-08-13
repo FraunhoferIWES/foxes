@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import interpn
 from typing import Any, cast
 
-from foxes.core import LoadedData, States, Model
+from foxes.core import Algorithm, FData, LoadedData, MData, States, Model, TData
 from foxes.utils import uv2wd
 from foxes.models.wake_frames.timelines import Timelines
 from foxes.config import config
@@ -37,10 +37,10 @@ class OnePointFlowStates(States):
 
     def __init__(
         self,
-        ref_xy,
+        ref_xy: list[float] | np.ndarray,
         *base_states_args: Any,
-        base_states=None,
-        tl_heights=None,
+        base_states: States | None = None,
+        tl_heights: list[float] | np.ndarray | None = None,
         dt_min: float | None = None,
         **base_states_kwargs: Any,
     ) -> None:
@@ -71,7 +71,6 @@ class OnePointFlowStates(States):
         super().__init__()
         self.ref_xy = np.array(ref_xy, dtype=config.dtype_double)
         self.heights = tl_heights
-        self.base_states = base_states
         self.dt_min = dt_min
         self.timelines_data: Any = None
 
@@ -88,7 +87,8 @@ class OnePointFlowStates(States):
                 f"Base states of type '{type(base_states).__name__}' were given, cannot handle base_states_args of types {[type(a).__name__ for a in base_states_args]}"
             )
         elif base_states is None:
-            self.base_states = States.new(*base_states_args, **base_states_kwargs)
+            base_states = States.new(*base_states_args, **base_states_kwargs)
+        self.base_states: States = base_states
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(base={type(self.base_states).__name__}, heights={self.heights}, dt_min={self.dt_min})"
@@ -106,7 +106,11 @@ class OnePointFlowStates(States):
         return [self.base_states]
 
     def load_data(
-        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
     ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
@@ -168,7 +172,7 @@ class OnePointFlowStates(States):
         """
         return self.base_states.size()
 
-    def index(self):
+    def index(self) -> object:
         """
         The index list
 
@@ -180,7 +184,7 @@ class OnePointFlowStates(States):
         """
         return self.base_states.index()
 
-    def output_point_vars(self, algo) -> list[str]:
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -199,10 +203,10 @@ class OnePointFlowStates(States):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -239,10 +243,10 @@ class OnePointFlowStates(States):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -272,7 +276,12 @@ class OnePointFlowStates(States):
                 self.timelines_data = data.pop("data")
 
     def calc_states_indices(
-        self, algo, mdata, points: np.ndarray, hi: int, ref_xy: np.ndarray
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        points: np.ndarray,
+        hi: int,
+        ref_xy: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
         # prepare:
         n_states, n_points = points.shape[:2]
@@ -353,12 +362,12 @@ class OnePointFlowStates(States):
 
         return trace_si, coeffs
 
-    def calculate(
+    def calculate(  # type: ignore[override]
         self,
-        algo,
-        mdata=None,
-        fdata=None,
-        tdata=None,
+        algo: Algorithm,
+        mdata: MData | None = None,
+        fdata: FData | None = None,
+        tdata: TData | None = None,
         *args: Any,
         **parameters: Any,
     ) -> dict[str, np.ndarray]:
@@ -385,7 +394,7 @@ class OnePointFlowStates(States):
 
         Returns
         -------
-        results: dict
+        results: dict[str, numpy.ndarray]
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
@@ -398,6 +407,8 @@ class OnePointFlowStates(States):
 
         # prepare:
         self.ensure_output_vars(algo, tdata)
+        n_algo_states = algo.n_states
+        assert n_algo_states is not None
         targets = tdata[FC.TARGETS]
         n_states, n_targets, n_tpoints = targets.shape[:3]
         n_points = n_targets * n_tpoints
@@ -429,9 +440,9 @@ class OnePointFlowStates(States):
             if np.any(sel_low):
                 out[sel_low] = data[0]
 
-            sel_hi = sts >= algo.n_states
+            sel_hi = sts >= n_algo_states
             if np.any(sel_hi):
-                out[sel_hi] = data[algo.n_states - 1]
+                out[sel_hi] = data[n_algo_states - 1]
 
             sel = (~sel_low) & (~sel_hi) & (cfs <= 0)
             if np.any(sel):

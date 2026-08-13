@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Any
 
-from foxes.core import LoadedData, Model, States, VerticalProfile
+from foxes.core import (
+    Algorithm,
+    FData,
+    LoadedData,
+    MData,
+    Model,
+    States,
+    TData,
+    VerticalProfile,
+)
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -39,8 +47,8 @@ class SingleStateStates(States):
         wd: float | None = None,
         ti: float | None = None,
         rho: float | None = None,
-        profiles: dict[str, str | dict[str, Any] | VerticalProfile] | None = None,
-        **profdata: Any,
+        profiles: dict[str, str | dict[str, object] | VerticalProfile] | None = None,
+        **profdata: object,
     ) -> None:
         """
         Constructor.
@@ -55,10 +63,10 @@ class SingleStateStates(States):
             The TI value
         rho: float, optional
             The air density
-        profiles: dict, optional
+        profiles: dict[str, str or dict[str, object] or foxes.core.VerticalProfile], optional
             Key: output variable name str, Value: str or dict
             or `foxes.core.VerticalProfile`
-        profdata: dict, optional
+        profdata: object
             Additional data for profiles
 
         """
@@ -95,11 +103,11 @@ class SingleStateStates(States):
 
     def initialize(
         self,
-        algo,
+        algo: Algorithm,
         loaded_data: LoadedData | None = None,
         force: bool = False,
         verbosity: int = 0,
-    ):
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -133,8 +141,12 @@ class SingleStateStates(States):
             elif isinstance(d, VerticalProfile):
                 self._profiles[v] = d
             elif isinstance(d, dict):
-                t = d.pop("type")
-                self._profiles[v] = VerticalProfile.new(t, **d)
+                profile_type = d.pop("type")
+                if not isinstance(profile_type, str):
+                    raise TypeError(
+                        f"States '{self.name}': Profile type for variable '{v}' must be str, got {type(profile_type).__name__}"
+                    )
+                self._profiles[v] = VerticalProfile.new(profile_type, **d)
             else:
                 raise TypeError(
                     f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
@@ -155,7 +167,7 @@ class SingleStateStates(States):
         """
         return 1
 
-    def output_point_vars(self, algo) -> list[str]:
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -183,7 +195,9 @@ class SingleStateStates(States):
 
         return list(out)
 
-    def calculate(self, algo, mdata, fdata, tdata) -> dict[str, np.ndarray]:  # type: ignore[override]
+    def calculate(  # type: ignore[override]
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -203,7 +217,7 @@ class SingleStateStates(States):
 
         Returns
         -------
-        results: dict
+        results: dict[str, numpy.ndarray]
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)

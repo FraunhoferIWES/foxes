@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from xarray import Dataset, open_dataset
 from scipy.interpolate import interp1d
+from pathlib import Path
+from typing import Any
 
 from foxes.core import Algorithm, FData, LoadedData, MData, States, TData
 from foxes.utils import PandasFileHelper
@@ -25,22 +29,22 @@ class MultiHeightStates(States):
 
     Attributes
     ----------
-    data_source: str or pandas.DataFrame
+    data_source: str or pathlib.Path or pandas.DataFrame
         Either path to a file or data
     ovars: list of str
         The output variables
     heights: list of float
         The heights at which to search data
-    var2col: dict, optional
+    var2col: dict[str, str], optional
         Mapping from variable names to data column names
-    fixed_vars: dict, optional
+    fixed_vars: dict[str, float], optional
         Fixed uniform variable values, instead of
         reading from data
-    read_pars: dict, optional
+    read_pars: dict[str, object], optional
         pandas file reading parameters
     states_sel: slice or range or list of int
         States subset selection
-    states_loc: list
+    states_loc: list[object]
         State index selection via pandas loc function
     check_nans: bool
         Whether to check for NaN values in the data
@@ -57,45 +61,45 @@ class MultiHeightStates(States):
 
     def __init__(
         self,
-        data_source,
-        output_vars,
-        heights,
-        var2col={},
-        fixed_vars={},
-        read_pars={},
-        states_sel=None,
-        states_loc=None,
-        check_nans=True,
-        interpolate_nans_pars=None,
-        **ipars,
-    ):
+        data_source: str | Path | pd.DataFrame,
+        output_vars: list[str],
+        heights: list[float] | np.ndarray,
+        var2col: dict[str, str] = {},
+        fixed_vars: dict[str, float] = {},
+        read_pars: dict[str, object] = {},
+        states_sel: slice | range | list[int] | None = None,
+        states_loc: list[object] | None = None,
+        check_nans: bool = True,
+        interpolate_nans_pars: dict[str, object] | None = None,
+        **ipars: object,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str or pandas.DataFrame
+        data_source: str or pathlib.Path or pandas.DataFrame
             Either path to a file or data
         output_vars: list of str
             The output variables
         heights: list of float
             The heights at which to search data
-        var2col: dict, optional
+        var2col: dict[str, str], optional
             Mapping from variable names to data column names
-        fixed_vars: dict, optional
+        fixed_vars: dict[str, float], optional
             Fixed uniform variable values, instead of
             reading from data
-        read_pars: dict, optional
+        read_pars: dict[str, object], optional
             pandas file reading parameters
         states_sel: slice or range or list of int, optional
             States subset selection
-        states_loc: list, optional
+        states_loc: list[object], optional
             State index selection via pandas loc function
         check_nans: bool, optional
             Whether to check for NaN values in the data
-        interpolate_nans_pars: dict, optional
+        interpolate_nans_pars: dict[str, object], optional
             Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
-        ipars: dict, optional
+        ipars: object
             Parameters for scipy.interpolate.interp1d
 
         """
@@ -112,24 +116,24 @@ class MultiHeightStates(States):
         self.check_nans = check_nans
         self.interpolate_nans_pars = interpolate_nans_pars
 
-        self._data_source = data_source
-        self._solo = None
-        self._inds = None
-        self._N = None
+        self._data_source: str | Path | pd.DataFrame | Dataset = data_source
+        self._solo: dict[str, np.ndarray] = {}
+        self._inds: np.ndarray = np.array([], dtype=config.dtype_int)
+        self._N: int = 0
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         berr = self.ipars.get("bounds_error", False)
-        ssel = "" if self.states_sel is None else f"n_states={len(self.states_sel)}, "
+        ssel = "" if self.states_sel is None else "selected_states, "
         return f"{type(self).__name__}({ssel}bounds_error={berr})"
 
     @property
-    def data_source(self):
+    def data_source(self) -> str | Path | pd.DataFrame | Dataset:
         """
         The data source
 
         Returns
         -------
-        s: object
+        s: str or pathlib.Path or pandas.DataFrame or xarray.Dataset
             The data source
 
         """
@@ -139,7 +143,13 @@ class MultiHeightStates(States):
             )
         return self._data_source
 
-    def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
+    def reset(
+        self,
+        algo: Algorithm | None = None,
+        states_sel: slice | range | list[int] | None = None,
+        states_loc: list[object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Reset the states, optionally select states
 
@@ -147,7 +157,7 @@ class MultiHeightStates(States):
         ----------
         states_sel: slice or range or list of int, optional
             States subset selection
-        states_loc: list, optional
+        states_loc: list[object], optional
             State index selection via pandas loc function
         verbosity: int
             The verbosity level, 0 = silent
@@ -157,12 +167,12 @@ class MultiHeightStates(States):
             if algo is None:
                 raise KeyError(f"{self.name}: Missing algo for reset")
             elif algo.states is not self:
-                raise ValueError(f"{self.states}: algo.states differs from self")
+                raise ValueError(f"{self.name}: algo.states differs from self")
             self.finalize(algo, verbosity)
         self.states_sel = states_sel
         self.states_loc = states_loc
 
-    def _find_cols(self, v, cols):
+    def _find_cols(self, v: str, cols: pd.Index[str]) -> dict[str, list[str]]:
         """
         Helper function for searching height columns
         """
@@ -172,7 +182,7 @@ class MultiHeightStates(States):
         elif c0 in cols:
             return {v: [c0]}
         else:
-            cls = {v: []}
+            cls: dict[str, list[str]] = {v: []}
             for h in self.heights:
                 hh = int(h) if int(h) == h else h
                 c = f"{c0}-{hh}"
@@ -200,7 +210,13 @@ class MultiHeightStates(States):
                     )
             return cls
 
-    def load_data(self, algo, loaded_data: LoadedData, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -232,21 +248,23 @@ class MultiHeightStates(States):
             return
 
         if not isinstance(self.data_source, pd.DataFrame):
-            self._data_source = get_input_path(self.data_source)
-            if not self.data_source.is_file():
+            data_source = self.data_source
+            assert isinstance(data_source, (str, Path))
+            fpath = get_input_path(data_source)
+            self._data_source = fpath
+            if not fpath.is_file():
                 if verbosity > 0:
                     print(
-                        f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
+                        f"States '{self.name}': Reading static data '{fpath}' from context '{STATES}'"
                     )
-                self._data_source = algo.dbook.get_file_path(
-                    STATES, self.data_source.name, check_raw=False
-                )
+                fpath = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                self._data_source = fpath
                 if verbosity > 0:
-                    print(f"Path: {self.data_source}")
+                    print(f"Path: {fpath}")
             elif verbosity:
-                print(f"States '{self.name}': Reading file {self.data_source}")
+                print(f"States '{self.name}': Reading file {fpath}")
             rpars = dict(self.RDICT, **self.rpars)
-            data = PandasFileHelper().read_file(self.data_source, **rpars)
+            data = PandasFileHelper().read_file(fpath, **rpars)
         else:
             data = self.data_source
 
@@ -308,8 +326,6 @@ class MultiHeightStates(States):
             loaded_data["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
         for v, d in self._solo.items():
             loaded_data["data_vars"][self.var(v)] = ((FC.STATE,), d)
-        self._solo = list(self._solo.keys())
-
         if not np.all(np.arange(self._N) == self._inds):
             loaded_data["coords"][FC.STATE] = self._inds
 
@@ -386,7 +402,7 @@ class MultiHeightStates(States):
             self._data_source = data.pop("data_source")
             self._inds = data.pop("inds")
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -396,9 +412,10 @@ class MultiHeightStates(States):
             The total number of states
 
         """
+        assert self._N is not None
         return self._N
 
-    def index(self):
+    def index(self) -> np.ndarray | None:
         """
         The index list
 
@@ -412,7 +429,7 @@ class MultiHeightStates(States):
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self._inds
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
@@ -451,7 +468,7 @@ class MultiHeightStates(States):
 
         Returns
         -------
-        results: dict
+        results: dict[str, numpy.ndarray]
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
@@ -629,7 +646,13 @@ class MultiHeightNCStates(MultiHeightStates):
         self.xr_read_pars.setdefault("engine", config.nc_engine)
         self._format_times_func = format_times_func
 
-    def load_data(self, algo, loaded_data: LoadedData, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -662,20 +685,22 @@ class MultiHeightNCStates(MultiHeightStates):
             return
 
         if not isinstance(self.data_source, Dataset):
-            self._data_source = get_input_path(self.data_source)
-            if not self.data_source.is_file():
+            data_source = self.data_source
+            assert isinstance(data_source, (str, Path))
+            fpath = get_input_path(data_source)
+            self._data_source = fpath
+            if not fpath.is_file():
                 if verbosity > 0:
                     print(
-                        f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
+                        f"States '{self.name}': Reading static data '{fpath}' from context '{STATES}'"
                     )
-                self._data_source = algo.dbook.get_file_path(
-                    STATES, self.data_source.name, check_raw=False
-                )
+                fpath = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                self._data_source = fpath
                 if verbosity > 0:
-                    print(f"Path: {self.data_source}")
+                    print(f"Path: {fpath}")
             elif verbosity:
-                print(f"States '{self.name}': Reading file {self.data_source}")
-            with open_dataset(self.data_source, **self.xr_read_pars) as ds:
+                print(f"States '{self.name}': Reading file {fpath}")
+            with open_dataset(fpath, **self.xr_read_pars) as ds:
                 data = ds
         else:
             data = self.data_source
@@ -758,7 +783,6 @@ class MultiHeightNCStates(MultiHeightStates):
                 (FC.STATE,),
                 d.astype(config.dtype_double),
             )
-        self._solo = list(self._solo.keys())
 
 
 class MultiHeightTimeseries(MultiHeightStates):
@@ -773,24 +797,24 @@ class MultiHeightTimeseries(MultiHeightStates):
 
     def __init__(
         self,
-        *args,
-        interpolate_nans_pars={},
-        **kwargs,
-    ):
+        *args: Any,
+        interpolate_nans_pars: dict[str, object] = {},
+        **kwargs: object,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args: Any
             Parameters for the base class
-        interpolate_nans_pars: dict, optional
+        interpolate_nans_pars: dict[str, object], optional
             Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
-        kwargs: dict, optional
+        kwargs: object
             Parameters for the base class
 
         """
-        super().__init__(*args, interpolate_nans_pars=interpolate_nans_pars, **kwargs)
+        super().__init__(*args, interpolate_nans_pars=interpolate_nans_pars, **kwargs)  # type: ignore[arg-type, misc]
 
 
 class MultiHeightNCTimeseries(MultiHeightNCStates):
@@ -803,20 +827,20 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
 
     def __init__(
         self,
-        *args,
-        time_coord=FC.TIME,
-        **kwargs,
-    ):
+        *args: object,
+        time_coord: str = FC.TIME,
+        **kwargs: object,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args: object
             Parameters for the base class
         time_coord: str
             Name of the state coordinate
-        kwargs: dict, optional
+        kwargs: object
             Parameters for the base class
 
         """
