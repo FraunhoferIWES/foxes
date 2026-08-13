@@ -266,9 +266,7 @@ class DynamicWakes(WakeFrame):
                     )
                 else:
                     data[:, age + 1, :3] = pts
-                    data[:, age + 1, 3] = data[:, age, 3] + np.linalg.norm(
-                        dxy, axis=-1
-                    )
+                    data[:, age + 1, 3] = data[:, age, 3] + np.linalg.norm(dxy, axis=-1)
 
                 if age < max_age - 2:
                     s = ~np.isnan(data[:, age + 1, 3])
@@ -367,8 +365,12 @@ class DynamicWakes(WakeFrame):
                             isnan0 = np.isnan(hdata)
                             for si in range(n_states):
                                 state_slice = slice(si, si + 1)
-                                hmdata = cast(Any, mdata.get_slice(FC.STATE, state_slice))
-                                hfdata = cast(Any, fdata.get_slice(FC.STATE, state_slice))
+                                hmdata = cast(
+                                    Any, mdata.get_slice(FC.STATE, state_slice)
+                                )
+                                hfdata = cast(
+                                    Any, fdata.get_slice(FC.STATE, state_slice)
+                                )
                                 htdt = {v: d[state_slice] for v, d in tdt.items()}
                                 htdata = TData.from_points(
                                     points=pts[None, :],

@@ -540,7 +540,9 @@ class Timelines(WakeFrame):
         heights = tldata["height"].to_numpy()
         data_dxy = tldata["dxy"].to_numpy()
 
-        points: np.ndarray = np.zeros((n_states, n_points, 3), dtype=config.dtype_double)
+        points: np.ndarray = np.zeros(
+            (n_states, n_points, 3), dtype=config.dtype_double
+        )
         points[:] = rxyz[:, None, :]
 
         trace_dp = np.zeros_like(points[..., :2])

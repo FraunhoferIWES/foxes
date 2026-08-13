@@ -160,12 +160,8 @@ class SeqDynamicWakes(FarmOrder):
         n_states = algo.n_states
         n_turbines = algo.n_turbines
         assert n_states is not None and n_turbines is not None
-        self._traces_p = np.zeros(
-            (n_states, n_turbines, 3), dtype=config.dtype_double
-        )
-        self._traces_v = np.zeros(
-            (n_states, n_turbines, 3), dtype=config.dtype_double
-        )
+        self._traces_p = np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double)
+        self._traces_v = np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double)
         self._traces_l = np.full(
             (n_states, n_turbines), np.nan, dtype=config.dtype_double
         )

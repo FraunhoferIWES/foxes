@@ -1,3 +1,4 @@
+import numpy as np
 from pandas import read_csv
 from foxes.core import FData, MData
 

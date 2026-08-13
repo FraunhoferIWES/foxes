@@ -254,7 +254,9 @@ class LookupTable(TurbineModel):
         iargs.update(self._iargs)
         try:
             table_any: Any = table
-            odata = cast(xr.Dataset, table_any.interp(**indata, kwargs=iargs, **self._xargs))
+            odata = cast(
+                xr.Dataset, table_any.interp(**indata, kwargs=iargs, **self._xargs)
+            )
         except ValueError as e:
             print("\nBOUNDS ERROR", self.name)
             print("Variables:", list(indata.keys()))

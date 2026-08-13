@@ -318,7 +318,7 @@ class NEWAStates(DatasetStates):
 
     def get_grid_points(
         self,
-        loaded_data: dict[str, Any] | None = None,
+        loaded_data: dict | None = None,
         mdata: MData | None = None,
         all_heights: bool = True,
         height: float | None = None,

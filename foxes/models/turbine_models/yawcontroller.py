@@ -193,11 +193,7 @@ class YawController(TurbineModel):
                 wstart[sel] = np.where(~sel2, wsel + 1, wsel)
 
         # run controller logic:
-        sel = (
-            t_sel
-            & (counter >= wstart + self._n - 1)
-            & ~np.isnan(targetyaw)
-        )
+        sel = t_sel & (counter >= wstart + self._n - 1) & ~np.isnan(targetyaw)
         if np.any(sel):
             # prepare:
             yaw0 = lastyaw[sel]
