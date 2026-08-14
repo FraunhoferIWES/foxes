@@ -26,7 +26,7 @@ class Model(ABC):
 
     Attributes
     ----------
-    name: str
+    name
         The model name
 
     :group: core
@@ -69,34 +69,34 @@ class Model(ABC):
 
     def var(self, v: str) -> str:
         """
-        Creates a model specific variable name.
+        Create a model-specific variable name.
 
         Parameters
         ----------
-        v: str
-            The variable name
+        v
+            The variable name.
 
         Returns
         -------
-        vnm: str
-            Model specific variable name
+        vnm
+            The model-specific variable name.
 
         """
         return f"{self.name}_{v}"
 
     def unvar(self, vnm: str) -> str | None:
         """
-        Translates model specific variable name to origninal variable name.
+        Translate a model-specific variable name to the original variable name.
 
         Parameters
         ----------
-        vnm: str
-            The vamodel specific variable name
+        vnm
+            The model-specific variable name.
 
         Returns
         -------
-        v: str
-            Original variable name
+        v
+            The original variable name.
 
         """
         lng = len(f"{self.name}_")
@@ -109,7 +109,7 @@ class Model(ABC):
 
         Returns
         -------
-        bool:
+        initialized
             True if the model has been initialized.
 
         """
@@ -117,12 +117,12 @@ class Model(ABC):
 
     def sub_models(self) -> list[Model]:
         """
-        List of all sub-models
+        Return the list of all sub-models.
 
         Returns
         -------
-        smdls: list of foxes.core.Model
-            All sub models
+        smdls
+            All sub-models.
 
         """
         return []
@@ -141,17 +141,17 @@ class Model(ABC):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        loaded_data: dict
+        algo
+            The calculation algorithm.
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            Keys are "coords", a dict with entries ``dim_name_str -> dim_array``;
+            "data_vars", a dict with entries ``name_str -> (dim_tuple, data_ndarray)``;
             and "extra_data", a dict with non-array additional data.
-        force: bool
-            Overwrite existing data
-        verbosity: int
-            The verbosity level, 0 = silent
+        force
+            Overwrite existing data.
+        verbosity
+            The verbosity level, where 0 is silent.
 
         """
         if self.initialized:
@@ -167,29 +167,27 @@ class Model(ABC):
         verbosity: int = 0,
     ) -> LoadedData:
         """
-        Initializes the model.
+        Initialize the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        loaded_data: dict, optional
+        algo
+            The calculation algorithm.
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            Keys are "coords", a dict with entries ``dim_name_str -> dim_array``;
+            "data_vars", a dict with entries ``name_str -> (dim_tuple, data_ndarray)``;
             and "extra_data", a dict with non-array additional data.
-        force: bool
-            Overwrite existing data
-        verbosity: int
-            The verbosity level, 0 = silent
+        force
+            Overwrite existing data.
+        verbosity
+            The verbosity level, where 0 is silent.
 
         Returns
         -------
-        loaded_data: dict
-            The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
+        loaded_data
+            The loaded data, containing the keys "coords", "data_vars", and
+            "extra_data".
 
         """
 
@@ -233,7 +231,7 @@ class Model(ABC):
 
         Returns
         -------
-        flag: bool
+        running
             True if currently running
 
         """
@@ -248,25 +246,24 @@ class Model(ABC):
         verbosity: int = 0,
     ) -> None:
         """
-        Sets this model status to running, and moves
-        all large data to stash.
+        Set this model to the running state and move large data to the stash.
 
-        The stashed data will be returned by the
-        unset_running() function after running calculations.
+        The stashed data is restored by ``unset_running`` after the calculation
+        has finished.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict, optional
-            Large data stash, this function adds data here, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            The large-data stash. This function adds entries here when provided.
+            Keys are model names and values are dictionaries of large model data.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level; ``0`` is silent.
 
         """
         if self.running:
@@ -293,22 +290,21 @@ class Model(ABC):
         verbosity: int = 0,
     ) -> None:
         """
-        Sets this model status to not running, recovering large data
-        from stash
+        Set this model status to not running and recover large data from stash.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict, optional
-            Reconstruct model data from this stash, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            Reconstruct model data from this stash when provided.
+            Keys are model names and values are dictionaries of large model data.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level; ``0`` is silent.
 
         """
         if not self.running:
@@ -325,14 +321,14 @@ class Model(ABC):
 
     def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
-        Finalizes the model.
+        Finalize the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        verbosity
+            The verbosity level; ``0`` is silent.
 
         """
         if self.running:
@@ -407,41 +403,35 @@ class Model(ABC):
 
         Parameters
         ----------
-        variable: str
-            The variable, serves as data key
-        target: str, optional
-            The dimensions identifier for the output,
-            FC.STATE_TURBINE, FC.STATE_TARGET or
-            FC.STATE_TARGET_TPOINT
-        lookup: str
+        variable
+            The variable name used as the data key.
+        target
+            The dimensions identifier for the output: ``FC.STATE_TURBINE``,
+            ``FC.STATE_TARGET``, or ``FC.STATE_TARGET_TPOINT``.
+        lookup
             The order of data sources. Combination of:
-            's' for self,
-            'm' for mdata,
-            'f' for fdata,
-            't' for tdata,
-            'w' for wake modelling data
-        mdata: foxes.core.Data, optional
-            The model data
-        fdata: foxes.core.Data, optional
-            The farm data
-        tdata: foxes.core.Data, optional
-            The target point data
-        downwind_index: int, optional
-            The index in the downwind order
-        data_prio: bool
-            First search the data source, then the object
-        accept_none: bool
-            Do not throw an error if data entry is None
-        accept_nan: bool
-            Do not throw an error if data entry is np.nan
-        algo: foxes.core.Algorithm, optional
-            The algorithm, needed for data from previous iteration
-        upcast: bool
-            Flag for ensuring targets dimension,
-            otherwise dimension 1 is entered
-        selection: numpy.ndarray, optional
-            Apply this selection to the result,
-            state-turbine, state-target, or state-target-tpoint
+            ``'s'`` for self, ``'m'`` for mdata, ``'f'`` for fdata,
+            ``'t'`` for tdata, and ``'w'`` for wake-modeling data.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target point data.
+        downwind_index
+            The index in the downwind order.
+        accept_none
+            Do not raise an error if the data entry is ``None``.
+        accept_nan
+            Do not raise an error if the data entry is ``np.nan``.
+        algo
+            The algorithm, needed for data from previous iterations.
+        upcast
+            Ensure the target dimension is present; otherwise dimension 1 is
+            entered.
+        selection
+            Apply this selection to the result, for state-turbine, state-target,
+            or state-target-tpoint outputs.
 
         """
 

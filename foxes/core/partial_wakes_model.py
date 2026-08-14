@@ -27,9 +27,9 @@ class PartialWakesModel(Model):
 
     Attributes
     ----------
-    wake_models: list of foxes.core.WakeModel
+    wake_models
         The wake model selection
-    wake_frame: foxes.core.WakeFrame, optional
+    wake_frame
         The wake frame
 
     :group: core
@@ -42,14 +42,14 @@ class PartialWakesModel(Model):
 
         Parameters
         ----------
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model to be tested
-        error: bool
+        error
             Flag for raising TypeError
 
         Returns
         -------
-        chk: bool
+        chk
             True if wake model is compatible
 
         """
@@ -68,19 +68,19 @@ class PartialWakesModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        rpoints: numpy.ndarray
+        rpoints
             The wake calculation points, shape:
             (n_states, n_turbines, n_tpoints, 3)
-        rweights: numpy.ndarray
+        rweights
             The target point weights, shape: (n_tpoints,)
 
         """
@@ -100,24 +100,24 @@ class PartialWakesModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        amb_rotor_res: dict
+        amb_rotor_res
             The ambient results at rotor points,
             key: variable name, value: numpy.ndarray
             of shape: (n_states, n_turbines, n_rotor_points)
-        rotor_weights: numpy.ndarray
+        rotor_weights
             The rotor point weights, shape: (n_rotor_points,)
-        wmodels: list of foxes.core.WakeModel
+        wmodels
             The wake models for this partial wake model
 
         Returns
         -------
-        tdata: foxes.core.TData
+        tdata
             The target point data for the wake points
 
         """
@@ -157,23 +157,23 @@ class PartialWakesModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data for the wake points
-        amb_rotor_res: dict
+        amb_rotor_res
             The ambient results at rotor points,
             key: variable name, value: numpy.ndarray
             of shape: (n_states, n_turbines, n_rotor_points)
-        rotor_weights: numpy.ndarray, optional
+        rotor_weights
             The rotor point weights, shape: (n_rotor_points,)
-        wmodels: list of foxes.core.WakeModel
+        wmodels
             The wake models for this partial wake model
-        downwind_index: int
+        downwind_index
             The downwind index of the updated turbine
 
         """
@@ -286,29 +286,29 @@ class PartialWakesModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name to map
-        rotor_res: numpy.ndarray
+        rotor_res
             The results at rotor points, shape:
             (n_states, n_turbines, n_rotor_points) if downwind_index is None,
             otherwise shape: (n_states, n_rotor_points)
-        rotor_weights: numpy.ndarray
+        rotor_weights
             The rotor point weights, shape: (n_rotor_points,)
-        downwind_index: int, optional
+        downwind_index
             The downwind index of the updated turbine,
             if None, maps for all turbines
 
         Returns
         -------
-        res: numpy.ndarray
+        res
             The mapped results at target points, shape:
             (n_states, n_targets, n_tpoints) if downwind_index is None,
             otherwise shape: (n_states, n_tpoints)
@@ -323,7 +323,7 @@ class PartialWakesModel(Model):
                 tdata.n_targets,
             )
         ):
-            q = np.zeros(
+            q: np.ndarray = np.zeros(
                 (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
                 dtype=config.dtype_double,
             )
@@ -342,12 +342,10 @@ class PartialWakesModel(Model):
                 (tdata.n_states, tdata.n_tpoints),
                 dtype=config.dtype_double,
             )
-            if rotor_res.shape[2] == 1:
-                q[:] = rotor_res[:, downwind_index, :]
+            if rotor_res.shape[1] == 1:
+                q[:] = rotor_res[:, 0][:, None]
             else:
-                q[:] = np.einsum(
-                    "sr,r->s", rotor_res[:, downwind_index, :], rotor_weights
-                )
+                q[:] = np.einsum("sr,r->s", rotor_res, rotor_weights)[:, None]
 
             return q
 
@@ -370,20 +368,20 @@ class PartialWakesModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_tpoints, ...)
 
@@ -406,22 +404,22 @@ class PartialWakesModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            values are arrays with shape
             (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
 
         """
@@ -449,28 +447,28 @@ class PartialWakesModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.Data
+        tdata
             The target point data
-        rpoint_weights: numpy.ndarray
+        rpoint_weights
             The rotor point weights, shape: (n_rotor_points,)
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
             value: np.ndarray of shape
             (n_states, n_turbines, n_tpoints)
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
-        downwind_index: int
+        downwind_index
             The index in the downwind order
 
         Returns
         -------
-        final_wake_deltas: dict
+        final_wake_deltas
             The final wake deltas at the selected downwind
             turbines. Key: variable name, value: np.ndarray
             of shape (n_states, n_rotor_points)
@@ -490,11 +488,11 @@ class PartialWakesModel(Model):
 
         Parameters
         ----------
-        pwakes_type: str
+        pwakes_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         """

@@ -21,11 +21,11 @@ class WindFarm:
 
     Attributes
     ----------
-    name: str
+    name
         The wind farm name
-    turbines: list of foxes.core.Turbine
+    turbines
         The wind turbines
-    boundary: foxes.utils.geom2d.AreaGeometry, optional
+    boundary
         The wind farm boundary
 
     :group: core
@@ -40,26 +40,22 @@ class WindFarm:
         utm_zone: Any = None,
     ) -> None:
         """
-        Constructor.
+        Construct the wind farm.
 
         Parameters
         ----------
-        name: str
-            The wind farm name
-        boundary: foxes.utils.geom2d.AreaGeometry, optional
-            The wind farm boundary
-        input_is_lonlat: bool, optional
-            Whether the input coordinates are given in lon, lat. If True,
-            the coordinates are converted to UTM as specified by the
-            utm_zone parameter.
-        utm_zone: str or tuple, optional
-            Method for setting UTM zone in config, if not already set.
-            Options are:
-            - "from_turbine_X": use turbine X coordinates
-            - "from_farm": use farm center coordinates
-            - "XA": use given number X, letter A
-            - (lon, lat): use given lon, lat values
-            - None: do not set UTM zone, assume it is already set
+        name
+            The wind farm name.
+        boundary
+            The wind farm boundary.
+        input_is_lonlat
+            Whether the input coordinates are given as lon/lat. If True, the
+            coordinates are converted to UTM as specified by the utm_zone
+            parameter.
+        utm_zone
+            Method for setting the UTM zone in the config if it is not already
+            set. Supported options include values such as "from_turbine_X",
+            "from_farm", "XA", a (lon, lat) tuple, or None.
 
         """
         self.name = name
@@ -75,12 +71,12 @@ class WindFarm:
     @property
     def data_is_lonlat(self) -> bool:
         """
-        Whether the input coordinates are given in lat, lon.
+        Return whether input coordinates are given as latitude/longitude.
 
         Returns
         -------
-        data_is_lonlat: bool
-            True if the input coordinates are given in lat, lon
+        data_is_lonlat
+            ``True`` if the input coordinates are given in latitude/longitude.
 
         """
         return self.__data_is_lonlat
@@ -88,12 +84,13 @@ class WindFarm:
     @property
     def locked(self) -> bool:
         """
-        Whether the wind farm is locked (no more turbines can be added)
+        Return whether the wind farm is locked.
 
         Returns
         -------
-        locked: bool
-            True if the wind farm is locked
+        locked
+            ``True`` if the wind farm is locked and no more turbines may be
+            added.
 
         """
         return self.__locked
@@ -101,12 +98,12 @@ class WindFarm:
     @property
     def turbines(self) -> list[Turbine]:
         """
-        The list of wind turbines
+        Return the list of wind turbines.
 
         Returns
         -------
-        turbines: list of foxes.core.Turbine
-            The wind turbines
+        turbines
+            The wind turbines.
 
         """
         if not self.__locked:
@@ -175,12 +172,12 @@ class WindFarm:
 
     def lock(self, verbosity: int = 1) -> None:
         """
-        Lock the wind farm (no more turbines can be added)
+        Lock the wind farm so no more turbines can be added.
 
         Parameters
         ----------
-        verbosity: int
-            The output verbosity, 0 = silent
+        verbosity
+            The output verbosity; ``0`` is silent.
 
         """
         self.turbines
@@ -208,9 +205,9 @@ class WindFarm:
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The algorithm
-        turbines: list of foxes.core.Turbine, optional
+        algo
+            The algorithm.
+        turbines
             The new list of turbines. If None, the turbine list is cleared.
 
         """
@@ -230,10 +227,10 @@ class WindFarm:
 
         Parameters
         ----------
-        turbine: foxes.core.Turbine
-            The wind turbine
-        verbosity: int
-            The output verbosity, 0 = silent
+        turbine
+            The wind turbine.
+        verbosity
+            The output verbosity; ``0`` is silent.
 
         """
         assert not self.__locked, (
@@ -274,7 +271,7 @@ class WindFarm:
 
         Returns
         -------
-        lonlat: numpy.ndarray or None
+        lonlat
             The lon, lat coordinates of the turbines, shape: (n_turbines, 2), or None if input_is_lonlat was False
 
         """
@@ -287,7 +284,7 @@ class WindFarm:
 
         Returns
         -------
-        has_lonlat: bool
+        has_lonlat
             True if lon-lat coordinates are available, False otherwise
 
         """
@@ -304,23 +301,23 @@ class WindFarm:
 
         Parameters
         ----------
-        areas: list or str or pathlib.Path or dict
+        areas
             The areas to map turbines to. Accepted forms are:
             - list of AreaGeometry objects
             - list of (name, AreaGeometry) tuples for named areas
             - dict mapping names to AreaGeometry objects
             - path to GeoJSON file
             - GeoJSON dictionary
-        set_cluster: bool
+        set_cluster
             If True, set each mapped turbine's cluster_name to
             the mapped area name.
-        geojson_name_key: str or list of str
+        geojson_name_key
             Preferred GeoJSON feature property key(s) used
             to read area names from GeoJSON inputs.
 
         Returns
         -------
-        mapping: dict
+        mapping
             A dictionary, where keys are area names and values are
             lists of turbine indices belonging to that area.
 
@@ -351,7 +348,7 @@ class WindFarm:
 
         Returns
         -------
-        cluster_areas: dict or None
+        cluster_areas
             The mapping from cluster names to AreaGeometry objects, or
             None if not set
 
@@ -365,7 +362,7 @@ class WindFarm:
 
         Returns
         -------
-        utm_zone: str or None
+        utm_zone
             The UTM zone as a string, or None if not set
 
         """
@@ -380,7 +377,7 @@ class WindFarm:
 
         Returns
         -------
-        n_turbines: int
+        n_turbines
             The total number of turbines
 
         """
@@ -393,7 +390,7 @@ class WindFarm:
 
         Returns
         -------
-        names: list of str
+        names
             The names of all turbines
 
         """
@@ -408,7 +405,7 @@ class WindFarm:
 
         Returns
         -------
-        xya: numpy.ndarray
+        xya
             The turbine ground positions, shape: (n_turbines, 2)
 
         """
@@ -421,7 +418,7 @@ class WindFarm:
 
         Returns
         -------
-        names: list of str
+        names
             The wind farm names for all turbines
 
         """
@@ -441,7 +438,7 @@ class WindFarm:
 
         Returns
         -------
-        mapping: dict
+        mapping
             A dictionary, where keys are wind farm names and
             values are lists of turbine indices belonging to that wind farm
 
@@ -461,7 +458,7 @@ class WindFarm:
 
         Returns
         -------
-        wf_list: list of str
+        wf_list
             A list of wind farm names for all turbines
 
         """
@@ -477,7 +474,7 @@ class WindFarm:
 
         Returns
         -------
-        names: list of str
+        names
             The cluster names for all turbines
 
         """
@@ -497,7 +494,7 @@ class WindFarm:
 
         Returns
         -------
-        mapping: dict
+        mapping
             A dictionary, where keys are cluster names and
             values are lists of turbine indices belonging to that cluster
 
@@ -517,7 +514,7 @@ class WindFarm:
 
         Returns
         -------
-        cluster_list: list of str
+        cluster_list
             A list of cluster names for all turbines
 
         """
@@ -538,21 +535,21 @@ class WindFarm:
 
         Parameters
         ----------
-        extra_space: float or str, optional
+        extra_space
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        algo: foxes.core.Algorithm, optional
+        algo
             The algorithm
-        lonlat: bool
+        lonlat
             Whether to return the points in lon, lat coordinates
-        sample_dx: float
+        sample_dx
             The sampling distance in m for boundary conversion to lonlat
 
         Returns
         -------
-        x_mima: numpy.ndarray
+        x_mima
             The (x_min, x_max) point
-        y_mima: numpy.ndarray
+        y_mima
             The (y_min, y_max) point
 
         """
@@ -562,6 +559,7 @@ class WindFarm:
             xy = self.xy_array
 
         if extra_space is not None:
+            extra_space_value: float | np.ndarray
             if isinstance(extra_space, str):
                 assert algo is not None, (
                     f"WindFarm: require algo argument for extra_space '{extra_space}'"
@@ -569,14 +567,18 @@ class WindFarm:
                 assert len(extra_space) > 1 and extra_space[-1] == "D", (
                     f"Expecting float or str like '2.5D', got extra_space = '{extra_space}'"
                 )
-                extra_space = float(extra_space[:-1])
+                extra_space_value = float(extra_space[:-1])
                 rds = self.get_rotor_diameters(algo)
                 if self.boundary is not None:
-                    extra_space *= np.max(rds)
+                    extra_space_value *= np.max(rds)
                 else:
-                    extra_space *= rds[:, None]
+                    extra_space_value = extra_space_value * rds[:, None]
+            else:
+                extra_space_value = float(extra_space)
 
-            xy = np.concatenate((xy - extra_space, xy + extra_space), axis=0)
+            xy = np.concatenate(
+                (xy - extra_space_value, xy + extra_space_value), axis=0
+            )
 
         p_min = np.min(xy, axis=0)
         p_max = np.max(xy, axis=0)
@@ -607,12 +609,12 @@ class WindFarm:
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm
 
         Returns
         -------
-        rds: numpy.ndarray
+        rds
             The rotor diameters, shape: (n_turbienes,)
 
         """
@@ -629,12 +631,12 @@ class WindFarm:
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm
 
         Returns
         -------
-        hhs: numpy.ndarray
+        hhs
             The hub heights, shape: (n_turbines,)
 
         """
@@ -651,12 +653,12 @@ class WindFarm:
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm
 
         Returns
         -------
-        capa: float
+        capa
             The total capacity in W
 
         """
@@ -680,12 +682,12 @@ class WindFarm:
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm
 
         Returns
         -------
-        capacity_array: numpy.ndarray
+        capacity_array
             The capacity array (nominal power) for all turbines, shape: (n_turbines,)
 
         """
@@ -695,7 +697,9 @@ class WindFarm:
             f"WindFarm '{self.name}': turbine types not set in farm controller {farm_controller.name}"
         )
 
-        capacity_array = np.zeros(self.n_turbines, dtype=config.dtype_double)
+        capacity_array: np.ndarray = np.zeros(
+            self.n_turbines, dtype=config.dtype_double
+        )
         for i, t in enumerate(self.__turbines):
             tt = ttypes[i]
             assert tt.P_nominal is not None, (

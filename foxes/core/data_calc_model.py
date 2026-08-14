@@ -19,7 +19,7 @@ class DataCalcModel(Model):
 
     Attributes
     ----------
-    load_mode: str
+    load_mode
         The data loading mode
 
     :group: core
@@ -37,12 +37,12 @@ class DataCalcModel(Model):
 
         Parameters
         ----------
-        args: tuple, optional
-            Additional parameters for constructor
-        load_mode: str
-            The data loading mode, e.g. 'preload'
-        kwargs: dict, optional
-            Additional parameters for constructor
+        args
+            Additional positional arguments for the constructor.
+        load_mode
+            The data loading mode, e.g. ``"preload"``.
+        kwargs
+            Additional keyword arguments for the constructor.
 
         """
         super().__init__(*args, **kwargs)
@@ -55,7 +55,7 @@ class DataCalcModel(Model):
 
         Returns
         -------
-        dims: tuple of str
+        dims
             The coordinates of all output arrays
 
         """
@@ -63,18 +63,18 @@ class DataCalcModel(Model):
 
     def load_chunk_data(self, algo: Algorithm, *data: Data) -> None:
         """
-        Load chunk data according to load mode.
+        Load chunk data according to the configured load mode.
 
-        This function adds data to mdata.
+        This function adds data to the model data container.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data: tuple of foxes.core.Data, optional
-            The input data, typically either (mdata, fdata) in
-            the case of farm calculations, or (mdata, fdata, tdata)
-            for point data calculations
+        algo
+            The calculation algorithm.
+        data
+            Input data, typically either ``(mdata, fdata)`` for farm
+            calculations or ``(mdata, fdata, tdata)`` for point data
+            calculations.
 
         """
         for m in self.sub_models():
@@ -90,27 +90,27 @@ class DataCalcModel(Model):
         **parameters: Any,
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
+        Execute the main model calculation.
 
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        This function is executed on a single chunk of data. All computations
+        should be based on NumPy arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data: tuple of foxes.core.Data, optional
-            The input data, typically either (mdata, fdata) in
-            the case of farm calculations, or (mdata, fdata, tdata)
-            for point data calculations
-        parameters: dict, optional
-            The calculation parameters
+        algo
+            The calculation algorithm.
+        data
+            Input data, typically either ``(mdata, fdata)`` for farm
+            calculations or ``(mdata, fdata, tdata)`` for point data
+            calculations.
+        parameters
+            Calculation parameters.
 
         Returns
         -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray
+        results
+            The resulting data. Keys are output variable names and values are
+            NumPy arrays.
 
         """
         self.load_chunk_data(algo, *data)

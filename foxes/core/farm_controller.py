@@ -24,15 +24,15 @@ class FarmController(FarmDataModel):
 
     Attributes
     ----------
-    turbine_types: list of foxes.core.TurbineType
+    turbine_types
         The turbine type of each turbine
-    turbine_model_names: list of str
+    turbine_model_names
         Names of all turbine models found in the farm
-    pre_rotor_models: foxes.core.FarmDataModelList
+    pre_rotor_models
         The turbine models with pre-rotor flag
-    post_rotor_models: foxes.core.FarmDataModelList
+    post_rotor_models
         The turbine models without pre-rotor flag
-    pars: dict
+    pars
         Parameters for the turbine models, stored
         under their respecitve name
 
@@ -44,13 +44,13 @@ class FarmController(FarmDataModel):
         self, pars: dict[str, dict[str, dict[str, Any]]] | None = None
     ) -> None:
         """
-        Constructor.
+        Construct the farm controller.
 
         Parameters
         ----------
-        pars: dict
-            Parameters for the turbine models, stored
-            under their respective name
+        pars
+            Parameters for the turbine models, stored under their respective
+            names.
 
         """
         super().__init__()
@@ -69,7 +69,7 @@ class FarmController(FarmDataModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -86,18 +86,18 @@ class FarmController(FarmDataModel):
         final_pars: dict[str, Any],
     ) -> None:
         """
-        Set parameters for a turbine model
+        Set parameters for a turbine model.
 
         Parameters
         ----------
-        model_name: str
-            Name of the model
-        init_pars: dict
-            Parameters for initialization
-        calc_pars: dict
-            Parameters for calculation
-        final_pars: dict
-            Parameters for finalization
+        model_name
+            Name of the model.
+        init_pars
+            Parameters for initialization.
+        calc_pars
+            Parameters for calculation.
+        final_pars
+            Parameters for finalization.
 
         """
         self.pars[model_name] = {
@@ -112,7 +112,7 @@ class FarmController(FarmDataModel):
 
         Returns
         -------
-        flag: bool
+        needs_rews2
             True if REWS2 is required
 
         """
@@ -128,7 +128,7 @@ class FarmController(FarmDataModel):
 
         Returns
         -------
-        flag: bool
+        needs_rews3
             True if REWS3 is required
 
         """
@@ -147,10 +147,10 @@ class FarmController(FarmDataModel):
         """
         Helper function for model analysis
         """
-        tmodels = []
-        tmsels = []
+        tmodels: list[Any] = []
+        tmsels: list[np.ndarray] = []
         mnames = [[m.name for m in mlist] for mlist in models]
-        tmis = np.zeros(algo.n_turbines, dtype=config.dtype_int)
+        tmis: np.ndarray = np.zeros(algo.n_turbines, dtype=config.dtype_int)
         news = True
         while news:
             news = False
@@ -173,7 +173,9 @@ class FarmController(FarmDataModel):
                         m = models[ti][tmis[ti]]
                         tmodels.append(m)
 
-                        tsel = np.zeros((algo.n_states, algo.n_turbines), dtype=bool)
+                        tsel: np.ndarray = np.zeros(
+                            (algo.n_states, algo.n_turbines), dtype=bool
+                        )
                         for tj, jnames in enumerate(mnames):
                             mi = tmis[tj]
                             if mi < len(jnames) and jnames[mi] == mname:
@@ -208,12 +210,12 @@ class FarmController(FarmDataModel):
 
         Parameters
         ----------
-        mi: int
+        mi
             The turbine model index
 
         Returns
         -------
-        str:
+        model_selection_variable
             The per-model selection variable name
 
         """
@@ -227,7 +229,7 @@ class FarmController(FarmDataModel):
 
         Returns
         -------
-        flag: bool
+        has_pre_rotor_models
             True if pre-rotor models are present
 
         """
@@ -242,7 +244,7 @@ class FarmController(FarmDataModel):
 
         Returns
         -------
-        flag: bool
+        has_post_rotor_models
             True if post-rotor models are present
 
         """
@@ -253,12 +255,12 @@ class FarmController(FarmDataModel):
 
     def find_turbine_types(self, algo: Algorithm) -> None:
         """
-        Collects the turbine types.
+        Collect the turbine types.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The algorithm
+        algo
+            The algorithm.
 
         """
 
@@ -290,13 +292,12 @@ class FarmController(FarmDataModel):
 
     def collect_models(self, algo: Algorithm) -> None:
         """
-        Analyze and gather turbine models, based on the
-        turbines of the wind farm.
+        Analyze and gather turbine models based on the wind farm turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
+        algo
+            The calculation algorithm.
 
         """
 
@@ -362,7 +363,7 @@ class FarmController(FarmDataModel):
             algo, pre_rotor=False, models=postr_models
         )
         tmsels = tmsels_pre + tmsels_post
-        self._tmall = [np.all(t) for t in tmsels]
+        self._tmall = [bool(np.all(t)) for t in tmsels]
         self.turbine_model_names = mnames_pre + mnames_post
         if len(self.turbine_model_names):
             self._tmsels = {mi: t for mi, t in enumerate(tmsels) if not self._tmall[mi]}
@@ -408,29 +409,27 @@ class FarmController(FarmDataModel):
         verbosity: int = 0,
     ) -> LoadedData:
         """
-        Initializes the model.
+        Initialize the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-        loaded_data: dict
+        algo
+            The calculation algorithm.
+        verbosity
+            The verbosity level, where 0 is silent.
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            Keys are "coords", a dict with entries ``dim_name_str -> dim_array``;
+            "data_vars", a dict with entries ``name_str -> (dim_tuple, data_ndarray)``;
             and "extra_data", a dict with non-array additional data.
-        force: bool
-            Overwrite existing data
+        force
+            Overwrite existing data.
 
         Returns
         -------
-        loaded_data: dict
-            The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
+        loaded_data
+            The loaded data, containing the keys "coords", "data_vars", and
+            "extra_data".
 
         """
         self.collect_models(algo)
@@ -449,32 +448,34 @@ class FarmController(FarmDataModel):
         verbosity: int = 0,
     ) -> None:
         """
-        Load and/or create all model data that is subject to chunking.
+        Load and/or create the model data subject to chunking.
 
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
+        Such data should not be stored under self for memory reasons. The data
+        returned here will automatically be chunked and then provided as part of
+        the mdata object during calculations.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        loaded_data: dict
+        algo
+            The calculation algorithm.
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            Keys are "coords", a dict with entries ``dim_name_str -> dim_array``;
+            "data_vars", a dict with entries ``name_str -> (dim_tuple, data_ndarray)``;
             and "extra_data", a dict with non-array additional data.
-        force: bool
-            Overwrite existing data
-        verbosity: int
-            The verbosity level, 0 = silent
+        force
+            Overwrite existing data.
+        verbosity
+            The verbosity level, where 0 is silent.
 
         """
         if force or FC.TMODELS not in loaded_data["coords"]:
             super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
             assert self.turbine_model_names is not None
-            loaded_data["coords"][FC.TMODELS] = self.turbine_model_names
+            loaded_data["coords"][FC.TMODELS] = np.asarray(
+                self.turbine_model_names, dtype=str
+            )
             for mi, tsel in (self._tmsels or {}).items():
                 loaded_data["data_vars"][self._tmodel_sels_var(mi)] = (
                     (FC.STATE, FC.TURBINE),
@@ -485,17 +486,17 @@ class FarmController(FarmDataModel):
 
     def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
-        The variables which are being modified by the model.
+        Return the variables modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
+        algo
+            The calculation algorithm.
 
         Returns
         -------
-        output_vars: list of str
-            The output variable names
+        output_vars
+            The output variable names.
 
         """
         assert self.pre_rotor_models is not None
@@ -514,30 +515,29 @@ class FarmController(FarmDataModel):
         downwind_index: int | None = None,
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
+        Run the main model calculation for a single chunk of data.
 
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        This function is executed on a single chunk of data, and all
+        computations should be based on numpy arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        pre_rotor: bool
-            Flag for running pre-rotor or post-rotor
-            models
-        downwind_index: int, optional
-            The index in the downwind order
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        pre_rotor
+            Flag indicating whether to run pre-rotor or post-rotor models.
+        downwind_index
+            The index in the downwind order.
 
         Returns
         -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+        results
+            The resulting data. Keys are output variable names and values are
+            arrays with shape ``(n_states, n_turbines)``.
 
         """
         s = self.pre_rotor_models if pre_rotor else self.post_rotor_models
@@ -548,14 +548,14 @@ class FarmController(FarmDataModel):
 
     def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
-        Finalizes the model.
+        Finalize the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 means silent
+        algo
+            The calculation algorithm.
+        verbosity
+            The verbosity level, where 0 is silent.
 
         """
         super().finalize(algo, verbosity)
@@ -569,16 +569,16 @@ class FarmController(FarmDataModel):
         **kwargs: Any,
     ) -> FarmController:
         """
-        Run-time farm controller factory.
+        Create a farm controller instance at runtime.
 
         Parameters
         ----------
-        controller_type: str
-            The selected derived class name
-        args: tuple, optional
-            Additional parameters for the constructor
-        kwargs: dict, optional
-            Additional parameters for the constructor
+        controller_type
+            The selected derived class name.
+        args
+            Additional positional arguments for the constructor.
+        kwargs
+            Additional keyword arguments for the constructor.
 
         """
         return new_instance(cls, controller_type, *args, **kwargs)

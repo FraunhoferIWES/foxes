@@ -36,13 +36,13 @@ class VerticalProfile(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         """
@@ -56,7 +56,7 @@ class VerticalProfile(Model):
 
         Returns
         -------
-        vars: list of str
+        vars
             The variable names
 
         """
@@ -69,14 +69,14 @@ class VerticalProfile(Model):
 
         Parameters
         ----------
-        tdata: dict
+        tdata
             The target point data
-        heights: numpy.ndarray
+        heights
             The evaluation heights
 
         Returns
         -------
-        results: numpy.ndarray
+        results
             The profile results, same
             shape as heights
 
@@ -95,11 +95,11 @@ class VerticalProfile(Model):
 
         Parameters
         ----------
-        profile_type: str
+        profile_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         """

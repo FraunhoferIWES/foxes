@@ -88,6 +88,7 @@ test = [
 ]
 dev = [
     "pre-commit>=3.0",
+    "mypy>=1.11.0",
     "objsize>=0.5",
     "jupyter>=1.0",
 ]
@@ -108,6 +109,13 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["foxes*"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+follow_imports = "silent"
+show_error_codes = true
+warn_unused_ignores = true
 
 [project.scripts]
 foxes_yaml = "foxes.input.yaml.yaml:main"

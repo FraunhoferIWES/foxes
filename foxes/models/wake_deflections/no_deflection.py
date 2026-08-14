@@ -34,24 +34,24 @@ class NoDeflection(WakeDeflection):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         Returns
         -------
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
@@ -76,25 +76,25 @@ class NoDeflection(WakeDeflection):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        x: numpy.ndarray
+        x
             The distance from the wake causing rotor
             for the first n_times subsequent time steps,
             shape: (n_times,)
 
         Returns
         -------
-        alpha: numpy.ndarray
+        alpha
             The delta WD result at the x locations,
             shape: (n_times,)
 

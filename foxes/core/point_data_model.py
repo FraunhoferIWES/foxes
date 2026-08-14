@@ -29,12 +29,12 @@ class PointDataModel(DataCalcModel):
     @abstractmethod
     def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
-        The variables which are being modified by the model.
+        Return the variables modified by the model.
 
         Returns
         -------
-        output_vars: list of str
-            The output variable names
+        output_vars
+            The output variable names.
 
         """
         return []
@@ -45,7 +45,7 @@ class PointDataModel(DataCalcModel):
 
         Returns
         -------
-        dims: tuple of str
+        dims
             The coordinates of all output arrays
 
         """
@@ -57,9 +57,9 @@ class PointDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         """
@@ -95,20 +95,20 @@ class PointDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values are arrays with shape
             (n_states, n_targets, n_tpoints)
 
         """
@@ -129,18 +129,18 @@ class PointDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
         *data: tuple of xarray.Dataset
             The input data
-        out_vars: list of str
+        out_vars
             The calculation output variables
-        **calc_pars: dict, optional
+        **calc_pars
             Additional arguments for the `calculate` function
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The calculation results
 
         """
@@ -177,7 +177,7 @@ class PointDataModelList(PointDataModel):
 
     Attributes
     ----------
-    models: list of foxes.core.PointDataModel
+    models
         The model list
 
     :group: core
@@ -190,7 +190,7 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        models: list of foxes.core.PointDataModel
+        models
             The model list
 
         """
@@ -206,7 +206,7 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        model: foxes.core.PointDataModel
+        model
             The model to add
 
         """
@@ -218,7 +218,7 @@ class PointDataModelList(PointDataModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -230,12 +230,12 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -260,22 +260,22 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        parameters: list of dict, optional
+        parameters
             A list of parameter dicts, one for each model
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values are arrays with shape
             (n_states, n_targets, n_tpoints)
 
         """
@@ -310,11 +310,11 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        model_type: str
+        model_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         """

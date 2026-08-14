@@ -18,17 +18,17 @@ class AxialInductionModel(Model):
     @abstractmethod
     def ct2a(self, ct: np.ndarray | float) -> np.ndarray | float:
         """
-        Computes induction from ct
+        Compute induction from the thrust coefficient.
 
         Parameters
         ----------
-        ct: numpy.ndarray or float
-            The ct values
+        ct
+            The thrust coefficient values.
 
         Returns
         -------
-        ct: numpy.ndarray or float
-            The induction values
+        ct
+            The induction values.
 
         """
         pass
@@ -41,16 +41,16 @@ class AxialInductionModel(Model):
         **kwargs: Any,
     ) -> "AxialInductionModel":
         """
-        Run-time axial induction model factory.
+        Create an axial induction model instance at runtime.
 
         Parameters
         ----------
-        induction_type: str
-            The selected derived class name
-        args: tuple, optional
-            Additional parameters for the constructor
-        kwargs: dict, optional
-            Additional parameters for the constructor
+        induction_type
+            The selected derived class name.
+        args
+            Additional positional arguments for the constructor.
+        kwargs
+            Additional keyword arguments for the constructor.
 
         """
         return new_instance(cls, induction_type, *args, **kwargs)

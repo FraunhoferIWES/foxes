@@ -46,31 +46,31 @@ class WakeSuperposition(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The selection of targets, shape: (n_states, n_targets)
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The original wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
-        wake_model_result: numpy.ndarray
+        wake_model_result
             The new wake deltas of the selected rotors,
             shape: (n_st_sel, n_tpoints, ...)
 
         Returns
         -------
-        wdelta: numpy.ndarray
+        wdelta
             The updated wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
@@ -93,23 +93,23 @@ class WakeSuperposition(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
 
         Returns
         -------
-        final_wake_delta: numpy.ndarray
+        final_wake_delta
             The final wake delta, which will be added to the ambient
             results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
@@ -124,11 +124,11 @@ class WakeSuperposition(Model):
 
         Parameters
         ----------
-        superp_type: str
+        superp_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """
@@ -166,29 +166,29 @@ class WindVectorWakeSuperposition(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The selection of targets, shape: (n_states, n_targets)
-        wake_delta_uv: numpy.ndarray
+        wake_delta_uv
             The original wind vector wake deltas, shape:
             (n_states, n_targets, n_tpoints, 2)
-        wake_model_result_uv: numpy.ndarray
+        wake_model_result_uv
             The new wind vector wake deltas of the selected rotors,
             shape: (n_st_sel, n_tpoints, 2, ...)
 
         Returns
         -------
-        wdelta_uv: numpy.ndarray
+        wdelta_uv
             The updated wind vector wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
@@ -210,25 +210,25 @@ class WindVectorWakeSuperposition(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        wake_delta_uv: numpy.ndarray
+        wake_delta_uv
             The original wind vector wake deltas, shape:
             (n_states, n_targets, n_tpoints, 2)
 
         Returns
         -------
-        final_wake_delta_ws: numpy.ndarray
+        final_wake_delta_ws
             The final wind speed wake delta, which will be added to
             the ambient results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
-        final_wake_delta_wd: numpy.ndarray
+        final_wake_delta_wd
             The final wind direction wake delta, which will be added to
             the ambient results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
@@ -248,11 +248,11 @@ class WindVectorWakeSuperposition(Model):
 
         Parameters
         ----------
-        superp_type: str
+        superp_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """

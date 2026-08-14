@@ -29,7 +29,7 @@ class Algorithm(Model):
 
     Attributes
     ----------
-    verbosity: int
+    verbosity
         The verbosity level, 0 means silent
 
     :group: core
@@ -48,14 +48,14 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        mbook: foxes.models.ModelBook
-            The model book
-        farm: foxes.WindFarm
-            The wind farm
-        verbosity: int
-            The verbosity level, 0 means silent
-        dbook: foxes.DataBook, optional
-            The data book, or None for default
+        mbook
+            The model book.
+        farm
+            The wind farm.
+        verbosity
+            The verbosity level; ``0`` means silent.
+        dbook
+            The data book, or ``None`` for the default data book.
 
         """
         super().__init__()
@@ -79,7 +79,7 @@ class Algorithm(Model):
 
         Returns
         -------
-        mb: foxes.core.WindFarm
+        farm
             The wind farm
 
         """
@@ -92,7 +92,7 @@ class Algorithm(Model):
 
         Returns
         -------
-        mb: foxes.models.ModelBook()
+        mbook
             The model book
 
         """
@@ -109,7 +109,7 @@ class Algorithm(Model):
 
         Returns
         -------
-        mb: foxes.data.StaticData()
+        dbook
             The data book
 
         """
@@ -126,7 +126,7 @@ class Algorithm(Model):
 
         Returns
         -------
-        dict :
+        chunk_store
             Keys: model name, value: idata dict
 
         """
@@ -220,15 +220,13 @@ class Algorithm(Model):
     @property
     def loaded_data(self) -> LoadedData:
         """
-        The data loaded during initialization
+        The data loaded during initialization.
 
         Returns
         -------
-        loaded_data: dict
-            The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
+        loaded_data
+            The loaded data, containing the keys "coords", "data_vars", and
+            "extra_data".
 
         """
         if self.__loaded_data is None:
@@ -240,7 +238,7 @@ class Algorithm(Model):
 
     def clear_loaded_data(self) -> None:
         """
-        Clear the loaded data
+        Clear the loaded data.
 
         Returns
         -------
@@ -255,14 +253,14 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        pop: bool
+        pop
             Pop the model data from loaded_data
 
         Returns
         -------
-        model_data: xarray.Dataset
+        model_data
             The model data, containing all coords and data_vars from loaded_data
-        extra_data: dict
+        extra_data
             The extra data from loaded_data
 
         """
@@ -274,16 +272,16 @@ class Algorithm(Model):
 
     def print(self, *args: Any, vlim: int = 1, **kwargs: Any) -> None:
         """
-        Print function, based on verbosity.
+        Print output based on the configured verbosity.
 
         Parameters
         ----------
-        args: tuple, optional
-            Arguments for the print function
-        kwargs: dict, optional
-            Keyword arguments for the print function
-        vlim: int
-            The verbosity limit
+        args
+            Positional arguments for the print function.
+        kwargs
+            Keyword arguments for the print function.
+        vlim
+            The verbosity threshold for printing.
 
         """
         if self.verbosity >= vlim:
@@ -299,9 +297,9 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        func_name: str, optional
+        func_name
             Name of the calling function
-        n_points: int, optional
+        n_points
             The number of points
 
         """
@@ -321,7 +319,7 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        force: bool
+        force
             Overwrite existing data
 
         """
@@ -406,11 +404,11 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        points: numpy.ndarray
+        points
             The points, shape: (n_states, n_points, 3)
-        states_indices: array_like, optional
+        states_indices
             The indices of the states dimension
-        n_states: int, optional
+        n_states
             The number of states
 
         Returns
@@ -470,19 +468,19 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        name: str
+        name
             The data name
-        data: numpy.ndarray
+        data
             The data
-        dims: tuple
+        dims
             The data dimensions
-        mdata: foxes.core.MData
+        mdata
             The mdata object
-        tdata: foxes.core.TData, optional
+        tdata
             The tdata object
-        copy: bool
+        copy
             Flag for copying incoming data
-        subset: numpy.ndarray or slice, optional
+        subset
             data corresponds to this subset of the already
             stored data, if given.
 
@@ -542,26 +540,26 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        name: str
+        name
             The data name
-        mdata: foxes.core.MData
+        mdata
             The mdata object
-        tdata: foxes.core.TData, optional
+        tdata
             The tdata object
-        prev_s: int
+        prev_s
             How many states chunks backward
-        prev_t: int
+        prev_t
             How many points chunks backward
-        ret_inds: bool
+        ret_inds
             Also return chunk index data (i0, n_states, t0, n_targets)
-        error: bool
+        error
             Flag for raising KeyError if data not found
 
         Returns
         -------
-        data: numpy.ndarray
+        data
             The data
-        inds: tuple, optional
+        inds
             The chunk index data (i0, n_states, t0, n_targets)
 
         """
@@ -648,12 +646,12 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        new_chunk_store: foxes.utils.Dict, optional
+        new_chunk_store
             The new chunk store
 
         Returns
         -------
-        chunk_store: foxes.utils.Dict
+        chunk_store
             The chunk store before resetting
 
         """
@@ -673,7 +671,7 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        kwargs: dict, optional
+        kwargs
             Parameters for add_to_chunk_store()
 
         """
@@ -687,7 +685,7 @@ class Algorithm(Model):
 
         Returns
         -------
-        blocked: bool
+        blocked
             True if convergence is currently blocked
 
         """
@@ -705,25 +703,23 @@ class Algorithm(Model):
         verbosity: int = 0,
     ) -> None:
         """
-        Sets this model status to running, and moves
-        all large data to stash.
+        Set this model status to running and move all large data to stash.
 
-        The stashed data will be returned by the
-        unset_running() function after running calculations.
+        The stashed data is returned by ``unset_running`` after the calculations.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict, optional
-            Large data stash, this function adds data here, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            Large-data stash. This function adds data here when provided.
+            Keys are model names and values are dictionaries of large model data.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level; ``0`` is silent.
 
         """
         assert algo is self
@@ -749,22 +745,21 @@ class Algorithm(Model):
         verbosity: int = 0,
     ) -> None:
         """
-        Sets this model status to not running, recovering large data
-        from stash
+        Set this model status to not running and recover large data from stash.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict, optional
-            Reconstruct model data from this stash, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            Reconstruct model data from this stash when provided.
+            Keys are model names and values are dictionaries of large model data.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level; ``0`` is silent.
 
         """
         assert algo is self
@@ -781,20 +776,20 @@ class Algorithm(Model):
 
     def _launch_parallel_farm_calc(self, *args: Any, **kwargs: Any) -> xr.Dataset:
         """
-        Runs the farm calculation in parallel
+        Run the farm calculation in parallel.
 
         Parameters
         ----------
-        args: tuple, optional
-            Additional parameters for running
-        kwargs: dict, optional
-            Additional parameters for running
+        args
+            Additional parameters for running.
+        kwargs
+            Additional keyword parameters for running.
 
         Returns
         -------
-        farm_results: xarray.Dataset
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+        farm_results
+            The farm results. The calculated variables have dimensions
+            ``(state, turbine)``.
 
         """
         return launch_parallel_calc(self, *args, **kwargs)
@@ -810,18 +805,18 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        args: tuple, optional
-            Parameters
-        clear_mem: bool
-            Clear idata memory after starting the run
-        kwargs: dict, optional
-            Keyword parameters
+        args
+            Positional parameters.
+        clear_mem
+            Clear in-memory data after starting the run.
+        kwargs
+            Keyword parameters.
 
         Returns
         -------
-        farm_results: xarray.Dataset
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+        farm_results
+            The farm results. The calculated variables have dimensions
+            ``(state, turbine)``.
 
         """
         if self.running:
@@ -863,14 +858,14 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Additional parameters for running
-        kwargs: dict, optional
+        kwargs
             Additional parameters for running
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 
@@ -889,18 +884,18 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Parameters
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        kwargs: dict, optional
+        kwargs
             Keyword parameters
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 
@@ -940,7 +935,7 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        clear_mem: bool
+        clear_mem
             Clear idata memory
 
         """
@@ -958,11 +953,11 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        algo_type: str
+        algo_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         """

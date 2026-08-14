@@ -40,7 +40,7 @@ class WakeModel(Model):
 
         Returns
         -------
-        dws: bool
+        affects_ws
             If True, this model affects wind speed
 
         """
@@ -54,7 +54,7 @@ class WakeModel(Model):
 
         Returns
         -------
-        dwnd: bool
+        affects_downwind
             Flag for downwind effects by this model
 
         """
@@ -67,7 +67,7 @@ class WakeModel(Model):
 
         Returns
         -------
-        hasuv: bool
+        has_uv
             Flag for wind vector data
 
         """
@@ -85,21 +85,21 @@ class WakeModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -125,24 +125,24 @@ class WakeModel(Model):
         tdata: TData,
     ) -> dict[str, np.ndarray]:
         """
-        Creates new empty wake delta arrays.
+        Create new empty wake delta arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target point data.
 
         Returns
         -------
-        wake_deltas: dict
-            Key: variable name, value: The zero filled
-            wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
+        wake_deltas
+            A dictionary keyed by variable name. Values are zero-filled wake
+            deltas with shape ``(n_states, n_targets, n_tpoints, ...)``.
 
         """
         pass
@@ -159,29 +159,27 @@ class WakeModel(Model):
         wake_deltas: dict[str, np.ndarray],
     ) -> None:
         """
-        Modifies wake deltas at target points by
-        contributions from the specified wake source turbines.
+        Modify wake deltas at target points using contributions from wake source
+        turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
-        downwind_index: int
-            The index of the wake causing turbine
-            in the downwind order
-        wake_coos: numpy.ndarray
-            The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_targets, n_tpoints, 3)
-        wake_deltas: dict
-            The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints, ...)
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target point data.
+        downwind_index
+            The index of the wake-causing turbine in the downwind order.
+        wake_coos
+            Wake-frame coordinates of the evaluation points with shape
+            ``(n_states, n_targets, n_tpoints, 3)``.
+        wake_deltas
+            The wake deltas. Keys are variable names and values are arrays with
+            shape ``(n_states, n_targets, n_tpoints, ...)``.
 
         """
         pass
@@ -201,17 +199,17 @@ class WakeModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        wake_deltas: dict
+        wake_deltas
             The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
+            turbines. Keys are variable names and values are arrays
             with shape (n_states, n_targets, n_tpoints)
 
         """
@@ -224,11 +222,11 @@ class WakeModel(Model):
 
         Parameters
         ----------
-        wmodel_type: str
+        wmodel_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """
@@ -244,16 +242,16 @@ class SingleTurbineWakeModel(WakeModel):
 
     Attributes
     ----------
-    wind_superposition: str
+    wind_superposition
         The wind superposition model name (vector or compenent model),
         will be looked up in model book
-    other_superpositions: dict
+    other_superpositions
         The superpositions for other than (ws, wd) variables.
         Key: variable name str, value: The wake superposition
         model name, will be looked up in model book
-    vec_superp: foxes.core.WindVectorWakeSuperposition or None
+    vec_superp
         The wind vector wake superposition model
-    superp: dict
+    superp
         The superposition dict, key: variable name str,
         value: `foxes.core.WakeSuperposition`
 
@@ -271,10 +269,10 @@ class SingleTurbineWakeModel(WakeModel):
 
         Parameters
         ----------
-        wind_superposition: str, optional
+        wind_superposition
             The wind superposition model name (vector or compenent model),
             will be looked up in model book
-        other_superpositions: dict
+        other_superpositions
             The superpositions for other than (ws, wd) variables.
             Key: variable name str, value: The wake superposition
             model name, will be looked up in model book
@@ -300,7 +298,7 @@ class SingleTurbineWakeModel(WakeModel):
 
         Returns
         -------
-        hasv: bool
+        has_vector_wind_superp
             Flag for wind vector superposition
 
         """
@@ -312,7 +310,7 @@ class SingleTurbineWakeModel(WakeModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -333,21 +331,21 @@ class SingleTurbineWakeModel(WakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -392,17 +390,17 @@ class SingleTurbineWakeModel(WakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        wake_deltas: dict
+        wake_deltas
             The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
+            turbines. Keys are variable names and values are arrays
             with shape (n_states, n_targets, n_tpoints)
 
         """
@@ -447,7 +445,7 @@ class TurbineInductionModel(SingleTurbineWakeModel):
 
         Returns
         -------
-        dwnd: bool
+        affects_downwind
             Flag for downwind effects by this model
 
         """
@@ -465,11 +463,11 @@ class TurbineInductionModel(SingleTurbineWakeModel):
 
         Parameters
         ----------
-        induction_type: str
+        induction_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """
@@ -482,9 +480,9 @@ class WakeK(Model):
 
     Attributes
     ----------
-    k_var: str
+    k_var
         The name of the k variable
-    ti_var: str
+    ti_var
         The name of the TI variable
 
     :group: core
@@ -504,15 +502,15 @@ class WakeK(Model):
 
         Parameters
         ----------
-        k: float, optional
+        k
             The k value
-        ka: float, optional
+        ka
             The ka value in k = ka * TI + kb
-        kb: float, optional
+        kb
             The kb value in k = ka * TI + kb
-        k_var: str
+        k_var
             The name of the k variable
-        ti_var: str
+        ti_var
             The name of the TI variable
 
         """
@@ -536,7 +534,7 @@ class WakeK(Model):
 
         Returns
         -------
-        s: str
+        s
             The representative string
 
         """
@@ -580,26 +578,26 @@ class WakeK(Model):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for get_data
-        lookup_ti: str
+        lookup_ti
             The ti lookup order for get_data
-        lookup_k: str
+        lookup_k
             The k lookup order for get_data
-        ti: numpy.ndarray, optional
+        ti
             ti data in the requested target shape,
             if known
-        amb_ti: numpy.ndarray, optional
+        amb_ti
             Ambient ti data in the requested target shape,
             if known
-        selection: array_like, optional
+        selection
             Optional data selection for get_data
-        kwargs: dict, optional
+        kwargs
             Arguments for get_data
 
         Returns
         -------
-        k: numpy.ndarray
+        k
             The k array as returned by get_data
 
         """

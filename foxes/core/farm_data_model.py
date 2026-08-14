@@ -29,17 +29,17 @@ class FarmDataModel(DataCalcModel):
     @abstractmethod
     def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
-        The variables which are being modified by the model.
+        Return the variables modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
+        algo
+            The calculation algorithm.
 
         Returns
         -------
-        output_vars: list of str
-            The output variable names
+        output_vars
+            The output variable names.
 
         """
         return []
@@ -50,7 +50,7 @@ class FarmDataModel(DataCalcModel):
 
         Returns
         -------
-        dims: tuple of str
+        dims
             The coordinates of all output arrays
 
         """
@@ -63,17 +63,18 @@ class FarmDataModel(DataCalcModel):
         defaults: dict[str, Any] | None = None,
     ) -> None:
         """
-        Ensures that the output variables are present in the farm data.
+        Ensure the output variables are present in the farm data.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        fdata: foxes.core.FData
-            The farm data
-        defaults: dict, optional
-            Default values for the output variables, keys: variable str,
-            values: scalar or array-like with shape (n_states, n_turbines)
+        algo
+            The calculation algorithm.
+        fdata
+            The farm data.
+        defaults
+            Default values for the output variables. Keys are variable names,
+            values are scalars or array-like data with shape
+            ``(n_states, n_turbines)``.
 
         """
         defs = {
@@ -102,25 +103,25 @@ class FarmDataModel(DataCalcModel):
         fdata: FData,
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
+        Run the main model calculation.
 
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        This function is executed on a single chunk of data; all computations
+        should be based on NumPy arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
 
         Returns
         -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+        results
+            The resulting data keyed by output variable name. Values are
+            ``numpy.ndarray`` objects with shape ``(n_states, n_turbines)``.
 
         """
         pass
@@ -140,18 +141,18 @@ class FarmDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
         *data: tuple of xarray.Dataset
             The input data
-        out_vars: list of str
+        out_vars
             The calculation output variables
-        **calc_pars: dict, optional
+        **calc_pars
             Additional arguments for the `calculate` function
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The calculation results
 
         """
@@ -183,7 +184,7 @@ class FarmDataModelList(FarmDataModel):
 
     Attributes
     ----------
-    models: list of foxes.core.FarmDataModel
+    models
         The model list
 
     :group: core
@@ -196,7 +197,7 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        models: list of foxes.core.FarmDataModel
+        models
             The model list
 
         """
@@ -212,7 +213,7 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        model: foxes.core.FarmDataModel
+        model
             The model to add
 
         """
@@ -224,9 +225,9 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        index: int
+        index
             The index in the model list
-        model: foxes.core.FarmDataModel
+        model
             The model to insert
 
         """
@@ -238,7 +239,7 @@ class FarmDataModelList(FarmDataModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -250,12 +251,12 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -280,20 +281,20 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        parameters: list of dict
+        parameters
             A list of parameter dicts, one for each model
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values are arrays with shape (n_states, n_turbines)
 
         """
         self.ensure_output_vars(algo, fdata)

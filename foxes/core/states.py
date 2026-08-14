@@ -32,7 +32,7 @@ class States(PointDataModel):
 
         Returns
         -------
-        int:
+        size
             The total number of states
 
         """
@@ -44,7 +44,7 @@ class States(PointDataModel):
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
@@ -58,16 +58,16 @@ class States(PointDataModel):
         verbosity: int = 0,
     ) -> None:
         """
-        Reset the states, optionally select states
+        Reset the states, optionally selecting a subset.
 
         Parameters
         ----------
-        states_sel: slice or range or list of int, optional
-            States subset selection
-        states_loc: list, optional
-            State index selection via pandas loc function
-        verbosity: int
-            The verbosity level, 0 = silent
+        states_sel
+            State subset selection.
+        states_loc
+            State index selection via the pandas loc function.
+        verbosity
+            The verbosity level, where 0 is silent.
 
         """
         raise NotImplementedError(f"States '{self.name}': Reset is not implemented")
@@ -75,17 +75,17 @@ class States(PointDataModel):
     @abstractmethod
     def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
-        The variables which are being modified by the model.
+        Return the variables modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
+        algo
+            The calculation algorithm.
 
         Returns
         -------
-        output_vars: list of str
-            The output variable names
+        output_vars
+            The output variable names.
 
         """
         pass
@@ -96,7 +96,7 @@ class States(PointDataModel):
 
         Yields
         ------
-        split_size: int or None
+        split_size
             The suggested split size, or None for no splitting
 
         """
@@ -122,16 +122,16 @@ class States(PointDataModel):
         **kwargs: Any,
     ) -> States:
         """
-        Run-time states factory.
+        Create a states instance at runtime.
 
         Parameters
         ----------
-        states_type: str
-            The selected derived class name
-        args: tuple, optional
-            Additional parameters for constructor
-        kwargs: dict, optional
-            Additional parameters for constructor
+        states_type
+            The selected derived class name.
+        args
+            Additional positional arguments for the constructor.
+        kwargs
+            Additional keyword arguments for the constructor.
 
         """
         return new_instance(cls, states_type, *args, **kwargs)
@@ -143,9 +143,9 @@ class ExtendedStates(States):
 
     Attributes
     ----------
-    states: foxes.core.States
+    states
         The base states to start from
-    pmodels: foxes.core.PointDataModelList
+    pmodels
         The point models, including states as first model
 
     :group: core
@@ -155,31 +155,32 @@ class ExtendedStates(States):
     def __init__(
         self,
         states: States,
-        point_models: list[PointDataModel] = [],
+        point_models: list[PointDataModel] | None = None,
     ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        states: foxes.core.States
-            The base states to start from
-        point_models: list of foxes.core.PointDataModel, optional
-            The point models, executed after states
+        states
+            The base states to start from.
+        point_models
+            The point models executed after states.
 
         """
         super().__init__()
         self.states = states
+        point_models = [] if point_models is None else point_models
         self.pmodels = PointDataModelList(models=[states] + point_models)
 
     def append(self, model: PointDataModel) -> None:
         """
-        Add a model to the list
+        Add a model to the list.
 
         Parameters
         ----------
-        model: foxes.core.PointDataModel
-            The model to add
+        model
+            The model to add.
 
         """
         self.pmodels.append(model)
@@ -190,7 +191,7 @@ class ExtendedStates(States):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -202,7 +203,7 @@ class ExtendedStates(States):
 
         Returns
         -------
-        int:
+        size
             The total number of states
 
         """
@@ -214,7 +215,7 @@ class ExtendedStates(States):
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
@@ -222,17 +223,17 @@ class ExtendedStates(States):
 
     def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
-        The variables which are being modified by the model.
+        Return the variables modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
+        algo
+            The calculation algorithm.
 
         Returns
         -------
-        output_vars: list of str
-            The output variable names
+        output_vars
+            The output variable names.
 
         """
         return self.pmodels.output_point_vars(algo)
@@ -252,20 +253,20 @@ class ExtendedStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values are arrays with shape (n_states, n_points)
 
         """
         return self.pmodels.calculate(algo, mdata, fdata, tdata)

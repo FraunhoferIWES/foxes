@@ -1,6 +1,6 @@
 import numpy as np
 from copy import deepcopy
-from typing import Any
+from numpy.typing import ArrayLike
 
 
 class Turbine:
@@ -12,27 +12,27 @@ class Turbine:
 
     Attributes
     ----------
-    xy: array_like
+    xy
         The turbine ground position, shape: (2,)
-    models: list of str
+    models
         The turbine model names, as they appear
         in the model book
-    index: int, optional
+    index
         The index in the wind farm
-    name: str, optional
+    name
         The turbine name/label
-    mstates_sel: list of numpy.ndarray, optional
+    mstates_sel
         For each turbine model, the state selection
         boolean array with shape (n_states,)
-    D: float, optional
+    D
         The rotor diameter. Overwrites turbine type
         settings if given
-    H: float, optional
+    H
         The hub height. Overwrites turbine type
         settings if given
-    wind_farm_name: str, optional
+    wind_farm_name
         The name of the wind farm the turbine belongs to
-    cluster_name: str, optional
+    cluster_name
         The name of the cluster the wind farm belongs to
 
     :group: core
@@ -41,7 +41,7 @@ class Turbine:
 
     def __init__(
         self,
-        xy: Any,
+        xy: ArrayLike,
         turbine_models: list[str] = [],
         index: int | None = None,
         name: str | None = None,
@@ -56,28 +56,27 @@ class Turbine:
 
         Parameters
         ----------
-        xy: array_like
-            The turbine ground position, shape: (2,)
-        turbine_models: list of str
-            The turbine model names, as they appear
-            in the model book
-        index: int, optional
-            The index in the wind farm
-        name: str, optional
-            The turbine name/label
-        models_state_sel: list of numpy.ndarray, optional
-            For each turbine model, the state selection
-            boolean array with shape (n_states,)
-        D: float, optional
-            The rotor diameter. Overwrites turbine type
-            settings if given
-        H: float, optional
-            The hub height. Overwrites turbine type
-            settings if given
-        wind_farm_name: str, optional
-            The name of the wind farm the turbine belongs to
-        cluster_name: str, optional
-            The name of the cluster the wind farm belongs to
+        xy
+            The turbine ground position with shape ``(2,)``.
+        turbine_models
+            The turbine model names as they appear in the model book.
+        index
+            The index in the wind farm.
+        name
+            The turbine name or label.
+        models_state_sel
+            For each turbine model, the state-selection boolean array with shape
+            ``(n_states,)``.
+        D
+            The rotor diameter. This overwrites the turbine-type setting when
+            provided.
+        H
+            The hub height. This overwrites the turbine-type setting when
+            provided.
+        wind_farm_name
+            The name of the wind farm to which the turbine belongs.
+        cluster_name
+            The name of the cluster to which the wind farm belongs.
 
         """
         self.index = index
@@ -100,10 +99,10 @@ class Turbine:
 
         Parameters
         ----------
-        model: str
-            The model name from mbook.turbine_models
-        states_sel: numpy.ndarray of bool, optional
-            The states selection for the model, shape: (n_states,)
+        model
+            The model name from ``mbook.turbine_models``.
+        states_sel
+            The state-selection mask for the model with shape ``(n_states,)``.
 
         """
         self.models.append(model)
@@ -116,16 +115,16 @@ class Turbine:
         states_sel: np.ndarray | None = None,
     ) -> None:
         """
-        Insert a turbine model into the list of models.
+        Insert a turbine model into the model list.
 
         Parameters
         ----------
-        index: int
-            The position in the model list
-        model: str
-            The model name from mbook.turbine_models
-        states_sel: numpy.ndarray of bool, optional
-            The states selection for the model, shape: (n_states,)
+        index
+            The position in the model list.
+        model
+            The model name from ``mbook.turbine_models``.
+        states_sel
+            The state-selection mask for the model with shape ``(n_states,)``.
 
         """
         self.models.insert(index, model)

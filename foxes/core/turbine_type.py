@@ -20,39 +20,39 @@ class TurbineType(TurbineModel):
 
     Attributes
     ----------
-    name: str
+    name
         The model name
-    D: float
+    D
         The rotor diameter
-    H: float
+    H
         The hub height
-    P_nominal: float
+    P_nominal
         The nominal power in kW
-    P_unit: str
+    P_unit
         The unit of power
-    rho_corr_P: str
+    rho_corr_P
         The type of air density correction for the power curve, choices:
         "rho": apply the air density ratio (rho / rho_ref) as a factor to the power curve
         "rews": correct the rotor equivalent wind speed by the air density ratio (rho / rho_ref)^3
         None: no air density correction applied to the power curve
-    rho_corr_ct: str
+    rho_corr_ct
         The type of air density correction for the ct curve, choices:
         "rho": apply the air density ratio (rho / rho_ref) as a factor to the ct curve
         "rews": correct the rotor equivalent wind speed by the air density ratio (rho / rho_ref)^2
         None: no air density correction applied to the ct curve
-    yawm_corr_P: str, optional
+    yawm_corr_P
         The type of yaw misalignment correction for the power curve, choices:
         "factor": apply a correction factor to the power curve
         "wind_speed": correct the rotor equivalent wind speed by a yaw misalignment factor
         None: no yaw misalignment correction applied to the power curve
-    yawm_corr_ct: str, optional
+    yawm_corr_ct
         The type of yaw misalignment correction for the ct curve, choices:
         "factor": apply a correction factor to the ct curve
         "wind_speed": correct the rotor equivalent wind speed by a yaw misalignment factor
         None: no yaw misalignment correction applied to the ct curve
-    yawm_corr_p_P: float, optional
+    yawm_corr_p_P
         The exponent for yaw dependency of P
-    yawm_corr_p_ct: float, optional
+    yawm_corr_p_ct
         The exponent for yaw dependency of ct
 
     :group: core
@@ -78,43 +78,28 @@ class TurbineType(TurbineModel):
 
         Parameters
         ----------
-        name: str, optional
-            The model name
-        D: float, optional
-            The rotor diameter
-        H: float, optional
-            The hub height
-        P_nominal: float, optional
-            The nominal power in kW
-        P_unit: str
-            The unit of power, choices:
-            W, kW, MW, GW
-        rho_corr_P: str, optional
-            The type of air density correction for the power curve, choices:
-            "factor": apply the air density ratio (rho / rho_ref) as a factor to the power curve
-            "wind_speed": correct the rotor equivalent wind speed by the air density ratio (rho / rho_ref)^3
-            None: no air density correction applied to the power curve
-        rho_corr_ct: str, optional
-            The type of air density correction for the ct curve, choices:
-            "factor": apply the air density ratio (rho / rho_ref) as a factor to the ct curve
-            "wind_speed": correct the rotor equivalent wind speed by the air density ratio (rho / rho_ref)^2
-            None: no air density correction applied to the ct curve
-        yawm_corr_P: str, optional
-            The type of yaw misalignment correction for the power curve, choices:
-            "factor": apply a correction factor to the power curve
-            "wind_speed": correct the rotor equivalent wind speed by a yaw misalignment factor
-            None: no yaw misalignment correction applied to the power curve
-        yawm_corr_ct: str, optional
-            The type of yaw misalignment correction for the ct curve, choices:
-            "factor": apply a correction factor to the ct curve
-            "wind_speed": correct the rotor equivalent wind speed by a yaw misalignment factor
-            None: no yaw misalignment correction applied to the ct curve
-        yawm_corr_p_P: float, optional
-            The exponent for yaw dependency of P
-        yawm_corr_p_ct: float, optional
-            The exponent for yaw dependency of ct
-        p_P: float
-            The exponent for yaw dependency of P
+        name
+            The model name.
+        D
+            The rotor diameter.
+        H
+            The hub height.
+        P_nominal
+            The nominal power in kW.
+        P_unit
+            The power unit, one of ``W``, ``kW``, ``MW``, or ``GW``.
+        rho_corr_P
+            The air-density correction mode for the power curve.
+        rho_corr_ct
+            The air-density correction mode for the thrust curve.
+        yawm_corr_P
+            The yaw-misalignment correction mode for the power curve.
+        yawm_corr_ct
+            The yaw-misalignment correction mode for the thrust curve.
+        yawm_corr_p_P
+            The exponent for yaw dependency of power.
+        yawm_corr_p_ct
+            The exponent for yaw dependency of thrust.
 
         """
         super().__init__()
@@ -146,7 +131,7 @@ class TurbineType(TurbineModel):
 
         Returns
         -------
-        flag: bool
+        needs_rews2
             True if REWS2 is required
 
         """
@@ -159,7 +144,7 @@ class TurbineType(TurbineModel):
 
         Returns
         -------
-        flag: bool
+        needs_rews3
             True if REWS3 is required
 
         """
@@ -167,17 +152,16 @@ class TurbineType(TurbineModel):
 
     def modify_cutin(self, modify_ct: bool, modify_P: bool) -> None:
         """
-        Modify the data such that a discontinuity
-        at cutin wind speed is avoided
+        Modify the data to avoid a discontinuity at cut-in wind speed.
 
         Parameters
         ----------
-        variable: str
-            The target variable
-        modify_ct: bool
-            Flag for modification of the ct curve
-        modify_P: bool
-            Flag for modification of the power curve
+        variable
+            The target variable.
+        modify_ct
+            Flag for modifying the thrust curve.
+        modify_P
+            Flag for modifying the power curve.
 
         """
         if modify_ct or modify_P:
@@ -198,31 +182,31 @@ class TurbineType(TurbineModel):
 
         Parameters
         ----------
-        rews_P: np.ndarray
+        rews_P
             The equivalent wind speeds for the power curve
-        rews_ct: np.ndarray
+        rews_ct
             The equivalent wind speeds for the ct curve
-        rho: np.ndarray, optional
+        rho
             The air density values in kg/m^3
-        rho_ref: np.ndarray or float, optional
+        rho_ref
             The reference air density in kg/m^3 for the correction
-        yawm: np.ndarray, optional
+        yawm
             The yaw misalignment values in degrees
 
         Returns
         -------
-        rews_P_corr: np.ndarray
+        rews_P_corr
             The corrected equivalent wind speeds for the power curve
-        rews_ct_corr: np.ndarray
+        rews_ct_corr
             The corrected equivalent wind speeds for the ct curve
-        factor_P: np.ndarray
+        factor_P
             The correction factor for the power curve
-        factor_ct: np.ndarray
+        factor_ct
             The correction factor for the ct curve
 
         """
-        factor_P = 1.0
-        factor_ct = 1.0
+        factor_P: float | np.ndarray = 1.0
+        factor_ct: float | np.ndarray = 1.0
 
         # compute air density correction for power curve:
         if rho is None or rho_ref is None or self.rho_corr_P is None:
@@ -295,11 +279,11 @@ class TurbineType(TurbineModel):
 
         Parameters
         ----------
-        ttype_type: str
+        ttype_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """

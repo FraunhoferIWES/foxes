@@ -43,16 +43,16 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        order: numpy.ndarray
+        order
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -72,21 +72,21 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
 
         Returns
         -------
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
@@ -109,26 +109,26 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm, optional
+        algo
             The algorithm, needed for data from previous iteration
-        variable: str
+        variable
             The variable, serves as data key
-        downwind_index: int, optional
+        downwind_index
             The index in the downwind order
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        target: str, optional
+        target
             The dimensions identifier for the output,
             FC.STATE_TURBINE, FC.STATE_TARGET,
             FC.STATE_TARGET_TPOINT
-        states0: numpy.ndarray, optional
+        states0
             The states of wake creation
 
         Returns
         -------
-        data: numpy.ndarray
+        data
             Data for wake modelling, shape:
             (n_states, n_turbines) or (n_states, n_target)
 
@@ -160,20 +160,20 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points: numpy.ndarray
+        points
             The centreline points, shape: (n_states, n_points, 3)
 
         """
@@ -199,31 +199,31 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        variables: list of str
+        variables
             The variables to be integrated
-        x: numpy.ndarray
+        x
             The wake frame x coordinates of the upper integral bounds,
             shape: (n_states, n_points)
-        dx: float
+        dx
             The step size of the integral
-        wake_models: list of foxes.core.WakeModels
+        wake_models
             The wake models to consider, default: from algo
-        self_wake: bool
+        self_wake
             Flag for considering only wake from states_source_turbine
-        ipars: dict, optional
+        ipars
             Additional interpolation parameters
 
         Returns
         -------
-        results: numpy.ndarray
+        results
             The integration results, shape: (n_states, n_points, n_vars)
 
         """
@@ -308,11 +308,11 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        wframe_type: str
+        wframe_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """

@@ -35,28 +35,27 @@ class TurbineModel(FarmDataModel):
         st_sel: slice | np.ndarray,
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
+        Run the main model calculation.
 
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        This function is executed on a single chunk of data. All computations
+        should be based on NumPy arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        st_sel: slice or numpy.ndarray of bool
-            The state-turbine selection,
-            for shape: (n_states, n_turbines)
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        st_sel
+            The state-turbine selection mask with shape ``(n_states, n_turbines)``.
 
         Returns
         -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+        results
+            The resulting data keyed by output variable name. Values are NumPy
+            arrays with shape ``(n_states, n_turbines)``.
 
         """
         pass
@@ -69,16 +68,16 @@ class TurbineModel(FarmDataModel):
         **kwargs: Any,
     ) -> "TurbineModel":
         """
-        Run-time turbine model factory.
+        Create a turbine model instance at runtime.
 
         Parameters
         ----------
-        tmodel_type: str
-            The selected derived class name
-        args: tuple, optional
-            Additional parameters for constructor
-        kwargs: dict, optional
-            Additional parameters for constructor
+        tmodel_type
+            The selected derived class name.
+        args
+            Additional positional arguments for the constructor.
+        kwargs
+            Additional keyword arguments for the constructor.
 
         """
         return new_instance(cls, tmodel_type, *args, **kwargs)

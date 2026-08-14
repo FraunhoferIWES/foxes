@@ -5,7 +5,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from tqdm.autonotebook import tqdm
 from xarray import Dataset
-from typing import Any, Callable, Iterator, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
 
 from foxes.config import config, get_output_path
 from foxes.utils import new_instance
@@ -13,6 +13,9 @@ from foxes.utils import write_nc as write_nc_file
 import foxes.constants as FC
 
 from .data import MData, FData, TData
+
+if TYPE_CHECKING:
+    from .algorithm import Algorithm
 
 __global_engine_data__: dict[str, Engine | None] = dict(engine=None)
 
@@ -26,7 +29,7 @@ class EngineRunner(ABC):
 
     def _write_chunk_results(
         self,
-        algo: Any,
+        algo: Algorithm,
         results: dict[str, np.ndarray],
         write_nc: dict[str, Any] | None,
         out_dims: tuple[str, ...],
@@ -76,7 +79,7 @@ class EngineRunner(ABC):
 
     def _write_ani(
         self,
-        algo: Any,
+        algo: Algorithm,
         chunk_key: tuple[int, int],
         write_chunk_ani: dict[str, Any] | None,
         *data: Any,
@@ -112,20 +115,20 @@ class EngineRunner(ABC):
 
 class Engine(ABC):
     """
-    Abstract base clas for foxes calculation engines
+    Abstract base class for foxes calculation engines.
 
     Attributes
     ----------
-    chunk_size_states: int
-        The size of a states chunk
-    chunk_size_points: int
-        The size of a points chunk
-    progress_bar: bool, optional
-        Use a progress bar instead of simply
-        printing lines of reached percentages.
-        Unless progress_bar is None, then neither
-    verbosity: int
-        The verbosity level, 0 = silent
+    chunk_size_states
+        The size of a state chunk.
+    chunk_size_points
+        The size of a point chunk.
+    progress_bar
+        Whether to use a progress bar instead of printing reached-percent
+        updates. If ``None``, neither a progress bar nor progress messages are
+        used.
+    verbosity
+        The verbosity level; ``0`` means silent.
 
     Notes
     -----
@@ -147,23 +150,22 @@ class Engine(ABC):
         verbosity: int = 1,
     ) -> None:
         """
-        Constructor.
+        Construct the engine.
 
         Parameters
         ----------
-        chunk_size_states: int, optional
-            The size of a states chunk
-        chunk_size_points: int, optional
-            The size of a points chunk
-        n_procs: int, optional
-            The number of processes to be used,
-            or None for automatic
-        progress_bar: bool, optional
-            Use a progress bar instead of simply
-            printing lines of reached percentages.
-            Unless progress_bar is None, then neither
-        verbosity: int
-            The verbosity level, 0 = silent
+        chunk_size_states
+            The size of a states chunk.
+        chunk_size_points
+            The size of a points chunk.
+        n_procs
+            The number of processes to be used, or ``None`` for automatic
+            selection.
+        progress_bar
+            Use a progress bar instead of printing reached-percent lines. If
+            ``None``, neither the progress bar nor progress prints are used.
+        verbosity
+            The verbosity level, where ``0`` is silent.
 
         """
         self.chunk_size_states = chunk_size_states
@@ -210,12 +212,12 @@ class Engine(ABC):
     @property
     def name(self) -> str:
         """
-        The engine's name
+        Return the engine name.
 
         Returns
         -------
-        nme: str
-            The engine's name
+        nme
+            The engine name.
 
         """
         return self.__name
@@ -223,12 +225,12 @@ class Engine(ABC):
     @property
     def n_procs(self) -> int:
         """
-        The number of processes
+        Return the number of processes.
 
         Returns
         -------
-        n_procs: int
-            The number of processes
+        n_procs
+            The number of processes.
 
         """
         return self._n_procs
@@ -236,12 +238,12 @@ class Engine(ABC):
     @property
     def n_workers(self) -> int:
         """
-        The number of worker processes
+        Return the number of worker processes.
 
         Returns
         -------
-        n_workers: int
-            The number of worker processes
+        n_workers
+            The number of worker processes.
 
         """
         return self._n_workers
@@ -249,12 +251,12 @@ class Engine(ABC):
     @property
     def has_progress_bar(self) -> bool:
         """
-        Flag for active progress bar
+        Return whether a progress bar is active.
 
         Returns
         -------
-        has_pbar: bool
-            True if progress bar is active
+        has_pbar
+            ``True`` if a progress bar is active.
 
         """
         return self.progress_bar is not None and self.progress_bar
@@ -262,12 +264,12 @@ class Engine(ABC):
     @property
     def prints_progress(self) -> bool:
         """
-        Flag for active progress printing
+        Return whether progress printing is active.
 
         Returns
         -------
-        has_pbar: bool
-            True if progress printing is active
+        has_pbar
+            ``True`` if progress printing is active.
 
         """
         return self.progress_bar is not None and not self.progress_bar
@@ -275,12 +277,12 @@ class Engine(ABC):
     @property
     def entered(self) -> bool:
         """
-        Flag that this model has been entered.
+        Return whether this engine has been entered.
 
         Returns
         -------
-        flag: bool
-            True if the model has been entered.
+        flag
+            ``True`` if the engine has been entered.
 
         """
         return self.__entered
@@ -288,40 +290,39 @@ class Engine(ABC):
     @property
     def running_chunk_calc(self) -> bool:
         """
-        Flag that a chunk calculation is running.
+        Return whether a chunk calculation is running.
 
         Returns
         -------
-        flag: bool
-            True if a chunk calculation is running.
+        flag
+            ``True`` if a chunk calculation is running.
 
         """
         return self.__running_chunk_calc
 
     def print(self, *args: Any, level: int = 1, **kwargs: Any) -> None:
-        """Prints based on verbosity"""
+        """Print output based on the configured verbosity."""
         if self.verbosity >= level:
             print(*args, **kwargs)
 
     @abstractmethod
     def submit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """
-        Submits a job to worker, obtaining a future
+        Submit a job to a worker and return the future.
 
         Parameters
         ----------
-        f: Callable
-            The function f(*args, **kwargs) to be
-            submitted
-        args: tuple, optional
-            Arguments for the function
-        kwargs: dict, optional
-            Arguments for the function
+        f
+            The function to be submitted.
+        args
+            Positional arguments for the function.
+        kwargs
+            Keyword arguments for the function.
 
         Returns
         -------
-        future: object
-            The future object
+        future
+            The future object.
 
         """
         pass
@@ -329,17 +330,17 @@ class Engine(ABC):
     @abstractmethod
     def future_is_done(self, future: Any) -> bool:
         """
-        Checks if a future is done
+        Check whether a future is done.
 
         Parameters
         ----------
-        future: object
-            The future
+        future
+            The future.
 
         Returns
         -------
-        is_done: bool
-            True if the future is done
+        is_done
+            ``True`` if the future is done.
 
         """
         pass
@@ -347,17 +348,17 @@ class Engine(ABC):
     @abstractmethod
     def await_result(self, future: Any) -> Any:
         """
-        Waits for result from a future
+        Wait for and return the result of a future.
 
         Parameters
         ----------
-        future: object
-            The future
+        future
+            The future.
 
         Returns
         -------
-        result: object
-            The calculation result
+        result
+            The calculation result.
 
         """
         pass
@@ -371,24 +372,23 @@ class Engine(ABC):
         **kwargs: Any,
     ) -> list[Any]:
         """
-        Runs a function on a list of files
+        Run a function on a list of inputs.
 
         Parameters
         ----------
-        func: Callable
-            Function to be called on each file,
-            func(input, *args, **kwargs) -> data
-        inputs: array-like
-            The input data list
-        args: tuple, optional
-            Arguments for func
-        kwargs: dict, optional
-            Keyword arguments for func
+        func
+            The function to call for each input.
+        inputs
+            The input data list.
+        args
+            Additional positional arguments for ``func``.
+        kwargs
+            Additional keyword arguments for ``func``.
 
         Returns
         -------
-        results: list
-            The list of results
+        results
+            The result list.
 
         """
         pass
@@ -396,12 +396,12 @@ class Engine(ABC):
     @property
     def loop_dims(self) -> list[str]:
         """
-        Gets the loop dimensions (possibly chunked)
+        Return the loop dimensions, including chunking when applicable.
 
         Returns
         -------
-        dims: list of str
-            The loop dimensions (possibly chunked)
+        dims
+            The loop dimensions, possibly chunked.
 
         """
         if self.chunk_size_states is None and self.chunk_size_states is None:
@@ -421,27 +421,25 @@ class Engine(ABC):
         default_n_states: int | None = None,
     ) -> tuple[list[Any], int | None]:
         """
-        Takes subsets of datasets
+        Take subsets of datasets.
 
         Parameters
         ----------
-        datasets: tuple
-            The xarray.Dataset or xarray.Dataarray objects
-        sel: dict, optional
-            The selection dictionary
-        isel: dict, optional
-            The index selection dictionary
-        default_n_states: int, optional
-            Fallback number of states if no dataset has
-            state dimension
+        datasets
+            The xarray dataset or data array objects.
+        sel
+            The selection dictionary.
+        isel
+            The index selection dictionary.
+        default_n_states
+            The fallback number of states if no dataset has a state dimension.
 
         Returns
         -------
-        subsets: list
-            The subsets of the input data
-        n_states: int or None
-            The number of states after subset selection,
-            or fallback value
+        subsets
+            The subsets of the input data.
+        n_states
+            The number of states after subset selection, or the fallback value.
 
         """
         subsets: list[Any] = list(datasets)
@@ -480,21 +478,21 @@ class Engine(ABC):
         n_targets: int = 1,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Computes the sizes of states and points chunks
+        Compute the sizes of the state and target chunks.
 
         Parameters
         ----------
-        n_states: int
-            The number of states
-        n_targets: int
-            The number of point targets
+        n_states
+            The number of states.
+        n_targets
+            The number of point targets.
 
         Returns
         -------
-        chunk_sizes_states: numpy.ndarray
-            The sizes of all states chunks, shape: (n_chunks_states,)
-        chunk_sizes_targets: numpy.ndarray
-            The sizes of all targets chunks, shape: (n_chunks_targets,)
+        chunk_sizes_states
+            The sizes of all state chunks, with shape ``(n_chunks_states,)``.
+        chunk_sizes_targets
+            The sizes of all target chunks, with shape ``(n_chunks_targets,)``.
 
         """
         # determine states chunks:
@@ -509,7 +507,9 @@ class Engine(ABC):
                 chunk_size_states = int(n_states / n_chunks_states)
 
         # determine points chunks:
-        chunk_sizes_targets = [n_targets]
+        chunk_sizes_targets: np.ndarray = np.asarray(
+            [n_targets], dtype=config.dtype_int
+        )
         if n_targets > 1:
             if self.chunk_size_points is None:
                 if n_targets < max(n_states, 1000):
@@ -528,7 +528,9 @@ class Engine(ABC):
             if int(n_targets / n_chunks_targets) > chunk_size_targets:
                 n_chunks_targets += 1
                 chunk_size_targets = int(n_targets / n_chunks_targets)
-            chunk_sizes_targets = np.full(n_chunks_targets, chunk_size_targets)
+            chunk_sizes_targets = np.full(
+                n_chunks_targets, chunk_size_targets, dtype=config.dtype_int
+            )
             extra = n_targets - n_chunks_targets * chunk_size_targets
             if extra > 0:
                 chunk_sizes_targets[-extra:] += 1
@@ -552,7 +554,7 @@ class Engine(ABC):
 
     def get_chunk_input_data(
         self,
-        algo: Any,
+        algo: Algorithm,
         model_data: Dataset,
         farm_data: Dataset | None,
         point_data: Dataset | None,
@@ -565,38 +567,38 @@ class Engine(ABC):
         n_chunks_points: int,
     ) -> tuple[MData, FData] | tuple[MData, FData, TData]:
         """
-        Extracts the data for a single chunk calculation
+        Extract the data for a single chunk calculation.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The algorithm object
-        model_data: xarray.Dataset
-            The initial model data
-        farm_data: xarray.Dataset
-            The initial farm data
-        point_data: xarray.Dataset
-            The initial point data
-        states_i0_i1: tuple
-            The (start, end) values of the states
-        targets_i0_i1: tuple
-            The (start, end) values of the targets
-        out_vars: list of str
-            Names of the output variables
-        chunki_states: int
-            The index of the states chunk
-        chunki_points: int
-            The index of the points chunk
-        n_chunks_states: int
-            The number of states chunks
-        n_chunks_points: int
-            The number of points chunks
+        algo
+            The algorithm object.
+        model_data
+            The initial model data.
+        farm_data
+            The initial farm data.
+        point_data
+            The initial point data.
+        states_i0_i1
+            The start and end indices of the state slice.
+        targets_i0_i1
+            The start and end indices of the target slice.
+        out_vars
+            Names of the output variables.
+        chunki_states
+            The index of the states chunk.
+        chunki_points
+            The index of the points chunk.
+        n_chunks_states
+            The number of state chunks.
+        n_chunks_points
+            The number of point chunks.
 
         Returns
         -------
-        data: tuple of foxes.core.Data
-            The input data for the chunk calculation,
-            either (mdata, fdata) or (mdata, fdata, tdata)
+        data
+            The input data for the chunk calculation, either ``(mdata, fdata)``
+            or ``(mdata, fdata, tdata)``.
 
         """
         # prepare:
@@ -695,33 +697,32 @@ class Engine(ABC):
     @abstractmethod
     def run_calculation(
         self,
-        algo: Any,
+        algo: Algorithm,
         model: Any,
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
         point_data: Dataset | None = None,
     ) -> Any:
         """
-        Runs the model calculation
+        Run the model calculation.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The algorithm object
-        model: foxes.core.DataCalcModel, optional
-            The model that whose calculate function
-            should be run
-        model_data: xarray.Dataset
-            The initial model data
-        farm_data: xarray.Dataset, optional
-            The initial farm data
-        point_data: xarray.Dataset, optional
-            The initial point data
+        algo
+            The algorithm object.
+        model
+            The model whose ``calculate`` method should be executed.
+        model_data
+            The initial model data.
+        farm_data
+            The initial farm data.
+        point_data
+            The initial point data.
 
         Returns
         -------
-        results: xarray.Dataset
-            The model results
+        results
+            The model results.
 
         """
         n_states = algo.n_states
@@ -739,46 +740,45 @@ class Engine(ABC):
     @abstractmethod
     def new_runner(self) -> EngineRunner:
         """
-        Creates a new EngineRunner for running calculations in this engine
+        Create a new engine runner for this engine.
 
         Returns
         -------
-        runner: foxes.core.EngineRunner
-            The engine runner
+        runner
+            The engine runner.
 
         """
         pass
 
     def new_chunk_results_manager(
-        self, algo: Any, **kwargs: Any
+        self, algo: Algorithm, **kwargs: Any
     ) -> ChunkResultsManager:
         """
-        Creates a new ChunkResultsManager
+        Create a new chunk results manager.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The algorithm object
-        kwargs: dict, optional
-            Additional keyword arguments
+        algo
+            The algorithm object.
+        kwargs
+            Additional keyword arguments.
 
         Returns
         -------
-        crm: foxes.core.engine.ChunkResultsManager
-            The chunk results manager
+        crm
+            The chunk results manager.
 
         Example
         -------
-        Derived engines should receive results from chunked calculations
-        through
+        Derived engines should receive results from chunked calculations via
 
         >>> with engine.new_chunk_results_manager(...) as results_man:
-        >>>    ...
-        >>>    results_man.update(results, futures)
-        >>>    ...
+        >>>     ...
+        >>>     results_man.update(results, futures)
+        >>>     ...
 
-        After exiting the with-block, the final results are available
-        through `results_man.results`.
+        After leaving the ``with`` block, the final results are available via
+        ``results_man.results``.
 
         """
         return self.ChunkResultsManager(algo=algo, engine=self, **kwargs)
@@ -788,7 +788,7 @@ class Engine(ABC):
 
         def __init__(
             self,
-            algo: Any,
+            algo: Algorithm,
             engine: Engine,
             chunk_store: Any,
             goal_data: Dataset,
@@ -801,32 +801,32 @@ class Engine(ABC):
             write_nc: dict[str, Any] | None,
         ) -> None:
             """
-            Constructor
+            Construct the chunk results manager.
 
             Parameters
             ----------
-            algo: foxes.core.Algorithm
-                The algorithm object
-            engine: foxes.core.Engine
-                The engine object
-            chunk_store: foxes.utils.Dict
-                The chunk store
-            goal_data: xarray.Dataset
-                The goal data
-            n_chunks_states: int
-                Number of state chunks
-            n_chunks_targets: int
-                Number of target chunks
-            out_vars: list
-                List of output variables
-            out_dims: list
-                List of output dimensions
-            coords: dict
-                Coordinates
-            iterative: bool
-                Whether the calculation is iterative
-            write_nc: dict or None
-                Write netCDF parameters
+            algo
+                The algorithm object.
+            engine
+                The engine object.
+            chunk_store
+                The chunk store.
+            goal_data
+                The goal dataset.
+            n_chunks_states
+                The number of state chunks.
+            n_chunks_targets
+                The number of target chunks.
+            out_vars
+                The output variables.
+            out_dims
+                The output dimensions.
+            coords
+                The coordinates.
+            iterative
+                Whether the calculation is iterative.
+            write_nc
+                NetCDF output parameters, or ``None``.
 
             """
             self.algo = algo
@@ -941,13 +941,14 @@ class Engine(ABC):
             """Helper function for writing results to files on the fly"""
             vrb = max(self.verbosity - 1, 0)
             wfutures: list[Any] = []
+            n_states = self.algo.n_states
+            assert n_states is not None
             if self.split_size is not None and self.split_size > 0:
                 assert self.out_dir is not None
                 assert self.base_name is not None
-                splits = min(self.split_size, self.algo.n_states - self.wcount)
+                splits = min(self.split_size, n_states - self.wcount)
                 while (
-                    self.algo.n_states - self.wcount > 0
-                    and self.scount - self.wcount >= splits
+                    n_states - self.wcount > 0 and self.scount - self.wcount >= splits
                 ):
                     for v in self.data_vars.keys():
                         if len(self.data_vars[v][1]) > 1:
@@ -998,14 +999,14 @@ class Engine(ABC):
                     self.wcount += splits
                     self.fcounter += 1
 
-                    if self.algo.n_states - self.wcount > 0:
+                    if n_states - self.wcount > 0:
                         if self.split_mode == "input":
                             try:
                                 assert self.gen_size is not None
                                 self.split_size = next(self.gen_size)
                             except StopIteration:
-                                self.split_size = self.algo.n_states - self.wcount
-                        splits = min(self.split_size, self.algo.n_states - self.wcount)
+                                self.split_size = n_states - self.wcount
+                        splits = min(self.split_size, n_states - self.wcount)
 
             self.wfutures += wfutures
 
@@ -1013,14 +1014,14 @@ class Engine(ABC):
             self, results: dict[tuple[int, int], Any], futures: list[Any] | None = None
         ) -> None:
             """
-            Updates the chunk calculation progress, adds results to data_vars
+            Update chunk calculation progress and accumulate the results.
 
             Parameters
             ----------
-            results: dict
-                Dictionary of chunk results
-            futures: list or None
-                List of current futures for asynchronous writing
+            results
+                A dictionary of chunk results.
+            futures
+                The current futures for asynchronous writing, or ``None``.
 
             """
             assert self.__entered, (
@@ -1143,8 +1144,10 @@ class Engine(ABC):
                         wcount = 0
                         fcounter = 0
                         wfutures: list[Any] = []
-                        while wcount < self.algo.n_states:
-                            splits = min(self.split_size, self.algo.n_states - wcount)
+                        n_states = self.algo.n_states
+                        assert n_states is not None
+                        while wcount < n_states:
+                            splits = min(self.split_size, n_states - wcount)
                             assert self.results is not None
                             dssub = self.results.isel(
                                 {FC.STATE: slice(wcount, wcount + splits)}
@@ -1164,15 +1167,12 @@ class Engine(ABC):
                             wcount += splits
                             fcounter += 1
 
-                            if (
-                                wcount < self.algo.n_states
-                                and self.split_mode == "input"
-                            ):
+                            if wcount < n_states and self.split_mode == "input":
                                 try:
                                     assert self.gen_size is not None
                                     self.split_size = next(self.gen_size)
                                 except StopIteration:
-                                    self.split_size = self.algo.n_states - wcount
+                                    self.split_size = n_states - wcount
                         for wf in wfutures:
                             self.engine.await_result(wf)
 
@@ -1207,16 +1207,16 @@ class Engine(ABC):
     @classmethod
     def new(cls, engine_type: str | None, *args: Any, **kwargs: Any) -> Engine:
         """
-        Run-time engine factory.
+        Create an engine instance at runtime.
 
         Parameters
         ----------
-        engine_type: str
-            The selected derived class name
-        args: tuple, optional
-            Additional parameters for constructor
-        kwargs: dict, optional
-            Additional parameters for constructor
+        engine_type
+            The selected derived class name.
+        args
+            Additional positional arguments for the constructor.
+        kwargs
+            Additional keyword arguments for the constructor.
 
         """
 
@@ -1242,18 +1242,17 @@ class Engine(ABC):
 
 def get_engine(error: bool = True) -> Engine | None:
     """
-    Gets the global calculation engine
+    Return the global calculation engine.
 
     Parameters
     ----------
-    error: bool
-        Flag for raising ValueError if no
-        engine is found
+    error
+        Whether to raise a ``ValueError`` if no engine is set.
 
     Returns
     -------
-    engine: foxes.core.Engine
-        The foxes calculation engine
+    engine
+        The foxes calculation engine.
 
     :group: core
 
@@ -1266,12 +1265,12 @@ def get_engine(error: bool = True) -> Engine | None:
 
 def has_engine() -> bool:
     """
-    Flag that checks if engine has been set
+    Return whether an engine has been set.
 
     Returns
     -------
-    flag: bool
-        True if engine has been set
+    flag
+        ``True`` if an engine has been set.
 
     :group: core
 
@@ -1281,22 +1280,21 @@ def has_engine() -> bool:
 
 def run_with_engine(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
     """
-    Runs a function within engine context
+    Run a function within the active engine context.
 
     Parameters
     ----------
-    func: Callable
-        The function to be run,
-        func(*args, **kwargs)
-    args: tuple
-        Arguments for the function
-    kwargs: dict
-        Keyword arguments for the function
+    func
+        The function to run.
+    args
+        Arguments for the function.
+    kwargs
+        Keyword arguments for the function.
 
     Returns
     -------
-    result: object
-        The function result
+    result
+        The function result.
 
     """
     if has_engine():
@@ -1309,20 +1307,19 @@ def run_with_engine(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
 
 def map_with_engine(*args: Any, **kwargs: Any) -> Any:
     """
-    Maps a function via engine
+    Map a function via the active engine.
 
     Parameters
     ----------
-    args: tuple
-        Arguments for the Engine.map function
-    kwargs: dict
-        Keyword arguments for the Engine.map
-        function
+    args
+        Arguments for the ``Engine.map`` function.
+    kwargs
+        Keyword arguments for the ``Engine.map`` function.
 
     Returns
     -------
-    result: object
-        The function result
+    result
+        The function result.
 
     """
     if has_engine():
@@ -1337,19 +1334,19 @@ def map_with_engine(*args: Any, **kwargs: Any) -> Any:
 
 def launch_parallel_calc(self: Any, *args: Any, **kwargs: Any) -> Any:
     """
-    Launches parallel calculation using engine
+    Launch a parallel calculation using the active engine.
 
     Parameters
     ----------
-    args: tuple, optional
-        Additional parameters for running
-    kwargs: dict, optional
-        Additional parameters for running
+    args
+        Additional parameters for running the calculation.
+    kwargs
+        Additional keyword arguments for running the calculation.
 
     Returns
     -------
-    results: object
-        The calculation results
+    results
+        The calculation results.
 
     """
     if has_engine():

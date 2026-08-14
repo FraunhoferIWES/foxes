@@ -30,29 +30,28 @@ class GroundModel(Model):
         pwake: PartialWakesModel,
     ) -> dict[str, np.ndarray]:
         """
-        Creates new initial wake deltas, filled
-        with zeros.
+        Create new initial wake deltas filled with zeros.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        tdata: foxes.core.Data
-            The target point data
-        wmodel: foxes.core.WakeModel
-            The wake model
-        pwake: foxes.core.PartialWakesModel
-            The partial wakes model
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target point data.
+        wmodel
+            The wake model.
+        pwake
+            The partial wakes model.
 
         Returns
         -------
-        wake_deltas: dict
-            Key: variable name, value: The zero filled
-            wake deltas, shape: (n_states, n_turbines, n_tpoints, ...)
+        wake_deltas
+            A dictionary keyed by variable name. Values are zero-filled wake
+            deltas with shape ``(n_states, n_turbines, n_tpoints, ...)``.
 
         """
         return pwake.new_wake_deltas(algo, mdata, fdata, tdata, wmodel)
@@ -69,30 +68,28 @@ class GroundModel(Model):
         pwake: PartialWakesModel,
     ) -> None:
         """
-        Modifies wake deltas at target points by
-        contributions from the specified wake source turbines.
+        Modify wake deltas at target points using contributions from wake source
+        turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
-        downwind_index: int
-            The index of the wake causing turbine
-            in the downwind order
-        wake_deltas: dict
-            The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
-            The wake model
-        pwake: foxes.core.PartialWakesModel
-            The partial wakes model
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target-point data.
+        downwind_index
+            The index of the wake-causing turbine in the downwind order.
+        wake_deltas
+            The wake deltas. Keys are variable names and values are arrays with
+            shape ``(n_states, n_targets, n_tpoints, ...)``.
+        wmodel
+            The wake model.
+        pwake
+            The partial wakes model.
 
         """
         pwake.contribute(algo, mdata, fdata, tdata, downwind_index, wake_deltas, wmodel)
@@ -110,38 +107,36 @@ class GroundModel(Model):
         pwake: PartialWakesModel,
     ) -> dict[str, np.ndarray]:
         """
-        Updates the wake_deltas at the selected target
-        downwind index.
+        Update wake deltas at the selected target downwind index.
 
-        Modifies wake_deltas on the fly.
+        This modifies ``wake_deltas`` in place.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.Data
-            The target point data
-        rpoint_weights: numpy.ndarray
-            The rotor point weights, shape: (n_rotor_points,)
-        wake_deltas: dict
-            The wake deltas. Key: variable name,
-            value: np.ndarray of shape
-            (n_states, n_turbines, n_tpoints)
-        wmodel: foxes.core.WakeModel
-            The wake model
-        downwind_index: int
-            The index in the downwind order
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target-point data.
+        rpoint_weights
+            The rotor-point weights with shape ``(n_rotor_points,)``.
+        wake_deltas
+            The wake deltas. Keys are variable names and values are arrays with
+            shape ``(n_states, n_turbines, n_tpoints)``.
+        wmodel
+            The wake model.
+        downwind_index
+            The index in the downwind order.
 
         Returns
         -------
-        final_wake_deltas: dict
-            The final wake deltas at the selected downwind
-            turbines. Key: variable name, value: np.ndarray
-            of shape (n_states, n_rotor_points)
+        final_wake_deltas
+            The final wake deltas at the selected downwind turbines. Keys are
+            variable names and values are arrays with shape
+            ``(n_states, n_rotor_points)``.
 
         """
         return pwake.finalize_wakes(
@@ -168,20 +163,20 @@ class GroundModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
@@ -204,22 +199,22 @@ class GroundModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            values are arrays with shape
             (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
 
         """
@@ -243,17 +238,17 @@ class GroundModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        wake_deltas: dict
+        wake_deltas
             The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
+            turbines. Keys are variable names and values are arrays
             with shape (n_states, n_targets, n_tpoints)
 
         """
@@ -266,11 +261,11 @@ class GroundModel(Model):
 
         Parameters
         ----------
-        ground_type: str
+        ground_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         """
