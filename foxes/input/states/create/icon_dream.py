@@ -680,6 +680,7 @@ def main():
         type=str,
     )
     args = parser.parse_args()
+    cdo_temp_dir = Path(args.cdo_tmp_dir).expanduser().resolve()
 
     try:
         with Engine.new(args.engine, n_procs=args.n_cpus):
@@ -694,11 +695,11 @@ def main():
                 check_grb=args.check_grb,
                 check_nans=not args.skip_check_nans,
                 pack=not args.skip_pack,
-                cdo_tmp_dir=args.cdo_tmp_dir,
+                cdo_tmp_dir=cdo_temp_dir,
                 verbosity=args.verbosity,
             )
     except Exception as e:
-        _rm_tmp_dir(args.cdo_tmp_dir, verbosity=args.verbosity)
+        _rm_tmp_dir(cdo_temp_dir, verbosity=args.verbosity)
         raise e
 
 
