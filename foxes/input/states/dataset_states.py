@@ -1256,6 +1256,11 @@ class DatasetStates(States):
                 ):
                     _points_data["up"] = points
                     _points_data["points_vary"] = False
+                    # turbine point clouds carry per-turbine coordinates verbatim;
+                    # the uh2h height reconstruction must not re-index the turbine axis
+                    _points_data["heights_vary"] = False
+                    _points_data["uh"] = None
+                    _points_data["uh2h"] = None
                 elif np.max(pmax - pmin) > 1e-4:
                     _points_data["up"], _points_data["up2p"] = np.unique(
                         points.reshape(n_states * n_pts, 3), axis=0, return_inverse=True
