@@ -26,9 +26,9 @@ class VortexSheet(TurbineInductionModel):
 
     Attributes
     ----------
-    pre_rotor_only: bool
+    pre_rotor_only
         Calculate only the pre-rotor region
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
 
     :group: models.wake_models.induction
@@ -46,11 +46,11 @@ class VortexSheet(TurbineInductionModel):
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind speed superposition
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        pre_rotor_only: bool
+        pre_rotor_only
             Calculate only the pre-rotor region
 
         """
@@ -71,7 +71,7 @@ class VortexSheet(TurbineInductionModel):
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
@@ -83,7 +83,7 @@ class VortexSheet(TurbineInductionModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -104,21 +104,21 @@ class VortexSheet(TurbineInductionModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -139,18 +139,18 @@ class VortexSheet(TurbineInductionModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
@@ -188,23 +188,23 @@ class VortexSheet(TurbineInductionModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
-        tdata: foxes.core.Data
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            value
             (n_states, n_targets, n_tpoints, ...)
 
         """

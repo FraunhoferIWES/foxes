@@ -30,13 +30,13 @@ class IECTIWake(TopHatWakeModel):
 
     Attributes
     ----------
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
-    c0: float
+    c0
         The c0 parameter for the wake decay
-    c1: float
+    c1
         The c1 parameter for the wake decay
-    c2: float
+    c2
         The c2 parameter for the wake decay
 
     :group: models.wake_models.ti
@@ -59,22 +59,22 @@ class IECTIWake(TopHatWakeModel):
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The TI wake superposition.
-        opening_angle: float, optional
+        opening_angle
             The wake opening angle. The wake growth parameter k is calculated
             based on the wake opening angle.
-        iec_type: str
+        iec_type
             Either '2005' or '2019'/'Frandsen'
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
-        induction: str or foxes.core.InductionModel, optional
+        induction
             The induction model to use. Default: 'Betz'
-        c0: float, optional
+        c0
             The c0 parameter for the wake decay
-        c1: float, optional
+        c1
             The c1 parameter for the wake decay
-        c2: float, optional
+        c2
             The c2 parameter for the wake decay
 
         """
@@ -113,7 +113,7 @@ class IECTIWake(TopHatWakeModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -127,18 +127,18 @@ class IECTIWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
@@ -160,25 +160,25 @@ class IECTIWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        ct: numpy.ndarray
+        ct
             The ct values of the wake-causing turbines,
             shape: (n_states, n_targets)
 
         Returns
         -------
-        wake_r: numpy.ndarray
+        wake_r
             The wake radii, shape: (n_states, n_targets)
 
         """
@@ -223,32 +223,32 @@ class IECTIWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
-        x: numpy.ndarray
+        x
             The x values, shape: (n_st_sel,)
-        wake_r: numpy.ndarray
+        wake_r
             The wake radii, shape: (n_st_sel,)
-        ct: numpy.ndarray
+        ct
             The ct values of the wake-causing turbines,
             shape: (n_st_sel,)
 
         Returns
         -------
-        cl_del: dict
+        cl_del
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_st_sel,)
+            varlue
 
         """
         # read D from extra data:

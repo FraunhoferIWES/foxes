@@ -16,13 +16,13 @@ class Calculator(TurbineModel):
 
     Attributes
     ----------
-    in_vars: list of str
+    in_vars
         The input farm variables
-    out_vars: list of str
+    out_vars
         The output variables
-    func: Function
+    func
         The function: f(in0, in1, ..., algo, mdata, fdata, st_sel) -> (out0, out1, ...)
-        where inX and outY are numpy.ndarrays and
+        where inX and outY are arrays and
         st_sel is the state-turbine selection slice or array.
         All arrays have shape (n_states, n_turbines).
 
@@ -48,13 +48,13 @@ class Calculator(TurbineModel):
 
         Parameters
         ----------
-        in_vars: list of str
+        in_vars
             The input farm variables
-        out_vars: list of str
+        out_vars
             The output variables
         func: Function
             The function: f(in0, in1, ..., algo, mdata, fdata, st_sel) -> (out0, out1, ...)
-            where inX and outY are numpy.ndarrays and
+            where inX and outY are arrays and
             st_sel is the state-turbine selection slice or array.
             All arrays have shape (n_states, n_turbines).
 
@@ -63,7 +63,7 @@ class Calculator(TurbineModel):
             needs to be reordered by X[ssel, order] with
             ssel = fdata[FV.ORDER_SSEL], order = fdata[FV.ORDER]
             before using it in combination with fdata variables.
-        kwargs: dict, optional
+        kwargs
             Additional arguments for TurbineModel
 
         """
@@ -82,12 +82,12 @@ class Calculator(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -108,21 +108,21 @@ class Calculator(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel: slice or array of bool
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)

@@ -20,12 +20,12 @@ class LevelRotor(RotorModel):
 
     Attributes
     ----------
-    n: int
+    n
         The number of points along the vertical direction
-    reduce: bool
+    reduce
         Flag for calculating the weight of every element according
         to the rotor diameter at the respective height level
-    nint: int
+    nint
         Integration steps per element
 
     :group: models.rotor_models
@@ -40,16 +40,16 @@ class LevelRotor(RotorModel):
 
         Parameters
         ----------
-        n: int
+        n
             The number of points along the vertical direction
-        reduce: bool
+        reduce
             Flag for calculating the weight of every element according
             to the rotor diameter at the respective height level
-        nint: int
+        nint
             Integration steps per element
-        name: str, optional
+        name
             The model name
-        kwargs: dict, optional
+        kwargs
             Addition parameters for the base model
 
         """
@@ -75,21 +75,21 @@ class LevelRotor(RotorModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -143,7 +143,7 @@ class LevelRotor(RotorModel):
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
@@ -155,7 +155,7 @@ class LevelRotor(RotorModel):
 
         Returns
         -------
-        n_rpoints: int
+        n_rpoints
             The number of rotor points
 
         """
@@ -174,7 +174,7 @@ class LevelRotor(RotorModel):
 
         Returns
         -------
-        dpoints: numpy.ndarray
+        dpoints
             The design points, shape: (n_points, 3)
 
         """
@@ -186,7 +186,7 @@ class LevelRotor(RotorModel):
 
         Returns
         -------
-        weights: numpy.ndarray
+        weights
             The weights of the rotor points,
             add to one, shape: (n_rpoints,)
 

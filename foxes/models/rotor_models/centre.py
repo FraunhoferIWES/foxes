@@ -30,7 +30,7 @@ class CentreRotor(RotorModel):
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
@@ -42,7 +42,7 @@ class CentreRotor(RotorModel):
 
         Returns
         -------
-        n_rpoints: int
+        n_rpoints
             The number of rotor points
 
         """
@@ -61,7 +61,7 @@ class CentreRotor(RotorModel):
 
         Returns
         -------
-        dpoints: numpy.ndarray
+        dpoints
             The design points, shape: (n_points, 3)
 
         """
@@ -73,7 +73,7 @@ class CentreRotor(RotorModel):
 
         Returns
         -------
-        weights: numpy.ndarray
+        weights
             The weights of the rotor points,
             add to one, shape: (n_rpoints,)
 
@@ -88,16 +88,16 @@ class CentreRotor(RotorModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        points: numpy.ndarray
+        points
             The rotor points, shape:
             (n_states, n_turbines, n_rpoints, 3)
 
@@ -126,25 +126,25 @@ class CentreRotor(RotorModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        rpoint_results: dict
+        rpoint_results
             The results at rotor points. Keys: variable str.
-            Values: numpy.ndarray, shape if `states_turbine`
+            Values
             is None: (n_states, n_turbines, n_rpoints).
             Else: (n_states, 1, n_rpoints)
-        weights: numpy.ndarray
+        weights
             The rotor point weights, shape: (n_rpoints,)
-        downwind_index: int, optional
+        downwind_index
             The index in the downwind order
-        copy_to_ambient: bool
+        copy_to_ambient
             If `True`, the fdata results are copied to ambient
             variables after calculation
-        set_wd: bool
+        set_wd
             If `True`, the wind direction is updated
 
         """

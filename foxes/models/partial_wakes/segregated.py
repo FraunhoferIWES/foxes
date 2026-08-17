@@ -23,9 +23,9 @@ class PartialSegregated(PartialWakesModel):
 
     Attributes
     ----------
-    rotor_model: foxes.core.RotorModel
+    rotor_model
         The rotor model, default is the one from the algorithm
-    grotor: foxes.models.rotor_models.GridRotor
+    grotor
         The grid rotor model
 
     :group: models.partial_wakes
@@ -38,7 +38,7 @@ class PartialSegregated(PartialWakesModel):
 
         Parameters
         ----------
-        rotor_model: foxes.core.RotorModel
+        rotor_model
             The rotor model for wake averaging
 
         """
@@ -57,7 +57,7 @@ class PartialSegregated(PartialWakesModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -72,19 +72,19 @@ class PartialSegregated(PartialWakesModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        rpoints: numpy.ndarray
+        rpoints
             The wake calculation points, shape:
             (n_states, n_turbines, n_tpoints, 3)
-        rweights: numpy.ndarray
+        rweights
             The target point weights, shape: (n_tpoints,)
 
         """
@@ -112,28 +112,28 @@ class PartialSegregated(PartialWakesModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.Data
+        tdata
             The target point data
-        rpoint_weights: numpy.ndarray
+        rpoint_weights
             The rotor point weights, shape: (n_rotor_points,)
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
             value: np.ndarray of shape
             (n_states, n_turbines, n_tpoints)
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
-        downwind_index: int
+        downwind_index
             The index in the downwind order
 
         Returns
         -------
-        final_wake_deltas: dict
+        final_wake_deltas
             The final wake deltas at the selected downwind
             turbines. Key: variable name, value: np.ndarray
             of shape (n_states, n_rotor_points)

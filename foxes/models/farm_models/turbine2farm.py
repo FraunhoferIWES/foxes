@@ -21,7 +21,7 @@ class Turbine2FarmModel(FarmModel):
 
     Attributes
     ----------
-    turbine_model: foxes.core.TurbineModel
+    turbine_model
         The turbine model
 
     :group: models.farm_models
@@ -34,7 +34,7 @@ class Turbine2FarmModel(FarmModel):
 
         Parameters
         ----------
-        turbine_model: foxes.core.TurbineModel
+        turbine_model
             The turbine model
 
         """
@@ -51,7 +51,7 @@ class Turbine2FarmModel(FarmModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -63,12 +63,12 @@ class Turbine2FarmModel(FarmModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -89,20 +89,20 @@ class Turbine2FarmModel(FarmModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        **parameters: dict, optional
+        **parameters
             Init parameters forwarded to the turbine model
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values have shape (n_states, n_turbines)
 
         """
         n_states = algo.n_states

@@ -29,15 +29,15 @@ class TurbOParkWake(GaussianWakeModel):
 
     Attributes
     ----------
-    sbeta_factor: float
+    sbeta_factor
         Factor multiplying sbeta
-    c1: float
+    c1
         Factor from Frandsen turbulence model
-    c2: float
+    c2
         Factor from Frandsen turbulence model
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
 
     :group: models.wake_models.wind
@@ -58,17 +58,17 @@ class TurbOParkWake(GaussianWakeModel):
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind deficit superposition
-        sbeta_factor: float
+        sbeta_factor
             Factor multiplying sbeta
-        c1: float
+        c1
             Factor from Frandsen turbulence model
-        c2: float
+        c2
             Factor from Frandsen turbulence model
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
@@ -96,7 +96,7 @@ class TurbOParkWake(GaussianWakeModel):
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
@@ -108,7 +108,7 @@ class TurbOParkWake(GaussianWakeModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -129,21 +129,21 @@ class TurbOParkWake(GaussianWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -171,25 +171,25 @@ class TurbOParkWake(GaussianWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
 
         Returns
         -------
-        amsi: tuple
-            The amplitude and sigma, both numpy.ndarray
+        amsi
+            The amplitude and sigma arrays
             with shape (n_st_sel,)
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
@@ -308,17 +308,17 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
     Attributes
     ----------
-    dx: float
+    dx
         The step size of the integral
-    sbeta_factor: float
+    sbeta_factor
         Factor multiplying sbeta
-    self_wake: bool
+    self_wake
         Flag for considering only own wake in ti integral
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
-    ipars: dict
+    ipars
         Additional parameters for centreline integration
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
 
     :group: models.wake_models.wind
@@ -340,19 +340,19 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind deficit superposition
-        dx: float
+        dx
             The step size of the integral
-        sbeta_factor: float
+        sbeta_factor
             Factor multiplying sbeta
-        self_wake: bool
+        self_wake
             Flag for considering only own wake in ti integral
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        ipars: dict
+        ipars
             Additional parameters for centreline integration
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
@@ -384,7 +384,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
@@ -396,7 +396,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -417,21 +417,21 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -452,18 +452,18 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
@@ -497,25 +497,25 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
 
         Returns
         -------
-        amsi: tuple
-            The amplitude and sigma, both numpy.ndarray
+        amsi
+            The amplitude and sigma arrays
             with shape (n_st_sel,)
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
@@ -609,9 +609,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """

@@ -17,9 +17,9 @@ class TIPow(WakeSuperposition):
 
     Attributes
     ----------
-    pow: float
+    pow
         The power to which to take the wake results
-    superp_to_amb: str
+    superp_to_amb
         The method for combining ambient with wake deltas:
         linear or quadratic
 
@@ -33,9 +33,9 @@ class TIPow(WakeSuperposition):
 
         Parameters
         ----------
-        pow: float
+        pow
             The power to which to take the wake results
-        superp_to_amb: str
+        superp_to_amb
             The method for combining ambient with wake deltas:
             linear or quadratic
 
@@ -67,31 +67,31 @@ class TIPow(WakeSuperposition):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The selection of targets, shape: (n_states, n_targets)
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The original wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
-        wake_model_result: numpy.ndarray
+        wake_model_result
             The new wake deltas of the selected rotors,
             shape: (n_st_sel, n_tpoints, ...)
 
         Returns
         -------
-        wdelta: numpy.ndarray
+        wdelta
             The updated wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
@@ -119,23 +119,23 @@ class TIPow(WakeSuperposition):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
 
         Returns
         -------
-        final_wake_delta: numpy.ndarray
+        final_wake_delta
             The final wake delta, which will be added to the ambient
             results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)

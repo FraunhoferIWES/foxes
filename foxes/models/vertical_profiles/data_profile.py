@@ -14,13 +14,13 @@ class DataProfile(VerticalProfile):
 
     Attributes
     ----------
-    var: float
+    var
         The value
-    data_z: numpy.ndarray
+    data_z
         The z values, shape: (n_z,)
-    data_v: numpy.ndarray
+    data_v
         The variable values, shape: (n_z,)
-    interp_pars: dict
+    interp_pars
         Additional parameters for interpolation
 
     :group: models.vertical_profiles
@@ -41,17 +41,17 @@ class DataProfile(VerticalProfile):
 
         Parameters
         ----------
-        data_source: str or numpy.ndarray or pandas.DataFrame
+        data_source
             The profile data
-        variable: float
+        variable
             The value
-        col_z: str or int, optional
+        col_z
             The column of z data
-        col_var: str or int, optional
+        col_var
             The column of variable data
-        pd_read_pars: dict
+        pd_read_pars
             Additional parameters for pandas.read_csv()
-        interp_pars: dict, optional
+        interp_pars
             Additional parameters for interpolation
 
         """
@@ -89,7 +89,7 @@ class DataProfile(VerticalProfile):
 
         Returns
         -------
-        vars: list of str
+        vars
             The variable names
 
         """
@@ -101,14 +101,14 @@ class DataProfile(VerticalProfile):
 
         Parameters
         ----------
-        data: dict
+        data
             The input data
-        heights: numpy.ndarray
+        heights
             The evaluation heights
 
         Returns
         -------
-        results: numpy.ndarray
+        results
             The profile results, same
             shape as heights
 

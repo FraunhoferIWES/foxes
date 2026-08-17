@@ -19,11 +19,11 @@ class MadsenAxialInduction(AxialInductionModel):
 
     Attributes
     ----------
-    k1: float
+    k1
         Model coefficient
-    k2: float
+    k2
         Model coefficient
-    k3: float
+    k3
         Model coefficient
 
     :group: models.axial_induction
@@ -38,11 +38,11 @@ class MadsenAxialInduction(AxialInductionModel):
 
         Parameters
         ----------
-        k1: float
+        k1
             Model coefficient
-        k2: float
+        k2
             Model coefficient
-        k3: float
+        k3
             Model coefficient
 
         """
@@ -57,12 +57,12 @@ class MadsenAxialInduction(AxialInductionModel):
 
         Parameters
         ----------
-        ct: numpy.ndarray or float
+        ct
             The ct values
 
         Returns
         -------
-        ct: numpy.ndarray or float
+        ct
             The induction values
 
         """

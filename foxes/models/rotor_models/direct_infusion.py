@@ -21,12 +21,12 @@ class DirectMDataInfusion(CentreRotor):
 
     Attributes
     ----------
-    svars2mdvars: dict
+    svars2mdvars
         A mapping of state variables to mdata variables.
-    mdata_vars: list of str
+    mdata_vars
         The mdata variables to be used for infusion. By default,
         all mdata variables are searched.
-    turbine_coord: str, optional
+    turbine_coord
         The mdata coordinate that represents turbine names. By default,
         the second coordinate is used as a candidate if the mdata variable
         has three dimensions.
@@ -47,16 +47,16 @@ class DirectMDataInfusion(CentreRotor):
 
         Parameters
         ----------
-        svars2mdvars: dict, optional
+        svars2mdvars
             A mapping of state variables to mdata variables.
-        mdata_vars: list of str, optional
+        mdata_vars
             The mdata variables to be used for infusion. By default,
             all mdata variables are searched.
-        turbine_coord: str, optional
+        turbine_coord
             The mdata coordinate that represents turbine names. By default,
             the second coordinate is used as a candidate if the mdata variable
             has three dimensions.
-        kwargs: dict, optional
+        kwargs
             Additional parameters for RotorModel class
 
         """
@@ -71,7 +71,7 @@ class DirectMDataInfusion(CentreRotor):
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
@@ -83,12 +83,12 @@ class DirectMDataInfusion(CentreRotor):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -129,34 +129,34 @@ class DirectMDataInfusion(CentreRotor):
         rpoint_weights: np.ndarray | None = None,
         store: bool = False,
         downwind_index: int | None = None,
-    ) -> dict[str, np.ndarray]:  # type: ignore[override]
+    ) -> dict[str, np.ndarray]:
         """
         Calculate ambient rotor effective results.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        rpoints: numpy.ndarray, optional
+        rpoints
             The rotor points, or None for automatic for
             this rotor. Shape: (n_states, n_turbines, n_rpoints, 3)
-        rpoint_weights: numpy.ndarray, optional
+        rpoint_weights
             The rotor point weights, or None for automatic
             for this rotor. Shape: (n_rpoints,)
-        store: bool, optional
+        store
             Flag for storing ambient rotor point results
-        downwind_index: int, optional
+        downwind_index
             Only compute for index in the downwind order
 
         Returns
         -------
-        results: dict
+        results
             results dict. Keys: Variable name str. Values:
-            numpy.ndarray with results, shape: (n_states, n_turbines)
+            Results have shape (n_states, n_turbines)
 
         """
         self.ensure_output_vars(algo, fdata)

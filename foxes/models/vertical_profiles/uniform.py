@@ -12,7 +12,7 @@ class UniformProfile(VerticalProfile):
 
     Attributes
     ----------
-    var: float
+    var
         The value
 
     :group: models.vertical_profiles
@@ -25,7 +25,7 @@ class UniformProfile(VerticalProfile):
 
         Parameters
         ----------
-        variable: float
+        variable
             The value
 
         """
@@ -39,7 +39,7 @@ class UniformProfile(VerticalProfile):
 
         Returns
         -------
-        vars: list of str
+        vars
             The variable names
 
         """
@@ -51,14 +51,14 @@ class UniformProfile(VerticalProfile):
 
         Parameters
         ----------
-        data: dict
+        data
             The input data
-        heights: numpy.ndarray
+        heights
             The evaluation heights
 
         Returns
         -------
-        results: numpy.ndarray
+        results
             The profile results, same
             shape as heights
 

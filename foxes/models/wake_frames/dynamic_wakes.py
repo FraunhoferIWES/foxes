@@ -23,12 +23,12 @@ class DynamicWakes(WakeFrame):
 
     Attributes
     ----------
-    max_age: int
+    max_age
         The maximal number of wake steps
-    cl_ipars: dict
+    cl_ipars
         Interpolation parameters for centre line
         point interpolation
-    dt_min: float
+    dt_min
         The delta t value in minutes,
         if not from timeseries data
 
@@ -49,18 +49,18 @@ class DynamicWakes(WakeFrame):
 
         Parameters
         ----------
-        max_age: int, optional
+        max_age
             The maximal number of wake steps
-        max_age_mean_ws: float
+        max_age_mean_ws
             The mean wind speed for the max_age calculation,
             if the latter is not given
-        cl_ipars: dict
+        cl_ipars
             Interpolation parameters for centre line
             point interpolation
-        dt_min: float, optional
+        dt_min
             The delta t value in minutes,
             if not from timeseries data
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -87,21 +87,21 @@ class DynamicWakes(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -165,16 +165,16 @@ class DynamicWakes(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        order: numpy.ndarray
+        order
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -273,7 +273,7 @@ class DynamicWakes(WakeFrame):
                     if np.min(data[s, age + 1, 3]) >= max_wake_length_km * 1e3:
                         break
 
-                del res, uv, s, hdt, dxy
+                del res, uv, hdt, dxy
             del pts, tdt
 
             # store this chunk's results:
@@ -489,21 +489,21 @@ class DynamicWakes(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
 
         Returns
         -------
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
@@ -531,8 +531,8 @@ class DynamicWakes(WakeFrame):
         assert max_age is not None, "Missing max_age"
         for si in range(n_states):
             # select wake ages that exist for this state:
-            ags = np.arange(max_age)
-            sts = i0 + si - ags - wi0
+            ags: Any = np.arange(max_age)
+            sts: Any = i0 + si - ags - wi0
             sel = (sts >= 0) & (sts < len(wdata))
             if np.any(sel):
                 # filter to existing wake points:

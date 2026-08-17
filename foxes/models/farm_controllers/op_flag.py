@@ -23,10 +23,10 @@ class OpFlagController(FarmController):
 
     Parameters
     ----------
-    non_op_values: dict
+    non_op_values
         The non-operational values for variables,
         keys: variable str, values: float
-    var2ncvar: dict
+    var2ncvar
         The mapping of variable names to NetCDF variable names,
         only needed if data_source is a path to a NetCDF file
 
@@ -46,16 +46,16 @@ class OpFlagController(FarmController):
 
         Parameters
         ----------
-        data_source: numpy.ndarray or str
+        data_source
             The operating flag data, shape: (n_states, n_turbines),
             or path to a NetCDF file
-        non_op_values: dict, optional
+        non_op_values
             The non-operational values for variables,
             keys: variable str, values: float
-        var2ncvar: dict
+        var2ncvar
             The mapping of variable names to NetCDF variable names,
             only needed if data_source is a path to a NetCDF file
-        kwargs: dict, optional
+        kwargs
             Additional keyword arguments for the
             base class constructor
 
@@ -79,12 +79,12 @@ class OpFlagController(FarmController):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -108,16 +108,16 @@ class OpFlagController(FarmController):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -188,23 +188,23 @@ class OpFlagController(FarmController):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        pre_rotor: bool
+        pre_rotor
             Flag for running pre-rotor or post-rotor
             models
-        downwind_index: int, optional
+        downwind_index
             The index in the downwind order
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values have shape (n_states, n_turbines)
 
         """
         self.ensure_output_vars(algo, fdata)

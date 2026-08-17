@@ -31,19 +31,19 @@ class PartialCentre(RotorPoints):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        rpoints: numpy.ndarray
+        rpoints
             The wake calculation points, shape:
             (n_states, n_turbines, n_tpoints, 3)
-        rweights: numpy.ndarray
+        rweights
             The target point weights, shape: (n_tpoints,)
 
         """
@@ -65,29 +65,29 @@ class PartialCentre(RotorPoints):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name to map
-        rotor_res: numpy.ndarray
+        rotor_res
             The results at rotor points, shape:
             (n_states, n_turbines, n_rotor_points) if downwind_index is None,
             otherwise shape: (n_states, n_rotor_points)
-        rotor_weights: numpy.ndarray
+        rotor_weights
             The rotor point weights, shape: (n_rotor_points,)
-        downwind_index: int, optional
+        downwind_index
             The downwind index of the updated turbine,
             if None, maps for all turbines
 
         Returns
         -------
-        res: numpy.ndarray
+        res
             The mapped results at target points, shape:
             (n_states, n_targets, n_tpoints) if downwind_index is None,
             otherwise shape: (n_states, n_tpoints)

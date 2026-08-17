@@ -23,7 +23,7 @@ class ShearedProfile(VerticalProfile):
 
         Returns
         -------
-        vars: list of str
+        vars
             The variable names
 
         """
@@ -35,14 +35,14 @@ class ShearedProfile(VerticalProfile):
 
         Parameters
         ----------
-        data: dict
+        data
             The input data
-        heights: numpy.ndarray
+        heights
             The evaluation heights
 
         Returns
         -------
-        results: numpy.ndarray
+        results
             The profile results, same
             shape as heights
 

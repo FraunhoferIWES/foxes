@@ -30,19 +30,19 @@ class RotorPoints(PartialWakesModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        rpoints: numpy.ndarray
+        rpoints
             The wake calculation points, shape:
             (n_states, n_turbines, n_tpoints, 3)
-        rweights: numpy.ndarray
+        rweights
             The target point weights, shape: (n_tpoints,)
 
         """
@@ -67,29 +67,29 @@ class RotorPoints(PartialWakesModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name to map
-        rotor_res: numpy.ndarray
+        rotor_res
             The results at rotor points, shape:
             (n_states, n_turbines, n_rotor_points) if downwind_index is None,
             otherwise shape: (n_states, n_rotor_points)
-        rotor_weights: numpy.ndarray
+        rotor_weights
             The rotor point weights, shape: (n_rotor_points,)
-        downwind_index: int, optional
+        downwind_index
             The downwind index of the updated turbine,
             if None, maps for all turbines
 
         Returns
         -------
-        res: numpy.ndarray
+        res
             The mapped results at target points, shape:
             (n_states, n_targets, n_tpoints) if downwind_index is None,
             otherwise shape: (n_states, n_tpoints)
@@ -116,28 +116,28 @@ class RotorPoints(PartialWakesModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.Data
+        tdata
             The target point data
-        rpoint_weights: numpy.ndarray
+        rpoint_weights
             The rotor point weights, shape: (n_rotor_points,)
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
             value: np.ndarray of shape
             (n_states, n_turbines, n_tpoints)
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
-        downwind_index: int
+        downwind_index
             The index in the downwind order
 
         Returns
         -------
-        final_wake_deltas: dict
+        final_wake_deltas
             The final wake deltas at the selected downwind
             turbines. Key: variable name, value: np.ndarray
             of shape (n_states, n_rotor_points)

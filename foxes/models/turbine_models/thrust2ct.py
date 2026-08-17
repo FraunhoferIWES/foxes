@@ -18,9 +18,9 @@ class Thrust2Ct(TurbineModel):
 
     Attributes
     ----------
-    thrust_var: str
+    thrust_var
         Name of the thrust variable
-    WSCT: str
+    WSCT
         The wind speed variable for ct lookup
 
     :group: models.turbine_models
@@ -33,9 +33,9 @@ class Thrust2Ct(TurbineModel):
 
         Parameters
         ----------
-        thrust_var: str
+        thrust_var
             Name of the thrust variable
-        var_ws_ct: str
+        var_ws_ct
             The wind speed variable for ct lookup
 
         """
@@ -53,12 +53,12 @@ class Thrust2Ct(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -79,21 +79,21 @@ class Thrust2Ct(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel: slice or array of bool
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)

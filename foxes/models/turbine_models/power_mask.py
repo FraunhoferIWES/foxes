@@ -29,13 +29,13 @@ class PowerMask(TurbineModel):
 
     Attributes
     ----------
-    var_ws_P: str
+    var_ws_P
         The wind speed variable for power lookup
-    factor_P: float
+    factor_P
         The power unit factor, e.g. 1000 for kW
-    P_lim: float
+    P_lim
         Threshold power delta for boosts
-    induction: foxes.core.AxialInductionModel
+    induction
         The induction model
 
     :group: models.turbine_models
@@ -54,13 +54,13 @@ class PowerMask(TurbineModel):
 
         Parameters
         ----------
-        var_ws_P: str
+        var_ws_P
             The wind speed variable for power lookup
-        factor_P: float
+        factor_P
             The power unit factor, e.g. 1000 for kW
-        P_lim: float
+        P_lim
             Threshold power delta for boosts
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
 
         """
@@ -85,12 +85,12 @@ class PowerMask(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -102,7 +102,7 @@ class PowerMask(TurbineModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -120,21 +120,21 @@ class PowerMask(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -173,21 +173,21 @@ class PowerMask(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel: slice or array of bool
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         # prepare:

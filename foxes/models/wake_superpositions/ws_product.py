@@ -25,9 +25,9 @@ class WSProduct(WakeSuperposition):
 
     Attributes
     ----------
-    lim_low: float
+    lim_low
         Lower limit of the final waked wind speed
-    lim_high: float
+    lim_high
         Upper limit of the final waked wind speed
 
     :group: models.wake_superpositions
@@ -45,12 +45,12 @@ class WSProduct(WakeSuperposition):
 
         Parameters
         ----------
-        scale_amb: bool
+        scale_amb
             Flag for scaling wind deficit with ambient wind speed
             instead of waked wind speed
-        lim_low: float
+        lim_low
             Lower limit of the final waked wind speed
-        lim_high: float
+        lim_high
             Upper limit of the final waked wind speed
 
         """
@@ -71,12 +71,12 @@ class WSProduct(WakeSuperposition):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
@@ -100,31 +100,31 @@ class WSProduct(WakeSuperposition):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The selection of targets, shape: (n_states, n_targets)
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The original wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
-        wake_model_result: numpy.ndarray
+        wake_model_result
             The new wake deltas of the selected rotors,
             shape: (n_st_sel, n_tpoints, ...)
 
         Returns
         -------
-        wdelta: numpy.ndarray
+        wdelta
             The updated wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
@@ -157,23 +157,23 @@ class WSProduct(WakeSuperposition):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
 
         Returns
         -------
-        final_wake_delta: numpy.ndarray
+        final_wake_delta
             The final wake delta, which will be added to the ambient
             results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)

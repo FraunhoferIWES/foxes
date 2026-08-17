@@ -26,13 +26,13 @@ class SeqDynamicWakes(FarmOrder):
 
     Attributes
     ----------
-    cl_ipars: dict
+    cl_ipars
         Interpolation parameters for centre line
         point interpolation
-    dt_min: float, optional
+    dt_min
         The delta t value in minutes,
         if not from timeseries data
-    induction: foxes.core.AxialInductionModel
+    induction
         The induction model
 
     :group: models.wake_frames.sequential
@@ -51,15 +51,15 @@ class SeqDynamicWakes(FarmOrder):
 
         Parameters
         ----------
-        cl_ipars: dict
+        cl_ipars
             Interpolation parameters for centre line
             point interpolation
-        dt_min: float, optional
+        dt_min
             The delta t value in minutes,
             if not from timeseries data
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -84,7 +84,7 @@ class SeqDynamicWakes(FarmOrder):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -102,21 +102,21 @@ class SeqDynamicWakes(FarmOrder):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -176,16 +176,16 @@ class SeqDynamicWakes(FarmOrder):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        order: numpy.ndarray
+        order
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -204,21 +204,21 @@ class SeqDynamicWakes(FarmOrder):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
 
         Returns
         -------
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
@@ -329,25 +329,25 @@ class SeqDynamicWakes(FarmOrder):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm, optional
+        algo
             The algorithm, needed for data from previous iteration
-        variable: str
+        variable
             The variable, serves as data key
-        downwind_index: int, optional
+        downwind_index
             The index in the downwind order
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        target: str, optional
+        target
             The dimensions identifier for the output,
             FC.STATE_TARGET, FC.STATE_TARGET_TPOINT
-        states0: numpy.ndarray, optional
+        states0
             The states of wake creation
 
         Returns
         -------
-        data: numpy.ndarray
+        data
             Data for wake modelling, shape:
             (n_states, n_turbines) or (n_states, n_target)
 
@@ -404,20 +404,20 @@ class SeqDynamicWakes(FarmOrder):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points: numpy.ndarray
+        points
             The centreline points, shape: (n_states, n_points, 3)
 
         """

@@ -19,9 +19,9 @@ class WakeDeltas(PointDataModel):
 
     Attributes
     ----------
-    vars: list of str
+    vars
         The variables
-    normalize: bool
+    normalize
         Divide resulting deltas by ambient values
 
     :group: models.point_models
@@ -34,9 +34,9 @@ class WakeDeltas(PointDataModel):
 
         Parameters
         ----------
-        vars: list of str
+        vars
             The variables
-        normalize: bool
+        normalize
             Divide resulting deltas by ambient values
 
         """
@@ -50,12 +50,12 @@ class WakeDeltas(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -76,20 +76,20 @@ class WakeDeltas(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values
 
         """
 

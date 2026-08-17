@@ -33,17 +33,17 @@ class Bastankhah2016Deflection(WakeDeflection):
 
     Attributes
     ----------
-    model: Bastankhah2016Model
+    model
         The model for computing common data
-    alpha: float
+    alpha
         model parameter used to determine onset of far wake region,
         if not found in wake model
-    beta: float
+    beta
         model parameter used to determine onset of far wake region,
         if not found in wake model
-    wake_k: dict
+    wake_k
         Parameters for the WakeK class, if not found in wake model
-    induction: foxes.core.AxialInductionModel
+    induction
         The induction model, if not found in wake model
 
     :group: models.wake_deflections
@@ -62,15 +62,15 @@ class Bastankhah2016Deflection(WakeDeflection):
 
         Parameters
         ----------
-        alpha: float
+        alpha
             model parameter used to determine onset of far wake region,
             if not found in wake model
-        beta: float
+        beta
             model parameter used to determine onset of far wake region,
             if not found in wake model
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model, if not found in wake model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class, if not found in wake model
 
         """
@@ -97,7 +97,7 @@ class Bastankhah2016Deflection(WakeDeflection):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -120,21 +120,21 @@ class Bastankhah2016Deflection(WakeDeflection):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -267,24 +267,24 @@ class Bastankhah2016Deflection(WakeDeflection):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         Returns
         -------
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 

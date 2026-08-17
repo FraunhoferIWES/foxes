@@ -17,7 +17,7 @@ class Ustar2TI(PointDataModel):
 
     Attributes
     ----------
-    max_ti: float
+    max_ti
         Upper limit of the computed TI values
 
     :group: models.point_models
@@ -30,9 +30,9 @@ class Ustar2TI(PointDataModel):
 
         Parameters
         ----------
-        max_ti: float, optional
+        max_ti
             Upper limit of the computed TI values
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -45,12 +45,12 @@ class Ustar2TI(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -71,20 +71,20 @@ class Ustar2TI(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values
 
         """
         ustar = tdata[FV.USTAR]

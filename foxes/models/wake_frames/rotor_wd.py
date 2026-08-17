@@ -22,7 +22,7 @@ class RotorWD(WakeFrame):
 
     Attributes
     ----------
-    var_wd: str
+    var_wd
         The wind direction variable
 
     :group: models.wake_frames
@@ -35,9 +35,9 @@ class RotorWD(WakeFrame):
 
         Parameters
         ----------
-        var_wd: str
+        var_wd
             The wind direction variable
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -53,16 +53,16 @@ class RotorWD(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        order: numpy.ndarray
+        order
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -85,21 +85,21 @@ class RotorWD(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
 
         Returns
         -------
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
@@ -142,20 +142,20 @@ class RotorWD(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points: numpy.ndarray
+        points
             The centreline points, shape: (n_states, n_points, 3)
 
         """

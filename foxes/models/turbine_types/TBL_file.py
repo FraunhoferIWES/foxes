@@ -50,11 +50,11 @@ class TBLFile(PCtFile):
 
         Parameters
         ----------
-        tbl_file: str
+        tbl_file
             Path to the tbl file
-        rho: float
+        rho
             The air density for the curves
-        paramerers: dict, optional
+        paramerers
             Additional parameters for PCtFile class
 
         """

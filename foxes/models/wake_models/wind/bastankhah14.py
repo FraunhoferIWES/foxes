@@ -28,14 +28,14 @@ class Bastankhah2014(GaussianWakeModel):
 
     Attributes
     ----------
-    sbeta_factor: float
+    sbeta_factor
         Factor multiplying sbeta, only relevant if sbeta is not set
-    sbeta: float
+    sbeta
         If set, sbeta is fixed to this value, otherwise it
         is calculated from axial induction
-    induction: foxes.core.AxialInductionModel
+    induction
         The axial induction model
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
 
     :group: models.wake_models.wind
@@ -55,16 +55,16 @@ class Bastankhah2014(GaussianWakeModel):
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind speed deficit superposition.
-        sbeta_factor: float
+        sbeta_factor
             Factor multiplying sbeta, only relevant if sbeta is not set
-        sbeta: float, optional
+        sbeta
             If set, sbeta is fixed to this value, otherwise it
             is calculated from axial induction
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The axial induction model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
@@ -90,7 +90,7 @@ class Bastankhah2014(GaussianWakeModel):
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
@@ -102,7 +102,7 @@ class Bastankhah2014(GaussianWakeModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -123,21 +123,21 @@ class Bastankhah2014(GaussianWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -165,25 +165,25 @@ class Bastankhah2014(GaussianWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
 
         Returns
         -------
-        amsi: tuple
-            The amplitude and sigma, both numpy.ndarray
+        amsi
+            The amplitude and sigma arrays
             with shape (n_st_sel,)
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 

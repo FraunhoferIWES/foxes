@@ -33,21 +33,21 @@ class WsRho2PCtFromTwo(TurbineType):
 
     Attributes
     ----------
-    source_P: str or pandas.DataFrame
+    source_P
         The file path for the power curve, static name, or data
-    source_ct: str or pandas.DataFrame
+    source_ct
         The file path for the ct curve, static name, or data
-    WSCT: str
+    WSCT
         The wind speed variable for ct lookup
-    WSP: str
+    WSP
         The wind speed variable for power lookup
-    rpars_P: dict, optional
+    rpars_P
         Parameters for pandas power file reading
-    rpars_ct: dict, optional
+    rpars_ct
         Parameters for pandas ct file reading
-    ipars_P: dict, optional
+    ipars_P
         Parameters for scipy.interpolate.interpn
-    ipars_ct: dict, optional
+    ipars_ct
         Parameters for scipy.interpolate.interpn
 
     :group: models.turbine_types
@@ -71,23 +71,23 @@ class WsRho2PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        data_source_P: str or pandas.DataFrame
+        data_source_P
             The file path for the power curve, static name, or data
-        data_source_ct: str or pandas.DataFrame
+        data_source_ct
             The file path for the ct curve, static name, or data
-        var_ws_ct: str
+        var_ws_ct
             The wind speed variable for ct lookup
-        var_ws_P: str
+        var_ws_P
             The wind speed variable for power lookup
-        pd_file_read_pars_P:  dict
+        pd_file_read_pars_P
             Parameters for pandas power file reading
-        pd_file_read_pars_ct:  dict
+        pd_file_read_pars_ct
             Parameters for pandas ct file reading
-        interpn_pars_P: dict, optional
+        interpn_pars_P
             Parameters for scipy.interpolate.interpn
-        interpn_pars_ct: dict, optional
+        interpn_pars_ct
             Parameters for scipy.interpolate.interpn
-        parameters: dict, optional
+        parameters
             Additional parameters for TurbineType class
 
         """
@@ -126,7 +126,7 @@ class WsRho2PCtFromTwo(TurbineType):
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS2 is required
 
         """
@@ -138,7 +138,7 @@ class WsRho2PCtFromTwo(TurbineType):
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS3 is required
 
         """
@@ -150,12 +150,12 @@ class WsRho2PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -177,16 +177,16 @@ class WsRho2PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -262,21 +262,21 @@ class WsRho2PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         # prepare:
@@ -369,9 +369,9 @@ class WsRho2PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        verbosity: int
+        verbosity
             The verbosity level
 
         """

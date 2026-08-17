@@ -21,9 +21,9 @@ class PartialGrid(PartialSegregated):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Parameters for GridRotor
-        kwargs: dict, optional
+        kwargs
             Parameters for GridRotor
 
         """

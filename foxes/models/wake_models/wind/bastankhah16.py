@@ -29,11 +29,11 @@ class Bastankhah2016Model(Model):
 
     Attributes
     ----------
-    alpha: float
+    alpha
         model parameter used to determine onset of far wake region
-    beta: float
+    beta
         model parameter used to determine onset of far wake region
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
 
     :group: models.wake_models.wind
@@ -63,11 +63,11 @@ class Bastankhah2016Model(Model):
 
         Parameters
         ----------
-        alpha: float
+        alpha
             model parameter used to determine onset of far wake region
-        beta: float
+        beta
             model parameter used to determine onset of far wake region
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
 
         """
@@ -82,7 +82,7 @@ class Bastankhah2016Model(Model):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -100,21 +100,21 @@ class Bastankhah2016Model(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -161,21 +161,21 @@ class Bastankhah2016Model(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        gamma: numpy.ndarray
+        gamma
             The YAWM angles in radiants, shape: (n_states, n_targets)
-        k: numpy.ndarray
+        k
             The k parameter values, shape: (n_states, n_targets)
 
         """
@@ -363,7 +363,7 @@ class Bastankhah2016Model(Model):
 
         # update mdata:
         out[self.ST_SEL] = st_sel
-        mdata.add(self.MDATA_KEY, out, None)  # type: ignore[arg-type]
+        mdata.add(self.MDATA_KEY, out, None)
 
     def has_data(self, mdata: MData, downwind_index: int, x: np.ndarray) -> bool:
         """
@@ -371,17 +371,17 @@ class Bastankhah2016Model(Model):
 
         Parameters
         ----------
-        mdata: foxes.core.Data
+        mdata
             The model data
-        downwind_index: numpy.ndarray
+        downwind_index
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_points)
 
         Returns
         -------
-        check: bool
+        check
             True if data exists
 
         """
@@ -399,14 +399,14 @@ class Bastankhah2016Model(Model):
 
         Parameters
         ----------
-        key: str
+        key
             The data key
-        mdata: foxes.core.Data
+        mdata
             The model data
 
         Returns
         -------
-        data: numpy.ndarray
+        data
             The data
 
         """
@@ -432,20 +432,20 @@ class Bastankhah2016(DistSlicedWakeModel):
 
     Attributes
     ----------
-    model: Bastankhah2016Model
+    model
         The model for computing common data
-    model_pars: dict
+    model_pars
         Model parameters
-    YAWM: float
+    YAWM
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
-    alpha: float
+    alpha
         model parameter used to determine onset of far wake region
-    beta: float
+    beta
         model parameter used to determine onset of far wake region
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
-    wake_k: dict, optional
+    wake_k
         Parameters for the WakeK class
 
     :group: models.wake_models.wind
@@ -465,18 +465,18 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind deficit superposition
-        ct_max: float
+        ct_max
             The maximal value for ct, values beyond will be limited
             to this number, by default 0.9999
-        alpha: float
+        alpha
             model parameter used to determine onset of far wake region
-        beta: float
+        beta
             model parameter used to determine onset of far wake region
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
@@ -504,7 +504,7 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
@@ -516,7 +516,7 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -537,21 +537,21 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -581,28 +581,28 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        yz: numpy.ndarray
+        yz
             The yz values for each x value, shape:
             (n_states, n_targets, n_yz_per_target, 2)
 
         Returns
         -------
-        wdeltas: dict
+        wdeltas
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_st_sel, n_yz_per_target)
-        st_sel: numpy.ndarray of bool
+            value
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 

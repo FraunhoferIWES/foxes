@@ -27,7 +27,7 @@ class PartialTopHat(PartialCentre):
 
     Attributes
     ----------
-    rotor_model: foxes.core.RotorModel
+    rotor_model
         The rotor model, default is the one from the algorithm
 
     :group: models.partial_wakes
@@ -40,14 +40,14 @@ class PartialTopHat(PartialCentre):
 
         Parameters
         ----------
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model to be tested
-        error: bool
+        error
             Flag for raising TypeError
 
         Returns
         -------
-        chk: bool
+        chk
             True if wake model is compatible
 
         """
@@ -65,7 +65,7 @@ class PartialTopHat(PartialCentre):
 
         Parameters
         ----------
-        rotor_model: foxes.core.RotorModel, optional
+        rotor_model
             The rotor model, default is the one from the algorithm
 
         """
@@ -84,21 +84,21 @@ class PartialTopHat(PartialCentre):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -123,7 +123,7 @@ class PartialTopHat(PartialCentre):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -148,20 +148,20 @@ class PartialTopHat(PartialCentre):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            value
             (n_states, n_targets, n_tpoints, ...)
 
         """

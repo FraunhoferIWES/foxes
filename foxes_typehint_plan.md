@@ -82,7 +82,7 @@ The status snapshot below and the latest validation record are authoritative. Ol
 - `foxes.algorithms`: complete (package directory: `foxes/algorithms`)
 - `foxes.input`: complete (package directory: `foxes/input`)
 - `foxes.utils`: complete (package directory: `foxes/utils`)
-- `foxes.models`: pending (package directory: `foxes/models`)
+- `foxes.models`: complete (package directory: `foxes/models`)
 - `foxes.output`: pending (package directory: `foxes/output`)
 - remaining packages: pending (package directory: `foxes/<remaining_package>`)
 
@@ -152,7 +152,7 @@ This makes the hidden failure mode impossible to miss in a fresh session, becaus
 
 ### Current Next Action
 
-- Begin the `foxes.models.axial_induction` type and docstring remediation.
+- Begin the `foxes.output` type and docstring remediation.
 
 ### foxes.input status
 
@@ -176,6 +176,160 @@ This makes the hidden failure mode impossible to miss in a fresh session, becaus
 - supplemental grep anti-drift scan: empty
 - remaining files or hits: none in `foxes/utils`
 - next action: begin `foxes.models.axial_induction` remediation
+
+### foxes.models.axial_induction status
+
+- package directory: `foxes/models/axial_induction`
+- pass/fail: complete
+- `uv run mypy foxes/models/axial_induction` — passed (`3` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_axial_induction.py -q` — passed (`2 passed`)
+- Python files inspected by AST docstring audit: `3`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/axial_induction`
+- next action: begin `foxes.models.farm_controllers` remediation
+
+### foxes.models.farm_controllers status
+
+- package directory: `foxes/models/farm_controllers`
+- pass/fail: complete
+- `uv run mypy foxes/models/farm_controllers` — passed (`3` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_farm_controllers.py -q` — passed (`2 passed`)
+- Python files inspected by AST docstring audit: `3`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/farm_controllers`
+- next action: begin `foxes.models.farm_models` remediation
+
+### foxes.models.farm_models status
+
+- package directory: `foxes/models/farm_models`
+- pass/fail: complete
+- `uv run mypy foxes/models/farm_models` — passed (`2` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_farm_models.py -q` — skipped (`1 skipped`)
+- Python files inspected by AST docstring audit: `2`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/farm_models`
+- next action: begin `foxes.models.ground_models` remediation
+
+### foxes.models.ground_models status
+
+- package directory: `foxes/models/ground_models`
+- pass/fail: complete
+- `uv run mypy foxes/models/ground_models` — passed (`3` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_ground_models.py -q` — passed (`3 passed`)
+- Python files inspected by AST docstring audit: `3`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/ground_models`
+- next action: begin `foxes.models.partial_wakes` remediation
+
+### foxes.models.partial_wakes status
+
+- package directory: `foxes/models/partial_wakes`
+- pass/fail: complete
+- `uv run mypy foxes/models/partial_wakes` — passed (`7` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_model_smoke_partial_wakes.py tests/0_consistency/partial_wakes/test_partial_wakes.py -q` — passed (`7 passed`)
+- Python files inspected by AST docstring audit: `7`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/partial_wakes`
+- next action: begin `foxes.models.point_models` remediation
+
+### foxes.models.point_models status
+
+- package directory: `foxes/models/point_models`
+- pass/fail: complete
+- `uv run mypy foxes/models/point_models` — passed (`5` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_point_models.py -q` — passed (`4 passed`)
+- Python files inspected by AST docstring audit: `5`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/point_models`
+- next action: begin `foxes.models.rotor_models` remediation
+
+### foxes.models.rotor_models status
+
+- package directory: `foxes/models/rotor_models`
+- pass/fail: complete
+- `uv run mypy foxes/models/rotor_models` — passed (`5` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_rotor_models.py -q` — passed (`4 passed`)
+- Python files inspected by AST docstring audit: `5`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/rotor_models`
+- next action: begin `foxes.models.turbine_models` remediation
+
+### foxes.models.turbine_models status
+
+- package directory: `foxes/models/turbine_models`
+- pass/fail: complete
+- `uv run mypy foxes/models/turbine_models` — passed (`13` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_turbine_models.py tests/2_models/turbine_models -q` — passed (`25 passed`)
+- Python files inspected by AST docstring audit: `13`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/turbine_models`
+- next action: begin `foxes.models.turbine_types` remediation
+
+### foxes.models.turbine_types status
+
+- package directory: `foxes/models/turbine_types`
+- pass/fail: complete
+- `uv run mypy foxes/models/turbine_types` — passed (`11` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_turbine_types.py tests/2_models/turbine_types -q` — passed (`12 passed`)
+- Python files inspected by AST docstring audit: `11`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/turbine_types`
+- next action: begin `foxes.models.vertical_profiles` remediation
+
+### foxes.models.wake_superpositions status
+
+- package directory: `foxes/models/wake_superpositions`
+- pass/fail: complete
+- `uv run mypy foxes/models/wake_superpositions` — passed (`11` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_wake_superpositions.py -q` — passed (`14 passed`)
+- Python files inspected by AST docstring audit: `11`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/wake_superpositions`
+- next action: begin `foxes.output` remediation
+
+### foxes.models.vertical_profiles status
+
+- package directory: `foxes/models/vertical_profiles`
+- pass/fail: complete
+- `uv run mypy foxes/models/vertical_profiles` — passed (`8` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_vertical_profiles.py -q` — passed (`7 passed`)
+- Python files inspected by AST docstring audit: `8`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/vertical_profiles`
+- next action: begin `foxes.models.wake_deflections` remediation
+
+### foxes.models.wake_deflections status
+
+- package directory: `foxes/models/wake_deflections`
+- pass/fail: complete
+- `uv run mypy foxes/models/wake_deflections` — passed (`4` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_wake_deflections.py -q` — passed (`3 passed`)
+- Python files inspected by AST docstring audit: `4`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/wake_deflections`
+- next action: begin `foxes.models.wake_frames` remediation
+
+### foxes.models.wake_frames status
+
+- package directory: `foxes/models/wake_frames`
+- pass/fail: complete
+- `uv run mypy foxes/models/wake_frames` — passed (`7` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_wake_frames.py -q` — passed (`6 passed`)
+- Python files inspected by AST docstring audit: `7`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/wake_frames`
+- next action: begin `foxes.models.wake_models` remediation
+
+### foxes.models.wake_models status
+
+- package directory: `foxes/models/wake_models`
+- pass/fail: complete
+- `uv run mypy foxes/models/wake_models` — passed (`19` source files)
+- focused tests: `uv run pytest tests/2_models/model_smoke/test_wake_models.py tests/0_consistency/iterative/test_iterative.py -q` — passed (`13 passed, 1 skipped`)
+- Python files inspected by AST docstring audit: `19`; final result `0` typed-field and type-prose hits
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/models/wake_models`
+- next action: begin `foxes.models.wake_superpositions` remediation
 
 ## Historical Validation Log
 

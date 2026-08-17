@@ -12,7 +12,7 @@ class BetzAxialInduction(AxialInductionModel):
 
     Attributes
     ----------
-    ct_max: float
+    ct_max
         The maximal ct value
 
     :group: models.axial_induction
@@ -25,7 +25,7 @@ class BetzAxialInduction(AxialInductionModel):
 
         Parameters
         ----------
-        ct_max: float
+        ct_max
             The maximal ct value
 
         """
@@ -38,12 +38,12 @@ class BetzAxialInduction(AxialInductionModel):
 
         Parameters
         ----------
-        ct: numpy.ndarray or float
+        ct
             The ct values
 
         Returns
         -------
-        ct: numpy.ndarray or float
+        ct
             The induction values
 
         """

@@ -31,14 +31,14 @@ class Streamlines2D(WakeFrame):
 
     Attributes
     ----------
-    step: float
+    step
         The streamline step size in m
-    chunksize_steps: int
+    chunksize_steps
         The number of steps per chunk for streamline
-    cl_ipars: dict
+    cl_ipars
         Interpolation parameters for centre line
         point interpolation
-    intersection_error: bool
+    intersection_error
         Whether to check for streamline
         self-intersections
 
@@ -59,17 +59,17 @@ class Streamlines2D(WakeFrame):
 
         Parameters
         ----------
-        step: float
+        step
             The streamline step size in m
-        chunksize_steps: int
+        chunksize_steps
             The number of steps per chunk for streamline
-        cl_ipars: dict
+        cl_ipars
             Interpolation parameters for centre line
             point interpolation
-        intersection_error: bool
+        intersection_error
             Whether to check for streamline
             self-intersections
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -91,16 +91,16 @@ class Streamlines2D(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        order: numpy.ndarray
+        order
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -242,21 +242,21 @@ class Streamlines2D(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int, optional
+        downwind_index
             The index of the wake causing turbine
             in the downwind order, or all if None
 
         Returns
         -------
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
             if downwind_index is not None, else shape:
@@ -371,20 +371,20 @@ class Streamlines2D(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points: numpy.ndarray
+        points
             The centreline points, shape: (n_states, n_points, 3)
 
         """

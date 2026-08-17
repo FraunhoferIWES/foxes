@@ -19,14 +19,14 @@ class GridRotor(RotorModel):
 
     Attributes
     ----------
-    n: int
+    n
         The number of points along one direction,
         maximal number of points is N = n * n
-    reduce: bool
+    reduce
         Flag for reduction to points actually representing
         an area with overlap with the circle, recalculating
         the self.__weights accordingly
-    nint: int
+    nint
         Integration steps per element
 
     :group: models.rotor_models
@@ -41,18 +41,18 @@ class GridRotor(RotorModel):
 
         Parameters
         ----------
-        n: int
+        n
             The number of points along one direction,
             maximal number of points is N = n * n
-        reduce: bool
+        reduce
             Flag for reduction to points actually representing
             an area with overlap with the circle, recalculating
             the self.__weights accordingly
-        nint: int
+        nint
             Integration steps per element
-        name: str, optional
+        name
             The model name
-        kwargs: dict, optional
+        kwargs
             Addition parameters for the base model
 
         """
@@ -78,21 +78,21 @@ class GridRotor(RotorModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -156,7 +156,7 @@ class GridRotor(RotorModel):
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
@@ -168,7 +168,7 @@ class GridRotor(RotorModel):
 
         Returns
         -------
-        n_rpoints: int
+        n_rpoints
             The number of rotor points
 
         """
@@ -187,7 +187,7 @@ class GridRotor(RotorModel):
 
         Returns
         -------
-        dpoints: numpy.ndarray
+        dpoints
             The design points, shape: (n_points, 3)
 
         """
@@ -199,7 +199,7 @@ class GridRotor(RotorModel):
 
         Returns
         -------
-        weights: numpy.ndarray
+        weights
             The weights of the rotor points,
             add to one, shape: (n_rpoints,)
 

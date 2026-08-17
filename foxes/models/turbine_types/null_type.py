@@ -30,13 +30,13 @@ class NullType(TurbineType):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Additional parameters for TurbineType class
-        needs_rews2: bool
+        needs_rews2
             Flag for runs that require the REWS2 variable
-        needs_rews3: bool
+        needs_rews3
             Flag for runs that require the REWS3 variable
-        kwargs: dict, optional
+        kwargs
             Additional parameters for TurbineType class
 
         """
@@ -50,7 +50,7 @@ class NullType(TurbineType):
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS2 is required
 
         """
@@ -62,7 +62,7 @@ class NullType(TurbineType):
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS3 is required
 
         """
@@ -74,12 +74,12 @@ class NullType(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -100,21 +100,21 @@ class NullType(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)

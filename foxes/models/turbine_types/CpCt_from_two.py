@@ -28,23 +28,23 @@ class CpCtFromTwo(TurbineType):
 
     Attributes
     ----------
-    source_P: str or pandas.DataFrame
+    source_P
         The file path for the power curve, static name, or data
-    source_ct: str or pandas.DataFrame
+    source_ct
         The file path for the ct curve, static name, or data
-    col_ws: str
+    col_ws
         The wind speed column
-    col_cp: str
+    col_cp
         The cp column
-    col_ct: str
+    col_ct
         The ct column
-    WSCT: str
+    WSCT
         The wind speed variable for ct lookup
-    WSP: str
+    WSP
         The wind speed variable for cp lookup
-    rpars_cp: dict, optional
+    rpars_cp
         Parameters for pandas cp file reading
-    rpars_ct: dict, optional
+    rpars_ct
         Parameters for pandas ct file reading
 
     :group: models.turbine_types
@@ -71,29 +71,29 @@ class CpCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        data_source_cp: str or pandas.DataFrame
+        data_source_cp
             The file path for the cp curve, static name, or data
-        data_source_ct: str or pandas.DataFrame
+        data_source_ct
             The file path for the ct curve, static name, or data
-        col_ws_cp_file: str
+        col_ws_cp_file
             The wind speed column in the file of the cp curve
-        col_ws_ct_file: str
+        col_ws_ct_file
             The wind speed column in the file of the ct curve
-        col_cp: str
+        col_cp
             The cp column
-        col_ct: str
+        col_ct
             The ct column
-        rho: float, optional
+        rho
             The air density for which the data is valid
-        var_ws_ct: str
+        var_ws_ct
             The wind speed variable for ct lookup
-        var_ws_cp: str
+        var_ws_cp
             The wind speed variable for cp lookup
-        pd_file_read_pars_cp:  dict
+        pd_file_read_pars_cp
             Parameters for pandas cp file reading
-        pd_file_read_pars_ct:  dict
+        pd_file_read_pars_ct
             Parameters for pandas ct file reading
-        parameters: dict, optional
+        parameters
             Additional parameters for TurbineType class
 
         """
@@ -133,7 +133,7 @@ class CpCtFromTwo(TurbineType):
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS2 is required
 
         """
@@ -145,7 +145,7 @@ class CpCtFromTwo(TurbineType):
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS3 is required
 
         """
@@ -157,12 +157,12 @@ class CpCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -184,16 +184,16 @@ class CpCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -258,20 +258,20 @@ class CpCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        variable: str
+        variable
             The target variable
-        modify_ct: bool
+        modify_ct
             Flag for modification of the ct curve
-        modify_P: bool
+        modify_P
             Flag for modification of the power curve
-        steps: int
+        steps
             The number of wind speed steps between 0 and
             the cutin wind speed
-        iterations: int
+        iterations
             The number of iterations
-        a: float
+        a
             Coefficient for iterative mixing
-        b: float
+        b
             Coefficient for iterative mixing
 
         """
@@ -349,21 +349,21 @@ class CpCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)
@@ -414,9 +414,9 @@ class CpCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        verbosity: int
+        verbosity
             The verbosity level
 
         """

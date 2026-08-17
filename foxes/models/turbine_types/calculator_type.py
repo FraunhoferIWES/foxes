@@ -32,10 +32,10 @@ class CalculatorType(TurbineType):
 
         Parameters
         ----------
-        func: callable
+        func
             The function to calculate farm variables, should have the signature:
             f(algo, mdata, fdata, st_sel) -> dict, where the keys are
-            output variable names and the values are numpy.ndarrays
+            output variable names and the values are arrays
             with shape (n_states, n_turbines).
 
             Beware that the turbine ordering in fdata is in downwind order,
@@ -43,15 +43,15 @@ class CalculatorType(TurbineType):
             needs to be reordered by X[ssel, order] with
             ssel = fdata[FV.ORDER_SSEL], order = fdata[FV.ORDER]
             before using it in combination with fdata variables.
-        out_vars: list of str
+        out_vars
             The output variables of the function
-        args: tuple, optional
+        args
             Additional parameters for TurbineType class
-        needs_rews2: bool
+        needs_rews2
             Flag for runs that require the REWS2 variable
-        needs_rews3: bool
+        needs_rews3
             Flag for runs that require the REWS3 variable
-        kwargs: dict, optional
+        kwargs
             Additional parameters for TurbineType class
 
         """
@@ -67,7 +67,7 @@ class CalculatorType(TurbineType):
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS2 is required
 
         """
@@ -79,7 +79,7 @@ class CalculatorType(TurbineType):
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS3 is required
 
         """
@@ -91,12 +91,12 @@ class CalculatorType(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -117,21 +117,21 @@ class CalculatorType(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)

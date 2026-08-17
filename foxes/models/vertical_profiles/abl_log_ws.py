@@ -18,7 +18,7 @@ class ABLLogWsProfile(VerticalProfile):
 
     Attributes
     ----------
-    ustar_input: bool
+    ustar_input
         Flag for using ustar as an input
 
     :group: models.vertical_profiles
@@ -31,11 +31,11 @@ class ABLLogWsProfile(VerticalProfile):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Additional arguments for VerticalProfile
-        ustar_input: bool
+        ustar_input
             Flag for using ustar as an input
-        kwargs: dict, optional
+        kwargs
             Additional arguments for VerticalProfile
 
         """
@@ -49,7 +49,7 @@ class ABLLogWsProfile(VerticalProfile):
 
         Returns
         -------
-        vars: list of str
+        vars
             The variable names
 
         """
@@ -64,14 +64,14 @@ class ABLLogWsProfile(VerticalProfile):
 
         Parameters
         ----------
-        data: dict
+        data
             The input data
-        heights: numpy.ndarray
+        heights
             The evaluation heights
 
         Returns
         -------
-        results: numpy.ndarray
+        results
             The profile results, same
             shape as heights
 

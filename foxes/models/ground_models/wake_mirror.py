@@ -17,7 +17,7 @@ class WakeMirror(GroundModel):
 
     Attributes
     ----------
-    heights: list of float
+    heights
         The reflection heights
 
     :group: models.ground_models
@@ -30,7 +30,7 @@ class WakeMirror(GroundModel):
 
         Parameters
         ----------
-        heights: list of float
+        heights
             The reflection heights
 
         """
@@ -54,24 +54,24 @@ class WakeMirror(GroundModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            Values have shape
             (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
-        pwake: foxes.core.PartialWakesModel
+        pwake
             The partial wakes model
 
         """
@@ -119,22 +119,22 @@ class WakeMirror(GroundModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            Values have shape
             (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
 
         """

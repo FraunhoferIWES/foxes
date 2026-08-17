@@ -64,19 +64,19 @@ class YawController(TurbineModel):
         ----------
         algo : foxes.algorithms.sequential.Sequential
             The sequential algorithm instance
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -111,21 +111,21 @@ class YawController(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel: slice or array of bool
             The state-turbine selection,
             for shape: (n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_turbines)
+            Values
         """
         assert fdata.n_states == 1, (
             "This controller only runs with the Sequential algorithm."
@@ -142,9 +142,9 @@ class YawController(TurbineModel):
         # self.ensure_output_vars(algo, fdata)
         n_turbines = fdata.n_turbines
         assert n_turbines is not None
-        t_sel = np.zeros((fdata.n_states, n_turbines), dtype=np.bool_)
-        t_sel[st_sel] = True
-        t_sel = t_sel[0, :]
+        t_sel_2d = np.zeros((fdata.n_states, n_turbines), dtype=np.bool_)
+        t_sel_2d[st_sel] = True
+        t_sel = t_sel_2d[0, :]
 
         # get current data:
         counter = algo.states.counter

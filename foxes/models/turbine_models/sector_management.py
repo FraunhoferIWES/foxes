@@ -23,7 +23,7 @@ class SectorManagement(TurbineModel):
 
     Attributes
     ----------
-    source: str or pandas.DataFrame
+    source
         The file path or data
 
     :group: models.turbine_models
@@ -46,24 +46,24 @@ class SectorManagement(TurbineModel):
 
         Parameters
         ----------
-        data_source: str or pandas.DataFrame
+        data_source
             The file path or data
-        range_vars: list of str
+        range_vars
             The variables for which (min, max) ranges
             are specified in the data
-        target_vars: list of str
+        target_vars
             The variables that change if range variables
             are within specified ranges
-        col_tinds: str, optional
+        col_tinds
             The turbine index column name in the data
-        col_tnames: str, optional
+        col_tnames
             The turbine name column name in the data
-        colmap: dict
+        colmap
             Mapping from expected to existing
             column names
-        var_periods: dict
+        var_periods
             Periods for periodic variables
-        pd_file_read_pars: dict
+        pd_file_read_pars
             Parameters for pandas file reading
 
         """
@@ -95,21 +95,21 @@ class SectorManagement(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -188,12 +188,12 @@ class SectorManagement(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -214,21 +214,21 @@ class SectorManagement(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel: slice or array of bool
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         # prepare:

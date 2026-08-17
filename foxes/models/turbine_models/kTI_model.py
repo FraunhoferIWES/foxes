@@ -21,9 +21,9 @@ class kTI(TurbineModel):
 
     Attributes
     ----------
-    ti_var: str
+    ti_var
         The `TI` variable name
-    k_var: str
+    k_var
         The variable name for k
 
     :group: models.turbine_models
@@ -43,18 +43,18 @@ class kTI(TurbineModel):
 
         Parameters
         ----------
-        kTI: float, optional
+        kTI
             Uniform value for `kTI`. If not given it
             will be searched in farm data
-        kb: float, optional
+        kb
             Uniform value for `kb`. If not given it
             will be searched in farm data, and zero by default
-        ti_var: str
+        ti_var
             The `TI` variable name
-        ti_val: float, optional
+        ti_val
             The uniform value of `TI`. If not given it
             will be searched in farm data
-        k_var: str
+        k_var
             The variable name for k
 
         """
@@ -80,12 +80,12 @@ class kTI(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -106,21 +106,21 @@ class kTI(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel: slice or array of bool
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)

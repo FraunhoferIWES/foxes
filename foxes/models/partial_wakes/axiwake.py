@@ -30,7 +30,7 @@ class PartialAxiwake(PartialCentre):
 
     Attributes
     ----------
-    n: int
+    n
         The number of radial evaluation points
 
     :group: models.partial_wakes
@@ -43,7 +43,7 @@ class PartialAxiwake(PartialCentre):
 
         Parameters
         ----------
-        n: int
+        n
             The number of radial evaluation points
 
         """
@@ -59,14 +59,14 @@ class PartialAxiwake(PartialCentre):
 
         Parameters
         ----------
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model to be tested
-        error: bool
+        error
             Flag for raising TypeError
 
         Returns
         -------
-        chk: bool
+        chk
             True if wake model is compatible
 
         """
@@ -94,20 +94,20 @@ class PartialAxiwake(PartialCentre):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            value
             (n_states, n_targets, n_tpoints, ...)
 
         """
