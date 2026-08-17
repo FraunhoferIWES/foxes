@@ -197,7 +197,7 @@ class SingleChunkEngine(Engine):
         Returns
         -------
         results
-            The list of results
+            Results for the submitted inputs
 
         """
         return [func(input, *args, **kwargs) for input in inputs]

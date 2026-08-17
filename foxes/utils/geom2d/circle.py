@@ -1,6 +1,8 @@
+from typing import Any, cast
+
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Any
+from matplotlib.axes import Axes
 
 from .area_geometry import AreaGeometry
 
@@ -45,7 +47,7 @@ class Circle(AreaGeometry):
             The minimal (x,y) point, shape = (2,)
 
         """
-        return self.centre - self.radius
+        return cast(np.ndarray, self.centre - self.radius)
 
     def p_max(self) -> np.ndarray:
         """
@@ -57,7 +59,7 @@ class Circle(AreaGeometry):
             The maximal (x,y) point, shape = (2,)
 
         """
-        return self.centre + self.radius
+        return cast(np.ndarray, self.centre + self.radius)
 
     def points_distance(
         self, points: np.ndarray, return_nearest: bool = False
@@ -96,9 +98,9 @@ class Circle(AreaGeometry):
                 minp[sel] = deltas[sel] / magd[sel]
                 minp[~sel][:, 0] = 1
                 minp = self.centre + minp * self.radius
-            return dists, minp
+            return cast(tuple[np.ndarray, np.ndarray], (dists, minp))
         else:
-            return dists
+            return cast(np.ndarray, dists)
 
     def points_inside(self, points: np.ndarray) -> np.ndarray:
         """
@@ -116,11 +118,11 @@ class Circle(AreaGeometry):
 
         """
         magd = np.linalg.norm(points - self.centre[None, :], axis=-1)
-        return magd <= self.radius
+        return cast(np.ndarray, magd <= self.radius)
 
     def add_to_figure(
         self,
-        ax,
+        ax: Axes,
         show_boundary: bool = True,
         fill_mode: str | None = None,
         pars_boundary: dict[str, Any] | None = None,

@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+from xarray import Dataset
 from inspect import signature
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 import foxes.input.farm_layout as farm_layout
@@ -14,19 +16,19 @@ import foxes.constants as FC
 
 
 def read_dict(
-    idict,
-    farm=None,
-    states=None,
-    mbook=None,
-    algo=None,
-    engine_pars=None,
-    iterative=None,
-    verbosity=None,
-    work_dir=None,
-    input_dir=None,
-    output_dir=None,
-    **algo_pars,
-):
+    idict: Dict[Any, Any],
+    farm: WindFarm | None = None,
+    states: States | None = None,
+    mbook: ModelBook | None = None,
+    algo: Algorithm | None = None,
+    engine_pars: dict[str, Any] | None = None,
+    iterative: bool | None = None,
+    verbosity: int | None = None,
+    work_dir: Path | str | None = None,
+    input_dir: Path | str | None = None,
+    output_dir: Path | str | None = None,
+    **algo_pars: Any,
+) -> tuple[Algorithm, Engine | None]:
     """
     Read dictionary input into foxes objects
 
@@ -72,7 +74,7 @@ def read_dict(
 
     """
 
-    def _print(*args, level: int = 1, **kwargs) -> None:
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
@@ -111,7 +113,7 @@ def read_dict(
                 for s, mlst in mdict.items():
                     t = mbook.sources.get_item(s)
                     c = mbook.base_classes.get_item(s)
-                    ms = [
+                    ms: list[Dict[Any, Any]] = [
                         Dict(m, _name=f"{mdict.name}.s.{i}") for i, m in enumerate(mlst)
                     ]
                     for m in ms:
@@ -177,14 +179,14 @@ def read_dict(
 
 
 def get_output_obj(
-    ocls,
-    odict,
-    algo,
-    farm_results=None,
-    point_results=None,
-    base_class=Output,
-    extra_sig={},
-):
+    ocls: str,
+    odict: dict[str, Any],
+    algo: Algorithm | None,
+    farm_results: Dataset | None = None,
+    point_results: Any = None,
+    base_class: type[Output] = Output,
+    extra_sig: dict[str, Any] = {},
+) -> Output | None:
     """
     Create the output object
 
@@ -215,11 +217,13 @@ def get_output_obj(
 
     """
     cls = new_cls(base_class, ocls)
+    assert cls is not None, f"Output class '{ocls}' was not found"
     prs = list(signature(cls.__init__).parameters.keys())
     if "algo" in prs:
         assert algo is not None, f"Output of type '{ocls}' requires algo"
         odict["algo"] = algo
     if "farm" in prs:
+        assert algo is not None, f"Output of type '{ocls}' requires algo"
         odict["farm"] = algo.farm
     if "farm_results" in prs:
         if farm_results is None:
@@ -235,7 +239,7 @@ def get_output_obj(
     return cls(**odict)
 
 
-def _get_object(results_storage, d: str):
+def _get_object(results_storage: dict[Any, Any], d: str) -> Any:
     """Helper function for object extraction"""
     d = d.replace("]", "")
     i0 = d.find("[")
@@ -247,14 +251,14 @@ def _get_object(results_storage, d: str):
 
 
 def run_obj_function(
-    obj,
-    fdict,
-    algo,
-    with_engine,
-    results_storage,
-    nofig=False,
-    verbosity=None,
-):
+    obj: Any,
+    fdict: Dict[Any, Any],
+    algo: Algorithm | None,
+    with_engine: bool,
+    results_storage: dict[Any, Any],
+    nofig: bool = False,
+    verbosity: int | None = None,
+) -> Any:
     """
     Runs a function of an object
 
@@ -284,7 +288,7 @@ def run_obj_function(
 
     """
 
-    def _print(*args, level: int = 1, **kwargs) -> None:
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
@@ -304,6 +308,7 @@ def run_obj_function(
     if "algo" in prs:
         fdict["algo"] = algo
     if "farm" in prs:
+        assert algo is not None, f"Output of type '{ocls}' requires algo"
         fdict["farm"] = algo.farm
 
     # replace result labels by objects:
@@ -325,7 +330,7 @@ def run_obj_function(
     # store results under result labels:
     if rlbs is not None:
 
-        def _set_label(results_storage, k: str, r) -> None:
+        def _set_label(results_storage: dict[Any, Any], k: str, r: Any) -> None:
             if k not in ["", "none", "None", "_", "__"]:
                 assert k[0] == "$", (
                     f"Output of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
@@ -346,17 +351,17 @@ def run_obj_function(
 
 
 def run_outputs(
-    idict,
-    algo=None,
-    farm_results=None,
-    point_results=None,
-    with_engine=False,
-    extra_sig={},
-    results_storage=None,
-    ret_results_storage=False,
-    nofig=False,
-    verbosity=None,
-):
+    idict: Dict[Any, Any],
+    algo: Algorithm | None = None,
+    farm_results: Dataset | None = None,
+    point_results: Any = None,
+    with_engine: bool = False,
+    extra_sig: dict[str, Any] = {},
+    results_storage: Dict[Any, Any] | None = None,
+    ret_results_storage: bool = False,
+    nofig: bool = False,
+    verbosity: int | None = None,
+) -> tuple[list[tuple[dict[str, Any], list[Any] | None]], Dict[Any, Any]]:
     """
     Run outputs from dict.
 
@@ -399,14 +404,14 @@ def run_outputs(
 
     """
 
-    def _print(*args, level: int = 1, **kwargs) -> None:
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
     if results_storage is None:
         results_storage = Dict(_name="result_storage")
 
-    out = []
+    out: list[tuple[dict[str, Any], list[Any] | None]] = []
     if "outputs" in idict:
         odicts = idict["outputs"]
 
@@ -464,7 +469,7 @@ def run_outputs(
                 out.append((d0, None))
             else:
                 _print(f"Entering output {i}, {ocls} (with_engine={with_engine})")
-                fres = []
+                fres: list[Any | None] = []
                 for fdict, em in zip(flist, ematch):
                     if em:
                         results = (
@@ -492,18 +497,18 @@ def run_outputs(
 
 
 def run_dict(
-    idict,
-    farm=None,
-    states=None,
-    mbook=None,
-    algo=None,
-    engine_pars=None,
-    iterative=None,
+    idict: Dict[Any, Any],
+    farm: WindFarm | None = None,
+    states: States | None = None,
+    mbook: ModelBook | None = None,
+    algo: Algorithm | None = None,
+    engine_pars: dict[str, Any] | None = None,
+    iterative: bool | None = None,
     nofig: bool = False,
     verbosity: int | None = None,
-    work_dir=None,
-    input_dir=None,
-    output_dir=None,
+    work_dir: Path | str | None = None,
+    input_dir: Path | str | None = None,
+    output_dir: Path | str | None = None,
     **algo_pars: Any,
 ) -> tuple[Any, ...]:
     """
@@ -554,7 +559,7 @@ def run_dict(
 
     """
 
-    def _print(*args, level: int = 1, **kwargs) -> None:
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
@@ -575,6 +580,7 @@ def run_dict(
         **algo_pars,
     )
     results_storage = None
+    assert engine is not None
     with engine:
         # run farm calculation:
         rdict = idict.get_item("calc_farm", Dict(_name=idict.name + ".calc_farm"))

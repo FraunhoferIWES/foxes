@@ -2,6 +2,7 @@ import numpy as np
 from typing import Any
 
 from foxes.utils import Dict
+from foxes.core import Algorithm
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -9,7 +10,11 @@ from .read_fields import foxes2wio
 
 
 def _read_turbine_outputs(
-    wio_outs, olist: list, algo, states_isel, verbosity: int
+    wio_outs: Dict[Any, Any],
+    olist: list[Any],
+    algo: Algorithm,
+    states_isel: Any,
+    verbosity: int,
 ) -> None:
     """Reads the turbine outputs request"""
     if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get_item(
@@ -64,7 +69,13 @@ def _read_turbine_outputs(
         )
 
 
-def _read_flow_field(wio_outs, olist: list, algo, states_isel, verbosity: int) -> None:
+def _read_flow_field(
+    wio_outs: Dict[Any, Any],
+    olist: list[Any],
+    algo: Algorithm,
+    states_isel: Any,
+    verbosity: int,
+) -> None:
     """Reads the flow field request"""
     if "flow_field" in wio_outs and wio_outs["flow_field"].get_item("report", True):
         flow_field = wio_outs["flow_field"]
@@ -172,7 +183,12 @@ def _read_flow_field(wio_outs, olist: list, algo, states_isel, verbosity: int) -
             )
 
 
-def read_outputs(wio_outs, idict, algo, verbosity: int = 1):
+def read_outputs(
+    wio_outs: Dict[Any, Any],
+    idict: dict[str, Any],
+    algo: Algorithm,
+    verbosity: int = 1,
+) -> str:
     """
     Reads the windio outputs
 

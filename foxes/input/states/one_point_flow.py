@@ -289,7 +289,12 @@ class OnePointFlowStates(States):
         coeffs = np.full((n_states, n_points), np.nan, dtype=config.dtype_double)
 
         # flake8: noqa: F821
-        def _eval_trace(sel, hdxy=None, hdxy0=None, trs=None) -> None:
+        def _eval_trace(
+            sel: np.ndarray | slice,
+            hdxy: np.ndarray | None = None,
+            hdxy0: np.ndarray | None = None,
+            trs: np.ndarray | None = None,
+        ) -> None:
             """Helper function that updates trace_done"""
             nonlocal coeffs
 
@@ -424,7 +429,7 @@ class OnePointFlowStates(States):
             del s, c
 
         # flake8: noqa: F821
-        def _interp_time(hi, v) -> np.ndarray:
+        def _interp_time(hi: int, v: str) -> np.ndarray:
             """Helper function for interpolation bewteen states"""
 
             sts = trace_si[hi]
@@ -538,7 +543,13 @@ class OnePointFlowTimeseries(OnePointFlowStates):
 
     """
 
-    def __init__(self, ref_xy, *args: Any, tl_heights=None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        ref_xy: np.ndarray,
+        *args: Any,
+        tl_heights: np.ndarray | list[float] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 

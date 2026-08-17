@@ -510,4 +510,4 @@ class RotorModel(FarmDataModel):
             Additional parameters for constructor
 
         """
-        return new_instance(cls, rmodel_type, *args, **kwargs)
+        return cast(RotorModel, new_instance(cls, rmodel_type, *args, **kwargs))

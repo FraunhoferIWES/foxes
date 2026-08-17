@@ -201,7 +201,7 @@ class RayEngine(PoolEngine):
 
         ray_mod = _get_ray()
 
-        @ray_mod.remote
+        @ray_mod.remote  # type: ignore[untyped-decorator]
         def f_ray(*args: Any, **kwargs: Any) -> Any:
             return f(*deepcopy(args), **deepcopy(kwargs))
 

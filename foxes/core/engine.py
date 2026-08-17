@@ -1237,7 +1237,7 @@ class Engine(ABC):
             single="SingleChunkEngine",
         ).get(engine_type, engine_type)
 
-        return new_instance(cls, engine_type, *args, **kwargs)
+        return cast(Engine, new_instance(cls, engine_type, *args, **kwargs))
 
 
 def get_engine(error: bool = True) -> Engine | None:

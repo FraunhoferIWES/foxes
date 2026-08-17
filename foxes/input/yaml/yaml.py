@@ -8,19 +8,19 @@ from .dict import run_dict
 
 
 def foxes_yaml(
-    yml_file,
-    output_dir=None,
-    rotor=None,
-    pwakes=None,
-    wakes=None,
-    frame=None,
-    engine=None,
-    n_procs=None,
-    chunksize_states=None,
-    chunksize_points=None,
-    iterative=False,
-    nofig=False,
-    verbosity=1,
+    yml_file: Path | str,
+    output_dir: Path | str | None = None,
+    rotor: Any = None,
+    pwakes: Any = None,
+    wakes: Any = None,
+    frame: Any = None,
+    engine: Any = None,
+    n_procs: int | None = None,
+    chunksize_states: int | None = None,
+    chunksize_points: int | None = None,
+    iterative: bool = False,
+    nofig: bool = False,
+    verbosity: int | None = 1,
 ) -> tuple[Any, Any, list[tuple[dict[str, Any], list[Any]]]]:
     """
     Run foxes from yaml file input

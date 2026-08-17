@@ -158,11 +158,11 @@ class StatesTable(States):
 
     def initialize(
         self,
-        algo,
+        algo: Algorithm,
         loaded_data: LoadedData | None = None,
         force: bool = False,
         verbosity: int = 0,
-    ):
+    ) -> LoadedData:
         """
         Initializes the model.
 
@@ -214,7 +214,11 @@ class StatesTable(States):
         return list(self._profiles.values())
 
     def load_data(
-        self, algo, loaded_data: LoadedData, force: bool = False, verbosity: int = 0
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
     ) -> None:
         """
         Load and/or create all data required for model calculations.

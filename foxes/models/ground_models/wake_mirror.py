@@ -3,12 +3,14 @@ from __future__ import annotations
 from foxes.core import GroundModel
 import foxes.variables as FV
 import foxes.constants as FC
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import numpy as np
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData, TData
+    from foxes.core.partial_wakes_model import PartialWakesModel
+    from foxes.core.wake_model import WakeModel
 
 
 class WakeMirror(GroundModel):
@@ -45,8 +47,8 @@ class WakeMirror(GroundModel):
         tdata: TData,
         downwind_index: int,
         wake_deltas: dict[str, np.ndarray],
-        wmodel: Any,
-        pwake: Any,
+        wmodel: WakeModel,
+        pwake: PartialWakesModel,
     ) -> None:
         """
         Modifies wake deltas at target points by
@@ -111,7 +113,7 @@ class WakeMirror(GroundModel):
         tdata: TData,
         downwind_index: int,
         wake_deltas: dict[str, np.ndarray],
-        wmodel: Any,
+        wmodel: WakeModel,
     ) -> None:
         """
         Modifies wake deltas at target points by

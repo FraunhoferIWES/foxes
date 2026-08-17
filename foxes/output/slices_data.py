@@ -3,6 +3,7 @@ import pandas as pd
 from typing import Any
 
 import foxes.constants as FC
+from foxes.core import Algorithm
 
 from .output import Output
 from .slice_data import SliceData
@@ -19,8 +20,8 @@ class SlicesData(Output):
 
     def __init__(
         self,
-        algo,
-        farm_results,
+        algo: Algorithm,
+        farm_results: xr.Dataset,
         verbosity_delta: int = 1,
         **kwargs: Any,
     ) -> None:
@@ -29,13 +30,13 @@ class SlicesData(Output):
 
         Parameters
         ----------
-        algo: foxes.Algorithm
+        algo
             The algorithm for point calculation
-        farm_results: xarray.Dataset
+        farm_results
             The farm results
-        verbosity_delta: int
+        verbosity_delta
             Verbosity threshold for printing calculation info
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the Output class
 
         """
@@ -58,18 +59,18 @@ class SlicesData(Output):
 
         Parameters
         ----------
-        z_list: list of float
+        z_list
             The z values
-        args: tuple, optional
+        args
             Arguments for the SliceData function of the same name
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Arguments for the SliceData function of the same name
 
         Returns
         -------
-        data: xarray.Dataset
+        data
             The gridded data
 
         """
@@ -107,18 +108,18 @@ class SlicesData(Output):
 
         Parameters
         ----------
-        y_list: list of float
+        y_list
             The y values
-        args: tuple, optional
+        args
             Arguments for the SliceData function of the same name
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Arguments for the SliceData function of the same name
 
         Returns
         -------
-        data: xarray.Dataset
+        data
             The gridded data
 
         """
@@ -156,18 +157,18 @@ class SlicesData(Output):
 
         Parameters
         ----------
-        x_list: list of float
+        x_list
             The x values
-        args: tuple, optional
+        args
             Arguments for the SliceData function of the same name
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Arguments for the SliceData function of the same name
 
         Returns
         -------
-        data: xarray.Dataset
+        data
             The gridded data
 
         """
@@ -205,18 +206,18 @@ class SlicesData(Output):
 
         Parameters
         ----------
-        z_list: list of float
+        z_list
             The z values
-        args: tuple, optional
+        args
             Arguments for the SliceData function of the same name
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Arguments for the SliceData function of the same name
 
         Returns
         -------
-        data: xarray.Dataset
+        data
             The gridded data
 
         """
@@ -254,18 +255,18 @@ class SlicesData(Output):
 
         Parameters
         ----------
-        y_list: list of float
+        y_list
             The y values
-        args: tuple, optional
+        args
             Arguments for the SliceData function of the same name
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Arguments for the SliceData function of the same name
 
         Returns
         -------
-        data: xarray.Dataset
+        data
             The gridded data
 
         """
@@ -303,18 +304,18 @@ class SlicesData(Output):
 
         Parameters
         ----------
-        x_list: list of float
+        x_list
             The x values
-        args: tuple, optional
+        args
             Arguments for the SliceData function of the same name
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Arguments for the SliceData function of the same name
 
         Returns
         -------
-        data: xarray.Dataset
+        data
             The gridded data
 
         """

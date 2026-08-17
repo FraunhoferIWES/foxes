@@ -2,21 +2,22 @@ from typing import Any
 
 from foxes.utils import Dict
 from foxes.core import WakeModel, WakeDeflection
+from foxes.models import ModelBook
 import foxes.variables as FV
 
 
 def _read_wind_deficit(
-    wake_model_key,
-    wind_deficit,
-    superposition,
-    induction,
-    algo_dict,
-    mbook,
-    verbosity,
-):
+    wake_model_key: str,
+    wind_deficit: Dict[Any, Any],
+    superposition: Dict[Any, Any],
+    induction: Any,
+    algo_dict: dict[str, Any],
+    mbook: ModelBook,
+    verbosity: int,
+) -> tuple[Any, Any, bool]:
     """Reads the wind deficit wake model"""
 
-    wind_def_map = Dict(
+    wind_def_map: Dict[str, str] = Dict(
         {
             "Jensen": "JensenWake",
             "Bastankhah2014": "Bastankhah2014",
@@ -26,7 +27,7 @@ def _read_wind_deficit(
         _name="wind_def_map",
     )
 
-    ws_sup_dict = Dict(
+    ws_sup_dict: Dict[str, str] = Dict(
         {
             "Linear": "ws_linear",
             "Squared": "ws_quadratic",
@@ -35,7 +36,7 @@ def _read_wind_deficit(
         },
         _name="ws_sup_dict",
     )
-    ws_sup_amb_dict = Dict(
+    ws_sup_amb_dict: Dict[str, str] = Dict(
         {
             "Linear": "ws_linear_amb",
             "Squared": "ws_quadratic_amb",
@@ -56,8 +57,12 @@ def _read_wind_deficit(
         print("      Name    :", wname)
         print("      Eff ws  :", eff_ws)
         print("      Contents:", [k for k in wind_deficit.keys()])
-    wind_def_dict = Dict(wmodel_type=wind_def_map[wname], induction=induction)
-    kcoef = Dict(wind_deficit["wake_expansion_coefficient"], _name="kcoef")
+    wind_def_dict: Dict[str, Any] = Dict(
+        wmodel_type=wind_def_map[wname], induction=induction
+    )
+    kcoef: Dict[str, Any] = Dict(
+        wind_deficit["wake_expansion_coefficient"], _name="kcoef"
+    )
     ka = kcoef.get_item("k_a", 0.0)
     kb = kcoef.get_item("k_b", 0.0)
     amb_ti = kcoef.get_item("free_stream_ti", False)
@@ -91,19 +96,19 @@ def _read_wind_deficit(
 
 
 def _read_turbulence(
-    turbulence_model,
-    superposition,
-    induction,
-    algo_dict,
-    mbook,
-    ka,
-    kb,
-    amb_ti,
-    verbosity,
-):
+    turbulence_model: Dict[str, Any],
+    superposition: Dict[Any, Any],
+    induction: Any,
+    algo_dict: dict[str, Any],
+    mbook: ModelBook,
+    ka: Any,
+    kb: Any,
+    amb_ti: Any,
+    verbosity: int,
+) -> None:
     """Reads the ti wake model"""
 
-    twake_def_map = Dict(
+    twake_def_map: Dict[str, str] = Dict(
         {
             "CrespoHernandez": "CrespoHernandezTIWake",
             "IEC-TI-2019": "IECTIWake",
@@ -113,7 +118,7 @@ def _read_turbulence(
         _name="twake_def_map",
     )
 
-    ti_sup_dict = Dict(
+    ti_sup_dict: Dict[str, str] = Dict(
         {
             "Linear": "ti_linear",
             "Squared": "ti_quadratic",
@@ -147,7 +152,9 @@ def _read_turbulence(
             tiwake_dict["c1"] = turbulence_model.pop_item("c1", None)
             tiwake_dict["c2"] = turbulence_model.pop_item("c2", None)
         if "wake_expansion_coefficient" in turbulence_model:
-            kcoef = Dict(turbulence_model["wake_expansion_coefficient"], _name="kcoef")
+            kcoef: Dict[str, Any] = Dict(
+                turbulence_model["wake_expansion_coefficient"], _name="kcoef"
+            )
             ka = kcoef.get_item("k_a", 0.0)
             kb = kcoef.get_item("k_b", 0.0)
             amb_ti = kcoef.get_item("free_stream_ti", False)
@@ -172,7 +179,13 @@ def _read_turbulence(
         algo_dict["wake_models"].append(wname)
 
 
-def _read_blockage(blockage_model, induction, algo_dict, mbook, verbosity: int) -> None:
+def _read_blockage(
+    blockage_model: Dict[str, Any],
+    induction: Any,
+    algo_dict: dict[str, Any],
+    mbook: ModelBook,
+    verbosity: int,
+) -> None:
     """Reads the blockage model"""
     indc_def_map: Any = Dict(
         {
@@ -205,7 +218,9 @@ def _read_blockage(blockage_model, induction, algo_dict, mbook, verbosity: int) 
         algo_dict["algo_type"] = "Iterative"
 
 
-def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity: int) -> None:
+def _read_rotor_averaging(
+    rotor_averaging: Dict[Any, Any], algo_dict: dict[str, Any], verbosity: int
+) -> None:
     """Reads the rotor averaging"""
     if verbosity > 2:
         print("    Reading rotor_averaging")
@@ -269,7 +284,13 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity: int) -> None:
         print("        --> partial_wakes   :", algo_dict["partial_wakes"])
 
 
-def _read_deflection(deflection, induction, algo_dict, mbook, verbosity: int) -> None:
+def _read_deflection(
+    deflection: Dict[Any, Any],
+    induction: Any,
+    algo_dict: dict[str, Any],
+    mbook: ModelBook,
+    verbosity: int,
+) -> None:
     """Reads deflection model"""
     defl_def_map: Any = Dict(
         {
@@ -306,7 +327,12 @@ def _read_deflection(deflection, induction, algo_dict, mbook, verbosity: int) ->
     algo_dict["wake_deflection"] = wname
 
 
-def _read_analysis(wio_ana, idict, mbook, verbosity: int) -> None:
+def _read_analysis(
+    wio_ana: Dict[Any, Any],
+    idict: dict[str, Any],
+    mbook: ModelBook,
+    verbosity: int,
+) -> None:
     """Reads the windio analyses"""
     if verbosity > 2:
         print("    Reading analysis")
@@ -391,7 +417,12 @@ def _read_analysis(wio_ana, idict, mbook, verbosity: int) -> None:
         print("deflection_model not found, using default settings")
 
 
-def read_attributes(wio_attrs, idict, mbook, verbosity: int = 1) -> None:
+def read_attributes(
+    wio_attrs: Dict[Any, Any],
+    idict: dict[str, Any],
+    mbook: ModelBook,
+    verbosity: int = 1,
+) -> None:
     """
     Reads the attributes part of windio
 

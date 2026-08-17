@@ -79,7 +79,7 @@ def shp2csv(
     in_kwargs: dict[str, Any] | None = None,
     out_kwargs: dict[str, Any] | None = None,
     verbosity: int = 1,
-):
+) -> Any:
     """
     Read shapefile file, write csv file
 
@@ -112,7 +112,7 @@ def shp2csv(
     return gpdf
 
 
-def _extract_poly_coords(geom) -> tuple[Any, Any]:
+def _extract_poly_coords(geom: Any) -> tuple[Any, Any]:
     """
     Helper function for shapefile reading
     """
@@ -133,7 +133,7 @@ def _extract_poly_coords(geom) -> tuple[Any, Any]:
     return exterior_coords, interior_coords
 
 
-def _extract_utm(to_utm) -> tuple[bool, int | None, str | None]:
+def _extract_utm(to_utm: bool | str) -> tuple[bool, int | None, str | None]:
     """
     Helper function for UTM zone parsing
     """
@@ -155,13 +155,13 @@ def _extract_utm(to_utm) -> tuple[bool, int | None, str | None]:
 
 
 def read_shp_polygons(
-    fname,
-    names=None,
-    name_col="Name",
-    geom_col="geometry",
-    to_utm=True,
-    ret_utm_zone=False,
-    **kwargs,
+    fname: str,
+    names: Any = None,
+    name_col: str = "Name",
+    geom_col: str = "geometry",
+    to_utm: bool | str = True,
+    ret_utm_zone: bool = False,
+    **kwargs: Any,
 ) -> Any:
     """
     Reads the polygon points from a shp file.
@@ -230,7 +230,7 @@ def read_shp_polygons(
                 )
                 return utm_poly
 
-            def _to_numpy(data):
+            def _to_numpy(data: Any) -> Any:
                 if not len(data):
                     return []
                 if isinstance(data[0], tuple):
@@ -249,12 +249,12 @@ def read_shp_polygons(
 
 
 def shp2geom2d(
-    shp_files,
-    *args,
-    combine_mode="union",
-    to_utm=True,
-    ret_utm_zone=False,
-    **kwargs,
+    shp_files: Any,
+    *args: Any,
+    combine_mode: str = "union",
+    to_utm: bool | str = True,
+    ret_utm_zone: bool = False,
+    **kwargs: Any,
 ) -> Any:
     """
     Read shapefile into geom2d geometry
@@ -298,7 +298,7 @@ def shp2geom2d(
             f"Invalid combine_mode '{combine_mode}', expected 'union' or 'intersection'"
         )
 
-    def _combine(gs, mode: str):
+    def _combine(gs: list[Any], mode: str) -> Any:
         gs = [g for g in gs if g is not None]
         if not len(gs):
             return None
@@ -306,7 +306,7 @@ def shp2geom2d(
             return gs[0]
         return AreaUnion(gs) if mode == "union" else AreaIntersection(gs)
 
-    def _expand_files(path_spec) -> list[str]:
+    def _expand_files(path_spec: Any) -> list[str]:
         s = str(path_spec)
         return glob(s) if has_magic(s) else [s]
 
@@ -400,7 +400,7 @@ def shp2geom2d(
                                 )[:2]
                             ).T
 
-    def _create_geom(data, mode: str):
+    def _create_geom(data: Any, mode: str) -> Any:
         if not len(data):
             return None
         if isinstance(data, dict):

@@ -2,7 +2,7 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -80,4 +80,4 @@ class TurbineModel(FarmDataModel):
             Additional keyword arguments for the constructor.
 
         """
-        return new_instance(cls, tmodel_type, *args, **kwargs)
+        return cast(TurbineModel, new_instance(cls, tmodel_type, *args, **kwargs))

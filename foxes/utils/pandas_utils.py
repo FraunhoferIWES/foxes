@@ -108,7 +108,7 @@ class PandasFileHelper:
                     f = pd.read_hdf
                 elif fmt == "nc":
 
-                    def f(fname, **pars) -> pd.DataFrame:
+                    def f(fname: str | Path, **pars: Any) -> pd.DataFrame:
                         """little helper to read netcdf files"""
                         return xarray.open_dataset(fname, **pars).to_dataframe()
 

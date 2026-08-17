@@ -528,13 +528,14 @@ class NEWAStates(DatasetStates):
         if isinstance(gpts, tuple):
             assert len(gpts) == 1
             gpts = gpts[0]
-        assert (
-            isinstance(gpts, np.ndarray)
-            and gpts.ndim == 2
-            and gpts.shape[1] == len(idims)
-        ), (
-            f"States '{self.name}': gpts must be a 2D numpy array with shape (n_points, {len(idims)}), got {gpts.shape}"
-        )
+        if not isinstance(gpts, np.ndarray):
+            raise TypeError(
+                f"States '{self.name}': gpts must be a 2D numpy array or a single-item tuple containing it, got {type(gpts).__name__}"
+            )
+        if gpts.ndim != 2 or gpts.shape[1] != len(idims):
+            raise ValueError(
+                f"States '{self.name}': gpts must be a 2D numpy array with shape (n_points, {len(idims)}), got {gpts.shape}"
+            )
         gpts_array: np.ndarray = gpts
 
         # check and reshape d, data is on a non-regular grid:

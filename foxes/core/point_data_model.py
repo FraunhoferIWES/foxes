@@ -269,7 +269,7 @@ class PointDataModelList(PointDataModel):
         tdata
             The target point data
         parameters
-            A list of parameter dicts, one for each model
+            Parameters for each model
 
         Returns
         -------
@@ -318,4 +318,4 @@ class PointDataModelList(PointDataModel):
             Additional parameters for the constructor
 
         """
-        return new_instance(cls, model_type, *args, **kwargs)
+        return cast(PointDataModel, new_instance(cls, model_type, *args, **kwargs))

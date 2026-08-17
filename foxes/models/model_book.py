@@ -752,20 +752,20 @@ class ModelBook:
 
         Parameters
         ----------
-        model_type: str
+        model_type
             The model type
-        name: str
+        name
             The model name
-        class_name: str, optinal
+        class_name
             Name of the model class
-        args: tuple, optional
+        args
             Arguments for the model class
-        kwargs: dict, optional
+        kwargs
             Arguments for the model class
 
         Returns
         -------
-        model: mclass
+        model
             The model object
 
         """
@@ -785,12 +785,12 @@ class ModelBook:
 
         Parameters
         ----------
-        wake_model: foxes.core.WakeModel
+        wake_model
             The wake model
 
         Returns
         -------
-        pwake: str
+        pwake
             The partial wake model name
 
         """
@@ -813,9 +813,9 @@ class ModelBook:
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """

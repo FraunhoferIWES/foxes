@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 import utm
 
@@ -85,4 +87,4 @@ def get_utm_zone(lonlat: np.ndarray) -> tuple[int, str]:
     """
     lat = lonlat[:, 1].astype(np.float64)
     lon = lonlat[:, 0].astype(np.float64)
-    return utm.from_latlon(lat, lon)[2:4]
+    return cast(tuple[int, str], utm.from_latlon(lat, lon)[2:4])

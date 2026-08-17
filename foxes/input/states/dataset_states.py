@@ -7,7 +7,7 @@ from collections.abc import Callable, Generator
 from scipy.interpolate import interpn
 from contextlib import nullcontext
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from foxes.core import (
     Algorithm,
@@ -749,7 +749,7 @@ class DatasetStates(States):
                 preprocess=self.preprocess_nc,
             )
 
-            def _len_ds(ds):
+            def _len_ds(ds: xr.Dataset | np.ndarray) -> int:
                 """Helper function to get the number of states"""
                 return ds.sizes[states_coord] if isinstance(ds, xr.Dataset) else len(ds)
 
@@ -842,8 +842,8 @@ class DatasetStates(States):
             self._vars = _update_vars(data, self._vars)
 
         # make sure state indices are sorted ascending:
-        def _is_sorted(a):
-            return np.all(a[:-1] <= a[1:])
+        def _is_sorted(a: np.ndarray) -> bool:
+            return bool(np.all(a[:-1] <= a[1:]))
 
         if self.check_times and not _is_sorted(self._inds):
             print("\n\nError with state indices, not sorted:\n")
@@ -1572,9 +1572,13 @@ class DatasetStates(States):
         data, weights = self._get_calc_data(mdata, fdata)
 
         # check if points are state dependent
-        _points_data = None
+        _points_data: dict[str, Any] | None = None
 
-        def _analyze_points(has_p, has_h, hcoords=None):
+        def _analyze_points(
+            has_p: bool,
+            has_h: bool,
+            hcoords: dict[str, np.ndarray] | None = None,
+        ) -> dict[str, Any]:
             """Helper function for points analysis."""
             nonlocal _points_data
 

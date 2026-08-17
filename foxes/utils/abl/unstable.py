@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 
 from .stable import logz
@@ -23,11 +25,12 @@ def psi(height: float | np.ndarray, mol: float | np.ndarray) -> float | np.ndarr
 
     """
     x = (1.0 - 16.0 * height / mol) ** 0.25
-    return (
+    return cast(
+        float | np.ndarray,
         2.0 * np.log((1.0 + x) / 2.0)
         + np.log((1.0 + x**2) / 2.0)
         - 2.0 * np.arctan(x)
-        + np.pi / 2.0
+        + np.pi / 2.0,
     )
 
 
@@ -63,7 +66,9 @@ def ustar(
     :group: utils.abl.unstable
 
     """
-    return ws_ref * kappa / (logz(h_ref, z0) - psi(h_ref, mol))
+    return cast(
+        float | np.ndarray, ws_ref * kappa / (logz(h_ref, z0) - psi(h_ref, mol))
+    )
 
 
 def calc_ws(
@@ -97,4 +102,4 @@ def calc_ws(
     :group: utils.abl.unstable
 
     """
-    return ustar / kappa * (logz(height, z0) - psi)
+    return cast(float | np.ndarray, ustar / kappa * (logz(height, z0) - psi))

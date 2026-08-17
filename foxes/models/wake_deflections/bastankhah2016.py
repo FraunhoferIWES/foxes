@@ -4,6 +4,7 @@ import numpy as np
 from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
+from foxes.core import Model
 from foxes.core.wake_deflection import WakeDeflection
 from foxes.core.wake_model import WakeK
 from foxes.models.wake_models.wind.bastankhah16 import (
@@ -54,7 +55,7 @@ class Bastankhah2016Deflection(WakeDeflection):
         self,
         alpha: float = 0.58,
         beta: float = 0.07,
-        induction: Any = "Madsen",
+        induction: str = "Madsen",
         **wake_k: Any,
     ) -> None:
         """
@@ -91,7 +92,7 @@ class Bastankhah2016Deflection(WakeDeflection):
         s += ")"
         return s
 
-    def sub_models(self) -> list[Any]:
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -101,7 +102,7 @@ class Bastankhah2016Deflection(WakeDeflection):
             Names of all sub models
 
         """
-        smdls: list[Any] = []
+        smdls: list[Model] = []
         if self.wake_k is not None:
             smdls.append(self.wake_k)
         if self.model is not None:

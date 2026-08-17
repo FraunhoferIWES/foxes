@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 from .neutral import logz as lgz
 
@@ -22,7 +24,7 @@ def logz(height: float | np.ndarray, z0: float | np.ndarray) -> float | np.ndarr
     :group: utils.abl.stable
 
     """
-    return lgz(height, z0)
+    return cast(float | np.ndarray, lgz(height, z0))
 
 
 def psi(height: float | np.ndarray, mol: float | np.ndarray) -> float | np.ndarray:
@@ -45,7 +47,7 @@ def psi(height: float | np.ndarray, mol: float | np.ndarray) -> float | np.ndarr
 
     """
     h = np.minimum(height, np.abs(mol))
-    return -5.0 * h / mol
+    return cast(float | np.ndarray, -5.0 * h / mol)
 
 
 def ustar(
@@ -80,7 +82,9 @@ def ustar(
     :group: utils.abl.stable
 
     """
-    return ws_ref * kappa / (logz(h_ref, z0) - psi(h_ref, mol))
+    return cast(
+        float | np.ndarray, ws_ref * kappa / (logz(h_ref, z0) - psi(h_ref, mol))
+    )
 
 
 def calc_ws(
@@ -114,4 +118,4 @@ def calc_ws(
     :group: utils.abl.stable
 
     """
-    return ustar / kappa * (logz(height, z0) - psi)
+    return cast(float | np.ndarray, ustar / kappa * (logz(height, z0) - psi))

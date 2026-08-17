@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 
 
@@ -56,7 +58,7 @@ def area(
     A2 = r2**2 * np.arccos(d2/r2) - d2 * np.sqrt(r2**2 - d2**2)
     """
 
-    return A1 + A2
+    return cast(float | np.ndarray, A1 + A2)
 
 
 def calc_area(r1: np.ndarray, r2: np.ndarray, d: np.ndarray) -> np.ndarray:

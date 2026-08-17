@@ -668,11 +668,7 @@ class PopulationModel(TurbineModel):
 
         coords = {FC.STATE: self._inds0} if self._inds0 is not None else {}
         coords.update(
-            {
-                str(c): d.values
-                for c, d in farm_results.coords.items()
-                if c != FC.STATE
-            }
+            {str(c): d.values for c, d in farm_results.coords.items() if c != FC.STATE}
         )
 
         data = {}

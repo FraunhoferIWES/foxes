@@ -1,9 +1,13 @@
+# mypy: disable-error-code=arg-type
+
 from __future__ import annotations
+
+from typing import Any, cast
 
 import numpy as np
 import matplotlib.pyplot as plt
 from collections.abc import Sequence
-from typing import Any
+from matplotlib.axes import Axes
 
 from .area_geometry import AreaGeometry
 
@@ -55,15 +59,19 @@ class HalfPlane(AreaGeometry):
 
         """
         if np.linalg.norm(self.n - np.array([1, 0])) < 1e-13:
-            return np.array([self.centre[0], -np.inf], dtype=np.float64)
+            return cast(
+                np.ndarray, np.array([self.centre[0], -np.inf], dtype=np.float64)
+            )
         if np.linalg.norm(self.n - np.array([-1, 0])) < 1e-13:
-            return np.array([-np.inf, -np.inf], dtype=np.float64)
+            return cast(np.ndarray, np.array([-np.inf, -np.inf], dtype=np.float64))
         if np.linalg.norm(self.n - np.array([0, 1])) < 1e-13:
-            return np.array([-np.inf, self.centre[1]], dtype=np.float64)
+            return cast(
+                np.ndarray, np.array([-np.inf, self.centre[1]], dtype=np.float64)
+            )
         if np.linalg.norm(self.n - np.array([0, -1])) < 1e-13:
-            return np.array([-np.inf, -np.inf], dtype=np.float64)
+            return cast(np.ndarray, np.array([-np.inf, -np.inf], dtype=np.float64))
 
-        return np.array([-np.inf, -np.inf], dtype=np.float64)
+        return cast(np.ndarray, np.array([-np.inf, -np.inf], dtype=np.float64))
 
     def p_max(self) -> np.ndarray:
         """
@@ -76,15 +84,19 @@ class HalfPlane(AreaGeometry):
 
         """
         if np.linalg.norm(self.n - np.array([1, 0])) < 1e-13:
-            return np.array([np.inf, np.inf], dtype=np.float64)
+            return cast(np.ndarray, np.array([np.inf, np.inf], dtype=np.float64))
         if np.linalg.norm(self.n - np.array([-1, 0])) < 1e-13:
-            return np.array([self.centre[0], np.inf], dtype=np.float64)
+            return cast(
+                np.ndarray, np.array([self.centre[0], np.inf], dtype=np.float64)
+            )
         if np.linalg.norm(self.n - np.array([0, 1])) < 1e-13:
-            return np.array([np.inf, np.inf], dtype=np.float64)
+            return cast(np.ndarray, np.array([np.inf, np.inf], dtype=np.float64))
         if np.linalg.norm(self.n - np.array([0, -1])) < 1e-13:
-            return np.array([np.inf, self.centre[1]], dtype=np.float64)
+            return cast(
+                np.ndarray, np.array([np.inf, self.centre[1]], dtype=np.float64)
+            )
 
-        return np.array([np.inf, np.inf], dtype=np.float64)
+        return cast(np.ndarray, np.array([np.inf, np.inf], dtype=np.float64))
 
     def points_distance(
         self, points: np.ndarray, return_nearest: bool = False
@@ -116,9 +128,9 @@ class HalfPlane(AreaGeometry):
         if return_nearest:
             y = np.einsum("pd,d->p", deltas, self.m)
             nerst = self.centre[None, :] + y[:, None] * self.m[None, :]
-            return np.abs(x), nerst
+            return cast(tuple[np.ndarray, np.ndarray], (np.abs(x), nerst))
         else:
-            return np.abs(x)
+            return cast(np.ndarray, np.abs(x))
 
     def points_inside(self, points: np.ndarray) -> np.ndarray:
         """
@@ -137,11 +149,11 @@ class HalfPlane(AreaGeometry):
         """
         deltas = points - self.centre[None, :]
         x = np.einsum("pd,d->p", deltas, self.n)
-        return x >= 0.0
+        return cast(np.ndarray, x >= 0.0)
 
     def add_to_figure(
         self,
-        ax,
+        ax: Axes,
         show_boundary: bool = True,
         fill_mode: str | None = None,
         pars_boundary: dict[str, Any] | None = None,

@@ -84,11 +84,11 @@ doc = [
 test = [
     "pytest>=7.0",
     "nbmake>=1.0",
+    "mypy>=1.11.0",
     "multiprocess>=0.70.17"
 ]
 dev = [
     "pre-commit>=3.0",
-    "mypy>=1.11.0",
     "objsize>=0.5",
     "jupyter>=1.0",
 ]
@@ -116,6 +116,12 @@ ignore_missing_imports = true
 follow_imports = "silent"
 show_error_codes = true
 warn_unused_ignores = true
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_untyped_decorators = true
+warn_return_any = false
 
 [project.scripts]
 foxes_yaml = "foxes.input.yaml.yaml:main"

@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 import numpy as np
 from scipy.interpolate import interpn
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.utils import new_instance
 from foxes.config import config
@@ -316,4 +316,4 @@ class WakeFrame(Model):
             Additional parameters for constructor
 
         """
-        return new_instance(cls, wframe_type, *args, **kwargs)
+        return cast(WakeFrame, new_instance(cls, wframe_type, *args, **kwargs))

@@ -1,3 +1,6 @@
+from typing import cast
+from typing import Any
+
 import numpy as np
 from pathlib import Path
 from sys import version_info
@@ -35,7 +38,7 @@ class Config(Dict):
         if version_info[0] == 3 and version_info[1] == 8:
             self["nc_engine"] = None
 
-    def __setitem__(self, key: str, value) -> None:
+    def __setitem__(self, key: str, value: Any) -> None:
         if key == FC.UTM_ZONE:
             raise KeyError(
                 "Direct setting of UTM zone is not allowed. "
@@ -50,11 +53,11 @@ class Config(Dict):
 
         Returns
         -------
-        dtp: type
+        dtp
             The default double data type
 
         """
-        return self.get_item(FC.DTYPE)
+        return cast(type, self.get_item(FC.DTYPE))
 
     @property
     def dtype_int(self) -> type:
@@ -63,11 +66,11 @@ class Config(Dict):
 
         Returns
         -------
-        dtp: type
+        dtp
             The default integer data type
 
         """
-        return self.get_item(FC.ITYPE)
+        return cast(type, self.get_item(FC.ITYPE))
 
     @property
     def work_dir(self) -> Path:
@@ -76,7 +79,7 @@ class Config(Dict):
 
         Returns
         -------
-        pth: pathlib.Path
+        pth
             Path to the foxes working directory
 
         """
@@ -85,7 +88,7 @@ class Config(Dict):
             self[FC.WORK_DIR] = Path(".")
         elif not isinstance(pth, Path):
             self[FC.WORK_DIR] = Path(pth)
-        return self[FC.WORK_DIR]
+        return cast(Path, self[FC.WORK_DIR])
 
     @property
     def input_dir(self) -> Path:
@@ -94,7 +97,7 @@ class Config(Dict):
 
         Returns
         -------
-        pth: pathlib.Path
+        pth
             Path to the input base directory
 
         """
@@ -104,7 +107,7 @@ class Config(Dict):
             pth = self.get_item(FC.INPUT_DIR)
             if not isinstance(pth, Path):
                 self[FC.INPUT_DIR] = Path(pth)
-            return self[FC.INPUT_DIR]
+            return cast(Path, self[FC.INPUT_DIR])
 
     @property
     def output_dir(self) -> Path:
@@ -113,7 +116,7 @@ class Config(Dict):
 
         Returns
         -------
-        pth: pathlib.Path
+        pth
             Path to the default output directory
 
         """
@@ -123,7 +126,7 @@ class Config(Dict):
             pth = self.get_item(FC.OUTPUT_DIR)
             if not isinstance(pth, Path):
                 self[FC.OUTPUT_DIR] = Path(pth)
-            return self[FC.OUTPUT_DIR]
+            return cast(Path, self[FC.OUTPUT_DIR])
 
     @property
     def nc_engine(self) -> str | None:
@@ -132,7 +135,7 @@ class Config(Dict):
 
         Returns
         -------
-        nce: str
+        nce
             The NetCDF engine
 
         """
@@ -141,7 +144,7 @@ class Config(Dict):
             import_module("netCDF4")
         elif nce is not None:
             import_module(nce)
-        return nce
+        return cast(str | None, nce)
 
     @property
     def utm_zone_set(self) -> bool:
@@ -150,7 +153,7 @@ class Config(Dict):
 
         Returns
         -------
-        uzs: bool
+        uzs
             True if both UTM zone number and letter are set
 
         """
@@ -163,9 +166,9 @@ class Config(Dict):
 
         Returns
         -------
-        zn: int
+        zn
             The UTM zone number
-        zl: str
+        zl
             The UTM zone letter
 
         """
@@ -180,12 +183,10 @@ class Config(Dict):
 
         Parameters
         ----------
-        number: int
+        number
             The UTM zone number
-        letter: str
+        letter
             The UTM zone letter
-        verbosity: int
-            The verbosity level, 0 = silent
 
         """
         if self.utm_zone_set:
@@ -212,14 +213,14 @@ def get_path(pth: str | Path, base: Path) -> Path:
 
     Parameters
     ----------
-    pth: str or pathlib.Path
+    pth
         The path, optionally relative to base
-    base: pathlib.Path
+    base
         The base directory
 
     Returns
     -------
-    out: pathlib.Path
+    out
         The path, absolute or relative to base directory
 
     :group: foxes.config
@@ -240,12 +241,12 @@ def get_input_path(pth: str | Path) -> Path:
 
     Parameters
     ----------
-    pth: str or pathlib.Path
+    pth
         The path, optionally relative
 
     Returns
     -------
-    out: pathlib.Path
+    out
         The path, absolute or relative to input directory
         from config
 
@@ -262,12 +263,12 @@ def get_output_path(pth: str | Path) -> Path:
 
     Parameters
     ----------
-    pth: str or pathlib.Path
+    pth
         The path, optionally relative
 
     Returns
     -------
-    out: pathlib.Path
+    out
         The path, absolute or relative to output directory
         from config
 

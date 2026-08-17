@@ -55,9 +55,7 @@ def add_from_arrays(
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
     height_values = None if heights is None else np.asarray(heights, dtype=float)
-    diameter_values = (
-        None if diameters is None else np.asarray(diameters, dtype=float)
-    )
+    diameter_values = None if diameters is None else np.asarray(diameters, dtype=float)
     id_values = None if ids is None else np.asarray(ids)
     name_values = None if names is None else np.asarray(names)
 

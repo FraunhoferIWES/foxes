@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 from typing import Any
 
 from foxes.core import VerticalProfile
@@ -54,7 +55,7 @@ class ABLLogStableWsProfile(VerticalProfile):
         else:
             return [FV.WS, FV.H, FV.Z0, FV.MOL]
 
-    def calculate(self, data: dict[str, Any], heights: Any) -> Any:
+    def calculate(self, data: dict[str, Any], heights: np.ndarray) -> np.ndarray:
         """
         Run the profile calculation.
 
@@ -83,4 +84,4 @@ class ABLLogStableWsProfile(VerticalProfile):
             ustar = stable.ustar(ws, h0, z0, mol, kappa=FC.KAPPA)
         psi = stable.psi(heights, mol)
 
-        return stable.calc_ws(heights, z0, ustar, psi, kappa=FC.KAPPA)
+        return np.asarray(stable.calc_ws(heights, z0, ustar, psi, kappa=FC.KAPPA))

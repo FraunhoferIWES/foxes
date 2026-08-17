@@ -12,7 +12,7 @@ import foxes.constants as FC
 
 
 def read_turbine_types(
-    wio_farm: dict,
+    wio_farm: dict[str, Any],
     mbook: ModelBook,
     ws_exp_P: int,
     ws_exp_ct: int,
@@ -44,7 +44,7 @@ def read_turbine_types(
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity >= level:
             print(*args, **kwargs)
 
@@ -91,7 +91,7 @@ def read_turbine_types(
             ws_ct = ct_curve["Ct_wind_speeds"]
             data_ct = pd.DataFrame(data={"ws": ws_ct, "ct": ct})
 
-            def _get_wse_var(wse):
+            def _get_wse_var(wse: int) -> str:
                 if wse not in [1, 2, 3]:
                     raise ValueError(
                         f"Expecting wind speed exponent 1, 2 or 3, got {wse}"
@@ -204,7 +204,7 @@ def read_layout(
         print(f"          Total number of turbines: {farm.n_turbines}")
 
 
-def read_farm(wio_dict: dict, mbook: ModelBook, verbosity: int) -> WindFarm:
+def read_farm(wio_dict: dict[str, Any], mbook: ModelBook, verbosity: int) -> WindFarm:
     """
     Reads the wind farm information
 
@@ -297,7 +297,7 @@ def read_farm(wio_dict: dict, mbook: ModelBook, verbosity: int) -> WindFarm:
     return farm
 
 
-def read_n_turbines(wio_dict: dict) -> int:
+def read_n_turbines(wio_dict: dict[str, Any]) -> int:
     """
     Reads the number of turbines from windio input
 
@@ -333,7 +333,7 @@ def read_n_turbines(wio_dict: dict) -> int:
     return n_turbines
 
 
-def read_hub_heights(wio_dict: dict) -> list[float]:
+def read_hub_heights(wio_dict: dict[str, Any]) -> list[float]:
     """
     Reads the hub heights from windio input
 
@@ -361,7 +361,7 @@ def read_hub_heights(wio_dict: dict) -> list[float]:
     return hub_heights
 
 
-def read_rotor_diameters(wio_dict: dict) -> list[float]:
+def read_rotor_diameters(wio_dict: dict[str, Any]) -> list[float]:
     """
     Reads the rotor diameters from windio input
 

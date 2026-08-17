@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -269,4 +269,7 @@ class GroundModel(Model):
             Additional parameters for the constructor
 
         """
-        return new_instance(cls, ground_type, *args, **kwargs)
+        obj = new_instance(cls, ground_type, *args, **kwargs)
+        if obj is None:
+            raise ValueError(f"Ground model '{ground_type}' not found")
+        return cast(GroundModel, obj)

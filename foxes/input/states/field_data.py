@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
+from typing import Any
+from numpy.typing import ArrayLike
 from foxes.core import Algorithm, LoadedData, MData
 
 from foxes.utils import weibull_weights, get_utm_zone, to_lonlat, from_lonlat
@@ -53,16 +55,16 @@ class FieldData(DatasetStates):
 
     def __init__(
         self,
-        *args,
-        states_coord="Time",
-        x_coord="UTMX",
-        y_coord="UTMY",
-        h_coord="height",
-        time_format=r"%Y-%m-%d_%H:%M:%S",
-        weight_ncvar=None,
-        grid_point_plot=None,
-        **kwargs,
-    ):
+        *args: Any,
+        states_coord: str = "Time",
+        x_coord: str = "UTMX",
+        y_coord: str = "UTMY",
+        h_coord: str | None = "height",
+        time_format: str | None = r"%Y-%m-%d_%H:%M:%S",
+        weight_ncvar: str | None = None,
+        grid_point_plot: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -89,7 +91,9 @@ class FieldData(DatasetStates):
             Additional parameters for the base class
 
         """
-        super().__init__(*args, time_format=time_format, **kwargs)
+        kwargs.pop("time_format", None)
+        kwargs["time_format"] = time_format
+        super().__init__(*args, **kwargs)
         self.states_coord = states_coord
         self.x_coord = x_coord
         self.y_coord = y_coord
@@ -226,16 +230,16 @@ class LatLonFieldData(DatasetStates):
 
     def __init__(
         self,
-        data_source,
-        states_coord="Time",
-        lat_coord=FV.LAT,
-        lon_coord=FV.LON,
-        h_coord=None,
-        time_format=None,
-        grid_point_plot=None,
-        utm_zone=None,
-        **kwargs,
-    ):
+        data_source: Any,
+        states_coord: str = "Time",
+        lat_coord: str = FV.LAT,
+        lon_coord: str = FV.LON,
+        h_coord: str | None = None,
+        time_format: str | None = None,
+        grid_point_plot: str | None = None,
+        utm_zone: Any = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -269,6 +273,7 @@ class LatLonFieldData(DatasetStates):
             Additional parameters for the base class
 
         """
+        kwargs.pop("time_format", None)
         super().__init__(
             data_source=data_source,
             time_format=time_format,
@@ -495,12 +500,12 @@ class WeibullField(FieldData):
 
     def __init__(
         self,
-        *args,
-        wd_coord,
-        ws_coord=None,
-        ws_bins=None,
-        **kwargs,
-    ):
+        *args: Any,
+        wd_coord: str,
+        ws_coord: str | None = None,
+        ws_bins: ArrayLike | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -520,6 +525,9 @@ class WeibullField(FieldData):
             Keyword arguments for the base class
 
         """
+        kwargs.pop("states_coord", None)
+        kwargs.pop("time_format", None)
+        kwargs.pop("load_mode", None)
         super().__init__(
             *args,
             states_coord=wd_coord,

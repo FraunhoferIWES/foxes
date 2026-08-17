@@ -3,14 +3,18 @@ from __future__ import annotations
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
 from xarray import DataArray, Dataset, merge
-from typing import Any
 
 from foxes.utils import write_nc
 import foxes.constants as FC
 import foxes.variables as FV
 
 from .farm_results_eval import FarmResultsEval
+
+if TYPE_CHECKING:
+    from foxes.core import WindFarm
 
 
 class WindFarmsEval(FarmResultsEval):
@@ -19,44 +23,54 @@ class WindFarmsEval(FarmResultsEval):
 
      Attributes
     ----------
-    farm: foxes.core.WindFarm
+    farm
         The wind farm object
-    results: xarray.Dataset
+    results
         The farm results
 
     :group: output
 
     """
 
-    def __init__(self, farm, farm_results=None, results=None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        farm: WindFarm,
+        farm_results: Dataset | None = None,
+        results: Dataset | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        farm: foxes.core.WindFarm
+        farm
             The wind farm object
-        farm_results: xarray.Dataset, optional
+        farm_results
             The farm results
-        results: xarray.Dataset, optional
+        results
             The aggregated results, if already computed
-        algo: foxes.core.Algorithm, optional
+        algo
             The algorithm object, used to get the nominal power for the farms if available
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
+        if farm_results is None:
+            raise ValueError("Missing farm_results")
         super().__init__(farm_results=farm_results, **kwargs)
         self.farm = farm
-        self.farm_results = None
-        if farm_results is not None:
-            self.farm_results = merge(
+        farm_results_with_farm: Dataset = cast(
+            Dataset,
+            merge(
                 (
                     farm_results,
                     DataArray(farm.wind_farm_list, dims=[FC.TURBINE], name=FC.FARM),
                 ),
                 join="exact",
-            )
+            ),
+        )
+        self.farm_results = farm_results_with_farm
 
         if self.algo is not None:
             assert self.farm == self.algo.farm, (
@@ -64,7 +78,7 @@ class WindFarmsEval(FarmResultsEval):
             )
 
         self._LEVEL = FC.FARM
-        self._results = results
+        self._results = cast(Dataset, results)
 
     def get_power_units(self) -> np.ndarray:
         """
@@ -72,7 +86,7 @@ class WindFarmsEval(FarmResultsEval):
 
         Returns
         -------
-        P_unit_W: np.ndarray
+        P_unit_W
             The power units in Watts for all elements, shape: (n_elements,)
 
         """
@@ -95,7 +109,7 @@ class WindFarmsEval(FarmResultsEval):
 
         return P_unit_W_arr
 
-    def _aggregate(self, mapping=None) -> Dataset:
+    def _aggregate(self, mapping: dict[str | None, list[int]] | None = None) -> Dataset:
         assert self.farm_results is not None, (
             "farm_results are required for aggregation"
         )
@@ -115,6 +129,8 @@ class WindFarmsEval(FarmResultsEval):
             raise ValueError(
                 f"Mapping from {self._LEVEL} to turbine indices is required for aggregation"
             )
+        if mapping is None:
+            mapping = {}
 
         gb = self.farm_results.groupby(self._LEVEL)
         aggsum = gb.sum().transpose(FC.STATE, self._LEVEL).sortby(self._LEVEL)
@@ -190,12 +206,12 @@ class WindFarmsEval(FarmResultsEval):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm, optional
+        algo
             The algorithm object
 
         Returns
         -------
-        xarray.Dataset
+        The evaluated dataset
             The aggregated farm results
 
         """
@@ -204,7 +220,7 @@ class WindFarmsEval(FarmResultsEval):
             self._results = self._aggregate(mapping)
         return self._results
 
-    def get_mapping(self) -> dict:
+    def get_mapping(self) -> dict[str | None, list[int]] | None:
         """
         Get the mapping from farm to turbine indices.
 
@@ -214,7 +230,10 @@ class WindFarmsEval(FarmResultsEval):
             The mapping from farm to turbine indices
 
         """
-        return self.farm.get_wind_farm_mapping()
+        return cast(
+            dict[str | None, list[int]],
+            self.farm.get_wind_farm_mapping(),
+        )
 
     def get_capacity(self) -> np.ndarray:
         """
@@ -222,18 +241,20 @@ class WindFarmsEval(FarmResultsEval):
 
         Returns
         -------
-        capacity_array: numpy.ndarray
+        capacity_array
             The capacity array (nominal power) for all turbines, shape: (n_turbines,)
 
         """
         mapping = self.get_mapping()
         Pnom = super().get_capacity()
+        if mapping is None:
+            raise ValueError("Mapping is required to get capacity per farm")
         cap = np.array(
             [Pnom[mapping[f]].sum() for f in self.results[self._LEVEL].values]
         )
         return cap
 
-    def split(self) -> dict:
+    def split(self) -> dict[str | None, Dataset]:
         """
         Split the results by wind farm.
 
@@ -244,20 +265,24 @@ class WindFarmsEval(FarmResultsEval):
 
         """
         assert self.farm_results is not None, "farm_results are required for splitting"
+        wind_farm_names = self.farm.wind_farm_names
+        assert wind_farm_names is not None
         return {
             farm: self.farm_results.where(self.farm_results[FC.FARM] == farm, drop=True)
-            for farm in self.farm.wind_farm_names
+            for farm in wind_farm_names
         }
 
-    def write_split_nc_files(self, base_name: str, **kwargs: Any) -> dict:
+    def write_split_nc_files(
+        self, base_name: str, **kwargs: Any
+    ) -> dict[str | None, Dataset]:
         """
         Write the results for each sub element to separate netCDF files.
 
         Parameters
         ----------
-        base_name: str
+        base_name
             The base name for the netCDF files
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the foxes.utils.write_nc() method
 
         Returns
@@ -276,25 +301,25 @@ class WindFarmsEval(FarmResultsEval):
         return fdict
 
     def get_area_mapping_plot_layout(
-        self, area_by_name: dict, n_areas: int
+        self, area_by_name: dict[str, Any], n_areas: int
     ) -> tuple[tuple[float, float], float]:
         """
         Compute an extent-aware figure size and marker size for area mapping plots.
 
         Parameters
         ----------
-        area_by_name: dict
+        area_by_name
             Mapping from area names to area geometries. Geometries that
             expose ``p_min()`` and ``p_max()`` are used to derive plot extent.
-        n_areas: int
+        n_areas
             Number of legend entries (mapped areas) used to scale
             vertical space for readable legends.
 
         Returns
         -------
-        figsize: tuple of float
+        figsize
             Figure size as ``(width, height)`` in inches.
-        scatter_size: float
+        scatter_size
             Scatter marker size passed to matplotlib ``s``.
 
         :group: output
@@ -330,31 +355,31 @@ class WindFarmsEval(FarmResultsEval):
 
     def write_area_mapping_plot(
         self,
-        plot_file,
-        areas=None,
-        mapping=None,
-        geojson_name_key="name",
-        title=None,
-        verbosity=1,
-    ):
+        plot_file: str | Path,
+        areas: list[Any] | str | Path | dict[str, Any] | None = None,
+        mapping: dict[str | None, list[int]] | None = None,
+        geojson_name_key: str | list[str] = "name",
+        title: str | None = None,
+        verbosity: int = 1,
+    ) -> None:
         """
         Writes a plot visualizing turbine-to-area mapping.
 
         Parameters
         ----------
-        plot_file: str or pathlib.Path
+        plot_file
             The output plot path.
-        areas: list or str or pathlib.Path or dict, optional
+        areas
             The areas to visualize. If None, farm.cluster_areas is used.
-        mapping: dict, optional
+        mapping
             Mapping from area names to turbine indices. If None, mapping is
             chosen from self._LEVEL.
-        geojson_name_key: str or list of str
+        geojson_name_key
             Preferred GeoJSON feature property key(s) used to read area
             names from GeoJSON inputs
-        title: str, optional
+        title
             The plot title. If None, a default title based on self._LEVEL is used.
-        verbosity: int
+        verbosity
             The verbosity level. 0 = silent
 
         :group: output
@@ -384,7 +409,10 @@ class WindFarmsEval(FarmResultsEval):
             if self._LEVEL == FC.CLUSTER:
                 mapping = self.farm.get_cluster_mapping()
             elif self._LEVEL == FC.FARM:
-                mapping = self.farm.get_wind_farm_mapping()
+                mapping = cast(
+                    dict[str | None, list[int]],
+                    dict(self.farm.get_wind_farm_mapping()),
+                )
             else:
                 raise ValueError(
                     f"Unknown level '{self._LEVEL}', choice is '{FC.CLUSTER}' or '{FC.FARM}'"
@@ -415,7 +443,7 @@ class WindFarmsEval(FarmResultsEval):
         fig, ax = plt.subplots(figsize=figsize)
 
         for name in area_names:
-            area = area_by_name.get(name, None)
+            area = area_by_name.get(name) if name is not None else None
             if area is None:
                 continue
             area.add_to_figure(
@@ -429,7 +457,7 @@ class WindFarmsEval(FarmResultsEval):
                 },
             )
 
-        turbine_area = [None] * len(self.farm.turbines)
+        turbine_area: list[str | None] = [None] * len(self.farm.turbines)
         for name, inds in mapping.items():
             for i in inds:
                 turbine_area[i] = name

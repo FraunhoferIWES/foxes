@@ -204,11 +204,11 @@ class SetFarmVars(TurbineModel):
                     if v == FV.D:
                         d0: np.ndarray = np.asarray(t.D, dtype=config.dtype_double)
                         x[:] = d0 if np.ndim(d0) else float(d0)
-                        t.D = x  # type: ignore[assignment]
+                        t.D = x
                     else:
                         h0: np.ndarray = np.asarray(t.H, dtype=config.dtype_double)
                         x[:] = h0 if np.ndim(h0) else float(h0)
-                        t.H = x  # type: ignore[assignment]
+                        t.H = x
                     x[:] = np.where(np.isnan(data[:, ti]), x, data[:, ti])
 
     def set_running(

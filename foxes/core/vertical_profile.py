@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -103,4 +103,4 @@ class VerticalProfile(Model):
             Additional parameters for the constructor
 
         """
-        return new_instance(cls, profile_type, *args, **kwargs)
+        return cast(VerticalProfile, new_instance(cls, profile_type, *args, **kwargs))

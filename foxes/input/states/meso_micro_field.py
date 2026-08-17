@@ -600,7 +600,7 @@ class MesoMicroField(States):
             f"States '{self.name}': Reference point states '{self.meso_states.name}' must provide '{FV.WS}', got {list(ref_results.keys())}"
         )
 
-        def _print_wd_error_info(statesw):
+        def _print_wd_error_info(statesw: tuple[np.ndarray, ...]) -> None:
             us = np.unique(statesw[0])
             up = np.unique(statesw[1])
             print(f"\nWD MISMATCH STATES: {len(us)}, [{us[0]} - {us[-1]}]")

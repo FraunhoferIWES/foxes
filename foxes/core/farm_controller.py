@@ -577,4 +577,4 @@ class FarmController(FarmDataModel):
             Additional keyword arguments for the constructor.
 
         """
-        return new_instance(cls, controller_type, *args, **kwargs)
+        return cast(FarmController, new_instance(cls, controller_type, *args, **kwargs))

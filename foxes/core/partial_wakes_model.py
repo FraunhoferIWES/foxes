@@ -458,8 +458,7 @@ class PartialWakesModel(Model):
         rpoint_weights
             The rotor point weights, shape: (n_rotor_points,)
         wake_deltas
-            The wake deltas. Key: variable name,
-            value: np.ndarray of shape
+            The wake deltas, keyed by variable name, with arrays of shape
             (n_states, n_turbines, n_tpoints)
         wmodel
             The wake model
@@ -469,9 +468,8 @@ class PartialWakesModel(Model):
         Returns
         -------
         final_wake_deltas
-            The final wake deltas at the selected downwind
-            turbines. Key: variable name, value: np.ndarray
-            of shape (n_states, n_rotor_points)
+            The final wake deltas at the selected downwind turbines, keyed by
+            variable name, with shape (n_states, n_rotor_points)
 
         """
         pass
@@ -496,4 +494,4 @@ class PartialWakesModel(Model):
             Additional parameters for the constructor
 
         """
-        return new_instance(cls, pwakes_type, *args, **kwargs)
+        return cast(PartialWakesModel, new_instance(cls, pwakes_type, *args, **kwargs))

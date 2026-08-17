@@ -46,8 +46,8 @@ class Turbine:
         index: int | None = None,
         name: str | None = None,
         models_state_sel: list[np.ndarray | None] | None = None,
-        D: float | None = None,
-        H: float | None = None,
+        D: float | np.ndarray | None = None,
+        H: float | np.ndarray | None = None,
         wind_farm_name: str | None = None,
         cluster_name: str | None = None,
     ) -> None:

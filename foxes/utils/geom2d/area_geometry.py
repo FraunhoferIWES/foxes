@@ -1,10 +1,14 @@
+# mypy: disable-error-code=arg-type
+
 from __future__ import annotations
 
-import numpy as np
 from abc import ABCMeta, abstractmethod
+from typing import Any, cast
+
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-from typing import Any, cast
+from matplotlib.axes import Axes
 
 
 class AreaGeometry(metaclass=ABCMeta):
@@ -51,7 +55,7 @@ class AreaGeometry(metaclass=ABCMeta):
             The centre (x,y) point, shape = (2,)
 
         """
-        return 0.5 * (self.p_min() + self.p_max())
+        return cast(np.ndarray, 0.5 * (self.p_min() + self.p_max()))
 
     @abstractmethod
     def points_distance(
@@ -99,7 +103,7 @@ class AreaGeometry(metaclass=ABCMeta):
 
     def add_to_figure(
         self,
-        ax,
+        ax: Axes,
         show_boundary: bool = False,
         fill_mode: str | None = "inside_slategray",
         pars_boundary: dict[str, Any] | None = None,
@@ -227,15 +231,15 @@ class AreaGeometry(metaclass=ABCMeta):
 
     @staticmethod
     def from_shp(
-        fname,
-        names=None,
-        name_col="Name",
-        geom_col="geometry",
-        to_utm=True,
-        combine_mode="union",
-        ret_utm_zone=False,
-        **kwargs,
-    ):
+        fname: Any,
+        names: Any = None,
+        name_col: str = "Name",
+        geom_col: str = "geometry",
+        to_utm: bool | str = True,
+        combine_mode: str = "union",
+        ret_utm_zone: bool = False,
+        **kwargs: Any,
+    ) -> Any:
         """
         Read a shapefile into an ``AreaGeometry``.
 
@@ -288,7 +292,7 @@ class AreaGeometry(metaclass=ABCMeta):
             **kwargs,
         )
 
-    def __add__(self, g) -> AreaUnion:
+    def __add__(self, g: Any) -> AreaUnion:
         if isinstance(g, list):
             return AreaUnion([self] + g)
         elif isinstance(g, AreaUnion):
@@ -296,7 +300,7 @@ class AreaGeometry(metaclass=ABCMeta):
         else:
             return AreaUnion([self, g])
 
-    def __sub__(self, g) -> AreaIntersection:
+    def __sub__(self, g: Any) -> AreaIntersection:
         if isinstance(g, list):
             return AreaIntersection([self] + [gi.inverse() for gi in g])
         else:
@@ -417,7 +421,7 @@ class InvertedAreaGeometry(AreaGeometry):
 
     def add_to_figure(
         self,
-        ax,
+        ax: Axes,
         show_boundary: bool = False,
         fill_mode: str | None = "inside_slategray",
         pars_boundary: dict[str, Any] | None = None,
@@ -631,7 +635,7 @@ class AreaUnion(AreaGeometry):
 
     def add_to_figure(
         self,
-        ax,
+        ax: Axes,
         show_boundary: bool = False,
         fill_mode: str | None = "inside_slategray",
         pars_boundary: dict[str, Any] | None = None,
@@ -689,7 +693,7 @@ class AreaUnion(AreaGeometry):
         """
         return InvertedAreaUnion(self)
 
-    def __add__(self, g) -> AreaUnion:
+    def __add__(self, g: Any) -> AreaUnion:
         if isinstance(g, list):
             return AreaUnion(self.geometries + g)
         elif isinstance(g, AreaUnion):

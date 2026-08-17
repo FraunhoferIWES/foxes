@@ -50,9 +50,7 @@ def _mpi_create_worker_shared_cache(token: str, payload: dict[str, Any]) -> str:
         nbytes = arr.nbytes if rank == 0 else 0
         win = MPI.Win.Allocate_shared(nbytes, dtype.itemsize, comm=shared_comm)
         buf, _ = win.Shared_query(0)
-        shm_arr: np.ndarray[Any, Any] = np.ndarray(
-            shape, dtype=dtype, buffer=buf
-        )
+        shm_arr: np.ndarray[Any, Any] = np.ndarray(shape, dtype=dtype, buffer=buf)
         if rank == 0:
             shm_arr[...] = arr
         shared_comm.Barrier()

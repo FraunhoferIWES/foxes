@@ -3,6 +3,7 @@ from xarray import Dataset, SerializationWarning
 from pathlib import Path
 import warnings
 from typing import Any
+from collections.abc import Hashable
 
 import foxes.variables as FV
 
@@ -56,7 +57,7 @@ def pack_value(
     unpacked_value: float | np.ndarray,
     scale_factor: float,
     add_offset: float,
-    dtype,
+    dtype: np.dtype[Any] | type,
     fill_value: float | None,
 ) -> np.ndarray:
     """
@@ -189,15 +190,15 @@ def get_encoding(
 
 
 def write_nc(
-    ds,
-    fpath,
+    ds: Dataset,
+    fpath: Path | str,
     round: dict[str, int] | int | None = None,
     complevel: int = 5,
     nc_engine: str = "netcdf4",
     pack: bool = False,
     verbosity: int = 1,
     **kwargs: Any,
-):
+) -> None:
     """
     Writes a dataset to netCDF file
 
@@ -222,6 +223,7 @@ def write_nc(
     :group: utils
 
     """
+    fpath = Path(fpath)
 
     def _round(x: np.ndarray, v: str, d: int | None) -> np.ndarray:
         """Helper function to round values"""
@@ -235,11 +237,11 @@ def write_nc(
                 return r
         return x
 
-    enc = {}
-    fpath = Path(fpath)
+    enc: dict[Hashable, dict[str, Any]] = {}
     if round is not None:
-        crds = {}
+        crds: dict[Hashable, np.ndarray] = {}
         for v, x in ds.coords.items():
+            v = str(v)
             if isinstance(round, int):
                 d = round
             else:
@@ -247,8 +249,9 @@ def write_nc(
             crds[v] = _round(x.to_numpy(), v, d)
             enc[v] = get_encoding(crds[v], complevel=complevel, pack=pack)
             # print("WRITENC ENC",v, enc[v])
-        dvrs = {}
+        dvrs: dict[Hashable, tuple[Any, np.ndarray]] = {}
         for v, x in ds.data_vars.items():
+            v = str(v)
             if isinstance(round, int):
                 d = round
             else:
@@ -268,7 +271,7 @@ def write_nc(
     elif verbosity > 0:
         print("Writing file", fpath)
 
-    kw = dict(encoding=enc, engine=nc_engine)
+    kw: dict[str, Any] = dict(encoding=enc, engine=nc_engine)
     kw.update(kwargs)
 
     # silencing a warning about _FillValue = None

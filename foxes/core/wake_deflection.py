@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -141,4 +141,4 @@ class WakeDeflection(Model):
             Additional parameters for constructor
 
         """
-        return new_instance(cls, wdefl_type, *args, **kwargs)
+        return cast(WakeDeflection, new_instance(cls, wdefl_type, *args, **kwargs))

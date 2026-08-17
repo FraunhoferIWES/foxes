@@ -1029,6 +1029,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bugs:
   - Removed Python 3.9 from GitHub CI test matrix to align workflow runners with project support policy (`requires-python >=3.10`) and avoid unsupported-job noise
   - Gated MPI subprocess smoke coverage behind explicit `FOXES_RUN_MPI_TESTS=1` opt-in so constrained CI targets (e.g. conda-forge feedstock) remain deterministic
+  - Fixed `FarmResultsEval.calc_yield` default output selection so annual yield calculations no longer crash example and smoke runs with `UnboundLocalError`
   - Fixed `TurbinePointCloud` initialization for turbine-indexed data by disabling XY bounds filtering, preventing `Downwind.calc_farm` assertion failures about missing `X`/`Y` in coordinate mapping
   - Fixed `TurbinePointCloud` point interpolation for single-state/two-turbine chunks by falling back from linear to nearest interpolation when Qhull cannot construct a simplex, preventing `calc_points` smoke failures under Python 3.13 thread chunking
   - Fixed `SingleStateField` interpolation for NaN-only target points by skipping invalid points before calling xarray interpolation, preventing `All-NaN slice encountered` runtime warnings in `Streamlines2D` smoke runs

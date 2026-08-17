@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -132,7 +132,10 @@ class WakeSuperposition(Model):
             Additional parameters for constructor
 
         """
-        return new_instance(cls, superp_type, *args, **kwargs)
+        obj = new_instance(cls, superp_type, *args, **kwargs)
+        if obj is None:
+            raise ValueError(f"Wake superposition model '{superp_type}' not found")
+        return cast(WakeSuperposition, obj)
 
 
 class WindVectorWakeSuperposition(Model):
@@ -256,4 +259,9 @@ class WindVectorWakeSuperposition(Model):
             Additional parameters for constructor
 
         """
-        return new_instance(cls, superp_type, *args, **kwargs)
+        obj = new_instance(cls, superp_type, *args, **kwargs)
+        if obj is None:
+            raise ValueError(
+                f"Wind vector wake superposition model '{superp_type}' not found"
+            )
+        return cast(WindVectorWakeSuperposition, obj)

@@ -5,7 +5,9 @@ import pandas as pd
 from xarray import Dataset, open_dataset
 from scipy.interpolate import interp1d
 from pathlib import Path
-from typing import Any
+from collections.abc import Callable
+from typing import Any, cast
+from numpy.typing import ArrayLike
 
 from foxes.core import Algorithm, FData, LoadedData, MData, States, TData
 from foxes.utils import PandasFileHelper
@@ -331,12 +333,12 @@ class MultiHeightStates(States):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -370,12 +372,12 @@ class MultiHeightStates(States):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
@@ -399,8 +401,10 @@ class MultiHeightStates(States):
 
         if data_stash is not None:
             data = data_stash[self.name]
-            self._data_source = data.pop("data_source")
-            self._inds = data.pop("inds")
+            self._data_source = cast(
+                str | Path | pd.DataFrame | Dataset, data.pop("data_source")
+            )
+            self._inds = cast(np.ndarray, data.pop("inds"))
 
     def size(self) -> int:
         """
@@ -597,15 +601,15 @@ class MultiHeightNCStates(MultiHeightStates):
 
     def __init__(
         self,
-        data_source,
-        *args,
-        state_coord=FC.STATE,
-        h_coord=FV.H,
-        heights=None,
-        format_times_func="default",
-        xr_read_pars=None,
-        **kwargs,
-    ):
+        data_source: str | Path | pd.DataFrame | Dataset,
+        *args: Any,
+        state_coord: str = FC.STATE,
+        h_coord: str = FV.H,
+        heights: ArrayLike | None = None,
+        format_times_func: str | Callable[[np.ndarray], np.ndarray] | None = "default",
+        xr_read_pars: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -632,15 +636,16 @@ class MultiHeightNCStates(MultiHeightStates):
             Parameters for the base class
 
         """
+        read_pars = kwargs.pop("read_pars", {})
         super().__init__(
             data_source,
             *args,
             heights=[],
-            read_pars=None,
+            read_pars=read_pars,
             **kwargs,
-        )
+        )  # type: ignore[misc]
         self.state_coord = state_coord
-        self.heights = heights
+        self.heights = heights  # type: ignore[assignment]
         self.h_coord = h_coord
         self.xr_read_pars = {} if xr_read_pars is None else dict(xr_read_pars)
         self.xr_read_pars.setdefault("engine", config.nc_engine)
@@ -713,13 +718,16 @@ class MultiHeightNCStates(MultiHeightStates):
         self._N = data.sizes[self.state_coord]
         self._inds = data.coords[self.state_coord].to_numpy()
 
+        format_times_func: Callable[[np.ndarray], np.ndarray] | None
         if self._format_times_func == "default":
 
-            def format_times_func(t):
+            def format_times_func(t: np.ndarray) -> np.ndarray:
                 """little helper function to convert times to datetime64"""
                 return t.astype("datetime64[ns]")
         else:
-            format_times_func = self._format_times_func
+            format_times_func = cast(
+                Callable[[np.ndarray], np.ndarray] | None, self._format_times_func
+            )
         if format_times_func is not None:
             self._inds = format_times_func(self._inds)
 
@@ -827,9 +835,9 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
 
     def __init__(
         self,
-        *args: object,
+        *args: Any,
         time_coord: str = FC.TIME,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> None:
         """
         Constructor.

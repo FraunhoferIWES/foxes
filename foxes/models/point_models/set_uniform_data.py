@@ -143,7 +143,7 @@ class SetUniformData(PointDataModel):
         mdata: MData,
         fdata: FData,
         pdata: TData,
-    ) -> dict[str, Any]:
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

@@ -13,7 +13,7 @@ from .read_outputs import read_outputs
 from ..dict import run_dict
 
 
-def windio_file2dict(yml_file: Path | str, verbosity: int = 1) -> Dict:
+def windio_file2dict(yml_file: Path | str, verbosity: int = 1) -> Dict[Any, Any]:
     """
     Read windio yaml file and translate to foxes input data dictionary
 
@@ -47,8 +47,10 @@ def windio_file2dict(yml_file: Path | str, verbosity: int = 1) -> Dict:
 
 
 def read_windio_dict(
-    wio_dict: Dict | dict[str, Any], verbosity: int = 1, **algo_kwargs: Any
-) -> tuple[Dict, Algorithm, Path | None]:
+    wio_dict: Dict[Any, Any] | dict[str, Any],
+    verbosity: int = 1,
+    **algo_kwargs: Any,
+) -> tuple[Dict[str, Any], Algorithm, str | None]:
     """
     Translate windio data to foxes input data
 
@@ -77,7 +79,7 @@ def read_windio_dict(
 
     """
 
-    def _print(*args, level: int = 1, **kwargs) -> None:
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity >= level:
             print(*args, **kwargs)
 
@@ -179,19 +181,19 @@ def read_windio_file(
 
 
 def foxes_windio(
-    yml_file,
-    output_dir=None,
-    rotor=None,
-    pwakes=None,
-    wakes=None,
-    frame=None,
-    engine=None,
-    n_procs=None,
-    chunksize_states=None,
-    chunksize_points=None,
-    iterative=False,
-    nofig=False,
-    verbosity=1,
+    yml_file: Path | str,
+    output_dir: Path | str | None = None,
+    rotor: Any = None,
+    pwakes: Any = None,
+    wakes: Any = None,
+    frame: Any = None,
+    engine: Any = None,
+    n_procs: int | None = None,
+    chunksize_states: int | None = None,
+    chunksize_points: int | None = None,
+    iterative: bool = False,
+    nofig: bool = False,
+    verbosity: int = 1,
 ) -> tuple[Any, Any, list[tuple[dict[str, Any], list[Any]]]]:
     """Run foxes from windio yaml file input
 

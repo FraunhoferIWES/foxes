@@ -10,12 +10,12 @@ def parse_Pct_file_name(file_name: str | Path) -> dict[str, Any]:
 
     Parameters
     ----------
-    file_name: str or pathlib.Path
+    file_name
         Path to the file
 
     Returns
     -------
-    parsed_data: dict
+    parsed_data
         dict with data parsed from file name
 
     :group: data
@@ -79,14 +79,14 @@ def parse_Pct_two_files(
 
     Parameters
     ----------
-    file_name_A: str or pathlib.Path
+    file_name_A
         Path to the first file
-    file_name_B: str or pathlib.Path
+    file_name_B
         Path to the second file
 
     Returns
     -------
-    parsed_data: dict
+    parsed_data
         dict with data parsed from file name
 
     :group: data

@@ -1,4 +1,9 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import Any, Iterator, TYPE_CHECKING
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from foxes.core import TData
 from foxes.output import SliceData
@@ -7,6 +12,9 @@ import foxes.constants as FC
 
 from .get_fig import get_fig
 from ..grids import get_grid_xy, np2np_sp
+
+if TYPE_CHECKING:
+    from foxes.core import FData, MData
 
 
 class FlowPlots2D(SliceData):
@@ -17,39 +25,39 @@ class FlowPlots2D(SliceData):
 
     """
 
-    def get_mean_data_xy(
+    def get_mean_data_xy(  # type: ignore[override]
         self,
-        var,
-        vmin=None,
-        vmax=None,
-        data_format="numpy",
-        **kwargs,
-    ):
+        var: str,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        data_format: str = "numpy",
+        **kwargs: Any,
+    ) -> tuple[dict[str, Any], Any, Any]:
         """
         Generates 2D farm flow figure in a horizontal xy-plane.
 
         Parameters
         ----------
-        var: str
+        var
             The variable name
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        vmin: float, optional
+        vmin
             The minimal variable value
-        vmax: float, optional
+        vmax
             The maximal variable value
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        kwargs: dict, optional
+        kwargs
             Additional parameters for SliceData.get_mean_data_xy
 
         Returns
         -------
-        parameters: dict
+        parameters
             The parameters used
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -75,40 +83,40 @@ class FlowPlots2D(SliceData):
 
         return parameters, data, gdata
 
-    def get_mean_data_yz(
+    def get_mean_data_yz(  # type: ignore[override]
         self,
-        var,
-        x_direction=270,
-        vmin=None,
-        vmax=None,
-        data_format="numpy",
-        **kwargs,
-    ):
+        var: str,
+        x_direction: float = 270.0,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        data_format: str = "numpy",
+        **kwargs: Any,
+    ) -> tuple[dict[str, Any], Any, Any]:
         """
         Generates 2D farm flow figure in a horizontal yz-plane.
 
         Parameters
         ----------
-        var: str
+        var
             The variable name
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        vmin: float, optional
+        vmin
             The minimal variable value
-        vmax: float, optional
+        vmax
             The maximal variable value
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        kwargs: dict, optional
+        kwargs
             Additional parameters for SliceData.get_mean_data_yz
 
         Returns
         -------
-        parameters: dict
+        parameters
             The parameters used
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -136,40 +144,40 @@ class FlowPlots2D(SliceData):
 
         return parameters, data, gdata
 
-    def get_mean_data_xz(
+    def get_mean_data_xz(  # type: ignore[override]
         self,
-        var,
-        x_direction=270,
-        vmin=None,
-        vmax=None,
-        data_format="numpy",
-        **kwargs,
-    ):
+        var: str,
+        x_direction: float = 270.0,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        data_format: str = "numpy",
+        **kwargs: Any,
+    ) -> tuple[dict[str, Any], Any, Any]:
         """
         Generates 2D farm flow figure in a horizontal xz-plane.
 
         Parameters
         ----------
-        var: str
+        var
             The variable name
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        vmin: float, optional
+        vmin
             The minimal variable value
-        vmax: float, optional
+        vmax
             The maximal variable value
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        kwargs: dict, optional
+        kwargs
             Additional parameters for SliceData.get_mean_data_xz
 
         Returns
         -------
-        parameters: dict
+        parameters
             The parameters used
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -199,75 +207,75 @@ class FlowPlots2D(SliceData):
 
     def get_mean_fig_xy(
         self,
-        mean_data_xy,
-        xlabel="x [m]",
-        ylabel="y [m]",
-        levels=None,
-        figsize=None,
-        title=None,
-        vlabel=None,
-        fig=None,
-        ax=None,
-        add_bar=True,
-        cmap=None,
-        quiver_n=None,
-        quiver_pars={},
-        ret_state=False,
-        ret_im=False,
-        ret_data=False,
-        animated=False,
-    ):
+        mean_data_xy: tuple[Any, Any, Any],
+        xlabel: str = "x [m]",
+        ylabel: str = "y [m]",
+        levels: int | None = None,
+        figsize: tuple[int, int] | None = None,
+        title: Any = None,
+        vlabel: str | None = None,
+        fig: Figure | None = None,
+        ax: Axes | None = None,
+        add_bar: bool = True,
+        cmap: str | None = None,
+        quiver_n: int | None = None,
+        quiver_pars: dict[str, Any] | None = None,
+        ret_state: bool = False,
+        ret_im: bool = False,
+        ret_data: bool = False,
+        animated: bool = False,
+    ) -> Any:
         """
         Generates 2D farm flow figure in a horizontal xy-plane.
 
         Parameters
         ----------
-        mean_data_xy: tuple
+        mean_data_xy
             The pre-calculated data from get_mean_data_xy,
             (parameters, data, grid_data)
-        xlabel: str, optional
+        xlabel
             The x axis label
-        ylabel: str, optional
+        ylabel
             The y axis label
-        levels: int, optional
+        levels
             The number of levels for the contourf plot, or None for pure image
-        figsize: tuple, optional
+        figsize
             The figsize for plt.Figure
-        title: str, optional
+        title
             The title
-        vlabel: str, optional
+        vlabel
             The variable label
-        fig: plt.Figure, optional
+        fig
             The figure object
-        ax: plt.Axes, optional
+        ax
             The figure axes
-        add_bar: bool
+        add_bar
             Add a color bar
-        cmap: str, optional
+        cmap
             The colormap
-        quiver_n: int, optional
+        quiver_n
             Place a vector at each `n`th point
-        quiver_pars: dict, optional
+        quiver_pars
             Parameters for plt.quiver
-        ret_state: bool
+        ret_state
             Flag for state index return
-        ret_im: bool
+        ret_im
             Flag for image return
-        ret_data: bool
+        ret_data
             Flag for returning image data
-        animated: bool
+        animated
             Switch for usage for an animation
 
         Returns
         -------
-        fig: matplotlib.Figure
+        fig
             The figure object
-        si: int, optional
+        si
             The state index
-        im: tuple, optional
+        im
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
-        data: numpy.ndarray, optional
+        data
             The image data, shape: (n_x, n_y)
 
         """
@@ -293,6 +301,7 @@ class FlowPlots2D(SliceData):
 
         # define wind vector arrows:
         qpars = dict(angles="xy", scale_units="xy", scale=0.05)
+        quiver_pars = {} if quiver_pars is None else quiver_pars
         qpars.update(quiver_pars)
         quiv = (
             None
@@ -339,75 +348,75 @@ class FlowPlots2D(SliceData):
 
     def get_mean_fig_xz(
         self,
-        mean_data_xz,
-        xlabel="x [m]",
-        zlabel="z [m]",
-        levels=None,
-        figsize=None,
-        title=None,
-        vlabel=None,
-        fig=None,
-        ax=None,
-        add_bar=True,
-        cmap=None,
-        quiver_n=None,
-        quiver_pars={},
-        ret_state=False,
-        ret_im=False,
-        ret_data=False,
-        animated=False,
-    ):
+        mean_data_xz: tuple[Any, Any, Any],
+        xlabel: str = "x [m]",
+        zlabel: str = "z [m]",
+        levels: int | None = None,
+        figsize: tuple[int, int] | None = None,
+        title: Any = None,
+        vlabel: str | None = None,
+        fig: Figure | None = None,
+        ax: Axes | None = None,
+        add_bar: bool = True,
+        cmap: str | None = None,
+        quiver_n: int | None = None,
+        quiver_pars: dict[str, Any] | None = None,
+        ret_state: bool = False,
+        ret_im: bool = False,
+        ret_data: bool = False,
+        animated: bool = False,
+    ) -> Any:
         """
         Generates 2D farm flow figure in a horizontal xz-plane.
 
         Parameters
         ----------
-        mean_data_xz: tuple
+        mean_data_xz
             The pre-calculated data from get_mean_data_xz,
             (parameters, data, grid_data)
-        xlabel: str, optional
+        xlabel
             The x axis label
-        zlabel: str, optional
+        zlabel
             The z axis label
-        levels: int, optional
+        levels
             The number of levels for the contourf plot, or None for pure image
-        figsize: tuple, optional
+        figsize
             The figsize for plt.Figure
-        title: str, optional
+        title
             The title
-        vlabel: str, optional
+        vlabel
             The variable label
-        fig: plt.Figure, optional
+        fig
             The figure object
-        ax: plt.Axes, optional
+        ax
             The figure axes
-        add_bar: bool
+        add_bar
             Add a color bar
-        cmap: str, optional
+        cmap
             The colormap
-        quiver_n: int, optional
+        quiver_n
             Place a vector at each `n`th point
-        quiver_pars: dict, optional
+        quiver_pars
             Parameters for plt.quiver
-        ret_state: bool
+        ret_state
             Flag for state index return
-        ret_im: bool
+        ret_im
             Flag for image return
-        ret_data: bool
+        ret_data
             Flag for returning image data
-        animated: bool
+        animated
             Switch for usage for an animation
 
         Returns
         -------
-        fig: matplotlib.Figure
+        fig
             The figure object
-        si: int, optional
+        si
             The state index
-        im: tuple, optional
+        im
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
-        data: numpy.ndarray, optional
+        data
             The image data, shape: (n_x, n_y)
 
         """
@@ -437,6 +446,7 @@ class FlowPlots2D(SliceData):
 
         # define wind vector arrows:
         qpars = dict(angles="xy", scale_units="xy", scale=0.05)
+        quiver_pars = {} if quiver_pars is None else quiver_pars
         qpars.update(quiver_pars)
         quiv = (
             None
@@ -483,77 +493,77 @@ class FlowPlots2D(SliceData):
 
     def get_mean_fig_yz(
         self,
-        mean_data_yz,
-        ylabel="x [m]",
-        zlabel="z [m]",
-        levels=None,
-        figsize=None,
-        title=None,
-        vlabel=None,
-        fig=None,
-        ax=None,
-        add_bar=True,
-        cmap=None,
-        quiver_n=None,
-        quiver_pars={},
-        ret_state=False,
-        ret_im=False,
-        ret_data=False,
-        animated=False,
-    ):
+        mean_data_yz: tuple[Any, Any, Any],
+        ylabel: str = "x [m]",
+        zlabel: str = "z [m]",
+        levels: int | None = None,
+        figsize: tuple[int, int] | None = None,
+        title: Any = None,
+        vlabel: str | None = None,
+        fig: Figure | None = None,
+        ax: Axes | None = None,
+        add_bar: bool = True,
+        cmap: str | None = None,
+        quiver_n: int | None = None,
+        quiver_pars: dict[str, Any] | None = None,
+        ret_state: bool = False,
+        ret_im: bool = False,
+        ret_data: bool = False,
+        animated: bool = False,
+    ) -> Any:
         """
         Generates 2D farm flow figure in a horizontal yz-plane.
 
         Parameters
         ----------
-        mean_data_yz: tuple
+        mean_data_yz
             The pre-calculated data from get_mean_data_yz,
             (parameters, data, grid_data)
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        ylabel: str, optional
+        ylabel
             The y axis label
-        zlabel: str, optional
+        zlabel
             The z axis label
-        levels: int, optional
+        levels
             The number of levels for the contourf plot, or None for pure image
-        figsize: tuple, optional
+        figsize
             The figsize for plt.Figure
-        title: str, optional
+        title
             The title
-        vlabel: str, optional
+        vlabel
             The variable label
-        fig: plt.Figure, optional
+        fig
             The figure object
-        ax: plt.Axes, optional
+        ax
             The figure axes
-        add_bar: bool
+        add_bar
             Add a color bar
-        cmap: str, optional
+        cmap
             The colormap
-        quiver_n: int, optional
+        quiver_n
             Place a vector at each `n`th point
-        quiver_pars: dict, optional
+        quiver_pars
             Parameters for plt.quiver
-        ret_state: bool
+        ret_state
             Flag for state index return
-        ret_im: bool
+        ret_im
             Flag for image return
-        ret_data: bool
+        ret_data
             Flag for returning image data
-        animated: bool
+        animated
             Switch for usage for an animation
 
         Returns
         -------
-        fig: matplotlib.Figure
+        fig
             The figure object
-        si: int, optional
+        si
             The state index
-        im: tuple, optional
+        im
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
-        data: numpy.ndarray, optional
+        data
             The image data, shape: (n_x, n_y)
 
         """
@@ -583,6 +593,7 @@ class FlowPlots2D(SliceData):
 
         # define wind vector arrows:
         qpars = dict(angles="xy", scale_units="xy", scale=0.05)
+        quiver_pars = {} if quiver_pars is None else quiver_pars
         qpars.update(quiver_pars)
         quiv = (
             None
@@ -628,39 +639,39 @@ class FlowPlots2D(SliceData):
 
         return out
 
-    def get_states_data_xy(
+    def get_states_data_xy(  # type: ignore[override]
         self,
-        var,
-        vmin=None,
-        vmax=None,
-        data_format="numpy",
-        **kwargs,
-    ):
+        var: str,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        data_format: str = "numpy",
+        **kwargs: Any,
+    ) -> tuple[dict[str, Any], Any, Any, Any]:
         """
         Generates 2D farm flow figure in a horizontal xy-plane.
 
         Parameters
         ----------
-        var: str
+        var
             The variable name
-        vmin: float, optional
+        vmin
             The minimal variable value
-        vmax: float, optional
+        vmax
             The maximal variable value
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        kwargs: dict, optional
+        kwargs
             Additional parameters for SliceData.get_states_data_xy
 
         Returns
         -------
-        parameters: dict
+        parameters
             The parameters used
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        states: numpy.ndarray, optional
+        states
             The states indices
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -686,42 +697,42 @@ class FlowPlots2D(SliceData):
 
         return pars, data, states, gdata
 
-    def get_states_data_xz(
+    def get_states_data_xz(  # type: ignore[override]
         self,
-        var,
-        x_direction=270.0,
-        vmin=None,
-        vmax=None,
-        data_format="numpy",
-        **kwargs,
-    ):
+        var: str,
+        x_direction: float = 270.0,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        data_format: str = "numpy",
+        **kwargs: Any,
+    ) -> tuple[dict[str, Any], Any, Any, Any]:
         """
         Generates 2D farm flow figure in a horizontal xz-plane.
 
         Parameters
         ----------
-        var: str
+        var
             The variable name
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        vmin: float, optional
+        vmin
             The minimal variable value
-        vmax: float, optional
+        vmax
             The maximal variable value
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        kwargs: dict, optional
+        kwargs
             Additional parameters for SliceData.get_states_data_xz
 
         Returns
         -------
-        parameters: dict
+        parameters
             The parameters used
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        states: numpy.ndarray, optional
+        states
             The states indices
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -749,42 +760,42 @@ class FlowPlots2D(SliceData):
 
         return pars, data, states, gdata
 
-    def get_states_data_yz(
+    def get_states_data_yz(  # type: ignore[override]
         self,
-        var,
-        x_direction=270.0,
-        vmin=None,
-        vmax=None,
-        data_format="numpy",
-        **kwargs,
-    ):
+        var: str,
+        x_direction: float = 270.0,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        data_format: str = "numpy",
+        **kwargs: Any,
+    ) -> tuple[dict[str, Any], Any, Any, Any]:
         """
         Generates 2D farm flow figure in a horizontal yz-plane.
 
         Parameters
         ----------
-        var: str
+        var
             The variable name
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        vmin: float, optional
+        vmin
             The minimal variable value
-        vmax: float, optional
+        vmax
             The maximal variable value
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        kwargs: dict, optional
+        kwargs
             Additional parameters for SliceData.get_states_data_yz
 
         Returns
         -------
-        parameters: dict
+        parameters
             The parameters used
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        states: numpy.ndarray, optional
+        states
             The states indices
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -814,47 +825,47 @@ class FlowPlots2D(SliceData):
 
     def gen_states_fig_xy(
         self,
-        states_data_xy,
-        title=None,
-        add_bar=True,
-        quiver_n=None,
-        quiver_pars={},
-        animated=False,
-        rotor_color=None,
-        **kwargs,
-    ):
+        states_data_xy: tuple[Any, Any, Any, Any],
+        title: Any = None,
+        add_bar: bool = True,
+        quiver_n: int | None = None,
+        quiver_pars: dict[str, Any] | None = None,
+        animated: bool = False,
+        rotor_color: Any = None,
+        **kwargs: Any,
+    ) -> Iterator[Any]:
         """
         Generates 2D farm flow figure in a horizontal xy-plane.
 
         Parameters
         ----------
-        states_data_xy: tuple
+        states_data_xy
             The pre-calculated data from get_states_data_xy,
             (parameters, data, states, grid_data)
-        title: str, optional
+        title
             The title
-        add_bar: bool
+        add_bar
             Add a color bar
-        quiver_n: int, optional
+        quiver_n
             Place a vector at each `n`th point
-        quiver_pars: dict, optional
+        quiver_pars
             Parameters for plt.quiver
-        animated: bool
+        animated
             Switch for usage for an animation
-        rotor_color: str, optional
+        rotor_color
             Indicate the rotor orientation by a colored line
-        kwargs: dict, optional
+        kwargs
             Additional parameters for get_fig(), e.g.
             xlabel, ylabel, levels, figsize, vlabel,
             fig, ax, cmap, ret_state, ret_im
 
         Yields
         ------
-        fig: matplotlib.Figure
+        fig
             The figure object
-        si: int, optional
+        si
             The state index
-        im: tuple, optional
+        im
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
 
@@ -881,6 +892,7 @@ class FlowPlots2D(SliceData):
 
         # define wind vector arrows:
         qpars = dict(angles="xy", scale_units="xy", scale=0.05)
+        quiver_pars = {} if quiver_pars is None else quiver_pars
         qpars.update(quiver_pars)
         quiv = (
             None
@@ -953,47 +965,47 @@ class FlowPlots2D(SliceData):
 
     def gen_states_fig_xz(
         self,
-        states_data_xz,
-        title=None,
-        add_bar=True,
-        quiver_n=None,
-        quiver_pars={},
-        animated=False,
-        rotor_color=None,
-        **kwargs,
-    ):
+        states_data_xz: tuple[Any, Any, Any, Any],
+        title: Any = None,
+        add_bar: bool = True,
+        quiver_n: int | None = None,
+        quiver_pars: dict[str, Any] | None = None,
+        animated: bool = False,
+        rotor_color: Any = None,
+        **kwargs: Any,
+    ) -> Iterator[Any]:
         """
         Generates 2D farm flow figure in a vertical xz-plane.
 
         Parameters
         ----------
-        states_data_xz: tuple
+        states_data_xz
             The pre-calculated data from get_states_data_xz,
             (parameters, data, states, grid_data)
-        title: str, optional
+        title
             The title
-        add_bar: bool
+        add_bar
             Add a color bar
-        quiver_n: int, optional
+        quiver_n
             Place a vector at ech `n`th point
-        quiver_pars: dict, optional
+        quiver_pars
             Parameters for plt.quiver
-        animated: bool
+        animated
             Switch for usage for an animation
-        rotor_color: str, optional
+        rotor_color
             Indicate the rotor orientation by a colored line
-        kwargs: dict, optional
+        kwargs
             Additional parameters for get_fig(), e.g.
             xlabel, ylabel, levels, figsize, vlabel,
             fig, ax, cmap, ret_state, ret_im
 
         Yields
         ------
-        fig: matplotlib.Figure
+        fig
             The figure object
-        si: int, optional
+        si
             The state index
-        im: tuple, optional
+        im
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
 
@@ -1021,6 +1033,7 @@ class FlowPlots2D(SliceData):
 
         # define wind vector arrows:
         qpars = dict(angles="xy", scale_units="xy", scale=0.05)
+        quiver_pars = {} if quiver_pars is None else quiver_pars
         qpars.update(quiver_pars)
         quiv = (
             None
@@ -1091,47 +1104,47 @@ class FlowPlots2D(SliceData):
 
     def gen_states_fig_yz(
         self,
-        states_data_yz,
-        title=None,
-        add_bar=True,
-        quiver_n=None,
-        quiver_pars={},
-        animated=False,
-        rotor_color=None,
-        **kwargs,
-    ):
+        states_data_yz: tuple[Any, Any, Any, Any],
+        title: Any = None,
+        add_bar: bool = True,
+        quiver_n: int | None = None,
+        quiver_pars: dict[str, Any] | None = None,
+        animated: bool = False,
+        rotor_color: Any = None,
+        **kwargs: Any,
+    ) -> Iterator[Any]:
         """
         Generates 2D farm flow figure in a vertical yz-plane.
 
         Parameters
         ----------
-        states_data_yz: tuple
+        states_data_yz
             The pre-calculated data from get_states_data_yz,
             (parameters, data, states, grid_data)
-        title: str, optional
+        title
             The title
-        add_bar: bool
+        add_bar
             Add a color bar
-        quiver_n: int, optional
+        quiver_n
             Place a vector at ech `n`th point
-        quiver_pars: dict, optional
+        quiver_pars
             Parameters for plt.quiver
-        animated: bool
+        animated
             Switch for usage for an animation
-        rotor_color: str, optional
+        rotor_color
             Indicate the rotor orientation by a colored line
-        kwargs: dict, optional
+        kwargs
             Additional parameters for get_fig(), e.g.
             xlabel, ylabel, levels, figsize, vlabel,
             fig, ax, cmap, ret_state, ret_im
 
         Yields
         ------
-        fig: matplotlib.Figure
+        fig
             The figure object
-        si: int, optional
+        si
             The state index
-        im: tuple, optional
+        im
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
 
@@ -1159,6 +1172,7 @@ class FlowPlots2D(SliceData):
 
         # define wind vector arrows:
         qpars = dict(angles="xy", scale_units="xy", scale=0.05)
+        quiver_pars = {} if quiver_pars is None else quiver_pars
         qpars.update(quiver_pars)
         quiv = (
             None
@@ -1230,59 +1244,59 @@ class FlowPlots2D(SliceData):
 
     def precalc_chunk_xy(
         self,
-        var,
-        mdata,
-        fdata,
-        resolution=100,
-        figsize=(8, 8),
-        n_img_points=None,
-        xmin=None,
-        ymin=None,
-        xmax=None,
-        ymax=None,
-        z=None,
-        xspace=500.0,
-        yspace=500.0,
-    ):
+        var: str,
+        mdata: MData,
+        fdata: FData,
+        resolution: float = 100.0,
+        figsize: tuple[int, int] = (8, 8),
+        n_img_points: tuple[int, int] | None = None,
+        xmin: float | None = None,
+        ymin: float | None = None,
+        xmax: float | None = None,
+        ymax: float | None = None,
+        z: float | None = None,
+        xspace: float = 500.0,
+        yspace: float = 500.0,
+    ) -> tuple[Any, Any, Any]:
         """
         Pre-calculation of data for xy flow plots.
 
         Parameters
         ----------
-        var: str
+        var
             The variable name
-        mdata: foxes.core.TData
+        mdata
             The model data
-        fdata: foxes.core.TData
+        fdata
             The farm data
-        resolution: float, optional
+        resolution
             The resolution in m
-        figsize: tuple, optional
+        figsize
             The figsize for plt.Figure
-        n_img_points: int, optional
+        n_img_points
             The number of image points along each axis
-        xmin: float, optional
+        xmin
             The minimal x position
-        ymin: float, optional
+        ymin
             The minimal y position
-        xmax: float, optional
+        xmax
             The maximal x position
-        ymax: float, optional
+        ymax
             The maximal y position
-        z: float, optional
+        z
             The z position
-        xspace: float, optional
+        xspace
             Additional space around turbines
-        yspace: float, optional
+        yspace
             Additional space around turbines
 
         Returns
         -------
-        data: numpy.ndarray
+        data
             The calculated data
-        sinds: np.ndarray
+        sinds
             The state indices
-        gdata: tuple
+        gdata
             The grid data
 
         """

@@ -81,9 +81,7 @@ class InitFarmData(FarmDataModel):
         n_turbines = algo.n_turbines
 
         # initialize with farm order, will be corrected later:
-        order: np.ndarray = np.zeros(
-            (n_states, n_turbines), dtype=config.dtype_int
-        )
+        order: np.ndarray = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
         order[:] = np.arange(n_turbines)[None, :]
         ssel = np.zeros_like(order)
         ssel[:] = np.arange(n_states)[:, None]

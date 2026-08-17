@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
+import pandas as pd
 
 from foxes.config import config, get_output_path
 from foxes.utils import PandasFileHelper, new_instance, all_subclasses
@@ -16,11 +17,11 @@ class Output:
 
     Attributes
     ----------
-    out_dir: pathlib.Path
+    out_dir
         The output file directory
-    out_fname_fun: Function, optional
+    out_fname_fun
         Modifies file names by f(fname)
-    nofig: bool
+    nofig
         Do not show figures
 
     :group: output
@@ -38,11 +39,11 @@ class Output:
 
         Parameters
         ----------
-        out_dir: str, optional
+        out_dir
             The output file directory
-        out_fname_fun: Function, optional
+        out_fname_fun
             Modifies file names by f(fname)
-        nofig: bool
+        nofig
             Do not show figures
 
         """
@@ -62,12 +63,12 @@ class Output:
 
         Parameters
         ----------
-        fname: str
+        fname
             The file name
 
         Returns
         -------
-        fpath: pathlib.Path
+        fpath
             The total file path
 
         """
@@ -79,7 +80,7 @@ class Output:
     def write(
         self,
         file_name: str,
-        data,
+        data: pd.DataFrame,
         format_col2var: dict[str, str] | None = None,
         format_dict: dict[str, str] | None = None,
         **kwargs: Any,
@@ -91,16 +92,17 @@ class Output:
 
         Parameters
         ----------
-        file_name: str
+        file_name
             The output file name
-        data: pandas.DataFrame
+        data
             The data
-        format_col2var: dict
+        format_col2var
             Mapping from column names to foxes variables,
             for formatting
-        format_dict: dict
-            Dictionary with format entries for columns, e.g.
-            {FV.P: '{:.4f}'}. Note that the keys are foxes variables
+        format_dict
+            Dictionary with format entries for columns, for example
+            ``FV.P`` mapped to ``'{:.4f}'``. Note that the keys are foxes
+            variables.
 
         """
         format_col2var = {} if format_col2var is None else format_col2var
@@ -126,18 +128,18 @@ class Output:
             print(n)
 
     @classmethod
-    def new(cls, output_type: str, *args: Any, **kwargs: Any) -> Any:
+    def new(cls, output_type: str, *args: Any, **kwargs: Any) -> "Output":
         """
         Run-time output model factory.
 
         Parameters
         ----------
-        output_type: string
+        output_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         """
-        return new_instance(cls, output_type, *args, **kwargs)
+        return cast(Output, new_instance(cls, output_type, *args, **kwargs))

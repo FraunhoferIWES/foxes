@@ -2,7 +2,7 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 import numpy as np
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from foxes.core import TurbineModel, TData
 import foxes.variables as FV
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData
     from foxes.core.model import LoadedData
+    from foxes.core.model import Model
 
 
 class RotorCentreCalc(TurbineModel):
@@ -84,7 +85,7 @@ class RotorCentreCalc(TurbineModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def sub_models(self) -> list[Any]:
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 

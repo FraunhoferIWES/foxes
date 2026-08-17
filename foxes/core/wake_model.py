@@ -230,7 +230,7 @@ class WakeModel(Model):
             Additional parameters for constructor
 
         """
-        return new_instance(cls, wmodel_type, *args, **kwargs)
+        return cast(WakeModel, new_instance(cls, wmodel_type, *args, **kwargs))
 
 
 class SingleTurbineWakeModel(WakeModel):
@@ -471,7 +471,9 @@ class TurbineInductionModel(SingleTurbineWakeModel):
             Additional parameters for constructor
 
         """
-        return new_instance(cls, induction_type, *args, **kwargs)
+        return cast(
+            TurbineInductionModel, new_instance(cls, induction_type, *args, **kwargs)
+        )
 
 
 class WakeK(Model):

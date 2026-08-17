@@ -208,7 +208,7 @@ class WindFarm:
         algo
             The algorithm.
         turbines
-            The new list of turbines. If None, the turbine list is cleared.
+            The new turbine collection. If None, the turbine collection is cleared.
 
         """
         assert not algo.initialized, (
@@ -459,7 +459,7 @@ class WindFarm:
         Returns
         -------
         wf_list
-            A list of wind farm names for all turbines
+            Wind farm names assigned to all turbines
 
         """
         return [
@@ -515,7 +515,7 @@ class WindFarm:
         Returns
         -------
         cluster_list
-            A list of cluster names for all turbines
+            Cluster names assigned to all turbines
 
         """
         return [

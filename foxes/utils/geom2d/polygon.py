@@ -1,9 +1,11 @@
+from typing import Any, cast
+
 import numpy as np
 from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
-from typing import Any
+from matplotlib.axes import Axes
 
 from .area_geometry import AreaGeometry
 
@@ -52,7 +54,7 @@ class ClosedPolygon(AreaGeometry):
             The minimal (x,y) point, shape = (2,)
 
         """
-        return np.min(self.points, axis=0)
+        return cast(np.ndarray, np.min(self.points, axis=0))
 
     def p_max(self) -> np.ndarray:
         """
@@ -64,7 +66,7 @@ class ClosedPolygon(AreaGeometry):
             The maximal (x,y) point, shape = (2,)
 
         """
-        return np.max(self.points, axis=0)
+        return cast(np.ndarray, np.max(self.points, axis=0))
 
     def points_distance(
         self, points: np.ndarray, return_nearest: bool = False
@@ -131,9 +133,9 @@ class ClosedPolygon(AreaGeometry):
                 del x, sel
 
         if return_nearest:
-            return dists, minp
+            return cast(tuple[np.ndarray, np.ndarray], (dists, minp))
         else:
-            return dists
+            return cast(np.ndarray, dists)
 
     def points_inside(self, points: np.ndarray) -> np.ndarray:
         """
@@ -150,11 +152,11 @@ class ClosedPolygon(AreaGeometry):
             True if point is inside, shape: (n_points,)
 
         """
-        return self.poly.contains_points(points)
+        return cast(np.ndarray, self.poly.contains_points(points))
 
     def add_to_figure(
         self,
-        ax,
+        ax: Axes,
         show_boundary: bool = True,
         fill_mode: str | None = None,
         pars_boundary: dict[str, Any] | None = None,

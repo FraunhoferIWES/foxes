@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from xarray import Dataset
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import WakeFrame, MData, FData, TData
 from foxes.utils import wd2uv
@@ -14,6 +14,7 @@ import foxes.constants as FC
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
     from foxes.core.model import LoadedData
+    from foxes.core.states import States
 
 
 class Timelines(WakeFrame):
@@ -65,7 +66,7 @@ class Timelines(WakeFrame):
     def _precalc_data(
         self,
         algo: Algorithm,
-        states: Any,
+        states: States,
         heights: np.ndarray,
         verbosity: int,
         needs_res: bool = False,
@@ -112,14 +113,14 @@ class Timelines(WakeFrame):
 
         # prepare tdata:
         n_states = states.size()
-        data = {
+        data: dict[str, np.ndarray] = {
             v: np.zeros((n_states, 1, 1), dtype=config.dtype_double)
             for v in states.output_point_vars(algo)
         }
         pdims: dict[str, tuple[str, ...]] = {
             v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in data.keys()
         }
-        points = np.zeros((n_states, 1, 3), dtype=config.dtype_double)
+        points: np.ndarray = np.zeros((n_states, 1, 3), dtype=config.dtype_double)
 
         # calculate all heights:
         timelines_data: dict[str, tuple[tuple[str, ...], list[np.ndarray]]] = {
@@ -131,10 +132,13 @@ class Timelines(WakeFrame):
                 print(f"  Height: {h} m")
 
             points[..., 2] = h
-            tdata = TData.from_points(
-                points=points,
-                data=data,
-                dims=pdims,
+            tdata = cast(
+                TData,
+                TData.from_points(
+                    points=points,
+                    data=data,
+                    dims=pdims,
+                ),
             )
 
             res = states.calculate(algo, mdata, fdata, tdata)
@@ -279,7 +283,7 @@ class Timelines(WakeFrame):
         isel
             The index subset selection dictionary
         verbosity
-            The verbosity level, 0 = silent
+        states: States,
 
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)

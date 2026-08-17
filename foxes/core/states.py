@@ -2,7 +2,7 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any, Generator, cast
 
 from foxes.utils import new_instance
 
@@ -134,7 +134,7 @@ class States(PointDataModel):
             Additional keyword arguments for the constructor.
 
         """
-        return new_instance(cls, states_type, *args, **kwargs)
+        return cast(States, new_instance(cls, states_type, *args, **kwargs))
 
 
 class ExtendedStates(States):

@@ -10,29 +10,29 @@ import foxes.constants as FC
 
 
 def calc_point_results(
-    algo,
-    g_pts,
-    farm_results=None,
-    seq_iter=None,
-    verbosity=0,
-    **kwargs,
-):
+    algo: Any,
+    g_pts: np.ndarray,
+    farm_results: Dataset | None = None,
+    seq_iter: Any = None,
+    verbosity: int = 0,
+    **kwargs: Any,
+) -> Dataset:
     """
     Helper function that calculates results at grid points.
 
     Parameters
     ----------
-    algo: foxes.Algorithm
+    algo
         The algorithm for point calculation
-    g_pts: numpy.ndarray
+    g_pts
         The grid points, shape: (n_states, n_x, n_y, 3)
-    farm_results: xarray.Dataset, optional
+    farm_results
         The farm results
-    seq_iter: foxes.algorithms.sequential.SequentialIter, optional
+    seq_iter
         The sequential iterator
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    kwargs: dict, optional
+    kwargs
         Additional parameters for algo.calc_points
 
     """
@@ -48,62 +48,62 @@ def calc_point_results(
 
 
 def get_grid_xy(
-    farm_results,
-    resolution=None,
-    n_img_points=None,
-    xmin=None,
-    ymin=None,
-    xmax=None,
-    ymax=None,
-    z=None,
-    xspace=500.0,
-    yspace=500.0,
-    states_sel=None,
-    states_isel=None,
-    verbosity=0,
-):
+    farm_results: Dataset,
+    resolution: Any = None,
+    n_img_points: Any = None,
+    xmin: Any = None,
+    ymin: Any = None,
+    xmax: Any = None,
+    ymax: Any = None,
+    z: Any = None,
+    xspace: float = 500.0,
+    yspace: float = 500.0,
+    states_sel: Any = None,
+    states_isel: Any = None,
+    verbosity: int = 0,
+) -> tuple[np.ndarray, np.ndarray, Any, np.ndarray]:
     """
     Helper function that generates 2D grid in a horizontal xy-plane.
 
     Parameters
     ----------
-    farm_results: xarray.Dataset
+    farm_results
         The farm results. The calculated variables have
         dimensions (state, turbine)
-    resolution: float
+    resolution
         The resolution in m
-    n_img_points: tuple of int, optional
+    n_img_points
         The number of image points (n, m) in the two directions
-    xmin: float
+    xmin
         The min x coordinate, or None for automatic
-    ymin: float
+    ymin
         The min y coordinate, or None for automatic
-    xmax: float
+    xmax
         The max x coordinate, or None for automatic
-    ymax: float
+    ymax
         The max y coordinate, or None for automatic
-    z: float
+    z
         The z coordinate of the plane
-    xspace: float
+    xspace
         The extra space in x direction, before and after wind farm
-    yspace: float
+    yspace
         The extra space in y direction, before and after wind farm
-    states_sel: list, optional
+    states_sel
         Reduce to selected states
-    states_isel: list, optional
+    states_isel
         Reduce to the selected states indices
-    verbosity: int, optional
+    verbosity
         The verbosity level
 
     Returns
     -------
-    x_pos: numpy.ndarray
+    x_pos
         The x grid positions, shape: (n_x,)
-    y_pos: numpy.ndarray
+    y_pos
         The y grid positions, shape: (n_y,)
-    z_pos: float
+    z_pos
         The z position of the grid
-    g_pts: numpy.ndarray
+    g_pts
         The grid points, shape: (n_states, n_pts, 3)
 
     """
@@ -153,7 +153,7 @@ def get_grid_xy(
     N_x, N_y = len(x_pos), len(y_pos)
     n_pts = len(x_pos) * len(y_pos)
     z_pos = 0.5 * (z_min + z_max)
-    g_pts = np.zeros((n_states, N_x, N_y, 3), dtype=config.dtype_double)
+    g_pts: np.ndarray = np.zeros((n_states, N_x, N_y, 3), dtype=config.dtype_double)
     g_pts[:, :, :, 0] = x_pos[None, :, None]
     g_pts[:, :, :, 1] = y_pos[None, None, :]
     g_pts[:, :, :, 2] = z_pos
@@ -176,65 +176,65 @@ def get_grid_xy(
 
 
 def get_grid_xz(
-    farm_results,
-    resolution=None,
-    n_img_points=None,
-    x_direction=270,
-    xmin=None,
-    zmin=0.0,
-    xmax=None,
-    zmax=None,
-    y=None,
-    xspace=500.0,
-    zspace=500.0,
-    states_sel=None,
-    states_isel=None,
-    verbosity=0,
-):
+    farm_results: Dataset,
+    resolution: Any = None,
+    n_img_points: Any = None,
+    x_direction: Any = 270,
+    xmin: Any = None,
+    zmin: float = 0.0,
+    xmax: Any = None,
+    zmax: Any = None,
+    y: Any = None,
+    xspace: float = 500.0,
+    zspace: float = 500.0,
+    states_sel: Any = None,
+    states_isel: Any = None,
+    verbosity: int = 0,
+) -> tuple[np.ndarray, Any, np.ndarray, np.ndarray]:
     """
     Helper function that generates 2D grid in a vertical xz-plane.
 
     Parameters
     ----------
-    farm_results: xarray.Dataset
+    farm_results
         The farm results. The calculated variables have
         dimensions (state, turbine)
-    resolution: float, optional
+    resolution
         The resolution in m
-    n_img_points: tuple of int, optional
+    n_img_points
         The number of image points (n, m) in the two directions
-    x_direction: float
+    x_direction
         The direction of the x axis, 0 = north
-    xmin: float
+    xmin
         The min x coordinate, or None for automatic
-    zmin: float
+    zmin
         The min z coordinate
-    xmax: float
+    xmax
         The max x coordinate, or None for automatic
-    zmax: float
+    zmax
         The max z coordinate, or None for automatic
-    y: float
+    y
         The y coordinate of the plane
-    xspace: float
+    xspace
         The extra space in x direction, before and after wind farm
-    zspace: float
+    zspace
         The extra space in z direction, below and above wind farm
-    states_sel: list, optional
+    states_sel
         Reduce to selected states
-    states_isel: list, optional
+    states_isel
         Reduce to the selected states indices
-    verbosity: int, optional
+    verbosity
         The verbosity level
 
     Returns
     -------
-    x_pos: numpy.ndarray
+    x_pos
         The x grid positions, shape: (n_x,)
-    y_pos: float
+    y_pos
         The y position of the grid
-    z_pos: numpy.ndarray
+    z_pos
         The z grid positions, shape: (n_z,)
-    g_pts: numpy.ndarray
+    g_pts
         The grid points, shape: (n_states, n_pts, 3)
 
     """
@@ -250,7 +250,7 @@ def get_grid_xz(
     n_y = np.cross(n_z, n_x)
 
     # project to axes:
-    xyz = np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double)
+    xyz: np.ndarray = np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double)
     xyz[:, :, 0] = farm_results[FV.X]
     xyz[:, :, 1] = farm_results[FV.Y]
     xyz[:, :, 2] = farm_results[FV.H]
@@ -299,7 +299,7 @@ def get_grid_xz(
     N_x, N_z = len(x_pos), len(z_pos)
     n_pts = len(x_pos) * len(z_pos)
     y_pos = 0.5 * (y_min + y_max)
-    g_pts = np.zeros((n_states, N_x, N_z, 3), dtype=config.dtype_double)
+    g_pts: np.ndarray = np.zeros((n_states, N_x, N_z, 3), dtype=config.dtype_double)
     g_pts[:] += x_pos[None, :, None, None] * n_x[None, None, None, :]
     g_pts[:] += y_pos * n_y[None, None, None, :]
     g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
@@ -322,65 +322,65 @@ def get_grid_xz(
 
 
 def get_grid_yz(
-    farm_results,
-    resolution=None,
-    n_img_points=None,
-    x_direction=270,
-    ymin=None,
-    zmin=0.0,
-    ymax=None,
-    zmax=None,
-    x=None,
-    yspace=500.0,
-    zspace=500.0,
-    states_sel=None,
-    states_isel=None,
-    verbosity=0,
-):
+    farm_results: Dataset,
+    resolution: Any = None,
+    n_img_points: Any = None,
+    x_direction: Any = 270,
+    ymin: Any = None,
+    zmin: float = 0.0,
+    ymax: Any = None,
+    zmax: Any = None,
+    x: Any = None,
+    yspace: float = 500.0,
+    zspace: float = 500.0,
+    states_sel: Any = None,
+    states_isel: Any = None,
+    verbosity: int = 0,
+) -> tuple[Any, np.ndarray, np.ndarray, np.ndarray]:
     """
     Helper function that generates 2D grid in a vertical yz-plane.
 
     Parameters
     ----------
-    farm_results: xarray.Dataset
+    farm_results
         The farm results. The calculated variables have
         dimensions (state, turbine)
-    resolution: float, optional
+    resolution
         The resolution in m
-    n_img_points: tuple of int, optional
+    n_img_points
         The number of image points (n, m) in the two directions
-    x_direction: float
+    x_direction
         The direction of the x axis, 0 = north
-    ymin: float
+    ymin
         The min y coordinate, or None for automatic
-    zmin: float
+    zmin
         The min z coordinate
-    ymax: float
+    ymax
         The max y coordinate, or None for automatic
-    zmax: float
+    zmax
         The max z coordinate, or None for automatic
-    x: float
+    x
         The x coordinate of the plane
-    yspace: float
+    yspace
         The extra space in y direction, before and after wind farm
-    zspace: float
+    zspace
         The extra space in z direction, below and above wind farm
-    states_sel: list, optional
+    states_sel
         Reduce to selected states
-    states_isel: list, optional
+    states_isel
         Reduce to the selected states indices
-    verbosity: int, optional
+    verbosity
         The verbosity level
 
     Returns
     -------
-    x_pos: float
+    x_pos
         The x position of the grid
-    y_pos: numpy.ndarray
+    y_pos
         The y grid positions, shape: (n_y,)
-    z_pos: numpy.ndarray
+    z_pos
         The z grid positions, shape: (n_z,)
-    g_pts: numpy.ndarray
+    g_pts
         The grid points, shape: (n_states, n_pts, 3)
 
     """
@@ -396,7 +396,7 @@ def get_grid_yz(
     n_y = np.cross(n_z, n_x)
 
     # project to axes:
-    xyz = np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double)
+    xyz: np.ndarray = np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double)
     xyz[:, :, 0] = farm_results[FV.X]
     xyz[:, :, 1] = farm_results[FV.Y]
     xyz[:, :, 2] = farm_results[FV.H]
@@ -445,7 +445,7 @@ def get_grid_yz(
     N_y, N_z = len(y_pos), len(z_pos)
     n_pts = len(y_pos) * len(z_pos)
     x_pos = 0.5 * (x_min + x_max)
-    g_pts = np.zeros((n_states, N_y, N_z, 3), dtype=config.dtype_double)
+    g_pts: np.ndarray = np.zeros((n_states, N_y, N_z, 3), dtype=config.dtype_double)
     g_pts[:] += x_pos * n_x[None, None, None, :]
     g_pts[:] += y_pos[None, :, None, None] * n_y[None, None, None, :]
     g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
@@ -475,21 +475,18 @@ def np2np_p(
 
     Parameters
     ----------
-    data: dict
-        The data on the grid. Key: variable name,
-        value: numpy.ndarray with shape (n_gpts,)
-    a_pos: numpy.ndarray
-        The first axis coordinates, e.g. x_pos,
-        shape: (n_a,)
-    b_pos: numpy.ndarray
-        The second axis coordinates, e.g. y_pos,
-        shape: (n_b,)
+    data
+        The data on the grid, as a mapping from variable name to values.
+    a_pos
+        The first axis coordinates, e.g. x_pos, with shape `(n_a,)`.
+    b_pos
+        The second axis coordinates, e.g. y_pos, with shape `(n_b,)`.
 
     Returns
     -------
-    out: dict
+    out
         The data on the grid. Key: variable name,
-        value: numpy.ndarray with shape (n_a, n_b, n_vars)
+        value
 
     """
     n_a = len(a_pos)
@@ -512,23 +509,21 @@ def np2np_sp(
 
     Parameters
     ----------
-    data: dict
+    data
         The data on the grid. Key: variable name,
-        value: numpy.ndarray with shape (n_states, n_gpts)
-    states: numpy.ndarray
-        The states index, shape: (n_states,)
-    a_pos: numpy.ndarray
-        The first axis coordinates, e.g. x_pos,
-        shape: (n_a,)
-    b_pos: numpy.ndarray
-        The second axis coordinates, e.g. y_pos,
-        shape: (n_b,)
+        value
+    states
+        The states index, with shape `(n_states,)`.
+    a_pos
+        The first axis coordinates, e.g. x_pos, with shape `(n_a,)`.
+    b_pos
+        The second axis coordinates, e.g. y_pos, with shape `(n_b,)`.
 
     Returns
     -------
-    out: dict
+    out
         The data on the grid. Key: variable name,
-        value: numpy.ndarray with shape (n_states, n_a, n_b, n_vars)
+        value
 
     """
     n_s = len(states)
@@ -553,23 +548,20 @@ def np2pd_p(
 
     Parameters
     ----------
-    data: dict
-        The data on the grid. Key: variable name,
-        value: numpy.ndarray with shape (n_gpts,)
-    a_pos: numpy.ndarray
-        The first axis coordinates, e.g. x_pos,
-        shape: (n_a,)
-    b_pos: numpy.ndarray
-        The second axis coordinates, e.g. y_pos,
-        shape: (n_b,)
-    ori: str
+    data
+        The data on the grid, as a mapping from variable name to values.
+    a_pos
+        The first axis coordinates, e.g. x_pos, with shape `(n_a,)`.
+    b_pos
+        The second axis coordinates, e.g. y_pos, with shape `(n_b,)`.
+    ori
         The orientation, 'xy' or 'xz' or 'yz'
-    label_map: dict
+    label_map
         The mapping from original to new field names
 
     Returns
     -------
-    out: pandas.DataFrame
+    out
         The multi-indexed DataFrame object
 
     """
@@ -595,25 +587,23 @@ def np2pd_sp(
 
     Parameters
     ----------
-    data: dict
+    data
         The data on the grid. Key: variable name,
-        value: numpy.ndarray with shape (n_states, n_gpts,)
-    states: numpy.ndarray
-        The states index, shape: (n_states,)
-    a_pos: numpy.ndarray
-        The first axis coordinates, e.g. x_pos,
-        shape: (n_a,)
-    b_pos: numpy.ndarray
-        The second axis coordinates, e.g. y_pos,
-        shape: (n_b,)
-    ori: str
+        value
+    states
+        The states index, with shape `(n_states,)`.
+    a_pos
+        The first axis coordinates, e.g. x_pos, with shape `(n_a,)`.
+    b_pos
+        The second axis coordinates, e.g. y_pos, with shape `(n_b,)`.
+    ori
         The orientation, 'xy' or 'xz' or 'yz'
-    label_map: dict
+    label_map
         The mapping from original to new field names
 
     Returns
     -------
-    out: pandas.DataFrame
+    out
         The multi-indexed DataFrame object
 
     """
@@ -642,23 +632,20 @@ def np2xr_p(
 
     Parameters
     ----------
-    data: dict
-        The data on the grid. Key: variable name,
-        value: numpy.ndarray with shape (n_gpts,)
-    a_pos: numpy.ndarray
-        The first axis coordinates, e.g. x_pos,
-        shape: (n_a,)
-    b_pos: numpy.ndarray
-        The second axis coordinates, e.g. y_pos,
-        shape: (n_b,)
-    ori: str
+    data
+        The data on the grid, as a mapping from variable name to values.
+    a_pos
+        The first axis coordinates, e.g. x_pos, with shape `(n_a,)`.
+    b_pos
+        The second axis coordinates, e.g. y_pos, with shape `(n_b,)`.
+    ori
         The orientation, 'xy' or 'xz' or 'yz'
-    label_map: dict
+    label_map
         The mapping from original to new field names
 
     Returns
     -------
-    out: xarray.Dataset
+    out
         The Dataset object
 
     """
@@ -692,25 +679,23 @@ def np2xr_sp(
 
     Parameters
     ----------
-    data: dict
+    data
         The data on the grid. Key: variable name,
-        value: numpy.ndarray with shape (n_states, n_gpts,)
-    states: numpy.ndarray
-        The states index, shape: (n_states,)
-    a_pos: numpy.ndarray
-        The first axis coordinates, e.g. x_pos,
-        shape: (n_a,)
-    b_pos: numpy.ndarray
-        The second axis coordinates, e.g. y_pos,
-        shape: (n_b,)
-    ori: str
+        value
+    states
+        The states index, with shape `(n_states,)`.
+    a_pos
+        The first axis coordinates, e.g. x_pos, with shape `(n_a,)`.
+    b_pos
+        The second axis coordinates, e.g. y_pos, with shape `(n_b,)`.
+    ori
         The orientation, 'xy' or 'xz' or 'yz'
-    label_map: dict
+    label_map
         The mapping from original to new field names
 
     Returns
     -------
-    out: xarray.Dataset
+    out
         The Dataset object
 
     """
@@ -737,44 +722,44 @@ def np2xr_sp(
 
 
 def data2xr(
-    x_pos,
-    y_pos,
-    z_pos,
-    point_results,
-    vars=None,
-    state_mean=False,
-    to_file=None,
-    **kwargs,
-):
+    x_pos: Any,
+    y_pos: Any,
+    z_pos: Any,
+    point_results: Dataset,
+    vars: list[str] | None = None,
+    state_mean: bool | np.ndarray = False,
+    to_file: str | None = None,
+    **kwargs: Any,
+) -> Dataset:
     """
     Converts the image data to xarray data
 
     Parameter
     ---------
-    x_pos: numpy.ndarray or float
+    x_pos
         The x grid positions, shape: (n_x, 3)
-    y_pos: numpy.ndarray or float
+    y_pos
         The y grid positions, shape: (n_y, 3)
-    z_pos: numpy.ndarray or float
+    z_pos
         The z grid positions, shape: (n_z, 3)
-    point_results: xarray.Dataset
+    point_results
         Results of calc_points
-    vars: list of str, optional
+    vars
         Variable selection, or None for all
-    state_mean: numpy.ndarray or bool
+    state_mean
         Computes mean over states, optionally with
         given weights
-    round: dict, optional
+    round
         Round variables to given digits, or 'auto'
         for default
-    to_file: str, optional
+    to_file
         Write to nc file
-    kwargs: dict, optional
+    kwargs
         Additional parameters for write_nc
 
     Returns
     -------
-    ds: xarray.Dataset
+    ds
         The xarray data object
 
     """

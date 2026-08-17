@@ -1,4 +1,6 @@
-from typing import Any
+from typing import Any, TypeVar, cast
+
+T = TypeVar("T")
 
 
 def all_subclasses(cls: type[Any]) -> set[type[Any]]:
@@ -66,8 +68,8 @@ def new_cls(base_cls: type[Any], cls_name: str | None) -> type[Any] | None:
 
 
 def new_instance(
-    base_cls: type[Any], cls_name: str | None, *args: Any, **kwargs: Any
-) -> Any:
+    base_cls: type[T], cls_name: str | None, *args: Any, **kwargs: Any
+) -> T | None:
     """
     Run-time factory.
 
@@ -95,4 +97,4 @@ def new_instance(
     if cls is None:
         return None
     else:
-        return cls(*args, **kwargs)
+        return cast(T, cls(*args, **kwargs))

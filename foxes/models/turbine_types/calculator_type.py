@@ -2,7 +2,7 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 from foxes.core import TurbineType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
     import numpy as np
@@ -20,7 +20,7 @@ class CalculatorType(TurbineType):
 
     def __init__(
         self,
-        func: Any,
+        func: Callable[..., dict[str, np.ndarray]],
         out_vars: list[str],
         *args: Any,
         needs_rews2: bool = False,

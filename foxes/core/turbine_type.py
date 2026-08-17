@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 import numpy as np
-from typing import Any
+from typing import Any, cast
 
 from foxes.utils import new_instance
 import foxes.constants as FC
@@ -34,22 +34,22 @@ class TurbineType(TurbineModel):
         The type of air density correction for the power curve, choices:
         "rho": apply the air density ratio (rho / rho_ref) as a factor to the power curve
         "rews": correct the rotor equivalent wind speed by the air density ratio (rho / rho_ref)^3
-        None: no air density correction applied to the power curve
+        No air density correction applied to the power curve
     rho_corr_ct
         The type of air density correction for the ct curve, choices:
         "rho": apply the air density ratio (rho / rho_ref) as a factor to the ct curve
         "rews": correct the rotor equivalent wind speed by the air density ratio (rho / rho_ref)^2
-        None: no air density correction applied to the ct curve
+        No air density correction applied to the ct curve
     yawm_corr_P
         The type of yaw misalignment correction for the power curve, choices:
         "factor": apply a correction factor to the power curve
         "wind_speed": correct the rotor equivalent wind speed by a yaw misalignment factor
-        None: no yaw misalignment correction applied to the power curve
+        No yaw misalignment correction applied to the power curve
     yawm_corr_ct
         The type of yaw misalignment correction for the ct curve, choices:
         "factor": apply a correction factor to the ct curve
         "wind_speed": correct the rotor equivalent wind speed by a yaw misalignment factor
-        None: no yaw misalignment correction applied to the ct curve
+        No yaw misalignment correction applied to the ct curve
     yawm_corr_p_P
         The exponent for yaw dependency of P
     yawm_corr_p_ct
@@ -62,10 +62,10 @@ class TurbineType(TurbineModel):
     def __init__(
         self,
         name: str | None = None,
-        D: float | None = None,
-        H: float | None = None,
+        D: float | np.ndarray | None = None,
+        H: float | np.ndarray | None = None,
         P_nominal: float | None = None,
-        P_unit="kW",
+        P_unit: str = "kW",
         rho_corr_P: str | None = "wind_speed",
         rho_corr_ct: str | None = None,
         yawm_corr_P: str | None = "wind_speed",
@@ -287,4 +287,4 @@ class TurbineType(TurbineModel):
             Additional parameters for constructor
 
         """
-        return new_instance(cls, ttype_type, *args, **kwargs)
+        return cast(TurbineType, new_instance(cls, ttype_type, *args, **kwargs))

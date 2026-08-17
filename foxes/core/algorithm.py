@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import xarray as xr
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.data import StaticData
 from foxes.utils import Dict, new_instance
@@ -961,4 +961,4 @@ class Algorithm(Model):
             Additional parameters for the constructor
 
         """
-        return new_instance(cls, algo_type, *args, **kwargs)
+        return cast(Algorithm, new_instance(cls, algo_type, *args, **kwargs))

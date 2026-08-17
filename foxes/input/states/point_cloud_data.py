@@ -52,15 +52,15 @@ class PointCloudData(DatasetStates):
 
     def __init__(
         self,
-        *args,
-        states_coord="Time",
-        point_coord="point",
-        x_ncvar="x",
-        y_ncvar="y",
-        h_ncvar=None,
-        weight_ncvar=None,
-        **kwargs,
-    ):
+        *args: Any,
+        states_coord: str = "Time",
+        point_coord: str = "point",
+        x_ncvar: str = "x",
+        y_ncvar: str = "y",
+        h_ncvar: str | None = None,
+        weight_ncvar: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -84,7 +84,8 @@ class PointCloudData(DatasetStates):
             Additional parameters for the base class
 
         """
-        super().__init__(*args, bounds_extra_space=None, **kwargs)
+        kwargs["bounds_extra_space"] = None
+        super().__init__(*args, **kwargs)
 
         self.states_coord = states_coord
         self.point_coord = point_coord
@@ -423,12 +424,12 @@ class WeibullPointCloud(PointCloudData):
 
     def __init__(
         self,
-        *args,
-        wd_coord,
-        ws_coord=None,
-        ws_bins=None,
-        **kwargs,
-    ):
+        *args: Any,
+        wd_coord: str,
+        ws_coord: str | None = None,
+        ws_bins: Any = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -448,6 +449,9 @@ class WeibullPointCloud(PointCloudData):
             Keyword arguments for the base class
 
         """
+        kwargs.pop("states_coord", None)
+        kwargs.pop("time_format", None)
+        kwargs.pop("load_mode", None)
         super().__init__(
             *args,
             states_coord=wd_coord,
@@ -660,12 +664,12 @@ class TurbinePointCloud(DatasetStates):
 
     def __init__(
         self,
-        *args,
-        states_coord=FC.STATE,
-        turbine_coord=FC.TURBINE,
-        weight_ncvar=None,
-        **kwargs,
-    ):
+        *args: Any,
+        states_coord: str = FC.STATE,
+        turbine_coord: str = FC.TURBINE,
+        weight_ncvar: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
@@ -685,12 +689,9 @@ class TurbinePointCloud(DatasetStates):
         """
         # Turbine-point-cloud data is indexed by turbine, not by global X/Y grids.
         # Disable XY-bound filtering from DatasetStates to avoid requiring X/Y cmap.
-        super().__init__(
-            *args,
-            load_mode="preload",
-            bounds_extra_space=None,
-            **kwargs,
-        )
+        kwargs["load_mode"] = "preload"
+        kwargs["bounds_extra_space"] = None
+        super().__init__(*args, **kwargs)
 
         self.states_coord = states_coord
         self.turbine_coord = turbine_coord

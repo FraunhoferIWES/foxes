@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from xarray import Dataset
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
 from foxes.utils import write_nc
@@ -11,6 +11,9 @@ import foxes.constants as FC
 
 from .output import Output
 
+if TYPE_CHECKING:
+    from foxes.core import Algorithm
+
 
 class PointCalculator(Output):
     """
@@ -18,26 +21,26 @@ class PointCalculator(Output):
 
     Attributes
     ----------
-    algo: foxes.Algorithm
+    algo
         The algorithm for point calculation
-    farm_results: xarray.Dataset
+    farm_results
         The farm results
 
     :group: output
 
     """
 
-    def __init__(self, algo, farm_results, **kwargs: Any) -> None:
+    def __init__(self, algo: Algorithm, farm_results: Dataset, **kwargs: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        algo: foxes.Algorithm
+        algo
             The algorithm for point calculation
-        farm_results: xarray.Dataset
+        farm_results
             The farm results
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -52,7 +55,7 @@ class PointCalculator(Output):
         states_mean: bool = False,
         weight_turbine: int = 0,
         to_file: str | None = None,
-        write_vars=None,
+        write_vars: list[str] | None = None,
         write_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -61,28 +64,28 @@ class PointCalculator(Output):
 
         Parameters
         ----------
-        points: numpy.ndarray
+        points
             The points, shape: (n_points, 3)
             or (n_states, n_points, 3)
-        args: tuple, optional
+        args
             Additional arguments for algo.calc_points
-        states_mean: bool
+        states_mean
             Flag for taking the mean over states
-        weight_turbine: int, optional
+        weight_turbine
             Index of the turbine from which to take the weight
-        to_file: str, optional
+        to_file
             The output netCDF file name
-        write_vars: list of str
+        write_vars
             The variables to be written to file, or None
             for all
-        write_pars: dict, optional
+        write_pars
             Additional parameters for write_nc
-        kwargs: tuple, optional
+        kwargs
             Additional arguments for algo.calc_points
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 

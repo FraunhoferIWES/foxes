@@ -4,14 +4,21 @@ import numpy as np
 import pandas as pd
 from cycler import cycler
 import matplotlib.pyplot as plt
-from typing import Any
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from typing import Any, Iterator
 from xarray import Dataset
+from matplotlib.lines import Line2D
+from typing import TYPE_CHECKING
 
 from .output import Output
 from foxes.config import config
 from foxes.utils import write_nc
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
 
 
 class FarmResultsEval(Output):
@@ -23,24 +30,26 @@ class FarmResultsEval(Output):
 
     Attributes
     ----------
-    algo: foxes.core.Algorithm, optional
+    algo
         The algorithm object
 
     :group: output
 
     """
 
-    def __init__(self, farm_results, algo=None, **kwargs: Any) -> None:
+    def __init__(
+        self, farm_results: Dataset, algo: Algorithm | None = None, **kwargs: Any
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results
-        algo: foxes.core.Algorithm, optional
+        algo
             The algorithm object
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -56,13 +65,13 @@ class FarmResultsEval(Output):
 
         Returns
         -------
-        xarray.Dataset
+        The evaluated dataset
             The farm results
 
         """
         return self._results
 
-    def weinsum(self, rhs: str, *vars) -> np.ndarray:
+    def weinsum(self, rhs: str, *vars: str | np.ndarray) -> np.ndarray:
         """
         Calculates Einstein sum, adding weights
         as last argument to the given fields.
@@ -71,17 +80,17 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        rhs: str
+        rhs
             The right-hand side of the einsum expression.
-            Convention: 's' for states, 't' for turbines
-        vars: tuple of str or np.ndarray
+            Use 's' for states and 't' for turbines.
+        vars
             The variables mentioned in the expression,
             but without the obligatory weights that will
             be added at the end
 
         Returns
         -------
-        result: np.ndarray
+        result
             The results array
 
         """
@@ -320,20 +329,22 @@ class FarmResultsEval(Output):
 
         return rdata
 
-    def calc_states_mean(self, vars, use_weights: bool = True) -> pd.DataFrame:
+    def calc_states_mean(
+        self, vars: str | list[str], use_weights: bool = True
+    ) -> pd.DataFrame:
         """
         Calculates the mean wrt states.
 
         Parameters
         ----------
-        vars: list of str
+        vars
             The variables
-        use_weights: bool
+        use_weights
             Flag for using states weights for the mean
 
         Returns
         -------
-        data: pandas.DataFrame
+        data
             The results per turbine
 
         """
@@ -342,24 +353,24 @@ class FarmResultsEval(Output):
             return self.reduce_states({vars: r})
         return self.reduce_states({v: r for v in vars})
 
-    def calc_states_sum(self, vars) -> pd.DataFrame:
+    def calc_states_sum(self, vars: list[str]) -> pd.DataFrame:
         """
         Calculates the sum wrt states.
 
         Parameters
         ----------
-        vars: list of str
+        vars
             The variables
 
         Returns
         -------
-        data: pandas.DataFrame
+        data
             The results per turbine
 
         """
         return self.reduce_states({v: "sum" for v in vars})
 
-    def calc_states_std(self, vars) -> pd.DataFrame:
+    def calc_states_std(self, vars: list[str]) -> pd.DataFrame:
         """
         Calculates the standard deviation wrt states.
 
@@ -372,52 +383,51 @@ class FarmResultsEval(Output):
 
         return self.reduce_states({v: "std" for v in vars})
 
-    def calc_turbine_mean(self, vars) -> pd.DataFrame:
+    def calc_turbine_mean(self, vars: list[str]) -> pd.DataFrame:
         """
         Calculates the mean wrt turbines.
 
         Parameters
         ----------
-        vars: list of str
-            The variables
+        vars
 
         Returns
         -------
-        data: pandas.DataFrame
+        data
             The results per state
 
         """
         return self.reduce_turbines({v: "mean_no_weights" for v in vars})
 
-    def calc_turbine_sum(self, vars) -> pd.DataFrame:
+    def calc_turbine_sum(self, vars: list[str]) -> pd.DataFrame:
         """
         Calculates the sum wrt turbines.
 
         Parameters
         ----------
-        vars: list of str
+        vars
             The variables
 
         Returns
         -------
-        data: pandas.DataFrame
+        data
             The results per state
 
         """
         return self.reduce_turbines({v: "sum" for v in vars})
 
-    def calc_farm_mean(self, vars) -> dict:
+    def calc_farm_mean(self, vars: list[str]) -> dict[str, np.ndarray | float]:
         """
         Calculates the mean over states and turbines.
 
         Parameters
         ----------
-        vars: list of str
+        vars
             The variables
 
         Returns
         -------
-        data: dict
+        data
             The fully contracted results
 
         """
@@ -425,18 +435,18 @@ class FarmResultsEval(Output):
         op_turbines: dict[str, str] = {v: "weights" for v in vars}
         return self.reduce_all(states_op=op_states, turbines_op=op_turbines)
 
-    def calc_farm_sum(self, vars) -> dict:
+    def calc_farm_sum(self, vars: list[str]) -> dict[str, np.ndarray | float]:
         """
         Calculates the sum over states and turbines.
 
         Parameters
         ----------
-        vars: list of str
+        vars
             The variables
 
         Returns
         -------
-        data: dict
+        data
             The fully contracted results
 
         """
@@ -450,12 +460,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        ambient: bool
+        ambient
             Flag for ambient power
 
         Returns
         -------
-        data: float
+        data
             The mean wind farm power
 
         """
@@ -469,7 +479,7 @@ class FarmResultsEval(Output):
 
         Returns
         -------
-        P_unit_W: np.ndarray
+        P_unit_W
             The power units in Watts for all elements, shape: (n_elements,)
 
         """
@@ -487,24 +497,23 @@ class FarmResultsEval(Output):
         annual: bool = False,
         ambient: bool = False,
         hours: int | None = None,
-        delta_t=None,
-        P_unit_W=None,
+        delta_t: np.timedelta64 | None = None,
+        P_unit_W: np.ndarray | None = None,
     ) -> pd.DataFrame:
         """
         Calculates the yield
 
-        Parameters
         ----------
-        annual: bool, optional
+        annual
             Flag for returning annual results, by default False
-        ambient: bool, optional
+        ambient
             Flag for ambient power, by default False
-        hours: int, optional
+        hours
             The duration time in hours, if not timeseries states
         delta_t: np.datetime64, optional
             The time delta step in case of time series data,
             by default automatically determined
-        P_unit_W: float
+        P_unit_W
             The power unit in Watts, 1000 for kW. Looked up
             in algorithm if not given
 
@@ -560,11 +569,10 @@ class FarmResultsEval(Output):
 
     def get_capacity(self) -> np.ndarray:
         """
-        Gets the capacity values for each turbine, equals nominal power
 
         Returns
         -------
-        capacity_array: numpy.ndarray
+        capacity_array
             The capacity array (nominal power) for all turbines, shape: (n_turbines,)
 
         """
@@ -580,7 +588,7 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -600,13 +608,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        annual: bool, optional
+        annual
             Flag for returning annual results
-        ambient: bool, optional
-            Flag for ambient power
-        verbosity: int
+        ambient
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Parameters for calc_yield()
 
         """
@@ -619,18 +626,21 @@ class FarmResultsEval(Output):
             print(f"{s} added to results")
 
     def add_capacity_factor(
-        self, capacity=None, ambient: bool = False, verbosity: int = 1
+        self,
+        capacity: np.ndarray | None = None,
+        ambient: bool = False,
+        verbosity: int = 1,
     ) -> None:
         """
         Adds capacity factor to the farm results, P / CAP
 
         Parameters
         ----------
-        capacity: list of float, optional
+        capacity
             Capacity values for each turbine (nominal power), if algo not given
-        ambient: bool, optional
+        ambient
             Flag for calculating ambient capacity, by default False
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -657,34 +667,37 @@ class FarmResultsEval(Output):
                 print("Capacity factor added to farm results")
 
     def calc_farm_yield(
-        self, turbine_yield=None, power_uncert=None, **kwargs: Any
+        self,
+        turbine_yield: pd.DataFrame | None = None,
+        power_uncert: float | None = None,
+        **kwargs: Any,
     ) -> float | tuple[float, float, float]:
         """
         Calculates yield, P75 and P90 at the farm level
 
         Parameters
         ----------
-        turbine_yield: pandas.DataFrame, optional
+        turbine_yield
             Yield values by turbine
-        power_uncert: float, optional
+        power_uncert
             Uncertainty in the power value. Triggers
             P75 and P90 outputs
-        kwargs: dict, optional
+        kwargs
             Parameters for calc_yield(). Apply if
             turbine_yield is not given
 
         Returns
         -------
-        farm_yield: float
+        farm_yield
             Farm yield result, same unit as turbine yield
-        P75: float, optional
+        P75
             The P75 value, same unit as turbine yield
-        P90: float, optional
+        P90
             The P90 value, same unit as turbine yield
 
         """
         if turbine_yield is None:
-            yargs = dict(annual=True)
+            yargs: dict[str, Any] = dict(annual=True)
             yargs.update(kwargs)
             turbine_yield = self.calc_yield(**yargs)
         farm_yield = turbine_yield.sum()
@@ -702,7 +715,7 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -720,9 +733,9 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        ambient: bool, optional
+        ambient
             Flag for calculating ambient full load fraction, by default False
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -757,7 +770,7 @@ class FarmResultsEval(Output):
 
         Returns
         -------
-        eff: float
+        eff
             The farm efficiency
 
         """
@@ -767,43 +780,43 @@ class FarmResultsEval(Output):
 
     def gen_stdata(
         self,
-        turbines,
+        turbines: list[int],
         variable: str,
-        fig=None,
-        ax=None,
-        figsize=None,
+        fig: Figure | None = None,
+        ax: Axes | None = None,
+        figsize: tuple[float, float] | None = None,
         legloc: str = "lower right",
         animated: bool = True,
         ret_im: bool = True,
-    ):
+    ) -> Iterator[Figure | tuple[Figure, list[Line2D]]]:
         """
         Generates state-turbine data,
         intended to be used in animations
 
         Parameters
         ----------
-        turbines: list of int
+        turbines
             The turbines for which to scatter data
-        variable: str
+        variable
             The variable name
-        fig: plt.Figure, optional
+        fig
             The figure object
-        ax: plt.Axes, optional
+        ax
             The figure axes
-        figsize: tuple, optional
+        figsize
             The figsize for plt.Figure
-        legloc: str
+        legloc
             The legend location
-        animated: bool
+        animated
             Flag for animated output
-        ret_im: bool
+        ret_im
             Flag for image return,
 
         Yields
         ------
-        fig: matplotlib.Figure
+        fig
             The figure object
-        im: List of matplotlib.collections.PathCollection, optional
+        im
             The scatter artists
 
         """
@@ -844,14 +857,14 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        fname: str
+        fname
             The file name to write the netCDF file
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the foxes.utils.write_nc() method
 
         Returns
         -------
-        xarray.Dataset
+        The evaluated dataset
             The aggregated results that were written to the netCDF file
 
         """

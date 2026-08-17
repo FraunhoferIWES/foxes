@@ -1,10 +1,13 @@
+from typing import cast
+
 import numpy as np
+from xarray import Dataset
 
 from .load import import_module
 
 
 def calc_era5_density(
-    era5, z: float, var2ncvar: dict[str, str] | None = None
+    era5: Dataset, z: float, var2ncvar: dict[str, str] | None = None
 ) -> np.ndarray:
     """
     Returns local air densities at specified height using the
@@ -14,9 +17,9 @@ def calc_era5_density(
     ----------
     era5
         The era5 data
-    z : float
+    z
         height at which to calculate density
-    var2ncvar : dict, optional
+    var2ncvar
         A dictionary mapping variable names to netCDF variable names.
 
     Returns
@@ -68,4 +71,4 @@ def calc_era5_density(
     # calculate density at height z
     dens = mc.density(pz, tz, m).magnitude
 
-    return dens
+    return cast(np.ndarray, dens)

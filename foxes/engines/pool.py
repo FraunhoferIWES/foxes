@@ -128,7 +128,7 @@ class PoolEngine(Engine):
         Returns
         -------
         results
-            The list of results
+            Results for the submitted inputs
 
         """
         if len(inputs) == 0:
@@ -393,7 +393,9 @@ class PoolEngine(Engine):
         algo.reset_chunk_store(chunk_store)
 
         if results_mgr.results is None:
-            raise RuntimeError(f"{type(self).__name__} did not produce calculation results")
+            raise RuntimeError(
+                f"{type(self).__name__} did not produce calculation results"
+            )
         return results_mgr.results
 
     def init_shared_memory(

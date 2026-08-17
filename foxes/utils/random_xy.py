@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 from scipy.spatial.distance import cdist
 
@@ -53,4 +55,4 @@ def random_xy_square(
             print(f"Re-generating coordinates: {len(sel)}, xmax = {xmax:.1f}")
         xmax *= growth
         xy[sel] = np.random.uniform(0, xmax, (len(sel), 2))
-    return xy - np.mean(xy, axis=0)[None, :]
+    return cast(np.ndarray, xy - np.mean(xy, axis=0)[None, :])

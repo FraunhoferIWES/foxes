@@ -189,7 +189,7 @@ class DefaultEngine(Engine):
         Returns
         -------
         results
-            The list of results
+            Results for the submitted inputs
 
         """
         e, temporary = self._get_delegate_process_engine()

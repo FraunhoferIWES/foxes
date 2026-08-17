@@ -482,12 +482,12 @@ def get_default_digits(variable: str) -> int:
 
     Parameters
     ----------
-    variable: str
+        variable
         The variable name
 
     Returns
     -------
-    digits: int
+        digits
         The default number of output digits
 
     """

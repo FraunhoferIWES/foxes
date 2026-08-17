@@ -20,7 +20,14 @@ default_values = {
 }
 
 
-def _get_profiles(coords, fields, dims, ovars, fixval, verbosity: int) -> dict:
+def _get_profiles(
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    verbosity: int,
+) -> dict[str, str]:
     """Read ABL profiles information
     :group: input.yaml.windio
     """
@@ -53,8 +60,15 @@ def _get_profiles(coords, fields, dims, ovars, fixval, verbosity: int) -> dict:
 
 
 def _get_SingleStateStates(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
     """Try to generate single state parameters
     :group: input.yaml.windio
     """
@@ -92,8 +106,15 @@ def _get_SingleStateStates(
 
 
 def _get_Timeseries(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
     """Try to generate time series parameters
     :group: input.yaml.windio
     """
@@ -127,8 +148,15 @@ def _get_Timeseries(
 
 
 def _get_MultiHeightNCTimeseries(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
     """Try to generate time series parameters
     :group: input.yaml.windio
     """
@@ -170,8 +198,15 @@ def _get_MultiHeightNCTimeseries(
 
 
 def _get_TurbinePointCloud(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
     """Try to generate a point cloud with support at turbine locations
     :group: input.yaml.windio
     """
@@ -208,8 +243,15 @@ def _get_TurbinePointCloud(
 
 
 def _get_WeibullSectors(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
     """Try to generate Weibull sector parameters
     :group: input.yaml.windio
     """
@@ -254,8 +296,15 @@ def _get_WeibullSectors(
 
 
 def _get_WeibullPointCloud(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
     """Try to generate Weibull sector parameters
     :group: input.yaml.windio
     """
@@ -309,8 +358,15 @@ def _get_WeibullPointCloud(
 
 
 def _get_WeibullField(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
     """Try to generate Weibull sector parameters
     :group: input.yaml.windio
     """
@@ -358,7 +414,12 @@ def _get_WeibullField(
     return False
 
 
-def get_states(coords, fields, dims, verbosity: int = 1) -> States:
+def get_states(
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    verbosity: int = 1,
+) -> States:
     """
     Reads states parameters from windio input
 
@@ -419,7 +480,7 @@ def get_states(coords, fields, dims, verbosity: int = 1) -> States:
         )
 
 
-def read_site(wio_dict, verbosity: int = 1) -> States:
+def read_site(wio_dict: Dict[Any, Any], verbosity: int = 1) -> States:
     """
     Reads the site information
 
@@ -439,7 +500,7 @@ def read_site(wio_dict, verbosity: int = 1) -> States:
 
     """
 
-    def _print(*args, level: int = 1, **kwargs) -> None:
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity >= level:
             print(*args, **kwargs)
 

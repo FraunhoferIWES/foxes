@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 
 
@@ -30,4 +32,7 @@ def weibull_weights(
 
     """
     wsA = ws / A
-    return ws_deltas * (k / A * wsA ** (k - 1) * np.exp(-(wsA**k)))
+    return cast(
+        np.ndarray,
+        ws_deltas * (k / A * wsA ** (k - 1) * np.exp(-(wsA**k))),
+    )

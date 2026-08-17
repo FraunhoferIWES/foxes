@@ -288,7 +288,7 @@ class FarmDataModelList(FarmDataModel):
         fdata
             The farm data
         parameters
-            A list of parameter dicts, one for each model
+            Parameters for each model
 
         Returns
         -------

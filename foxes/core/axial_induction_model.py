@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -53,4 +53,6 @@ class AxialInductionModel(Model):
             Additional keyword arguments for the constructor.
 
         """
-        return new_instance(cls, induction_type, *args, **kwargs)
+        return cast(
+            AxialInductionModel, new_instance(cls, induction_type, *args, **kwargs)
+        )

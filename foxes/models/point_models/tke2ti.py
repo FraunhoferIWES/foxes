@@ -1,6 +1,7 @@
 from __future__ import annotations
 # mypy: disable-error-code=override
 
+import numpy as np
 from foxes.core import PointDataModel
 from foxes.utils import tke2ti
 import foxes.variables as FV
@@ -42,7 +43,7 @@ class TKE2TI(PointDataModel):
         mdata: MData,
         fdata: FData,
         tdata: TData,
-    ) -> dict[str, object]:
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 

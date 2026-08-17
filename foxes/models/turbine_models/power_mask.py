@@ -2,9 +2,9 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 import numpy as np
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, cast
 
-from foxes.core import TurbineModel
+from foxes.core import Model, TurbineModel
 from foxes.config import config
 from foxes.utils import cubic_roots
 import foxes.variables as FV
@@ -12,6 +12,7 @@ import foxes.variables as FV
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData
+    from foxes.core.axial_induction_model import AxialInductionModel
     from foxes.core.model import LoadedData
 
 
@@ -47,7 +48,7 @@ class PowerMask(TurbineModel):
         var_ws_P: str = FV.REWS3,
         factor_P: float = 1.0e3,
         P_lim: float = 100,
-        induction: Any = "Betz",
+        induction: str | AxialInductionModel = "Betz",
     ) -> None:
         """
         Constructor.
@@ -96,7 +97,7 @@ class PowerMask(TurbineModel):
         """
         return [FV.P, FV.CT]
 
-    def sub_models(self) -> list[Any]:
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
@@ -106,7 +107,7 @@ class PowerMask(TurbineModel):
             All sub models
 
         """
-        return [self.induction]
+        return [cast(Model, self.induction)]
 
     def initialize(
         self,
@@ -214,6 +215,9 @@ class PowerMask(TurbineModel):
         )
         if np.any(sel):
             # apply selection:
+            assert not isinstance(self.induction, str), (
+                "Induction model not initialized"
+            )
             max_P = max_P[sel]
             ws = fdata[self.var_ws_P][sel]
             rho = fdata[FV.RHO][sel]

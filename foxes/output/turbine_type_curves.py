@@ -4,10 +4,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from typing import Any
+from xarray import Dataset
 
 from foxes.input.states import StatesTable
 from foxes.core import WindFarm, Turbine
 from foxes.algorithms import Downwind
+from foxes.models import ModelBook
 from foxes.models.turbine_models import SetFarmVars
 from foxes.config import config
 import foxes.variables as FV
@@ -23,22 +25,22 @@ class TurbineTypeCurves(Output):
 
     Attributes
     ----------
-    mbook: foxes.models.ModelBook
+    mbook
         The model book
 
     :group: output
 
     """
 
-    def __init__(self, mbook, **kwargs: Any) -> None:
+    def __init__(self, mbook: ModelBook, **kwargs: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        mbook: foxes.models.ModelBook
+        mbook
             The model book
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -48,42 +50,42 @@ class TurbineTypeCurves(Output):
     def calc_plot_data(
         self,
         turbine_type: str,
-        variables,
+        variables: str | list[str],
         P_max: float | None = None,
         ws_min: float = 0.0,
         ws_max: float = 30.0,
         ws_step: float = 0.1,
         ti: float = 0.05,
         rho: float = 1.225,
-    ):
+    ) -> tuple[dict[str, Any], Dataset, Dataset | None]:
         """
         Plot the power or ct curve.
 
         Parameters
         ----------
-        turbine_type: str
+        turbine_type
             The turbine type name from the
             model book
-        variables: str or list of str
+        variables
             For example FV.P or FV.CT
-        P_max: float, optional
+        P_max
             The power mask value, if of interest
-        ws_min: float
+        ws_min
             The minimal wind speed
-        ws_max: float
+        ws_max
             The maximal wind speed
-        ws_step: float
+        ws_step
             The wind speed step size
-        ti: float
+        ti
             The TI value
-        rho: float
+        rho
             The air density value
 
         Returns
         -------
-        parameters: dict
+        parameters
             The plot data parameters
-        farm_results: xarray.Dataset
+        farm_results
             The farm results for the calculated states
 
         """
@@ -148,43 +150,43 @@ class TurbineTypeCurves(Output):
 
     def plot_curves(
         self,
-        plot_data,
-        titles=None,
+        plot_data: tuple[dict[str, Any], Dataset, Dataset | None],
+        titles: Any = None,
         x_label: str | None = None,
-        y_labels=None,
-        axs=None,
-        figsize=None,
+        y_labels: Any = None,
+        axs: Any = None,
+        figsize: Any = None,
         pmax_args: dict[str, Any] | None = None,
         **kwargs: Any,
-    ):
+    ) -> Any:
         """
         Plot the power or ct curve.
 
         Parameters
         ----------
-        plot_data: tuple
+        plot_data
             The plot data as returned
             by calc_plot_data(), (parameters, farm_results)
-        titles: list of str, optional
+        titles
             The plot titles, one for each variable
-        x_label: str, optional
+        x_label
             The x axis label
-        y_labels: list of str, optional
+        y_labels
             The y axis lables, one for each variable
-        axs: list of pyplot.Axis, optional
+        axs
             The axis, one for each variable
-        figsize: tuple
+        figsize
             The figsize argument for plt.subplots()
             in case ax is not provided
-        pmax_args: dict, optional
+        pmax_args
             Additionals parameters for plt.plot()
             for power mask case
-        kwargs: dict, optional
+        kwargs
             Additional parameters for plt.plot()
 
         Returns
         -------
-        axs: list of pyplot.Axis
+        axs
             The plot axes, one for each variable
 
         """
@@ -218,6 +220,7 @@ class TurbineTypeCurves(Output):
             pargs.update(kwargs)
             ax.plot(ws, results0[v][:, 0], label="default", **pargs)
             if P_max is not None:
+                assert results1 is not None
                 pargs = {"linewidth": 1.8}
                 pargs.update(pmax_args)
                 ax.plot(ws, results1[v][:, 0], label="PMask", **pargs)

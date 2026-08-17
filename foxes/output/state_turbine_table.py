@@ -16,22 +16,22 @@ class StateTurbineTable(Output):
 
     Attributes
     ----------
-    farm_results: xarray.Dataset
+    farm_results
         The farm results
 
     :group: output
 
     """
 
-    def __init__(self, farm_results, **kwargs: Any) -> None:
+    def __init__(self, farm_results: Dataset, **kwargs: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -40,7 +40,7 @@ class StateTurbineTable(Output):
 
     def get_dataset(
         self,
-        variables,
+        variables: list[str],
         name_map: dict[str, str] | None = None,
         to_file: str | None = None,
         isel: dict[str, Any] | None = None,
@@ -53,24 +53,24 @@ class StateTurbineTable(Output):
 
         Parameters
         ----------
-        variables: list of str
+        variables
             The output variables
-        name_map: dict
+        name_map
             Map from foxes to output names
-        to_file: str, optional
+        to_file
             Name of the output file, if writing is desired
-        isel: dict, optional
-            Parameters for xarray.Dataset.isel
-        sel: dict, optional
-            Parameters for xarray.Dataset.sel
-        transpose: bool, optional
+        isel
+            Parameters for indexed selection
+        sel
+            Parameters for label selection
+        transpose
             Whether to transpose the dataset
-        kwargs: dict, optional
+        kwargs
             Additional parameters for write_nc
 
         Returns
         -------
-        table: xarray.Dataset
+        table
             The state-turbine data table
 
         """

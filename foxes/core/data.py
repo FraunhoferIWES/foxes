@@ -26,8 +26,7 @@ class Data(Dict[str, np.ndarray]):
         The dimensions tuples, same or subset
         of data keys
     loop_dims
-        List of the loop dimensions during xarray's
-        `apply_ufunc` calculations
+        Loop dimensions used during xarray's `apply_ufunc` calculations
     sizes
         The dimension sizes
     chunki_states
@@ -612,8 +611,8 @@ class Data(Dict[str, np.ndarray]):
         callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
-        s_states: slice, optional
-            Slice object for states
+        s_states
+            Optional slice object for states
         copy
             Flag for copying data
         n_states
@@ -1331,8 +1330,8 @@ class TData(Data):
             The dataset
         args
             Additional parameters for the constructor
-        s_targets: slice, optional
-            Slice object for targets
+        s_targets
+            Optional slice object for targets
         mdata
             The mdata object
         callback

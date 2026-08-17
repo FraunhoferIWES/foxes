@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 
 
@@ -23,4 +25,4 @@ def sqrt_reg(x: np.ndarray, x0: float = 0.01) -> np.ndarray:
     """
     b = x0 * (1 - np.log(x0))
     y = np.exp((x - b) / x0)
-    return np.sqrt(np.where(x < x0, y, x))
+    return cast(np.ndarray, np.sqrt(np.where(x < x0, y, x)))

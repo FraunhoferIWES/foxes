@@ -11,15 +11,21 @@ import foxes.variables as FV
 
 
 def _read_nc(
-    fpath,
-    coord,
-    var2ncvar,
-    vname_mean_ws,
-    vname_main_wd,
-    wd_histo_width,
-    preprocess=None,
-    **kwargs,
-):
+    fpath: str | Path,
+    coord: str,
+    var2ncvar: dict[str, str],
+    vname_mean_ws: str,
+    vname_main_wd: str | None,
+    wd_histo_width: float,
+    preprocess: Callable[[Dataset], Dataset] | None = None,
+    **kwargs: Any,
+) -> tuple[
+    dict[str, Any],
+    dict[str, Any],
+    dict[str, np.ndarray],
+    np.ndarray | None,
+    np.ndarray | None,
+]:
     """Help function to read netCDF files with xarray."""
 
     # read nc file:
@@ -27,11 +33,11 @@ def _read_nc(
     if preprocess is not None:
         data = preprocess(data)
 
-    dvrs = {}
-    counts = {}
-    wd_histo = None
-    wd_bin_wd = None
-    uv = None
+    dvrs: dict[str, Any] = {}
+    counts: dict[str, np.ndarray] = {}
+    wd_histo: np.ndarray | None = None
+    wd_bin_wd: np.ndarray | None = None
+    uv: np.ndarray | None = None
     for v, c in var2ncvar.items():
         if c not in data:
             continue
@@ -62,15 +68,17 @@ def _read_nc(
                     a = list(range(len(uv.shape)))
                     a.remove(ax_time)
                     uvsel = ~np.any(np.isnan(uv), axis=tuple(a))
-                    s = [slice(None)] * len(uv.shape)
-                    s[ax_time] = uvsel
-                    s = tuple(s)
-                    a = tuple(
+                    s2: list[slice | np.ndarray] = [slice(None)] * len(uv.shape)
+                    s2[ax_time] = uvsel
+                    indexer = tuple(s2)
+                    axis_shape = tuple(
                         [m for ii, m in enumerate(uv.shape[:-1]) if ii != ax_time]
                     )
-                    uv = uv[s]
+                    uv = uv[indexer]
 
-                    counts[FV.U] = np.full(a, np.sum(uvsel), dtype=config.dtype_int)
+                    counts[FV.U] = np.full(
+                        axis_shape, np.sum(uvsel), dtype=config.dtype_int
+                    )
                     counts[FV.V] = counts[FV.U]
                     counts[vname_mean_ws] = counts[FV.U]
                     dvrs[vname_mean_ws] = (
@@ -99,16 +107,18 @@ def _read_nc(
                     a = list(range(len(uv.shape)))
                     a.remove(ax_time)
                     uvsel = ~np.any(np.isnan(uv), axis=tuple(a))
-                    s = [slice(None)] * len(uv.shape)
+                    s: list[slice | np.ndarray] = [slice(None)] * len(uv.shape)
                     s[ax_time] = uvsel
-                    s = tuple(s)
-                    a = tuple(
+                    indexer = tuple(s)
+                    axis_shape = tuple(
                         [m for ii, m in enumerate(uv.shape[:-1]) if ii != ax_time]
                     )
-                    uv = uv[s]
+                    uv = uv[indexer]
 
                     counts[vname_mean_ws] = np.sum(~np.isnan(ws), axis=ax_time)
-                    counts[FV.U] = np.full(a, np.sum(uvsel), dtype=config.dtype_int)
+                    counts[FV.U] = np.full(
+                        axis_shape, np.sum(uvsel), dtype=config.dtype_int
+                    )
                     counts[FV.V] = counts[FV.U]
                     dvrs[vname_mean_ws] = (dms, np.nansum(ws, axis=ax_time))
                     dvrs[FV.U] = (dms, np.sum(uv[..., 0], axis=ax_time))
@@ -130,6 +140,7 @@ def _read_nc(
     # compute wd histogram counts:
     if vname_main_wd is not None:
         # prepare:
+        assert uv is not None
         wd = np.moveaxis(uv2wd(uv), ax_time, -1)
         del uv
 
@@ -146,9 +157,9 @@ def _read_nc(
                 wd_histo[..., i] = np.sum(sel, axis=-1)
                 wd_bin_wd[..., i] = np.sum(np.where(sel, wd, 0), axis=-1)
 
-    crds = {}
-    for dms, __ in dvrs.values():
-        for d in dms:
+    crds: dict[str, np.ndarray] = {}
+    for dims, __ in dvrs.values():
+        for d in dims:
             if d != coord and d not in crds and d in data.coords:
                 crds[d] = data[d].values
 
@@ -251,15 +262,23 @@ def create_dataset_mean(
         for fpath in files
     ]
 
-    def _eval_result(hcrds, hdvrs, hcounts, hwd_histo, hwd_bin_wd) -> None:
+    def _eval_result(
+        hcrds: dict[str, Any],
+        hdvrs: dict[str, Any],
+        hcounts: dict[str, np.ndarray],
+        hwd_histo: np.ndarray | None,
+        hwd_bin_wd: np.ndarray | None,
+    ) -> None:
         """Helper function that evaluates single result"""
         nonlocal wd_histo, wd_bin_wd, crds, dvrs, counts
 
         if hwd_histo is not None:
+            assert hwd_bin_wd is not None
             if wd_histo is None:
                 wd_histo = hwd_histo.astype(config.dtype_double, copy=True)
                 wd_bin_wd = hwd_bin_wd.copy()
             else:
+                assert wd_bin_wd is not None
                 wd_histo += hwd_histo
                 wd_bin_wd += hwd_bin_wd
 
@@ -453,7 +472,7 @@ def main() -> None:
         v, nc = vn.split(":")
         v2nc[v] = nc
 
-    def _run():
+    def _run() -> Dataset:
         return create_dataset_mean(
             data_source=args.nc_files,
             coord=args.coord,

@@ -40,7 +40,7 @@ class Factory:
 
     def __init__(
         self,
-        base,
+        base: Any,
         name_template: str,
         args: tuple[Any, ...] = (),
         kwargs: dict[str, Any] | None = None,
@@ -226,7 +226,13 @@ class Factory:
 
         """
 
-        def gete(i: int, vals: dict[str, Any], vars: list[str], values: list[Any], examples: list[str]) -> None:
+        def gete(
+            i: int,
+            vals: dict[str, Any],
+            vars: list[str],
+            values: list[Any],
+            examples: list[str],
+        ) -> None:
             if i >= len(vars):
                 e = ""
                 for i, v in enumerate(self._vars):
@@ -357,7 +363,7 @@ class WakeKFactory:
 
     def __init__(
         self,
-        base,
+        base: Any,
         name_template: str,
         *args: Any,
         hints: dict[str, Any] | None = None,

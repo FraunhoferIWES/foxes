@@ -1,4 +1,6 @@
 import numpy as np
+from xarray import Dataset
+from typing import Any
 
 from foxes.config import config
 from foxes.utils import write_nc
@@ -15,11 +17,11 @@ class SliceData(Output):
 
     Attributes
     ----------
-    algo: foxes.Algorithm
+    algo
         The algorithm for point calculation
-    farm_results: xarray.Dataset
+    farm_results
         The farm results
-    verbosity_delta: int
+    verbosity_delta
         Verbosity threshold for printing calculation info
 
     :group: output
@@ -28,23 +30,23 @@ class SliceData(Output):
 
     def __init__(
         self,
-        algo,
-        farm_results,
-        verbosity_delta=1,
-        **kwargs,
-    ):
+        algo: Any,
+        farm_results: Dataset,
+        verbosity_delta: int = 1,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        algo: foxes.Algorithm
+        algo
             The algorithm for point calculation
-        farm_results: xarray.Dataset
+        farm_results
             The farm results
-        verbosity_delta: int
+        verbosity_delta
             Verbosity threshold for printing calculation info
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -55,17 +57,17 @@ class SliceData(Output):
 
     def _data_mod(
         self,
-        a_pos,
-        b_pos,
-        c_pos,
-        data,
-        normalize_a,
-        normalize_b,
-        normalize_c,
-        normalize_v,
-        vmin,
-        vmax,
-    ):
+        a_pos: np.ndarray,
+        b_pos: np.ndarray,
+        c_pos: float,
+        data: Any,
+        normalize_a: float | None,
+        normalize_b: float | None,
+        normalize_c: float | None,
+        normalize_v: dict[str, float],
+        vmin: dict[str, Any],
+        vmax: dict[str, Any],
+    ) -> tuple[Any, Any, Any, Any]:
         """Helper function for data modification"""
         if normalize_a is not None:
             a_pos /= normalize_a
@@ -84,7 +86,14 @@ class SliceData(Output):
 
         return a_pos, b_pos, c_pos, data
 
-    def _write(self, format, data, fname, verbosity, **write_pars) -> None:
+    def _write(
+        self,
+        format: str,
+        data: Any,
+        fname: str | None,
+        verbosity: int,
+        **write_pars: Any,
+    ) -> None:
         """Helper function for file writing"""
         if fname is not None:
             if format == "numpy":
@@ -119,26 +128,26 @@ class SliceData(Output):
 
     def _calc_mean_data(
         self,
-        ori,
-        data_format,
-        variables,
-        a_pos,
-        b_pos,
-        c_pos,
-        g_pts,
-        normalize_a,
-        normalize_b,
-        normalize_c,
-        normalize_v,
-        label_map,
-        vmin,
-        vmax,
-        to_file,
-        write_pars,
-        ret_states,
-        verbosity,
-        **kwargs,
-    ):
+        ori: str,
+        data_format: str,
+        variables: list[str] | None,
+        a_pos: np.ndarray,
+        b_pos: np.ndarray,
+        c_pos: float,
+        g_pts: np.ndarray,
+        normalize_a: float | None,
+        normalize_b: float | None,
+        normalize_c: float | None,
+        normalize_v: dict[str, float],
+        label_map: dict[str, str],
+        vmin: dict[str, Any],
+        vmax: dict[str, Any],
+        to_file: str | None,
+        write_pars: dict[str, Any],
+        ret_states: bool,
+        verbosity: int,
+        **kwargs: Any,
+    ) -> Any:
         """Helper function for mean data calculation"""
         # calculate point results:
         point_results = grids.calc_point_results(
@@ -157,6 +166,7 @@ class SliceData(Output):
 
         # take mean over states:
         weights = point_results[FV.WEIGHT].to_numpy()
+        data: Any
         if point_results[FV.WEIGHT].dims == (FC.STATE,):
             data = {
                 v: np.einsum("s,sp->p", weights, point_results[v].to_numpy())
@@ -206,99 +216,99 @@ class SliceData(Output):
 
     def get_mean_data_xy(
         self,
-        resolution=None,
-        n_img_points=None,
-        variables=None,
-        data_format="xarray",
-        xmin=None,
-        ymin=None,
-        xmax=None,
-        ymax=None,
-        z=None,
-        xspace=500.0,
-        yspace=500.0,
-        normalize_x=None,
-        normalize_y=None,
-        normalize_z=None,
-        normalize_v={},
-        label_map={},
-        vmin={},
-        vmax={},
-        states_sel=None,
-        states_isel=None,
-        to_file=None,
-        write_pars={},
-        ret_states=False,
-        ret_grid=False,
-        verbosity=0,
-        **kwargs,
-    ):
+        resolution: Any = None,
+        n_img_points: Any = None,
+        variables: list[str] | None = None,
+        data_format: str = "xarray",
+        xmin: float | None = None,
+        ymin: float | None = None,
+        xmax: float | None = None,
+        ymax: float | None = None,
+        z: float | None = None,
+        xspace: float = 500.0,
+        yspace: float = 500.0,
+        normalize_x: float | None = None,
+        normalize_y: float | None = None,
+        normalize_z: float | None = None,
+        normalize_v: dict[str, float] = {},
+        label_map: dict[str, str] = {},
+        vmin: dict[str, Any] = {},
+        vmax: dict[str, Any] = {},
+        states_sel: Any = None,
+        states_isel: Any = None,
+        to_file: str | None = None,
+        write_pars: dict[str, Any] = {},
+        ret_states: bool = False,
+        ret_grid: bool = False,
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> Any:
         """
         Creates mean data of 2D farm flow slices in a horizontal xy-plane.
 
         Parameters
         ----------
-        resolution: float, optional
+        resolution
             The resolution in m
-        n_img_points: tuple of int, optional
+        n_img_points
             The number of image points (n, m) in the two directions
-        variables: list of str, optional
+        variables
             The variables, or None for all
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        xmin: float, optional
+        xmin
             The min x coordinate, or None for automatic
-        ymin: float, optional
+        ymin
             The min y coordinate, or None for automatic
-        xmax: float, optional
+        xmax
             The max x coordinate, or None for automatic
-        ymax: float, optional
+        ymax
             The max y coordinate, or None for automatic
-        z: float, optional
+        z
             The z coordinate of the plane
-        xspace: float, optional
+        xspace
             The extra space in x direction, before and after wind farm
-        yspace: float, optional
+        yspace
             The extra space in y direction, before and after wind farm
-        normalize_x: float, optional
+        normalize_x
             Divide x by this value
-        normalize_y: float, optional
+        normalize_y
             Divide y by this value
-        normalize_z: float, optional
+        normalize_z
             Divide z by this value
-        normalize_v: dict, optional
+        normalize_v
             Divide the variables by these values
-        label_map: dict
+        label_map
             The mapping from original to new field names
-        vmin: dict
+        vmin
             Minimal values for variables
-        vmax: dict
+        vmax
             Maximal values for variables
-        states_sel: list, optional
+        states_sel
             Reduce to selected states
-        states_isel: list, optional
+        states_isel
             Reduce to the selected states indices
-        to_file: str, optional
+        to_file
             Write data to this file name
-        write_pars: dict
+        write_pars
             Additional write function parameters
-        ret_states: bool
+        ret_states
             Flag for returning states indices
-        ret_grid: bool
+        ret_grid
             Flag for returning grid data
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Returns
         -------
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        states: numpy.ndarray, optional
+        states
             The states indices
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -346,102 +356,102 @@ class SliceData(Output):
 
     def get_mean_data_xz(
         self,
-        resolution=None,
-        n_img_points=None,
-        variables=None,
-        data_format="xarray",
-        x_direction=270,
-        xmin=None,
-        zmin=0.0,
-        xmax=None,
-        zmax=None,
-        y=None,
-        xspace=500.0,
-        zspace=500.0,
-        normalize_x=None,
-        normalize_y=None,
-        normalize_z=None,
-        normalize_v={},
-        label_map={},
-        vmin={},
-        vmax={},
-        states_sel=None,
-        states_isel=None,
-        to_file=None,
-        write_pars={},
-        ret_states=False,
-        ret_grid=False,
-        verbosity=0,
-        **kwargs,
-    ):
+        resolution: Any = None,
+        n_img_points: Any = None,
+        variables: list[str] | None = None,
+        data_format: str = "xarray",
+        x_direction: float = 270,
+        xmin: float | None = None,
+        zmin: float = 0.0,
+        xmax: float | None = None,
+        zmax: Any = None,
+        y: float | None = None,
+        xspace: float = 500.0,
+        zspace: float = 500.0,
+        normalize_x: float | None = None,
+        normalize_y: float | None = None,
+        normalize_z: float | None = None,
+        normalize_v: dict[str, float] = {},
+        label_map: dict[str, str] = {},
+        vmin: dict[str, Any] = {},
+        vmax: dict[str, Any] = {},
+        states_sel: Any = None,
+        states_isel: Any = None,
+        to_file: str | None = None,
+        write_pars: dict[str, Any] = {},
+        ret_states: bool = False,
+        ret_grid: bool = False,
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> Any:
         """
         Creates mean data of 2D farm flow slices in an xz-plane.
 
         Parameters
         ----------
-        resolution: float, optional
+        resolution
             The resolution in m
-        n_img_points: tuple of int, optional
+        n_img_points
             The number of image points (n, m) in the two directions
-        variables: list of str, optional
+        variables
             The variables, or None for all
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        xmin: float, optional
+        xmin
             The min x coordinate, or None for automatic
-        zmin: float, optional
+        zmin
             The min z coordinate
-        xmax: float, optional
+        xmax
             The max x coordinate, or None for automatic
-        zmax: float, optional
+        zmax
             The max z coordinate, or None for automatic
-        y: float, optional
+        y
             The y coordinate of the plane
-        xspace: float, optional
+        xspace
             The extra space in x direction, before and after wind farm
-        zspace: float, optional
+        zspace
             The extra space in z direction, below and above wind farm
-        normalize_x: float, optional
+        normalize_x
             Divide x by this value
-        normalize_y: float, optional
+        normalize_y
             Divide y by this value
-        normalize_z: float, optional
+        normalize_z
             Divide z by this value
-        normalize_v: dict, optional
+        normalize_v
             Divide the variables by these values
-        label_map: dict
+        label_map
             The mapping from original to new field names
-        vmin: dict
+        vmin
             Minimal values for variables
-        vmax: dict
+        vmax
             Maximal values for variables
-        states_sel: list, optional
+        states_sel
             Reduce to selected states
-        states_isel: list, optional
+        states_isel
             Reduce to the selected states indices
-        to_file: str, optional
+        to_file
             Write data to this file name
-        write_pars: dict
+        write_pars
             Additional write function parameters
-        ret_states: bool
+        ret_states
             Flag for returning states indices
-        ret_grid: bool
+        ret_grid
             Flag for returning grid data
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Returns
         -------
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        states: numpy.ndarray, optional
+        states
             The states indices
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -491,102 +501,102 @@ class SliceData(Output):
 
     def get_mean_data_yz(
         self,
-        resolution=None,
-        n_img_points=None,
-        variables=None,
-        data_format="xarray",
-        x_direction=270,
-        ymin=None,
-        zmin=0.0,
-        ymax=None,
-        zmax=None,
-        x=None,
-        yspace=500.0,
-        zspace=500.0,
-        normalize_x=None,
-        normalize_y=None,
-        normalize_z=None,
-        normalize_v={},
-        label_map={},
-        vmin={},
-        vmax={},
-        states_sel=None,
-        states_isel=None,
-        to_file=None,
-        write_pars={},
-        ret_states=False,
-        ret_grid=False,
-        verbosity=0,
-        **kwargs,
-    ):
+        resolution: Any = None,
+        n_img_points: Any = None,
+        variables: list[str] | None = None,
+        data_format: str = "xarray",
+        x_direction: float = 270,
+        ymin: float | None = None,
+        zmin: float = 0.0,
+        ymax: float | None = None,
+        zmax: Any = None,
+        x: float | None = None,
+        yspace: float = 500.0,
+        zspace: float = 500.0,
+        normalize_x: float | None = None,
+        normalize_y: float | None = None,
+        normalize_z: float | None = None,
+        normalize_v: dict[str, float] = {},
+        label_map: dict[str, str] = {},
+        vmin: dict[str, Any] = {},
+        vmax: dict[str, Any] = {},
+        states_sel: Any = None,
+        states_isel: Any = None,
+        to_file: str | None = None,
+        write_pars: dict[str, Any] = {},
+        ret_states: bool = False,
+        ret_grid: bool = False,
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> Any:
         """
         Creates mean data of 2D farm flow slices in a yz-plane.
 
         Parameters
         ----------
-        resolution: float, optional
+        resolution
             The resolution in m
-        n_img_points: tuple of int, optional
+        n_img_points
             The number of image points (n, m) in the two directions
-        variables: list of str, optional
+        variables
             The variables, or None for all
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        ymin: float, optional
+        ymin
             The min y coordinate, or None for automatic
-        zmin: float, optional
+        zmin
             The min z coordinate
-        ymax: float, optional
+        ymax
             The max y coordinate, or None for automatic
-        zmax: float, optional
+        zmax
             The max z coordinate, or None for automatic
-        x: float, optional
+        x
             The x coordinate of the plane
-        yspace: float, optional
+        yspace
             The extra space in y direction, before and after wind farm
-        zspace: float, optional
+        zspace
             The extra space in z direction, below and above wind farm
-        normalize_x: float, optional
+        normalize_x
             Divide x by this value
-        normalize_y: float, optional
+        normalize_y
             Divide y by this value
-        normalize_z: float, optional
+        normalize_z
             Divide z by this value
-        normalize_v: dict, optional
+        normalize_v
             Divide the variables by these values
-        label_map: dict
+        label_map
             The mapping from original to new field names
-        vmin: dict
+        vmin
             Minimal values for variables
-        vmax: dict
+        vmax
             Maximal values for variables
-        states_sel: list, optional
+        states_sel
             Reduce to selected states
-        states_isel: list, optional
+        states_isel
             Reduce to the selected states indices
-        to_file: str, optional
+        to_file
             Write data to this file name
-        write_pars: dict
+        write_pars
             Additional write function parameters
-        ret_states: bool
+        ret_states
             Flag for returning states indices
-        ret_grid: bool
+        ret_grid
             Flag for returning grid data
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Returns
         -------
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        states: numpy.ndarray, optional
+        states
             The states indices
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -636,26 +646,26 @@ class SliceData(Output):
 
     def _calc_states_data(
         self,
-        ori,
-        data_format,
-        variables,
-        a_pos,
-        b_pos,
-        c_pos,
-        g_pts,
-        normalize_a,
-        normalize_b,
-        normalize_c,
-        normalize_v,
-        label_map,
-        vmin,
-        vmax,
-        to_file,
-        write_pars,
-        ret_states,
-        verbosity,
-        **kwargs,
-    ):
+        ori: str,
+        data_format: str,
+        variables: list[str] | None,
+        a_pos: np.ndarray,
+        b_pos: np.ndarray,
+        c_pos: float,
+        g_pts: np.ndarray,
+        normalize_a: float | None,
+        normalize_b: float | None,
+        normalize_c: float | None,
+        normalize_v: dict[str, float],
+        label_map: dict[str, str],
+        vmin: dict[str, Any],
+        vmax: dict[str, Any],
+        to_file: str | None,
+        write_pars: dict[str, Any],
+        ret_states: bool,
+        verbosity: int,
+        **kwargs: Any,
+    ) -> Any:
         """Helper function for states data calculation"""
         # calculate point results:
         point_results = grids.calc_point_results(
@@ -673,7 +683,7 @@ class SliceData(Output):
         del g_pts
 
         # convert to numpy:
-        data = {v: point_results[v].to_numpy() for v in variables}
+        data: Any = {v: point_results[v].to_numpy() for v in variables}
         del point_results
 
         # apply data modification:
@@ -709,99 +719,99 @@ class SliceData(Output):
 
     def get_states_data_xy(
         self,
-        resolution=None,
-        n_img_points=None,
-        variables=None,
-        data_format="xarray",
-        xmin=None,
-        ymin=None,
-        xmax=None,
-        ymax=None,
-        z=None,
-        xspace=500.0,
-        yspace=500.0,
-        normalize_x=None,
-        normalize_y=None,
-        normalize_z=None,
-        normalize_v={},
-        label_map={},
-        vmin={},
-        vmax={},
-        states_sel=None,
-        states_isel=None,
-        to_file=None,
-        write_pars={},
-        ret_states=False,
-        ret_grid=False,
-        verbosity=0,
-        **kwargs,
-    ):
+        resolution: Any = None,
+        n_img_points: Any = None,
+        variables: list[str] | None = None,
+        data_format: str = "xarray",
+        xmin: float | None = None,
+        ymin: float | None = None,
+        xmax: float | None = None,
+        ymax: float | None = None,
+        z: float | None = None,
+        xspace: float = 500.0,
+        yspace: float = 500.0,
+        normalize_x: float | None = None,
+        normalize_y: float | None = None,
+        normalize_z: float | None = None,
+        normalize_v: dict[str, float] = {},
+        label_map: dict[str, str] = {},
+        vmin: dict[str, Any] = {},
+        vmax: dict[str, Any] = {},
+        states_sel: Any = None,
+        states_isel: Any = None,
+        to_file: str | None = None,
+        write_pars: dict[str, Any] = {},
+        ret_states: bool = False,
+        ret_grid: bool = False,
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> Any:
         """
         Creates states data of 2D farm flow slices in a horizontal xy-plane.
 
         Parameters
         ----------
-        resolution: float, optional
+        resolution
             The resolution in m
-        n_img_points: tuple of int, optional
+        n_img_points
             The number of image points (n, m) in the two directions
-        variables: list of str, optional
+        variables
             The variables, or None for all
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        xmin: float, optional
+        xmin
             The min x coordinate, or None for automatic
-        ymin: float, optional
+        ymin
             The min y coordinate, or None for automatic
-        xmax: float, optional
+        xmax
             The max x coordinate, or None for automatic
-        ymax: float, optional
+        ymax
             The max y coordinate, or None for automatic
-        z: float, optional
+        z
             The z coordinate of the plane
-        xspace: float, optional
+        xspace
             The extra space in x direction, before and after wind farm
-        yspace: float, optional
+        yspace
             The extra space in y direction, before and after wind farm
-        normalize_x: float, optional
+        normalize_x
             Divide x by this value
-        normalize_y: float, optional
+        normalize_y
             Divide y by this value
-        normalize_z: float, optional
+        normalize_z
             Divide z by this value
-        normalize_v: dict, optional
+        normalize_v
             Divide the variables by these values
-        label_map: dict
+        label_map
             The mapping from original to new field names
-        vmin: dict
+        vmin
             Minimal values for variables
-        vmax: dict
+        vmax
             Maximal values for variables
-        states_sel: list, optional
+        states_sel
             Reduce to selected states
-        states_isel: list, optional
+        states_isel
             Reduce to the selected states indices
-        to_file: str, optional
+        to_file
             Write data to this file name
-        write_pars: dict
+        write_pars
             Additional write function parameters
-        ret_states: bool
+        ret_states
             Flag for returning states indices
-        ret_grid: bool
+        ret_grid
             Flag for returning grid data
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Returns
         -------
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        states: numpy.ndarray, optional
+        states
             The states indices
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -849,102 +859,102 @@ class SliceData(Output):
 
     def get_states_data_xz(
         self,
-        resolution=None,
-        n_img_points=None,
-        variables=None,
-        data_format="xarray",
-        x_direction=270,
-        xmin=None,
-        zmin=0.0,
-        xmax=None,
-        zmax=None,
-        y=None,
-        xspace=500.0,
-        zspace=500.0,
-        normalize_x=None,
-        normalize_y=None,
-        normalize_z=None,
-        normalize_v={},
-        label_map={},
-        vmin={},
-        vmax={},
-        states_sel=None,
-        states_isel=None,
-        to_file=None,
-        write_pars={},
-        ret_states=False,
-        ret_grid=False,
-        verbosity=0,
-        **kwargs,
-    ):
+        resolution: Any = None,
+        n_img_points: Any = None,
+        variables: list[str] | None = None,
+        data_format: str = "xarray",
+        x_direction: float = 270,
+        xmin: float | None = None,
+        zmin: float = 0.0,
+        xmax: float | None = None,
+        zmax: Any = None,
+        y: float | None = None,
+        xspace: float = 500.0,
+        zspace: float = 500.0,
+        normalize_x: float | None = None,
+        normalize_y: float | None = None,
+        normalize_z: float | None = None,
+        normalize_v: dict[str, float] = {},
+        label_map: dict[str, str] = {},
+        vmin: dict[str, Any] = {},
+        vmax: dict[str, Any] = {},
+        states_sel: Any = None,
+        states_isel: Any = None,
+        to_file: str | None = None,
+        write_pars: dict[str, Any] = {},
+        ret_states: bool = False,
+        ret_grid: bool = False,
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> Any:
         """
         Creates states data of 2D farm flow slices in an xz-plane.
 
         Parameters
         ----------
-        resolution: float, optional
+        resolution
             The resolution in m
-        n_img_points: tuple of int, optional
+        n_img_points
             The number of image points (n, m) in the two directions
-        variables: list of str, optional
+        variables
             The variables, or None for all
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        xmin: float, optional
+        xmin
             The min x coordinate, or None for automatic
-        zmin: float, optional
+        zmin
             The min z coordinate
-        xmax: float, optional
+        xmax
             The max x coordinate, or None for automatic
-        zmax: float, optional
+        zmax
             The max z coordinate, or None for automatic
-        y: float, optional
+        y
             The y coordinate of the plane
-        xspace: float, optional
+        xspace
             The extra space in x direction, before and after wind farm
-        zspace: float, optional
+        zspace
             The extra space in z direction, below and above wind farm
-        normalize_x: float, optional
+        normalize_x
             Divide x by this value
-        normalize_y: float, optional
+        normalize_y
             Divide y by this value
-        normalize_z: float, optional
+        normalize_z
             Divide z by this value
-        normalize_v: dict, optional
+        normalize_v
             Divide the variables by these values
-        label_map: dict
+        label_map
             The mapping from original to new field names
-        vmin: dict
+        vmin
             Minimal values for variables
-        vmax: dict
+        vmax
             Maximal values for variables
-        states_sel: list, optional
+        states_sel
             Reduce to selected states
-        states_isel: list, optional
+        states_isel
             Reduce to the selected states indices
-        to_file: str, optional
+        to_file
             Write data to this file name
-        write_pars: dict
+        write_pars
             Additional write function parameters
-        ret_states: bool
+        ret_states
             Flag for returning states indices
-        ret_grid: bool
+        ret_grid
             Flag for returning grid data
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Returns
         -------
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        states: numpy.ndarray, optional
+        states
             The states indices
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
@@ -994,102 +1004,102 @@ class SliceData(Output):
 
     def get_states_data_yz(
         self,
-        resolution=None,
-        n_img_points=None,
-        variables=None,
-        data_format="xarray",
-        x_direction=270,
-        ymin=None,
-        zmin=0.0,
-        ymax=None,
-        zmax=None,
-        x=None,
-        yspace=500.0,
-        zspace=500.0,
-        normalize_x=None,
-        normalize_y=None,
-        normalize_z=None,
-        normalize_v={},
-        label_map={},
-        vmin={},
-        vmax={},
-        states_sel=None,
-        states_isel=None,
-        to_file=None,
-        write_pars={},
-        ret_states=False,
-        ret_grid=False,
-        verbosity=0,
-        **kwargs,
-    ):
+        resolution: Any = None,
+        n_img_points: Any = None,
+        variables: list[str] | None = None,
+        data_format: str = "xarray",
+        x_direction: float = 270,
+        ymin: float | None = None,
+        zmin: float = 0.0,
+        ymax: float | None = None,
+        zmax: Any = None,
+        x: float | None = None,
+        yspace: float = 500.0,
+        zspace: float = 500.0,
+        normalize_x: float | None = None,
+        normalize_y: float | None = None,
+        normalize_z: float | None = None,
+        normalize_v: dict[str, float] = {},
+        label_map: dict[str, str] = {},
+        vmin: dict[str, Any] = {},
+        vmax: dict[str, Any] = {},
+        states_sel: Any = None,
+        states_isel: Any = None,
+        to_file: str | None = None,
+        write_pars: dict[str, Any] = {},
+        ret_states: bool = False,
+        ret_grid: bool = False,
+        verbosity: int = 0,
+        **kwargs: Any,
+    ) -> Any:
         """
         Creates states data of 2D farm flow slices in a yz-plane.
 
         Parameters
         ----------
-        resolution: float, optional
+        resolution
             The resolution in m
-        n_img_points: tuple of int, optional
+        n_img_points
             The number of image points (n, m) in the two directions
-        variables: list of str, optional
+        variables
             The variables, or None for all
-        data_format: str
+        data_format
             The output data format: numpy, pandas, xarray
-        x_direction: float, optional
+        x_direction
             The direction of the x axis, 0 = north
-        ymin: float, optional
+        ymin
             The min y coordinate, or None for automatic
-        zmin: float, optional
+        zmin
             The min z coordinate
-        ymax: float, optional
+        ymax
             The max y coordinate, or None for automatic
-        zmax: float, optional
+        zmax
             The max z coordinate, or None for automatic
-        x: float, optional
+        x
             The x coordinate of the plane
-        yspace: float, optional
+        yspace
             The extra space in y direction, before and after wind farm
-        zspace: float, optional
+        zspace
             The extra space in z direction, below and above wind farm
-        normalize_x: float, optional
+        normalize_x
             Divide x by this value
-        normalize_y: float, optional
+        normalize_y
             Divide y by this value
-        normalize_z: float, optional
+        normalize_z
             Divide z by this value
-        normalize_v: dict, optional
+        normalize_v
             Divide the variables by these values
-        label_map: dict
+        label_map
             The mapping from original to new field names
-        vmin: dict
+        vmin
             Minimal values for variables
-        vmax: dict
+        vmax
             Maximal values for variables
-        states_sel: list, optional
+        states_sel
             Reduce to selected states
-        states_isel: list, optional
+        states_isel
             Reduce to the selected states indices
-        to_file: str, optional
+        to_file
             Write data to this file name
-        write_pars: dict
+        write_pars
             Additional write function parameters
-        ret_states: bool
+        ret_states
             Flag for returning states indices
-        ret_grid: bool
+        ret_grid
             Flag for returning grid data
-        verbosity: int, optional
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Returns
         -------
-        data: dict or pandas.DataFrame or xarray.Dataset
+        data
             The gridded data
-        states: numpy.ndarray, optional
+        states
             The states indices
-        grid_data: tuple, optional
+        grid_data
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """

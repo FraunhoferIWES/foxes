@@ -2,6 +2,7 @@ import numpy as np
 import xarray as xr
 from pandas import read_csv
 from pathlib import Path
+from typing import Any
 
 from foxes.core import Algorithm, FData, LoadedData, MData
 
@@ -30,7 +31,7 @@ class ICONStates(LatLonFieldData):
         output_vars: list[str] | None = None,
         var2ncvar: dict[str, str] | None = None,
         load_mode: str = "fly",
-        **kwargs: object,
+        **kwargs: Any,
     ) -> None:
         """
         Constructor.

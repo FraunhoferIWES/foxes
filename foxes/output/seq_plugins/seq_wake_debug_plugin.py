@@ -1,8 +1,13 @@
+# mypy: disable-error-code=arg-type
+
 from __future__ import annotations
 
 from foxes.algorithms.sequential import SequentialPlugin
+from foxes.algorithms.sequential.sequential import Sequential
 from foxes.models.wake_frames.seq_dynamic_wakes import SeqDynamicWakes
+from matplotlib.axes import Axes
 from typing import Any, Iterator
+from xarray import Dataset
 
 
 class SeqWakeDebugPlugin(SequentialPlugin):
@@ -11,13 +16,13 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
     Attributes
     ----------
-    show_p: bool
+    show_p
         Flag for showing wake points
-    show_v: bool
+    show_v
         Flag for showing wake vectors
-    vpars: dict
+    vpars
         Additional parameters for vector lines
-    ppars: dict
+    ppars
         Additional parameters for point scatter
 
     :group: output.seq_plugins
@@ -36,13 +41,13 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
         Parameters
         ----------
-        show_p: bool
+        show_p
             Flag for showing wake points
-        show_v: bool
+        show_v
             Flag for showing wake vectors
-        vpars: dict
+        vpars
             Additional parameters for vector lines
-        ppars: dict, optional
+        ppars
             Additional parameters for point scatter
 
         """
@@ -56,30 +61,32 @@ class SeqWakeDebugPlugin(SequentialPlugin):
         self.ppars = dict(color="blue")
         self.ppars.update(ppars)
 
-    def initialize(self, algo) -> None:
+    def initialize(self, algo: Sequential) -> None:
         """
         Initialize data based on the intial iterator
 
         Parameters
         ----------
-        algo: foxes.algorithms.sequential.Sequential
+        algo
             The current sequential algorithm
 
         """
         super().initialize(algo)
         self._data: list[tuple[Any, Any, Any]] = []
 
-    def update(self, algo, fres, pres=None) -> None:
+    def update(
+        self, algo: Sequential, fres: Dataset, pres: Dataset | None = None
+    ) -> None:
         """
         Updates data based on current iteration
 
         Parameters
         ----------
-        algo: foxes.algorithms.sequential.Sequential
+        algo
             The latest sequential algorithm
-        fres: xarray.Dataset
+        fres
             The latest farm results
-        pres: xarray.Dataset, optional
+        pres
             The latest point results
 
         """
@@ -92,6 +99,7 @@ class SeqWakeDebugPlugin(SequentialPlugin):
             )
 
         counter = algo.counter
+        assert counter is not None
         N = counter + 1
         assert wframe._dt is not None
         dt = wframe._dt[counter] if counter < len(wframe._dt) else wframe._dt[-1]
@@ -107,17 +115,17 @@ class SeqWakeDebugPlugin(SequentialPlugin):
             )
         )
 
-    def gen_images(self, ax) -> Iterator[tuple[Any, list[Any]]]:
+    def gen_images(self, ax: Axes) -> Iterator[tuple[Any, list[Any]]]:
         """
 
         Parameters
         ----------
-        ax: matplotlib.Axis
+        ax
             The plotting axis
 
         Yields
         ------
-        imgs: tuple
+        imgs
             The (figure, artists) tuple
 
         """

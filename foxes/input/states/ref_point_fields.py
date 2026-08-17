@@ -479,7 +479,7 @@ class SectorSimRefPointField(States):
             f"States '{self.name}': Reference point states '{self.ref_point_states.name}' must provide '{FV.WS}', got {list(ref_results.keys())}"
         )
 
-        def _print_wd_error_info(statesi):
+        def _print_wd_error_info(statesi: np.ndarray) -> None:
             print("\nLOCAL WIND DIRECTION SECTORS:")
             for i, (c, m, p) in enumerate(
                 zip(wd_bin_centre, wd_bin_minus, wd_bin_plus)

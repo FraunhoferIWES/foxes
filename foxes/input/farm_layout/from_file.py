@@ -1,5 +1,6 @@
 from foxes.data import FARM, StaticData
 from foxes.config import get_input_path
+from pathlib import Path
 from typing import Any
 from foxes.core import WindFarm
 
@@ -12,7 +13,7 @@ def add_from_file(
     file_path: str,
     *args: Any,
     verbosity: int = 1,
-    dbook=None,
+    dbook: StaticData | None = None,
     **kwargs: Any,
 ) -> None:
     """
@@ -41,23 +42,27 @@ def add_from_file(
     """
 
     fpath = get_input_path(file_path)
+    source_path: str | Path = file_path
     dbook = StaticData() if dbook is None else dbook
 
     if not fpath.is_file():
         if verbosity:
             print(f"Reading static data '{fpath.name}' from context '{FARM}'")
-        file_path = dbook.get_file_path(FARM, fpath.name, check_raw=False)
+        resolved_path = dbook.get_file_path(FARM, fpath.name, check_raw=False)
+        if resolved_path is None:
+            raise FileNotFoundError(f"Could not resolve input file '{fpath.name}'")
+        source_path = resolved_path
 
     if fpath.suffix == ".json":
-        add_from_json(farm, file_path, *args, **kwargs)
+        add_from_json(farm, str(source_path), *args, **kwargs)
     elif (
         fpath.suffix == ".csv"
-        or (len(file_path) > 7 and file_path[-7:] == ".csv.gz")
-        or (len(file_path) > 8 and file_path[-8:] == ".csv.bz2")
-        or (len(file_path) > 8 and file_path[-8:] == ".csv.zip")
+        or (len(str(source_path)) > 7 and str(source_path)[-7:] == ".csv.gz")
+        or (len(str(source_path)) > 8 and str(source_path)[-8:] == ".csv.bz2")
+        or (len(str(source_path)) > 8 and str(source_path)[-8:] == ".csv.zip")
     ):
         ckwargs = {**kwargs, "verbosity": verbosity}
-        add_from_csv(farm, file_path, *args, **ckwargs)
+        add_from_csv(farm, source_path, *args, **ckwargs)
     else:
         raise KeyError(
             f"Unsupported file suffix: '{file_path}'. Please provide any of: json, csv, csv.gz, csv.bz2, csv.zip"

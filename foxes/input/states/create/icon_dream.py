@@ -5,6 +5,7 @@ from pandas import DataFrame
 from pathlib import Path
 from tqdm.autonotebook import tqdm
 from shutil import rmtree
+from collections.abc import Iterator
 from typing import Any
 
 from foxes.core import get_engine, Engine
@@ -14,7 +15,7 @@ from foxes.data import StaticData, STATES
 import foxes.variables as FV
 
 
-def _rm_tmp_dir(cdo_tmp_dir, verbosity: int = 1) -> None:
+def _rm_tmp_dir(cdo_tmp_dir: Any, verbosity: int = 1) -> None:
     """Remove the temporary directory for CDO intermediate files."""
     if cdo_tmp_dir.exists():
         if verbosity > 0:
@@ -22,7 +23,7 @@ def _rm_tmp_dir(cdo_tmp_dir, verbosity: int = 1) -> None:
         rmtree(cdo_tmp_dir)
 
 
-def _get_file_var_str(var, for_fname: bool = False) -> str:
+def _get_file_var_str(var: Any, for_fname: bool = False) -> str:
     """Get the variable string for the filename based on the variable code."""
     var_str = {
         FV.U: "U",
@@ -40,7 +41,7 @@ def _get_file_var_str(var, for_fname: bool = False) -> str:
 def _get_fname(
     year: int,
     month: int,
-    var=None,
+    var: Any = None,
     region: str | None = None,
     suffix: str = "nc",
 ) -> str:
@@ -51,7 +52,12 @@ def _get_fname(
     return f"ICON-DREAM-EU_{ym_str}{region_str}{var_str}_hourly.{suffix}"
 
 
-def _download_icon_dream(ymv, base_url: str, out_dir, verbosity: int = 1) -> int:
+def _download_icon_dream(
+    ymv: tuple[int, int, Any],
+    base_url: str,
+    out_dir: Any,
+    verbosity: int = 1,
+) -> int:
     """Download a file from ICON-DREAM-EU for a given year, month, and variable."""
     year, month, var = ymv
     fname = _get_fname(year, month, var, region=None, suffix="grb")
@@ -64,13 +70,13 @@ def _download_icon_dream(ymv, base_url: str, out_dir, verbosity: int = 1) -> int
 
 
 def _prepare_grid(
-    path_grid_select,
-    path_icon_grid,
-    path_weights_out,
-    url_icon_grid,
-    cdo_tmp_dir,
-    verbosity=1,
-):
+    path_grid_select: Any,
+    path_icon_grid: Any,
+    path_weights_out: Any,
+    url_icon_grid: str,
+    cdo_tmp_dir: Any,
+    verbosity: int = 1,
+) -> int:
     """Download and prepare grid files for remapping."""
     if path_weights_out.is_file():
         return 0  # Already present
@@ -102,13 +108,13 @@ def _prepare_grid(
 
 
 def _check_grb(
-    year,
-    month,
-    grb_dir,
-    var2ncvar,
-    cdo_tmp_dir,
-    verbosity=1,
-):
+    year: int,
+    month: int,
+    grb_dir: Any,
+    var2ncvar: dict[str, str],
+    cdo_tmp_dir: Any,
+    verbosity: int = 1,
+) -> tuple[list[bool], list[str], list[str], list[str]]:
     """Check dimensions of the grb files for a given year and month."""
     Cdo = import_module(
         "cdo",
@@ -225,20 +231,20 @@ def _check_grb(
 
 
 def _process(
-    region,
-    year,
-    month,
-    grb_dir,
-    nc_dir,
-    var2ncvar,
-    levels,
-    path_grid_select,
-    path_grid_weights,
-    check_nans=True,
-    pack=True,
-    cdo_tmp_dir="cdo_tmp",
-    verbosity=1,
-):
+    region: str,
+    year: int,
+    month: int,
+    grb_dir: Any,
+    nc_dir: Any,
+    var2ncvar: dict[str, str],
+    levels: Any,
+    path_grid_select: Any,
+    path_grid_weights: Any,
+    check_nans: bool = True,
+    pack: bool = True,
+    cdo_tmp_dir: Any = "cdo_tmp",
+    verbosity: int = 1,
+) -> Any:
     """Process grb files and convert to NetCDF."""
     nc_fname = _get_fname(year, month, var=None, region=region, suffix="nc")
     nc_path = nc_dir / nc_fname
@@ -326,9 +332,10 @@ def _process(
        print("PROCESSED DATA", grb_fname, d.to_numpy().shape, "NaNs:", np.sum(np.isnan(d.to_numpy())))
     data = Dataset(coords=crds, data_vars=dvrs)
     """
-    data = Dataset(data)
+    dataset = Dataset(data)
+    assert config.nc_engine is not None
     write_nc(
-        data,
+        dataset,
         nc_path,
         nc_engine=config.nc_engine,
         pack=pack,
@@ -438,7 +445,7 @@ def iconDream2foxes(
     path_grid_weights = nc0_dir / f"icon_weights_{region}.nc"
     path_icon_grid = nc0_dir / "icon_grid_0027_R03B08_N02.nc"
 
-    def _ymv(vrs=None):
+    def _ymv(vrs: Any = None) -> Iterator[tuple[Any, ...]]:
         """Helper to iterate over year/month/var"""
         y, m = min_year, min_month
         while (y < max_year) or (y == max_year and m <= max_month):
