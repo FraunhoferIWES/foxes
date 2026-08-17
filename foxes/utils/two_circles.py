@@ -24,17 +24,17 @@ def area(
 
     Parameters
     ----------
-    r1: float or numpy.ndarray
+    r1
         The radius of circle 1
-    r2: float or numpy.ndarray
+    r2
         The radius of circle 2
-    d: float or numpy.ndarray
+    d
         The distance between the centre points
         of the two circles
 
     Returns
     -------
-    area: float or numpy.ndarray
+    area
         The intersectional area
 
     :group: utils.two_circles
@@ -68,17 +68,17 @@ def calc_area(r1: np.ndarray, r2: np.ndarray, d: np.ndarray) -> np.ndarray:
 
     Parameters
     ----------
-    r1: numpy.ndarray
+    r1
         The radius of circle 1
-    r2: numpy.ndarray
+    r2
         The radius of circle 2
-    d: numpy.ndarray
+    d
         The distance between the centre points
         of the two circles
 
     Returns
     -------
-    area: numpy.ndarray
+    area
         The intersectional area
 
     :group: utils.two_circles

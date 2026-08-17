@@ -9,18 +9,18 @@ def calc_ws(
 
     Parameters
     ----------
-    height: float
+    height
         The evaluation height
-    height0: float
+    height0
         Reference height
-    WS0: float
+    WS0
         Reference wind speed
-    shear: float
+    shear
         Shear exponent
 
     Returns
     -------
-    ws: float
+    ws
         The wind speed
 
     :group: utils.abl.sheared

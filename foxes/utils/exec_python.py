@@ -21,20 +21,20 @@ def exec_python(
 
     Parameters
     ----------
-    s: list, dict or object
+    s
         The source to by analyzed
-    indicator: str
+    indicator
         The indicator that triggers python evaluation
-    newline: str
+    newline
         The new line indicator
-    globals: dict
+    globals
         The global namespace
-    locals: dict
+    locals
         The local namespace
 
     Returns
     -------
-    out: list, dict or object
+    out
         The same structure, but all python
         strings evaluated
 
@@ -89,16 +89,16 @@ def eval_dict_values(
 
     Parameters
     ----------
-    d: dict
+    d
         The dictionary
-    globals: dict, optional
+    globals
         The global namespace
-    locals: dict, optional
+    locals
         The local namespace
 
     Returns
     -------
-    d: dict
+    d
         The dictionary with evaluated values
 
     :group: utils

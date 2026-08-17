@@ -8,14 +8,14 @@ def logz(height: float | np.ndarray, z0: float | np.ndarray) -> float | np.ndarr
 
     Parameters
     ----------
-    height: float
+    height
         The evaluation height
-    z0: float
+    z0
         The roughness length
 
     Returns
     -------
-    lz: float
+    lz
         The log factor
 
     :group: utils.abl.neutral
@@ -37,18 +37,18 @@ def ustar(
 
     Parameters
     ----------
-    ws_ref: float
+    ws_ref
         The reference wind speed
-    h_ref: float
+    h_ref
         The reference height
-    z0: float
+    z0
         The roughness length
-    kappa: float
+    kappa
         The von Karman constant
 
     Returns
     -------
-    ustar: float
+    ustar
         The friction velocity
 
     :group: utils.abl.neutral
@@ -69,18 +69,18 @@ def calc_ws(
 
     Parameters
     ----------
-    height: float
+    height
         The evaluation height
-    z0: float
+    z0
         The roughness length
-    ustar: float
+    ustar
         The friction velocity
-    kappa: float
+    kappa
         The von Karman constant
 
     Returns
     -------
-    ws: float
+    ws
         The wind speed
 
     :group: utils.abl.neutral

@@ -81,7 +81,7 @@ The status snapshot below and the latest validation record are authoritative. Ol
 - `foxes.engines`: complete (package directory: `foxes/engines`)
 - `foxes.algorithms`: complete (package directory: `foxes/algorithms`)
 - `foxes.input`: complete (package directory: `foxes/input`)
-- `foxes.utils`: pending (package directory: `foxes/utils`)
+- `foxes.utils`: complete (package directory: `foxes/utils`)
 - `foxes.models`: pending (package directory: `foxes/models`)
 - `foxes.output`: pending (package directory: `foxes/output`)
 - remaining packages: pending (package directory: `foxes/<remaining_package>`)
@@ -152,7 +152,7 @@ This makes the hidden failure mode impossible to miss in a fresh session, becaus
 
 ### Current Next Action
 
-- Begin the `foxes.utils` type and docstring remediation.
+- Begin the `foxes.models.axial_induction` type and docstring remediation.
 
 ### foxes.input status
 
@@ -165,6 +165,17 @@ This makes the hidden failure mode impossible to miss in a fresh session, becaus
 - supplemental grep anti-drift scan: empty
 - remaining files or hits: none in `foxes/input`
 - next action: begin `foxes.utils` remediation
+
+### foxes.utils status
+
+- package directory: `foxes/utils`
+- pass/fail: complete
+- `uv run mypy foxes/utils` — passed (`36` source files)
+- focused tests: `uv run pytest tests/4_utils -q` — passed (`20 passed`)
+- Python files inspected by AST docstring audit: `36`; final result `0` typed-field hits and `0` type-prose hits in `Parameters`, `Other Parameters`, `Returns`, `Yields`, and `Attributes` sections
+- supplemental grep anti-drift scan: empty
+- remaining files or hits: none in `foxes/utils`
+- next action: begin `foxes.models.axial_induction` remediation
 
 ## Historical Validation Log
 

@@ -16,19 +16,19 @@ def import_module(
 
     Parameters
     ----------
-    name: str
+    name
         The module name
-    package: str, optional
+    package
         The explicit package name, deduced from name
         if not given
-    pip_hint: str, optional
+    pip_hint
         Installation advice, in case the import fails
-    conda_hint: str, optional
+    conda_hint
         Installation advice, in case the import fails
 
     Returns
     -------
-    mdl: module
+    mdl
         The imported package
 
     :group: utils
@@ -54,14 +54,14 @@ def load_module(name: str, path: str | Path) -> ModuleType:
 
     Parameters
     ----------
-    name: str
+    name
         The name of the module
-    path: str
+    path
         The path to the python file
 
     Returns
     -------
-    module:
+    module
         The module object
 
     :group: utils

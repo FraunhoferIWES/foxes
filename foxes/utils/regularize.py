@@ -8,14 +8,14 @@ def sqrt_reg(x: np.ndarray, x0: float = 0.01) -> np.ndarray:
 
     Parameters
     ----------
-    x: numpy.ndarray
+    x
         The x values to evaluate
-    x0: float
+    x0
         Parameter where to start the smoothing
 
     Returns
     -------
-    out: numpy.ndarray
+    out
         The regularized sqrt(x) results
 
     :group: utils

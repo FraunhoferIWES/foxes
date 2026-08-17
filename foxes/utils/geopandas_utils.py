@@ -55,14 +55,14 @@ def read_shp(fname: str, **kwargs: Any) -> Any:
 
     Parameters
     ----------
-    fname: str
+    fname
         Path to the .shp file
-    kwargs: dict, optional
+    kwargs
         Additional parameters for geopandas.read_file()
 
     Returns
     -------
-    data: geopandas.GeoDataFrame
+    data
         The data frame in WSG84
 
     :group: utils
@@ -85,15 +85,15 @@ def shp2csv(
 
     Parameters
     ----------
-    iname: str
+    iname
         Path to the input .shp file
-    oname: str
+    oname
         Path to the output .csv file
-    in_kwargs: dict
+    in_kwargs
         Additional parameters for geopandas.read_file()
-    out_kwargs: dict
+    out_kwargs
         Additional parameters for geopandas to_csv()
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
 
     :group: utils
@@ -168,32 +168,32 @@ def read_shp_polygons(
 
     Parameters
     ----------
-    fname: str
+    fname
         Path to the .shp file
-    names: list of str, optional
+    names
         The names of the polygons to be extracted. All by
         default
-    name_col: int
+    name_col
         Column that contains the area names
-    geom_col: str
+    geom_col
         The geometry column
-    to_utm: bool or str, optional
+    to_utm
         Convert to UTM coordinates. If str, then UTM zone
         plus letter, e.g. "32U"
-    ret_utm_zone: bool
+    ret_utm_zone
         Return UTM zone plus letter as str
-    kwargs: dict, optional
+    kwargs
         Additional parameters for geopandas.read_shp()
 
     Returns
     -------
-    point_dict_exterior: dict
-        Dict with list of array of points. Key: area name,
-        Value: list:np.ndarray, shape of latter: (n_points, 2)
-    point_dict_interior: dict
-        Dict with list of array of points. Key: area name,
-        Value: list:np.ndarray, shape of latter: (n_points, 2)
-    utm_zone_str: str, optional
+    point_dict_exterior
+        Mapping from area names to point arrays. Each key is an area name,
+        Value
+    point_dict_interior
+        Mapping from area names to point arrays. Each key is an area name,
+        Value
+    utm_zone_str
         The UTM zone plus letter as str, e.g. "32U"
 
     :group: utils
@@ -261,27 +261,27 @@ def shp2geom2d(
 
     Parameters
     ----------
-    shp_files: str
+    shp_files
         Path to a ``.shp`` file or glob pattern matching multiple
         ``.shp`` files
-    args: tuple, optional
+    args
         Additional positional arguments for read_shp_polygons()
-    combine_mode: str
+    combine_mode
         The combination mode for multiple areas. Options:
         ``"union"`` (default), ``"intersection"``
-    to_utm: bool or str, optional
+    to_utm
         Convert to UTM coordinates. If str, then UTM zone
         plus letter, e.g. "32U"
-    ret_utm_zone: bool
+    ret_utm_zone
         Return UTM zone plus letter as str
-    kwargs: dict, optional
+    kwargs
         Keyword arguments for read_shp_polygons()
 
     Returns
     -------
-    geom: foxes.tools.geom2D.AreaGeometry
+    geom
         The geometry object
-    utm_zone_str: str, optional
+    utm_zone_str
         The UTM zone plus letter as str, e.g. "32U"
 
     :group: utils

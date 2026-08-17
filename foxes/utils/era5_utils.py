@@ -12,7 +12,7 @@ def calc_era5_density(
 
     Parameters
     ----------
-    era5 : xarray.Dataset
+    era5
         The era5 data
     z : float
         height at which to calculate density
@@ -21,7 +21,7 @@ def calc_era5_density(
 
     Returns
     -------
-    rho : numpy.array
+    rho
         The air density in kg/m3
 
     :group: utils

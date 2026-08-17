@@ -8,7 +8,7 @@ class ReaderWRG:
 
     Attributes
     ----------
-    fpath: pathlib.Path
+    fpath
         Path to the wrg file
 
     """
@@ -19,7 +19,7 @@ class ReaderWRG:
 
         Parameters
         ----------
-        fpath: str
+        fpath
             Path to the wrg file
         """
         self.fpath = Path(fpath)
@@ -76,7 +76,7 @@ class ReaderWRG:
 
         Returns
         -------
-        df: pandas.DataFrame
+        df
             The WRG data
 
         """
@@ -89,7 +89,7 @@ class ReaderWRG:
 
         Returns
         -------
-        n: int
+        n
             The number of points in x direction
 
         """
@@ -102,7 +102,7 @@ class ReaderWRG:
 
         Returns
         -------
-        n: int
+        n
             The number of points in y direction
 
         """
@@ -115,7 +115,7 @@ class ReaderWRG:
 
         Returns
         -------
-        x: float
+        x
             The lower left x coordinate
 
         """
@@ -128,7 +128,7 @@ class ReaderWRG:
 
         Returns
         -------
-        y: float
+        y
             The lower left y coordinate
 
         """
@@ -141,7 +141,7 @@ class ReaderWRG:
 
         Returns
         -------
-        n: int
+        n
             The number of wind direction sectors
 
         """
@@ -154,7 +154,7 @@ class ReaderWRG:
 
         Returns
         -------
-        res: float
+        res
             The horizontal resolution
 
         """

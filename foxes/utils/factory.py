@@ -14,23 +14,23 @@ class Factory:
 
     Attributes
     ----------
-    base: class
+    base
         The class of which objects are to be created
-    name_template: str
+    name_template
         The name template, e.g. 'name_<A>_<B>_<C>' for
         variables A, B, C
-    args: tuple
+    args
         Fixed arguments for the base class
-    kwargs: dict
+    kwargs
         Fixed arguments for the base class
-    var2arg: dict
+    var2arg
         Mapping from variable to constructor argument
-    hints: dict
+    hints
         Hints for print_toc, only for variables for which the
         options are functions or missing
-    example: str
+    example
         An example name
-    options: dict
+    options
         For each variable, e.g. A, B or C, the list or dict
         or function that maps a str to the actual value
 
@@ -56,21 +56,21 @@ class Factory:
         ----------
         base: class
             The class of which objects are to be created
-        name_template: str
+        name_template
             The name template, e.g. 'name_<A>_<B>_<C>' for
             variables A, B, C
-        args: tuple
+        args
             Fixed arguments for the base class
-        kwargs: dict
+        kwargs
             Fixed arguments for the base class
-        var2arg: dict
+        var2arg
             Mapping from variable to constructor argument
-        hints: dict
+        hints
             Hints for print_toc, only for variables for which the
             options are functions or missing
-        example_vars: dict, optional
+        example_vars
             Variable values for creating an example
-        options: dict
+        options
             For each variable, e.g. A, B or C, the list or dict
             or function that maps a str to the actual value
 
@@ -163,7 +163,7 @@ class Factory:
 
         Returns
         -------
-        nbase: str
+        nbase
             The beginning of the name template
 
         """
@@ -176,7 +176,7 @@ class Factory:
 
         Returns
         -------
-        nbase: str
+        nbase
             The ending of the name template
 
         """
@@ -189,7 +189,7 @@ class Factory:
 
         Returns
         -------
-        vrs: list of str
+        vrs
             The variables
 
         """
@@ -215,24 +215,18 @@ class Factory:
 
         Parameters
         ----------
-        var_values: dict
+        var_values
             Variables values. Key: Variable,
-            value: list or value
+            value
 
         Returns
         -------
-        examples: list of str
+        examples
             The examples
 
         """
 
-        def gete(
-            i: int,
-            vals: dict[str, Any],
-            vars: list[str],
-            values: list[Any],
-            examples: list[str],
-        ) -> None:
+        def gete(i: int, vals: dict[str, Any], vars: list[str], values: list[Any], examples: list[str]) -> None:
             if i >= len(vars):
                 e = ""
                 for i, v in enumerate(self._vars):
@@ -270,19 +264,19 @@ class Factory:
 
         Parameters
         ----------
-        name: str
+        name
             The name to be checked
-        error: bool
+        error
             Flag for raising a Value error in case of
             mismatch
-        ret_pars: bool
+        ret_pars
             Flag for returning the parameters
 
         Returns
         -------
-        success: bool
+        success
             True if the template is matched
-        pars: dict, optional
+        pars
             The constructed parameters
 
         """
@@ -332,12 +326,12 @@ class Factory:
 
         Parameters
         ----------
-        name: str
+        name
             The name, matching the template
 
         Returns
         -------
-        obj: object
+        obj
             The instance of the base class
 
         """
@@ -354,7 +348,7 @@ class WakeKFactory:
 
     Attributes
     ----------
-    factories: list of Factory
+    factories
         The individual factories
 
     :group: utils
@@ -379,21 +373,21 @@ class WakeKFactory:
         ----------
         base: class
             The class of which objects are to be created
-        name_template: str
+        name_template
             The name template, e.g. 'name_<A>_<B>_<C>' for
             variables A, B, C. Indicate wake_k part by '_[wake_k]'
-        args: tuple, optional
+        args
             Additional arguments for Factory
-        hints: dict
+        hints
             Hints for print_toc, only for variables for which the
             options are functions or missing
-        factory_kwargs: dict, optional
+        factory_kwargs
             Extra keyword arguments forwarded to Factory
-        var2arg: dict, optional
+        var2arg
             Mapping from variable names to constructor argument names
-        example_vars: dict, optional
+        example_vars
             Example values for variables
-        options: dict
+        options
             Additional arguments for Factory
 
         """
@@ -558,9 +552,9 @@ class FDict(Dict):
 
     Attributes
     ----------
-    store_created: bool
+    store_created
         Flag for storing created objects
-    factories: list of foxes.utils.Factory
+    factories
         The factories
 
     :group: utils
@@ -579,11 +573,11 @@ class FDict(Dict):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Parameters for the base class
-        store_created: bool
+        store_created
             Flag for storing created objects
-        kwargs: dict, optional
+        kwargs
             Parameters for the base class
 
         """
@@ -599,11 +593,11 @@ class FDict(Dict):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Parameters for the Factory constructor
         factory: Factory, optional
             The factory object
-        kwargs: dict, optional
+        kwargs
             Parameters for the Factory constructor
 
         """
@@ -629,9 +623,9 @@ class FDict(Dict):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Parameters for the Factory constructor
-        kwargs: dict, optional
+        kwargs
             Parameters for the Factory constructor
 
         """
@@ -654,7 +648,7 @@ class FDict(Dict):
         ----------
         key: immutable object
             The key
-        prnt: bool
+        prnt
             Flag for message printing
 
         """

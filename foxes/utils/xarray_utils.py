@@ -16,22 +16,22 @@ def compute_scale_and_offset(
 
     Parameters
     ----------
-    min: float
+    min
         Minimum value of the data
-    max: float
+    max
         Maximum value of the data
-    n: int
+    n
         Number of bits for packing
-    hasnan: bool
+    hasnan
         NaN present in the data
 
     Returns
     -------
-    scale_factor: float
+    scale_factor
         The scale factor
-    add_offset: float
+    add_offset
         The add offset
-    fill_value: float
+    fill_value
         The fill value for NaN
 
     Notes
@@ -64,20 +64,20 @@ def pack_value(
 
     Parameters
     ----------
-    unpacked_value: float or np.ndarray
+    unpacked_value
         The floating point value(s) to be packed
-    scale_factor: float
+    scale_factor
         The scale factor
-    add_offset: float
+    add_offset
         The add offset
-    dtype: numpy.dtype
+    dtype
         The dtype of packed values
-    fill_value: float
+    fill_value
         The fill value for NaN
 
     Returns
     -------
-    packed_value: int or np.ndarray
+    packed_value
         The packed integer value(s)
 
     :group: utils
@@ -107,18 +107,18 @@ def unpack_value(
 
     Parameters
     ----------
-    packed_value: int or np.ndarray
+    packed_value
         The packed integer value(s) to be unpacked
-    scale_factor: float
+    scale_factor
         The scale factor
-    add_offset: float
+    add_offset
         The add offset
-    fill_value: float
+    fill_value
         The fill value for NaN
 
     Returns
     -------
-    unpacked_value: float or np.ndarray
+    unpacked_value
         The unpacked floating point value(s)
 
     :group: utils
@@ -145,16 +145,16 @@ def get_encoding(
 
     Parameters
     ----------
-    data: np.ndarray
+        data
         The numpy array for which to get the encoding information.
-    complevel: int
+    complevel
         The compression level (1-9)
-    pack: bool
+    pack
         Whether to pack data using scale_factor and add_offset
 
     Returns
     -------
-    encoding: dict
+    encoding
         The encoding information of the numpy array.
 
     :group: utils
@@ -169,7 +169,7 @@ def get_encoding(
         elif np.issubdtype(data.dtype, np.floating):
             min = np.min(data)
             max = np.max(data)
-            hasnan = np.any(np.isnan(data))
+            hasnan = bool(np.any(np.isnan(data)))
             for t, n in zip([np.int8, np.int16], [8, 16]):
                 scale_factor, add_offset, fill_value = compute_scale_and_offset(
                     min, max, n, hasnan
@@ -203,21 +203,21 @@ def write_nc(
 
     Parameters
     ----------
-    fpath: str
+    fpath
         Path to the output file, should be nc
-    round: dict or int
+    round
         The rounding digits, falling back to defaults
         if variable not found. If int, applies to all variables.
-    complevel: int
+    complevel
         The compression level
-    nc_engine: str
+    nc_engine
         The NetCDF engine to use
-    pack: bool
+    pack
         Whether to pack data using scale_factor and add_offset
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    kwargs: dict, optional
-        Additional parameters for xarray.to_netcdf
+    kwargs
+            Additional parameters for writing the NetCDF file.
 
     :group: utils
 

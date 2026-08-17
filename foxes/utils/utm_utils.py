@@ -8,13 +8,13 @@ def to_lonlat(xy: np.ndarray) -> np.ndarray:
 
     Parameters
     ----------
-    xy: array_like
+    xy
         The cartesian coordinates, shape: (n_points, 2), where
         the last dimension is (x, y).
 
     Returns
     -------
-    lonlat: numpy.ndarray
+    lonlat
         The longitude and latitude coordinates, shape: (n_points, 2), where
         the last dimension is (lon, lat).
 
@@ -40,13 +40,13 @@ def from_lonlat(lonlat: np.ndarray) -> np.ndarray:
 
     Parameters
     ----------
-    lonlat: array_like
+    lonlat
         The longitude and latitude coordinates, shape: (n_points, 2), where
         the last dimension is (lon, lat).
 
     Returns
     -------
-    xy: numpy.ndarray
+    xy
         The cartesian coordinates, shape: (n_points, 2), where
         the last dimension is (x, y).
 
@@ -71,13 +71,13 @@ def get_utm_zone(lonlat: np.ndarray) -> tuple[int, str]:
 
     Parameters
     ----------
-    lonlat: array_like
+    lonlat
         The latitude and longitude coordinates, shape: (n_points, 2), where
         the last dimension is (lat, lon).
 
     Returns
     -------
-    utm_zone: tuple
+    utm_zone
         The UTM zone as (zone_number, zone_letter).
 
     :group: utils

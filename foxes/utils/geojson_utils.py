@@ -14,15 +14,15 @@ def area_contains_point(area: Any, point: np.ndarray) -> bool:
 
     Parameters
     ----------
-    area: object
+    area
         Area-like object exposing contains_point(point) or
         points_inside(points)
-    point: array_like
+    point
         The point coordinates, shape: (2,)
 
     Returns
     -------
-    inside: bool
+    inside
         True if the point is inside area
 
     :group: utils
@@ -44,12 +44,12 @@ def geojson_geometry_to_area(geometry: dict[str, Any]) -> Any | None:
 
     Parameters
     ----------
-    geometry: dict
+    geometry
         A GeoJSON geometry dictionary
 
     Returns
     -------
-    area: foxes.utils.geom2d.AreaGeometry or None
+    area
         The area geometry or None for empty polygon coordinate arrays
 
     :group: utils
@@ -102,15 +102,15 @@ def load_areas_from_geojson(
 
     Parameters
     ----------
-    geojson_path: str or pathlib.Path
+    geojson_path
         Path to a GeoJSON file
 
-    name_key: str or list of str
+    name_key
         Preferred feature property key(s) for area names
 
     Returns
     -------
-    area_map: dict
+    area_map
         Mapping from unique resolved area names (str) to
         `foxes.utils.geom2d.AreaGeometry` objects.
         Missing, empty, or duplicate names are replaced with
@@ -140,17 +140,17 @@ def load_areas_from_geojson_data(
 
     Parameters
     ----------
-    data: dict
+    data
         GeoJSON dictionary
-    source_name: str
+    source_name
         Data source label used in error messages
 
-    name_key: str or list of str
+    name_key
         Preferred feature property key(s) for area names
 
     Returns
     -------
-    area_map: dict
+    area_map
         Mapping from unique resolved area names (str) to
         `foxes.utils.geom2d.AreaGeometry` objects.
         Missing, empty, or duplicate names are replaced with
@@ -222,20 +222,20 @@ def normalize_areas_input(
 
     Parameters
     ----------
-    areas: list or str or pathlib.Path or dict
+    areas
         Accepted area input forms:
-        - list of AreaGeometry objects
-        - list of (name, AreaGeometry) tuples
+        - a sequence of AreaGeometry objects
+        - a sequence of name and AreaGeometry pairs
         - dict mapping names to AreaGeometry objects
         - path to GeoJSON file
         - GeoJSON dictionary
-    geojson_name_key: str or list of str
+    geojson_name_key
         Preferred GeoJSON feature property key(s) used
         to read area names from GeoJSON inputs.
 
     Returns
     -------
-    area_map: dict
+    area_map
         Mapping from unique resolved area names (str) to
         `foxes.utils.geom2d.AreaGeometry` objects.
         Missing, empty, or duplicate names are replaced with default

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from yaml import safe_load  # type: ignore[import-untyped]
+from yaml import safe_load
 from pathlib import Path
 from typing import Any, TypeVar, cast
 
@@ -27,7 +27,7 @@ class Dict(dict[K, V]):
         ----------
         *args: tuple, optional
             Arguments passed to `dict`
-        _name: str, optional
+        _name
             The dictionary name
         **kwargs: dict, optional
             Arguments passed to `dict`
@@ -44,7 +44,7 @@ class Dict(dict[K, V]):
 
         Returns
         -------
-        name: str
+        name
             The dictionary name
 
         """
@@ -58,14 +58,14 @@ class Dict(dict[K, V]):
         ----------
         key: immutable object
             The key
-        deflt: tuple, optional
-            Tuple of length 1, containing the default
-        prnt: bool
+        deflt
+            A single-item sequence containing the default
+        prnt
             Flag for message printing
 
         Returns
         -------
-        data: object
+        data
             The data
 
         """
@@ -99,14 +99,14 @@ class Dict(dict[K, V]):
         ----------
         key: immutable object
             The key
-        deflt: tuple, optional
-            Tuple of length 1, containing the default
-        prnt: bool
+        deflt
+            A single-item sequence containing the default
+        prnt
             Flag for message printing
 
         Returns
         -------
-        data: object
+        data
             The data
 
         """
@@ -160,14 +160,14 @@ class Dict(dict[K, V]):
 
         Parameters
         ----------
-        globals: dict, optional
+        globals
             The global namespace
-        locals: dict, optional
+        locals
             The local namespace
 
         Returns
         -------
-        self: Dict
+        self
             The dictionary with evaluated values
 
         """
@@ -183,14 +183,14 @@ class Dict(dict[K, V]):
 
         Parameters
         ----------
-        yml_file: str
+        yml_file
             Path to the yaml file
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        dct: Dict
+        dct
             The data
 
         """

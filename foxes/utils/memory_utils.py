@@ -20,13 +20,13 @@ def get_object_nbytes(
 
     Parameters
     ----------
-    value: any
+    value
         The value to estimate the payload bytes for.
-    recursive: bool
+    recursive
         Whether to recursively estimate the payload bytes for nested containers.
-    seen: set, optional
+    seen
         A set of object IDs that have already been seen to avoid double counting.
-    allow_shallow_fallback: bool
+    allow_shallow_fallback
         If True, use ``sys.getsizeof`` as a shallow last-resort estimate for
         unknown object types. If False, return 0 for unknown object types to
         preserve payload-only semantics.
@@ -151,13 +151,13 @@ def print_mem(
 
     Parmeters
     ---------
-    obj: object
+    obj
         The object to be analyzed
-    min_csize: int
+    min_csize
         The minimal size of a component for being shown
-    max_csize: int, optional
+    max_csize
         The maximal allowed size of a component
-    pre_str: str
+    pre_str
         String to be printed before
 
     :group: utils
@@ -192,19 +192,19 @@ def deep_split(condition: Any, data: Any, fill_None: bool = True) -> tuple[Any, 
 
     Parameters
     ----------
-    condition: callable or nested structure of callables
+    condition
         A function or a nested structure of functions that takes an element of data and returns True or False.
-    data: any
+    data
         The data to be split, which can be a nested structure (e.g., dict, list, tuple) or a single element.
-    fill_None: bool
+    fill_None
         If True, fill the parts with None where the condition is not met.
         If False, the parts will be empty where the condition is not met.
 
     Returns
     -------
-    data_0: any
+    data_0
         data filled only with elements that evaluate the condition to False
-    data_1:
+    data_1
         data filled only with elements that evaluate the condition to True
 
     :group: utils
@@ -263,23 +263,23 @@ def deep_split_by_nbytes(
 
     Parameters
     ----------
-    data: any
+    data
         The data to split.
-    max_nbytes: int
+    max_nbytes
         Maximal payload size in bytes. Elements with estimated payload smaller
         than this threshold are placed in the first output.
-    fill_None: bool
+    fill_None
         If True, keep structure and fill missing branches with None.
         If False, remove missing branches.
-    allow_shallow_fallback: bool
+    allow_shallow_fallback
         Forwarded to ``get_object_nbytes`` for unknown object types.
 
     Returns
     -------
-    data_small: any
+    data_small
         Data filled only with elements that satisfy
         ``get_object_nbytes(element) < max_nbytes``.
-    data_large: any
+    data_large
         Data filled only with elements that satisfy
         ``get_object_nbytes(element) >= max_nbytes``.
 
@@ -311,14 +311,14 @@ def deep_update(data_0: Any, data_1: Any) -> Any:
 
     Parameters
     ----------
-    data_0: any
+    data_0
         The original data to be updated, which can be a nested structure (e.g., dict, list, tuple) or a single element.
-    data_1: any
+    data_1
         The new data to update with, which can be a nested structure (e.g., dict, list, tuple) or a single element.
 
     Returns
     -------
-    updated_data: any
+    updated_data
         The updated data after merging data_0 and data_1.
 
     :group: utils

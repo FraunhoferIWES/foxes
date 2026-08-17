@@ -8,12 +8,12 @@ def all_subclasses(cls: type[Any]) -> set[type[Any]]:
 
     Parameters
     ----------
-    cls: class
+    cls
         The base class
 
     Returns
     -------
-    list of class:
+    The derived classes
         The derived classes
 
     :group: utils
@@ -30,14 +30,14 @@ def new_cls(base_cls: type[Any], cls_name: str | None) -> type[Any] | None:
 
     Parameters
     ----------
-    base_cls: object
+    base_cls
         The base class
-    cls_name: string
+    cls_name
         Name of the class
 
     Returns
     -------
-    cls: object
+    cls
         The derived class
 
     :group: utils
@@ -73,18 +73,18 @@ def new_instance(
 
     Parameters
     ----------
-    base_cls: object
+    base_cls
         The base class
-    cls_name: string
+    cls_name
         Name of the class
-    args: tuple, optional
+    args
         Additional parameters for the constructor
-    kwargs: dict, optional
+    kwargs
         Additional parameters for the constructor
 
     Returns
     -------
-    obj: object
+    obj
         The instance of the derived class
 
     :group: utils

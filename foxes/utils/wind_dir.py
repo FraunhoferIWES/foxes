@@ -10,17 +10,17 @@ def wd2wdvec(
 
     Parameters
     ----------
-    wd: numpy.ndarray
+    wd
         Wind direction array (any shape)
-    ws: float or numpy.ndarray
+    ws
         The wind speed. Has to broadcast against wd.
-    axis: int
+    axis
         Location where to insert the (x, y) dimension
         into the shape of wd
 
     Returns
     -------
-    wdvec: numpy.ndarray
+    wdvec
         The wind direction vectors
 
     :group: utils
@@ -30,7 +30,7 @@ def wd2wdvec(
     n = np.stack([np.sin(wdr), np.cos(wdr)], axis=axis)
 
     if np.isscalar(ws):
-        return ws * n
+        return np.asarray(ws * n)
 
     return np.expand_dims(ws, axis) * n
 
@@ -42,17 +42,17 @@ def wd2uv(wd: np.ndarray, ws: float | np.ndarray = 1.0, axis: int = -1) -> np.nd
 
     Parameters
     ----------
-    wd: numpy.ndarray
+    wd
         Wind direction array (any shape)
-    ws: float or numpy.ndarray
+    ws
         The wind speed. Has to broadcast against wd.
-    axis: int
+    axis
         Axis location where to insert the (u, v) components
         into the shape of wd
 
     Returns
     -------
-    uv: numpy.ndarray
+    uv
         The wind vectors
 
     :group: utils
@@ -67,14 +67,14 @@ def uv2wd(uv: np.ndarray, axis: int = -1) -> np.ndarray:
 
     Parameters
     ----------
-    uv: numpy.ndarray
+    uv
         The wind vectors, any shape
-    axis: int
+    axis
         The axis which corresponds to (u, v) components
 
     Returns
     -------
-    wd: numpy.ndarray
+    wd
         The wind direction array
 
     :group: utils
@@ -98,14 +98,14 @@ def wdvec2wd(wdvec: np.ndarray, axis: int = -1) -> np.ndarray:
 
     Parameters
     ----------
-    wdvec: numpy.ndarray
+    wdvec
         The wind direction vectors, any shape
-    axis: int
+    axis
         The axis which corresponds to (x, y) components
 
     Returns
     -------
-    wd: numpy.ndarray
+    wd
         The wind direction array
 
     :group: utils
@@ -120,16 +120,16 @@ def delta_wd(wd_a: np.ndarray, wd_b: np.ndarray) -> np.ndarray:
 
     Parameters
     ----------
-    wd_a: numpy.ndarray
+    wd_a
         Array of wind directions.
-        Shape: any shape
-    wd_b: numpy.ndarray
+        Shape
+    wd_b
         Array of wind directions.
         Shape: same as wd_a
 
     Returns
     -------
-    numpy.ndarray :
+    Array
         Array of wind direction deltas.
         Shape: same as wd_a, wd_b
 

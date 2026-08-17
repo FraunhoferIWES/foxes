@@ -13,14 +13,14 @@ class DataBook:
 
     Parameters
     ----------
-    data_book: DataBook, optional
+    data_book
         A data book to start from
 
     Attributes
     ----------
-    dbase: dict
+    dbase
         The data base. Key: context str,
-        value: dict (file name str to pathlib.Path)
+        value
 
     :group: utils
 
@@ -50,11 +50,11 @@ class DataBook:
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        package: str or package
+        package
             The package, must contain init file
-        file_sfx: list of str
+        file_sfx
             File endings to include
 
         """
@@ -94,11 +94,11 @@ class DataBook:
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        package: str or package
+        package
             The package, must contain init.py file
-        file_mane: str
+        file_mane
             The file name
 
         """
@@ -119,9 +119,9 @@ class DataBook:
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        file_paths: list of str
+        file_paths
             The file paths
 
         """
@@ -143,9 +143,9 @@ class DataBook:
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        file_path: str
+        file_path
             The file path
 
         """
@@ -163,20 +163,20 @@ class DataBook:
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        file_name: str
+        file_name
             The file name
-        check_raw: bool
+        check_raw
             Check if `file_name` exists as given, and in
             that case return the path
-        errors: bool
+        errors
             Flag for raising KeyError, otherwise return None,
             if context of file_name not found
 
         Returns
         -------
-        path: pathlib.Path
+        path
             The path
 
         """
@@ -212,12 +212,12 @@ class DataBook:
 
         Parameters
         ----------
-        context: str
+        context
             The context
 
         Returns
         -------
-        keys: list of str
+        keys
             The data keys
 
         """

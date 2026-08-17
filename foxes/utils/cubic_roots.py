@@ -21,18 +21,18 @@ def cubic_roots(
 
     Parameters
     ----------
-    a0: numpy.ndarray
+    a0
         The coefficients a[0]
-    a1: numpy.ndarray
+    a1
         The coefficients a[1]
-    a2: numpy.ndarray
+    a2
         The coefficients a[2]
-    a3: numpy.ndarray
+    a3
         The coefficients a[3], or None for ones
 
     Returns
     -------
-    roots: numpy.ndarray
+    roots
         The real roots of the polynomial,
         shape: (n_a0, 3). If one root only
         the two last columns will be np.nan
@@ -96,15 +96,15 @@ def test_cubic_roots(
 
     Parameters
     ----------
-    roots: numpy.ndarray
+    roots
         The roots to test, shape: (n_a0, 3)
-    a0: numpy.ndarray
+    a0
         The coefficients a[0]
-    a1: numpy.ndarray
+    a1
         The coefficients a[1]
-    a2: numpy.ndarray
+    a2
         The coefficients a[2]
-    a3: numpy.ndarray
+    a3
         The coefficients a[3], or None for ones
 
     """

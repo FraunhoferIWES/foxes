@@ -9,16 +9,16 @@ def tke2ti(tke: np.ndarray, ws: np.ndarray, max_ti: float | None = None) -> np.n
 
     Parameters
     ----------
-    tke : numpy.ndarray
+    tke
         Turbulent kinetic energy.
-    ws : numpy.ndarray
+    ws
         Wind speed.
     max_ti : float, optional
         Upper limit of the computed TI values.
 
     Returns
     -------
-    ti :numpy.ndarray
+    ti
         Turbulence intensity.
 
     :group: utils
@@ -39,16 +39,16 @@ def ustar2ti(
 
     Parameters
     ----------
-    ustar : numpy.ndarray
+    ustar
         Friction velocity.
-    ws : numpy.ndarray
+    ws
         Wind speed.
     max_ti : float, optional
         Upper limit of the computed TI values.
 
     Returns
     -------
-    ti : numpy.ndarray
+    ti
         Turbulence intensity.
 
     :group: utils

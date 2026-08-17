@@ -12,18 +12,18 @@ def weibull_weights(
 
     Parameters
     ----------
-    ws: numpy.ndarray
+    ws
         The wind speed bin centre values
-    ws_deltas: numpy.ndarray
+    ws_deltas
         The wind speed bin widths, same shape as ws
-    A: numpy.ndarray
+    A
         The Weibull scale parameters, same shape as ws
-    k: numpy.ndarray
+    k
         The Weibull shape parameters, same shape as ws
 
     Returns
     -------
-    weights: numpy.ndarray
+    weights
         The weights, same shape as ws
 
     :group: utils

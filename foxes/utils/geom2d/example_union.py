@@ -13,7 +13,7 @@ if __name__ == "__main__":
         + ClosedPolygon(
             np.array([[500, 0], [500, 1500], [1000, 1500], [1000, 0]], dtype=np.float64)
         )
-        - Circle([-100.0, -100.0], 700)
+        - Circle(np.array([-100.0, -100.0]), 700)
     )
 
     fig, ax = plt.subplots()

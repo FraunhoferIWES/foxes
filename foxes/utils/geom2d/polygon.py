@@ -14,9 +14,9 @@ class ClosedPolygon(AreaGeometry):
 
     Attributes
     ----------
-    points: numpy.ndarray
+    points
         The polygon points
-    poly: matplotlib.path.Path
+    poly
         The closed polygon geometry
 
     :group: utils.geom2d
@@ -29,7 +29,7 @@ class ClosedPolygon(AreaGeometry):
 
         Parameters
         ----------
-        points: numpy.ndarray
+        points
             The polygon points, shape: (n_points, 2)
 
         """
@@ -48,7 +48,7 @@ class ClosedPolygon(AreaGeometry):
 
         Returns
         -------
-        p_min: numpy.ndarray
+        p_min
             The minimal (x,y) point, shape = (2,)
 
         """
@@ -60,7 +60,7 @@ class ClosedPolygon(AreaGeometry):
 
         Returns
         -------
-        p_min: numpy.ndarray
+        p_min
             The maximal (x,y) point, shape = (2,)
 
         """
@@ -74,17 +74,17 @@ class ClosedPolygon(AreaGeometry):
 
         Parameters
         ----------
-        points: numpy.ndarray
+        points
             The probe points, shape (n_points, 2)
-        return_nearest: bool
+        return_nearest
             Flag for return of the nearest point on boundary
 
         Returns
         -------
-        dist: numpy.ndarray
+        dist
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest: numpy.ndarray, optional
+        p_nearest
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
 
@@ -141,12 +141,12 @@ class ClosedPolygon(AreaGeometry):
 
         Parameters
         ----------
-        points: numpy.ndarray
+        points
             The probe points, shape (n_points, 2)
 
         Returns
         -------
-        inside: numpy.ndarray
+        inside
             True if point is inside, shape: (n_points,)
 
         """
@@ -167,15 +167,15 @@ class ClosedPolygon(AreaGeometry):
         ----------
         ax: matplotlib.pyplot.Axis
             The axis object
-        show_boundary: bool
+        show_boundary
             Add the boundary line to the image
-        fill_mode: str, optional
+        fill_mode
             Fill the area. Options:
             dist, dist_inside, dist_outside, inside_<color>,
             outside_<color>
-        pars_boundary: dict
+        pars_boundary
             Parameters for boundary plotting command
-        pars_distance: dict
+        pars_distance
             Parameters for distance plotting command
 
         """

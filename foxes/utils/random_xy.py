@@ -16,23 +16,23 @@ def random_xy_square(
 
     Parameters
     ----------
-    n: int
+    n
         The number of positions
-    min_dist: float
+    min_dist
         The minimal distance between any two positions
-    xmax_ini: float, optional
+    xmax_ini
         The initial maximal distance of any coordinates
-    growth: float
+    growth
         The growth factor of the initial radius, must be
         greater 1
-    seed: int, optional
+    seed
         The random seed
-    verbosity: int
+    verbosity
         The verbosity level. 0 = silent
 
     Returns
     -------
-    xy: numpy.ndarray
+    xy
         The positions, shape: (n, 2)
 
     :group: utils
