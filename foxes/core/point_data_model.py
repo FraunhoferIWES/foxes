@@ -131,7 +131,7 @@ class PointDataModel(DataCalcModel):
         ----------
         algo
             The calculation algorithm
-        *data: tuple of xarray.Dataset
+        *data
             The input data
         out_vars
             The calculation output variables

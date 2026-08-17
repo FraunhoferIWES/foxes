@@ -4,7 +4,7 @@ import numpy as np
 from pandas import DataFrame
 from xarray import Dataset, open_dataset
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from foxes.core import Algorithm, FData, LoadedData, MData, States, TData
 from foxes.config import config, get_input_path
@@ -12,7 +12,7 @@ from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .dataset_states import DatasetSelection, DatasetStates, InterpolationParameters
+from .dataset_states import DatasetStates
 
 
 class SingleStateField(States):
@@ -21,31 +21,31 @@ class SingleStateField(States):
 
     Attributes
     ----------
-    data_source: xarray.Dataset or str or pathlib.Path
+    data_source
         The NetCDF dataset to read from, or a path to it.
-    output_vars: list of str
+    output_vars
         List of variable names to read.
-    var2ncvar: dict[str, str]
+    var2ncvar
         Mapping from variable names to netCDF variable names.
-    fixed_vars: dict[str, float]
+    fixed_vars
         Mapping from variable names to fixed values.
-    x_coord: str
+    x_coord
         Name of the x coordinate.
-    y_coord: str
+    y_coord
         Name of the y coordinate.
-    h_coord: str
+    h_coord
         Name of the height coordinate.
-    sel: dict[str, object]
-        Subset selection via xr.Dataset.sel()
-    isel: dict[str, object]
-        Subset selection via xr.Dataset.isel()
-    interp_pars: dict[str, bool or float or str or None]
-        Interpolation parameters, passed to the interpolation function.
-    bounds_extra_space: float or str
-        The extra space, either float in m,
-        or str for units of D, e.g. '2.5D'
-    height_bounds: tuple[float, float]
-        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+    sel
+        Subset selection via xr.Dataset.sel().
+    isel
+        Subset selection via xr.Dataset.isel().
+    interp_pars
+        Interpolation parameters passed to the interpolation function.
+    bounds_extra_space
+        The extra space, either a float in m or a string for units of D,
+        for example "2.5D".
+    height_bounds
+        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D.
 
     :group: input.states
 
@@ -60,9 +60,9 @@ class SingleStateField(States):
         x_coord: str = "x",
         y_coord: str = "y",
         h_coord: str | None = "height",
-        sel: DatasetSelection | None = None,
-        isel: DatasetSelection | None = None,
-        interp_pars: InterpolationParameters | None = None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        interp_pars: dict[str, bool | float | str | None] | None = None,
         bounds_extra_space: float | str | None = 1000,
         height_bounds: tuple[float, float] | None = None,
         **kwargs: object,
@@ -72,32 +72,32 @@ class SingleStateField(States):
 
         Parameters
         ----------
-        data_source: xarray.Dataset or str or pathlib.Path
+        data_source
             The NetCDF dataset to read from, or a path to it.
-        output_vars: list of str
+        output_vars
             List of variable names to read.
-        var2ncvar: dict[str, str], optional
+        var2ncvar
             Mapping from variable names to netCDF variable names.
-        fixed_vars: dict[str, float], optional
+        fixed_vars
             Mapping from variable names to fixed values.
-        x_coord: str
+        x_coord
             Name of the x coordinate.
-        y_coord: str
+        y_coord
             Name of the y coordinate.
-        h_coord: str or None
+        h_coord
             Name of the height coordinate.
-        sel: dict[str, object], optional
-            Subset selection via xr.Dataset.sel()
-        isel: dict[str, object], optional
-            Subset selection via xr.Dataset.isel()
-        interp_pars: dict[str, bool or float or str or None], optional
-            Interpolation parameters, passed to the interpolation function.
-        bounds_extra_space: float or str or None, optional
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
-        height_bounds: tuple[float, float], optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        kwargs: object
+        sel
+            Subset selection via xr.Dataset.sel().
+        isel
+            Subset selection via xr.Dataset.isel().
+        interp_pars
+            Interpolation parameters passed to the interpolation function.
+        bounds_extra_space
+            The extra space, either a float in m or a string for units of D,
+            for example "2.5D".
+        height_bounds
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D.
+        kwargs
             Keyword arguments passed to the base class.
 
         """
@@ -250,10 +250,14 @@ class SingleStateField(States):
                     verbosity=verbosity,
                 )
             if self.isel is not None and len(self.isel):
-                isel = {c: s for c, s in self.isel.items() if c in data.sizes}
+                isel: dict[str, Any] = {
+                    c: s for c, s in self.isel.items() if c in data.sizes
+                }
                 data = data.isel(**isel)
             if self.sel is not None and len(self.sel):
-                sel = {c: s for c, s in self.sel.items() if c in data.sizes}
+                sel: dict[str, Any] = {
+                    c: s for c, s in self.sel.items() if c in data.sizes
+                }
                 data = data.sel(**sel)
 
             # rename:
@@ -339,7 +343,7 @@ class SingleStateField(States):
         for c in self._cmap:
             valid &= np.isfinite(pts[c])
 
-        out = {
+        out: dict[str, np.ndarray] = {
             v: np.full(n_targets * n_tpoints, np.nan, dtype=config.dtype_double)
             for v in vrs
         }

@@ -86,7 +86,7 @@ class DefaultEngine(Engine):
 
         Returns
         -------
-        runner: foxes.core.EngineRunner
+        runner
             The engine runner
 
         """
@@ -102,17 +102,17 @@ class DefaultEngine(Engine):
 
         Parameters
         ----------
-        f: Callable
+        f
             The function f(*args, **kwargs) to be
             submitted
-        args: tuple, optional
+        args
             Arguments for the function
-        kwargs: dict, optional
+        kwargs
             Arguments for the function
 
         Returns
         -------
-        future: object
+        future
             The future object
 
         """
@@ -128,12 +128,12 @@ class DefaultEngine(Engine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        is_done: bool
+        is_done
             True if the future is done
 
         """
@@ -149,12 +149,12 @@ class DefaultEngine(Engine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        result: object
+        result
             The calculation result
 
         """
@@ -176,19 +176,19 @@ class DefaultEngine(Engine):
 
         Parameters
         ----------
-        func: Callable
+        func
             Function to be called on each file,
             func(input, *args, **kwargs) -> data
-        inputs: array-like
+        inputs
             The input data list
-        args: tuple, optional
+        args
             Arguments for func
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for func
 
         Returns
         -------
-        results: list
+        results
             The list of results
 
         """
@@ -212,21 +212,21 @@ class DefaultEngine(Engine):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm object
-        model: foxes.core.DataCalcModel
+        model
             The model that whose calculate function
             should be run
-        model_data: xarray.Dataset
+        model_data
             The initial model data
-        farm_data: xarray.Dataset, optional
+        farm_data
             The initial farm data
-        point_data: xarray.Dataset, optional
+        point_data
             The initial point data
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The model results
 
         """

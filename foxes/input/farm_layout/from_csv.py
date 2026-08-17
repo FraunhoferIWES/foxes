@@ -1,76 +1,78 @@
 import pandas as pd
+from collections.abc import Sequence
+from typing import Any
 
-from foxes.core import Turbine
+from foxes.core import Turbine, WindFarm
 from foxes.config import get_input_path
 
 
 def add_from_csv(
-    farm,
-    data_source,
-    col_index=None,
-    col_name=None,
-    col_x="x",
-    col_y="y",
-    col_H=None,
-    col_D=None,
-    col_id=None,
-    cols_models_pre=None,
-    col_turbine_type=None,
-    cols_models_post=None,
-    col_wind_farm=None,
-    col_cluster=None,
-    turbine_base_name="T",
-    turbine_ids=None,
-    turbine_base_name_count_shift=False,
-    verbosity=1,
-    **turbine_parameters,
-):
+    farm: WindFarm,
+    data_source: str | pd.DataFrame,
+    col_index: str | None = None,
+    col_name: str | None = None,
+    col_x: str = "x",
+    col_y: str = "y",
+    col_H: str | None = None,
+    col_D: str | None = None,
+    col_id: str | None = None,
+    cols_models_pre: Sequence[str] | None = None,
+    col_turbine_type: str | None = None,
+    cols_models_post: Sequence[str] | None = None,
+    col_wind_farm: str | None = None,
+    col_cluster: str | None = None,
+    turbine_base_name: str = "T",
+    turbine_ids: Sequence[int] | None = None,
+    turbine_base_name_count_shift: bool = False,
+    verbosity: int = 1,
+    **turbine_parameters: Any,
+) -> None:
     """
     Add turbines to wind farm via csv input file.
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    data_source: str or pandas.DataFrame
+    data_source
         The input csv file or data source
-    col_index: str, optional
+    col_index
         The index column, or None
-    col_name: str, optional
+    col_name
         The name column, or None
-    col_x: str, optional
+    col_x
         The x column
-    col_y: str, optional
+    col_y
         The y column
-    col_H: str, optional
+    col_H
         The hub height column
-    col_D: str, optional
+    col_D
         The rotor diameter column
-    col_id: str, optional
+    col_id
         The id column
-    cols_models_pre: list of str, optional
+    cols_models_pre
         The turbine model columns, entered before
         turbine_models
-    col_turbine_type: str, optional
+    col_turbine_type
         The turbine type name
-    cols_models_post: list of str, optional
+    cols_models_post
         The turbine model columns, entered after
         turbine_models
-    col_wind_farm: str, optional
+    col_wind_farm
         The wind farm name column
-    col_cluster: str, optional
+    col_cluster
         The cluster name column
-    turbine_base_name: str, optional
+    turbine_base_name
         The turbine base name, only used
         if col_name is None
-    turbine_ids: list, optional
+    turbine_ids
         The turbine ids, or None for
         index
-    turbine_base_name_count_shift: bool, optional
+    turbine_base_name_count_shift
         Start turbine names by 1 instead of 0
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: dict, optional
+    turbine_parameters
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
     :group: input.farm_layout

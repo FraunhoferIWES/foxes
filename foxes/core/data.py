@@ -533,7 +533,7 @@ class Data(Dict[str, np.ndarray]):
 
         Returns
         -------
-        shared: Data
+        shared
             The shared data
 
         """
@@ -573,7 +573,7 @@ class Data(Dict[str, np.ndarray]):
 
         Parameters
         ----------
-        shared: Data
+        shared
             The shared data
 
         """
@@ -609,7 +609,7 @@ class Data(Dict[str, np.ndarray]):
             The dataset
         args
             Additional parameters for the constructor
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
         s_states: slice, optional
@@ -625,7 +625,7 @@ class Data(Dict[str, np.ndarray]):
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """
@@ -699,11 +699,11 @@ class Data(Dict[str, np.ndarray]):
 
         Parameters
         ----------
-        base_data: Data
+        base_data
             The source data
         args
             Additional parameters for the constructor
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
         states_i0
@@ -721,7 +721,7 @@ class Data(Dict[str, np.ndarray]):
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """
@@ -864,7 +864,7 @@ class FData(Data):
             The number of turbines
         args
             Additional parameters for the constructor
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
         kwargs
@@ -872,7 +872,7 @@ class FData(Data):
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """
@@ -907,7 +907,7 @@ class FData(Data):
             Additional parameters for the constructor
         mdata
             The mdata object
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
         n_states
@@ -919,7 +919,7 @@ class FData(Data):
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """
@@ -1140,7 +1140,7 @@ class TData(Data):
 
         Returns
         -------
-        tdata: TData
+        tdata
             The new TData object with the selected targets
 
         """
@@ -1209,7 +1209,7 @@ class TData(Data):
         variables
             Add default empty variables with NaN values
             and shape (n_states, n_targets, n_tpoints)
-        mdata: MData, optional
+        mdata
             The model data
         name
             The data container name
@@ -1276,7 +1276,7 @@ class TData(Data):
         variables
             Add default empty variables with NaN values
             and shape (n_states, n_targets, n_tpoints)
-        mdata: MData, optional
+        mdata
             The model data
         name
             The data container name
@@ -1333,9 +1333,9 @@ class TData(Data):
             Additional parameters for the constructor
         s_targets: slice, optional
             Slice object for targets
-        mdata: MData, optional
+        mdata
             The mdata object
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
         kwargs
@@ -1343,7 +1343,7 @@ class TData(Data):
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """

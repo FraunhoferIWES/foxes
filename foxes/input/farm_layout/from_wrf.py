@@ -25,25 +25,25 @@ def add_from_wrf(
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    directory: str
+    directory
         The directory containing the tbl files and the txt file
-    mbook: foxes.ModelBook, optional
+    mbook
         The model book, only needed if tbl_dir is specified
-    txt_file: str
+    txt_file
         The txt file name
-    csv_file: str, optional
+    csv_file
         An optional csv file containing additional turbine parameters.
-    csv_col_windfarm: str, optional
+    csv_col_windfarm
         The column name in the CSV file for the wind farm identifier
-    csv_col_cluster: str, optional
+    csv_col_cluster
         The column name in the CSV file for the cluster identifier
-    rho: float
+    rho
         The air density for the turbine types, if tbl_dir is given
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: dict, optional
+    turbine_parameters
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
     Examples

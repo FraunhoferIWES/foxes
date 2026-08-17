@@ -121,7 +121,7 @@ class FarmDataModel(DataCalcModel):
         -------
         results
             The resulting data keyed by output variable name. Values are
-            ``numpy.ndarray`` objects with shape ``(n_states, n_turbines)``.
+            arrays with shape ``(n_states, n_turbines)``.
 
         """
         pass
@@ -143,7 +143,7 @@ class FarmDataModel(DataCalcModel):
         ----------
         algo
             The calculation algorithm
-        *data: tuple of xarray.Dataset
+        *data
             The input data
         out_vars
             The calculation output variables

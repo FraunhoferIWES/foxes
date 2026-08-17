@@ -23,19 +23,18 @@ class SingleStateStates(States):
 
     Attributes
     ----------
-    ws: float
-        The wind speed
-    wd: float
-        The wind direction
-    ti: float
-        The TI value
-    rho: float
-        The air density
-    profdicts: dict
-        Key: output variable name str, Value: str or dict
-        or `foxes.core.VerticalProfile`
-    profdata: dict,
-        Additional data for profiles
+    ws
+        The wind speed.
+    wd
+        The wind direction.
+    ti
+        The TI value.
+    rho
+        The air density.
+    profdicts
+        Mapping from output variable names to profile definitions.
+    profdata
+        Additional data for profiles.
 
     :group: input.states
 
@@ -55,19 +54,18 @@ class SingleStateStates(States):
 
         Parameters
         ----------
-        ws: float, optional
-            The wind speed
-        wd: float, optional
-            The wind direction
-        ti: float, optional
-            The TI value
-        rho: float, optional
-            The air density
-        profiles: dict[str, str or dict[str, object] or foxes.core.VerticalProfile], optional
-            Key: output variable name str, Value: str or dict
-            or `foxes.core.VerticalProfile`
-        profdata: object
-            Additional data for profiles
+        ws
+            The wind speed.
+        wd
+            The wind direction.
+        ti
+            The TI value.
+        rho
+            The air density.
+        profiles
+            Mapping from output variable names to profile definitions.
+        profdata
+            Additional data for profiles.
 
         """
         super().__init__()

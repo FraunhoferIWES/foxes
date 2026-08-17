@@ -495,7 +495,7 @@ def np2np_p(
     n_a = len(a_pos)
     n_b = len(b_pos)
     n_v = len(data)
-    out = np.zeros((n_a, n_b, n_v), dtype=config.dtype_double)
+    out: np.ndarray = np.zeros((n_a, n_b, n_v), dtype=config.dtype_double)
     for vi, (v, d) in enumerate(data.items()):
         out[:, :, vi] = d.reshape(n_a, n_b)
     return out
@@ -535,7 +535,7 @@ def np2np_sp(
     n_a = len(a_pos)
     n_b = len(b_pos)
     n_v = len(data)
-    out = np.zeros((n_s, n_a, n_b, n_v), dtype=config.dtype_double)
+    out: np.ndarray = np.zeros((n_s, n_a, n_b, n_v), dtype=config.dtype_double)
     for vi, (v, d) in enumerate(data.items()):
         out[:, :, :, vi] = d.reshape(n_s, n_a, n_b)
     return out

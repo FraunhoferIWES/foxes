@@ -265,8 +265,7 @@ class ExtendedStates(States):
         Returns
         -------
         results
-            The resulting data, keys: output variable str.
-            Values are arrays with shape (n_states, n_points)
+            The resulting data, keyed by output variable names.
 
         """
         return self.pmodels.calculate(algo, mdata, fdata, tdata)

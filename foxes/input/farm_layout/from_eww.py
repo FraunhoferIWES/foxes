@@ -27,27 +27,27 @@ def add_from_eww(
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    data_source: str or pandas.DataFrame
+    data_source
         The input csv file or data source
-    filter: list of tuple, optional
-        A list of filters to apply to the dataframe,
+    filter
+        Multiple filters can be applied to the dataframe,
         e.g. ("wind_farm": ["Farm1", "Farm2"]),
         or ("latitude", ">=54.1"). For range filtering, use strings
         that start with ">=", "<=", ">", "<". For exact matches, use single values.
         For multiple matches, use lists, tuples or sets.
-    mbook: foxes.ModelBook, optional
+    mbook
         The model book, only needed if csv_dir is specified
-    csv_dir: str, optional
+    csv_dir
         The csv file directory, containing turbine type data files
-    rho: float
+    rho
         The air density for the turbine types, if csv_dir is given
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    pct_pars: dict
+    pct_pars
         Additional parameters for the PCtFile constructor
-    turbine_parameters: dict, optional
+    turbine_parameters
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
     Examples
@@ -196,20 +196,20 @@ def download_eww(
 
     Parameters
     ----------
-    out_folder: str
+    out_folder
         The output folder for the downloaded files
-    url_database: str
+    url_database
         The URL of the EuroWindWakes database csv file
-    url_power_curves: str
+    url_power_curves
         The URL of the EuroWindWakes power curve zip file
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
 
     Returns
     -------
-    fpath_db: Path
+    fpath_db
         The path to the downloaded database csv file
-    fpath_pc: Path
+    fpath_pc
         The path to the unpacked power curves folder
 
     """

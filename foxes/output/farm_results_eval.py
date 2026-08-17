@@ -85,8 +85,7 @@ class FarmResultsEval(Output):
             The results array
 
         """
-        nas = None
-        fields = []
+        fields: list[np.ndarray] = []
         for v in vars:
             if isinstance(v, str):
                 vdata = self.results[v].to_numpy()
@@ -101,16 +100,20 @@ class FarmResultsEval(Output):
                 raise TypeError(
                     f"Expecting variable name as str or array, got {type(v)}"
                 )
-            if nas is None:
-                nas = np.zeros_like(fields[-1], dtype=bool)
-            nas = nas | np.isnan(fields[-1])
+
+        if not fields:
+            raise ValueError("No data fields supplied for einsum reduction.")
+
+        nan_mask = np.zeros_like(fields[0], dtype=bool)
+        for field in fields:
+            nan_mask = nan_mask | np.isnan(field)
 
         inds = ["st" for __ in fields]
         if self.results[FV.WEIGHT].dims == (FC.STATE,):
             inds += ["s"]
 
-            if np.any(nas):
-                sel = ~np.any(nas, axis=1)
+            if np.any(nan_mask):
+                sel = ~np.any(nan_mask, axis=1)
                 fields = [f[sel] for f in fields]
 
                 weights0 = self.results[FV.WEIGHT].to_numpy()
@@ -126,8 +129,8 @@ class FarmResultsEval(Output):
         elif self.results[FV.WEIGHT].dims == (FC.STATE, self._LEVEL):
             inds += ["st"]
 
-            if np.any(nas):
-                sel = ~np.any(nas, axis=1)
+            if np.any(nan_mask):
+                sel = ~np.any(nan_mask, axis=1)
                 fields = [f[sel] for f in fields]
 
                 weights0 = self.results[FV.WEIGHT].to_numpy()
@@ -156,15 +159,15 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars_op: dict, optional
-            The operation per variable. Key: str, the variable
-            name. Value: str, the operation, choices
-            are: weights, mean_no_weights, sum, min, max.
+        vars_op
+            The operation per variable. The mapping is from variable name
+            to reduction mode, with choices: weights, mean_no_weights,
+            sum, min, max.
 
         Returns
         -------
-        data: pandas.DataFrame
-            The results per turbine
+        data
+            The results per turbine.
 
         """
 
@@ -225,15 +228,15 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars_op: dict
-            The operation per variable. Key: str, the variable
-            name. Value: str, the operation, choices
-            are: weights, mean_no_weights, sum, min, max.
+        vars_op
+            The operation per variable. The mapping is from variable name
+            to reduction mode, with choices: weights, mean_no_weights,
+            sum, min, max.
 
         Returns
         -------
-        data: pandas.DataFrame
-            The results per state
+        data
+            The results per state.
 
         """
         states = self.results.coords[FC.STATE].to_numpy()
@@ -274,21 +277,17 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        states_op: dict
-            The states contraction operations.
-            Key: str, the variable name. Value:
-            str, the operation, choices are:
-            sum, mean, min, max.
-        turbines_op: dict
-            The turbines contraction operations.
-            Key: str, the variable name. Value:
-            str, the operation, choices are:
-            sum, mean, min, max.
+        states_op
+            The states contraction operations. The mapping is from variable
+            name to reduction mode, with choices: sum, mean, min, max.
+        turbines_op
+            The turbines contraction operations. The mapping is from variable
+            name to reduction mode, with choices: sum, mean, min, max.
 
         Returns
         -------
-        data: dict
-            The fully contracted results
+        data
+            The fully contracted results.
 
         """
         sdata = self.reduce_states(states_op)
@@ -475,7 +474,7 @@ class FarmResultsEval(Output):
 
         """
         if self.algo is not None:
-            P_unit_W = np.array(
+            P_unit_W: np.ndarray = np.array(
                 [FC.P_UNITS[t.P_unit] for t in self.algo.farm_controller.turbine_types],
                 dtype=config.dtype_double,
             )
@@ -529,9 +528,11 @@ class FarmResultsEval(Output):
         else:
             raise KeyError("Expecting either algorithm or 'P_unit_W'")
 
+        duration_hours: float
+
         # compute yield per turbine
         if hours is None and annual:
-            duration_hours = 8760
+            duration_hours = 8760.0
         elif np.issubdtype(self.results[FC.STATE].dtype, np.datetime64):
             if hours is not None:
                 raise KeyError("Unexpected parameter 'hours' for timeseries data")
@@ -540,13 +541,13 @@ class FarmResultsEval(Output):
                 delta_t = times[-1] - times[-2]
             duration = times[-1] - times[0] + delta_t
             duration_seconds = np.int64(duration.astype(np.int64) / 1e9)
-            duration_hours = duration_seconds / 3600
+            duration_hours = float(duration_seconds) / 3600.0
         elif hours is None:
             raise ValueError(
                 "Expecting parameter 'hours' for non-timeseries data, or 'annual=True'"
             )
         else:
-            duration_hours = hours
+            duration_hours = float(hours)
 
         yld = self.calc_states_mean(var_in) * duration_hours * P_unit_W / 1e9
 

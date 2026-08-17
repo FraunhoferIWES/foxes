@@ -419,9 +419,7 @@ class FarmController(FarmDataModel):
             The verbosity level, where 0 is silent.
         loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries ``dim_name_str -> dim_array``;
-            "data_vars", a dict with entries ``name_str -> (dim_tuple, data_ndarray)``;
-            and "extra_data", a dict with non-array additional data.
+            It contains coordinate data, model variables, and additional data.
         force
             Overwrite existing data.
 
@@ -460,9 +458,7 @@ class FarmController(FarmDataModel):
             The calculation algorithm.
         loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries ``dim_name_str -> dim_array``;
-            "data_vars", a dict with entries ``name_str -> (dim_tuple, data_ndarray)``;
-            and "extra_data", a dict with non-array additional data.
+            It contains coordinate data, model variables, and additional data.
         force
             Overwrite existing data.
         verbosity

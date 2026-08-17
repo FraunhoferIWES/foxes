@@ -99,14 +99,14 @@ class ProcessEngineRunner(EngineRunner):
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The mdata from the chunk calculation result
-        handle: object
+        handle
             The handle for accessing the shared data
 
         Returns
         -------
-        recombined_mdata: foxes.core.MData
+        recombined_mdata
             The mdata recombined with the shared data
 
         """
@@ -119,7 +119,7 @@ class ProcessEngineRunner(EngineRunner):
             if shm_name not in active_shm_names:
                 _close_cached_shared_memory(shm_name)
 
-        data = {}
+        data: dict[str, np.ndarray[Any, Any]] = {}
         for name, value in shared_data.items():
             shm_name = value["name"]
             shm = _PROCESS_WORKER_SHM_CACHE.get(shm_name)
@@ -194,7 +194,7 @@ class ProcessEngine(PoolEngine):
 
         Returns
         -------
-        runner: foxes.core.EngineRunner
+        runner
             The engine runner
 
         """
@@ -210,17 +210,17 @@ class ProcessEngine(PoolEngine):
 
         Parameters
         ----------
-        f: Callable
+        f
             The function f(*args, **kwargs) to be
             submitted
-        args: tuple, optional
+        args
             Arguments for the function
-        kwargs: dict, optional
+        kwargs
             Arguments for the function
 
         Returns
         -------
-        future: object
+        future
             The future object
 
         """
@@ -232,12 +232,12 @@ class ProcessEngine(PoolEngine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        is_done: bool
+        is_done
             True if the future is done
 
         """
@@ -249,12 +249,12 @@ class ProcessEngine(PoolEngine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        result: object
+        result
             The calculation result
 
         """
@@ -272,18 +272,18 @@ class ProcessEngine(PoolEngine):
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        mdata: foxes.core.MData
+        mdata
             The mdata to be used in the chunk calculation
-        shared_mdata: foxes.core.MData
+        shared_mdata
             The shared mdata to be used in the chunk calculation
-        verbosity: int
+        verbosity
             The verbosity level, 0=silent
 
         Returns
         -------
-        handle: object
+        handle
             The handle for accessing the shared data
 
         """
@@ -302,7 +302,9 @@ class ProcessEngine(PoolEngine):
             shm = mp_shared_memory.SharedMemory(create=True, size=arr.nbytes)
             shared_memory.append({"kind": "shm", "obj": shm})
 
-            shm_arr = np.ndarray(arr.shape, dtype=arr.dtype, buffer=shm.buf)
+            shm_arr: np.ndarray[Any, Any] = np.ndarray(
+                arr.shape, dtype=arr.dtype, buffer=shm.buf
+            )
             shm_arr[...] = arr
 
             shared_data[name] = {
@@ -346,9 +348,9 @@ class ProcessEngine(PoolEngine):
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        shared_handle: object
+        shared_handle
             The handle for accessing the shared data
 
         """

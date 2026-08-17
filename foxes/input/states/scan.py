@@ -16,7 +16,7 @@ class ScanStates(States):
 
     Parameters
     ----------
-    scans: dict[str, numpy.typing.ArrayLike]
+    scans
         The scans, key: variable name,
         value: scan values
 
@@ -30,7 +30,7 @@ class ScanStates(States):
 
         Parameters
         ----------
-        scans: dict[str, numpy.typing.ArrayLike]
+        scans
             The scans, key: variable name,
             value: scan values
         kwargs: object
@@ -56,28 +56,26 @@ class ScanStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
         loaded_data: LoadedData
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force: bool
+            It contains coordinate data, model variables, and additional data.
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
         n_v = len(self.scans)
-        shp = [len(v) for v in self.scans.values()]
+        shp: list[int] = [len(v) for v in self.scans.values()]
         self._N = int(np.prod(shp))
         self._vars = list(self.scans.keys())
 
-        data = np.zeros(shp + [n_v], dtype=config.dtype_double)
+        data: np.ndarray = np.zeros(tuple(shp + [n_v]), dtype=config.dtype_double)
         for i, d in enumerate(self.scans.values()):
-            s = [None] * n_v
-            s[i] = np.s_[:]
+            s: list[slice | None] = [None] * n_v
+            s[i] = slice(None)
             st = tuple(s)
             data[..., i] = d[st]
         data = data.reshape(self._N, n_v)
@@ -85,7 +83,7 @@ class ScanStates(States):
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
-        loaded_data["coords"][self.VARS] = self._vars
+        loaded_data["coords"][self.VARS] = np.asarray(self._vars, dtype=str)
         loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
     def set_running(
@@ -105,17 +103,16 @@ class ScanStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict[str, dict[str, object]] or None
-            Large data stash, this function adds data here, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict[str, object], optional
-            The subset selection dictionary
-        isel: dict[str, object], optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            Large data stash. This function adds data here if given.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level, 0 = silent.
 
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
@@ -138,17 +135,16 @@ class ScanStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict[str, dict[str, object]] or None
-            Reconstruct model data from this stash, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict[str, object], optional
-            The subset selection dictionary
-        isel: dict[str, object], optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            Reconstruct model data from this stash if given.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level, 0 = silent.
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)

@@ -19,17 +19,17 @@ class NumpyEngine(ThreadsEngine):
 
         Parameters
         ----------
-        f: Callable
+        f
             The function f(*args, **kwargs) to be
             submitted
-        args: tuple, optional
+        args
             Arguments for the function
-        kwargs: dict, optional
+        kwargs
             Arguments for the function
 
         Returns
         -------
-        future: object
+        future
             The future object
 
         """
@@ -41,12 +41,12 @@ class NumpyEngine(ThreadsEngine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        result: object
+        result
             The calculation result
 
         """
@@ -63,12 +63,12 @@ class NumpyEngine(ThreadsEngine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        is_done: bool
+        is_done
             True if the future is done
 
         """
@@ -86,19 +86,19 @@ class NumpyEngine(ThreadsEngine):
 
         Parameters
         ----------
-        func: Callable
+        func
             Function to be called on each file,
             func(input, *args, **kwargs) -> data
-        inputs: array-like
+        inputs
             The input data list
-        args: tuple, optional
+        args
             Arguments for func
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for func
 
         Returns
         -------
-        results: list
+        results
             The list of results
 
         """
@@ -123,7 +123,7 @@ class NumpyEngine(ThreadsEngine):
 
         Returns
         -------
-        runner: foxes.core.EngineRunner
+        runner
             The engine runner
 
         """

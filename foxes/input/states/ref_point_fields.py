@@ -1,5 +1,5 @@
 import numpy as np
-from typing import cast
+from typing import Any, cast
 
 from foxes.config import config
 from foxes.core import (
@@ -422,17 +422,20 @@ class SectorSimRefPointField(States):
         # prepare
         super().calculate(algo, mdata, fdata, tdata)
         n_states = mdata.n_states
-        field_coords0 = mdata.extra_data[self.COORDS0]
-        field_vars0 = mdata.extra_data[self.VARS0]
-        field_extra0 = mdata.extra_data[self.EXTRA0]
-        field_ref_vars = mdata[self.REF_VARS].tolist()
-        field_ref_results = mdata[self.REF_DATA]
+        assert n_states is not None
+        field_coords0 = cast(list[str], mdata.extra_data[self.COORDS0])
+        field_vars0 = cast(list[str], mdata.extra_data[self.VARS0])
+        field_extra0 = cast(dict[str, Any], mdata.extra_data[self.EXTRA0])
+        field_ref_vars = cast(list[str], mdata[self.REF_VARS].tolist())
+        field_ref_results = cast(np.ndarray, mdata[self.REF_DATA])
         wd_bin_centre = mdata[self.WD_BIN_DATA][:, 0]
         wd_bin_minus = mdata[self.WD_BIN_DATA][:, 1]
         wd_bin_plus = mdata[self.WD_BIN_DATA][:, 2]
         n_bins = len(wd_bin_centre)
         ovars = self.output_point_vars(algo)
-        out = {v: np.zeros_like(tdata[v]) for v in ovars}
+        out: dict[str, np.ndarray] = {
+            v: np.zeros_like(tdata[v]) for v in ovars
+        }
 
         assert (
             FV.WD in ovars
@@ -448,22 +451,27 @@ class SectorSimRefPointField(States):
         points = np.zeros((n_states, 1, 3), dtype=self.ref_point.dtype)
         points[:] = self.ref_point[None, None, :]
         htdata = TData.from_points(points=points, mdata=mdata)
-        ref_results = self.ref_point_states.calculate(
-            algo,
-            mdata,
-            fdata,
-            htdata,  # type: ignore[arg-type]
+        raw_ref_results: dict[str, np.ndarray] = cast(
+            dict[str, np.ndarray],
+            self.ref_point_states.calculate(
+                algo,
+                mdata,
+                fdata,
+                htdata,  # type: ignore[arg-type]
+            ),
         )
-        ref_results = {k: d[:, 0, 0] for k, d in ref_results.items()}
+        ref_results: dict[str, np.ndarray] = {
+            str(k): d[:, 0, 0] for k, d in raw_ref_results.items()
+        }
         tdata[FV.WEIGHT] = htdata[FV.WEIGHT]
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
         del points, htdata
 
         if self.check_nans:
-            for k, v in ref_results.items():
-                if np.any(np.isnan(v)):
+            for result_name, result_data in ref_results.items():
+                if np.any(np.isnan(result_data)):
                     raise ValueError(
-                        f"States '{self.name}': Reference point states '{self.ref_point_states.name}' output variable '{k}' contains {np.sum(np.isnan(v))} NaN values"
+                        f"States '{self.name}': Reference point states '{self.ref_point_states.name}' output variable '{result_name}' contains {np.sum(np.isnan(result_data))} NaN values"
                     )
 
         assert FV.WD in ref_results.keys(), (
@@ -520,9 +528,9 @@ class SectorSimRefPointField(States):
                 b0 + np.where(dwd_sel >= 0.0, 1, -1).astype(config.dtype_int)
             ) % n_bins
             dbins = np.abs(delta_wd(wd_bin_centre[b0], wd_bin_centre[b1]))
-            blend = np.zeros_like(dwd_sel, dtype=config.dtype_double)
+            blend: np.ndarray = np.zeros_like(dwd_sel, dtype=config.dtype_double)
             np.divide(np.abs(dwd_sel), dbins, out=blend, where=dbins > 0.0)
-            bf0 = 1.0 - blend
+            bf0: float | np.ndarray = 1.0 - blend
             del dwd_sel, dbins, blend
             del dwd, b0
 
@@ -543,7 +551,7 @@ class SectorSimRefPointField(States):
             fstates = np.where(np.any(sel, axis=0))[0]
             fs2s = np.where(sel[:, fstates])[1]
             sector_maps = [fs2s]
-            bf0 = 1.0
+            bf0 = np.ones(n_states, dtype=config.dtype_double)
             del dwd, sel, fs2s
 
         # filter to relevant field states:
@@ -553,10 +561,12 @@ class SectorSimRefPointField(States):
         field_n_states = len(fstates)
         if field_n_states > 0:
             # create mdata:
-            mdict = {c: mdata[c] for c in field_coords0}
-            mdims = {c: (c,) for c in field_coords0}
+            mdict: dict[str, np.ndarray] = {c: mdata[c] for c in field_coords0}
+            mdims: dict[str, tuple[str, ...]] = {c: (c,) for c in field_coords0}
             mdict.update({v: mdata[v] for v in field_vars0})
-            mdims.update({v: mdata.dims[v] for v in field_vars0})
+            mdims.update(
+                {v: cast(tuple[str, ...], mdata.dims[v]) for v in field_vars0}
+            )
             if FC.STATE in mdict:
                 mdict[FC.STATE] = mdict[FC.STATE][fstates]
             else:
@@ -581,7 +591,7 @@ class SectorSimRefPointField(States):
             )
 
             # create tdata:
-            tpoints = np.zeros(
+            tpoints: np.ndarray = np.zeros(
                 (field_n_states, tdata.n_targets, tdata.n_tpoints, 3),
                 dtype=config.dtype_double,
             )
@@ -592,7 +602,7 @@ class SectorSimRefPointField(States):
             del tpoints
 
             # run field states calculation:
-            field_results = self.field_states.calculate(
+            field_results: dict[str, np.ndarray] = self.field_states.calculate(
                 algo,
                 hmdata,
                 cast(FData, hfdata),
@@ -606,7 +616,7 @@ class SectorSimRefPointField(States):
                 weight = bf0 if bi == 0 else (1.0 - bf0)
 
                 # compute speedups:
-                speedups = {}
+                speedups: dict[str, np.ndarray] = {}
                 for v in ref_results.keys():
                     if v in field_ref_vars:
                         i = field_ref_vars.index(v)
@@ -626,7 +636,7 @@ class SectorSimRefPointField(States):
                             f"States '{self.name}': Reference point states '{self.ref_point_states.name}' output variable '{v}' not found in field states variables {field_ref_vars} or output variables {ovars}"
                         )
 
-                def _get_data(v):
+                def _get_data(v: str) -> np.ndarray:
                     if v in field_results.keys():
                         return field_results[v][fs2s, :, :]
                     elif v in ref_results.keys():

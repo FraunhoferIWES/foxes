@@ -50,7 +50,9 @@ def _mpi_create_worker_shared_cache(token: str, payload: dict[str, Any]) -> str:
         nbytes = arr.nbytes if rank == 0 else 0
         win = MPI.Win.Allocate_shared(nbytes, dtype.itemsize, comm=shared_comm)
         buf, _ = win.Shared_query(0)
-        shm_arr = np.ndarray(shape, dtype=dtype, buffer=buf)
+        shm_arr: np.ndarray[Any, Any] = np.ndarray(
+            shape, dtype=dtype, buffer=buf
+        )
         if rank == 0:
             shm_arr[...] = arr
         shared_comm.Barrier()
@@ -150,7 +152,7 @@ class MPIEngine(ProcessEngine):
 
         Returns
         -------
-        runner: foxes.core.EngineRunner
+        runner
             The engine runner
 
         """
@@ -168,18 +170,18 @@ class MPIEngine(ProcessEngine):
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        mdata: foxes.core.MData
+        mdata
             The mdata to be used in the chunk calculation
-        shared_mdata: foxes.core.MData
+        shared_mdata
             The shared mdata to be used in the chunk calculation
-        verbosity: int
+        verbosity
             The verbosity level, 0=silent
 
         Returns
         -------
-        handle: object
+        handle
             The handle for accessing the shared data
 
         """
@@ -265,9 +267,9 @@ class MPIEngine(ProcessEngine):
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        shared_handle: object
+        shared_handle
             The handle for accessing the shared data
 
         """

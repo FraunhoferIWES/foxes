@@ -26,9 +26,9 @@ class PopulationStates(States):
 
     Attributes
     ----------
-    states: foxes.core.States
+    states
         The original states
-    n_pop: int
+    n_pop
         The population size
 
     :group: core
@@ -41,11 +41,11 @@ class PopulationStates(States):
 
         Parameters
         ----------
-        states: foxes.core.States
+        states
             The original states
-        n_pop: int
+        n_pop
             The population size
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -59,7 +59,7 @@ class PopulationStates(States):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -71,12 +71,12 @@ class PopulationStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -108,16 +108,14 @@ class PopulationStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force: bool
+            It contains coordinate data, model variables, and additional data.
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -158,7 +156,9 @@ class PopulationStates(States):
             need_state0 = True
 
         # create mapping from new states to original states:
-        smap = np.zeros((self.states.size(), self.n_pop), dtype=config.dtype_int)
+        smap: np.ndarray = np.zeros(
+            (self.states.size(), self.n_pop), dtype=config.dtype_int
+        )
         smap[:] = np.arange(self.states.size())[:, None]
         smap = smap.reshape(self.size())
         data_vars[self.SMAP] = ((FC.STATE,), smap)
@@ -182,13 +182,13 @@ class PopulationStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         """
@@ -279,20 +279,20 @@ class PopulationStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
-        tdata: foxes.core.Data
+        tdata
             The point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values with shape (n_states, n_points)
 
         """
         if mdata is None or fdata is None or tdata is None:
@@ -365,14 +365,14 @@ class PopulationModel(TurbineModel):
 
     Attributes
     ----------
-    index_coord: str
+    index_coord
         The name of the index coordinate, labeling individuals
         within the population.
-    turbine_coord: str
+    turbine_coord
         The name of the turbine coordinate
-    var2ncvar: dict
+    var2ncvar
         Mapping from variable names to NetCDF variable names
-    variables: list of str
+    variables
         The variables to be set. If None, all variables
         fields from the dataset are used
 
@@ -395,21 +395,21 @@ class PopulationModel(TurbineModel):
 
         Parameters
         ----------
-        data_source: xarray.Dataset or str
+        data_source
             The population data or path to NetCDF file.
-        index_coord: str
+        index_coord
             The name of the index coordinate, labeling individuals
             within the population.
-        turbine_coord: str
+        turbine_coord
             The name of the turbine coordinate
-        var2ncvar: dict
+        var2ncvar
             Mapping from variable names to NetCDF variable names
-        variables: list of str, optional
+        variables
             The variables to be set. If None, all variables
             fields from the dataset are used#
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -453,7 +453,7 @@ class PopulationModel(TurbineModel):
 
         Returns
         -------
-        pop_size: int
+        n_pop
             The population size
 
         """
@@ -465,12 +465,12 @@ class PopulationModel(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -490,16 +490,14 @@ class PopulationModel(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force: bool
+            It contains coordinate data, model variables, and additional data.
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -521,7 +519,7 @@ class PopulationModel(TurbineModel):
         self.n_states0 = states.states.size()
         self._inds0 = states.states.index()
         n_vrs = len(self.variables)
-        data = np.zeros(
+        data: np.ndarray = np.zeros(
             (self.n_pop, self.n_states0, algo.n_turbines, n_vrs),
             dtype=config.dtype_double,
         )
@@ -533,7 +531,7 @@ class PopulationModel(TurbineModel):
             data[..., i] = self._data.data_vars[c].values[:, None, :]
         data = data.reshape(algo.states.size(), algo.n_turbines, n_vrs)
 
-        loaded_data["coords"][self.VARS] = self.variables
+        loaded_data["coords"][self.VARS] = np.asarray(self.variables, dtype=str)
         loaded_data["data_vars"][self.DATA] = ((FC.STATE, FC.TURBINE, self.VARS), data)
 
     def set_running(
@@ -553,16 +551,16 @@ class PopulationModel(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict
+        data_stash
             Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -585,16 +583,16 @@ class PopulationModel(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict
+        data_stash
             Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -621,21 +619,21 @@ class PopulationModel(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
         self.ensure_output_vars(algo, fdata)
@@ -652,14 +650,14 @@ class PopulationModel(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        farm_results: xarray.Dataset
+        farm_results
             The farm results
 
         Returns
         -------
-        pop_results: xarray.Dataset
+        pop_results
             The population farm results
 
         """
@@ -670,11 +668,16 @@ class PopulationModel(TurbineModel):
 
         coords = {FC.STATE: self._inds0} if self._inds0 is not None else {}
         coords.update(
-            {c: d.values for c, d in farm_results.coords.items() if c != FC.STATE}
+            {
+                str(c): d.values
+                for c, d in farm_results.coords.items()
+                if c != FC.STATE
+            }
         )
 
         data = {}
-        for dname, d in farm_results.data_vars.items():
+        for dname_raw, d in farm_results.data_vars.items():
+            dname = str(dname_raw)
             if d.dims[0] == FC.STATE:
                 data[dname] = (
                     (FC.POP,) + d.dims,

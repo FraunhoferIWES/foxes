@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 from xarray import Dataset
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.algorithms import Iterative
 from foxes.config import config
@@ -12,6 +12,10 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 from . import models as mdls
+
+if TYPE_CHECKING:
+    from foxes.core import States, WindFarm
+    from .models.plugin import SequentialPlugin
 
 
 class Sequential(Iterative):
@@ -24,18 +28,18 @@ class Sequential(Iterative):
 
     Attributes
     ----------
-    ambient: bool
+    ambient
         Flag for ambient calculation
-    calc_pars: dict
+    calc_pars
         Parameters for model calculation.
         Key: model name str, value: parameter dict
-    states0: foxes.core.States
+    states0
         The original states
-    points: numpy.ndarray
+    points
         The points of interest, shape: (n_states, n_points, 3)
-    plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
+    plugins
         The plugins, updated with every iteration
-    outputs: list of str
+    outputs
         The output variables
     :group: algorithms.sequential
 
@@ -48,12 +52,12 @@ class Sequential(Iterative):
 
         Parameters
         ----------
-        name: str
+        name
             The model name
 
         Returns
         -------
-        model: foxes.core.model
+        model
             The model
 
         """
@@ -64,13 +68,13 @@ class Sequential(Iterative):
 
     def __init__(
         self,
-        farm: Any,
-        states: Any,
+        farm: WindFarm,
+        states: States,
         *args: Any,
         points: np.ndarray | None = None,
         ambient: bool = False,
         calc_pars: dict[str, Any] = {},
-        plugins: list[Any] = [],
+        plugins: list[SequentialPlugin] = [],
         outputs: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
@@ -79,24 +83,24 @@ class Sequential(Iterative):
 
         Parameters
         ----------
-        farm: foxes.WindFarm
+        farm
             The wind farm
-        states: foxes.core.States
+        states
             The ambient states
-        args: tuple, optional
+        args
             Additional arguments for Downwind
-        points: numpy.ndarray, optional
+        points
             The points of interest, shape: (n_states, n_points, 3)
-        ambient: bool
+        ambient
             Flag for ambient calculation
-        calc_pars: dict
+        calc_pars
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
+        plugins
             The plugins, updated with every iteration
-        outputs: list of str, optional
+        outputs
             The output variables
-        kwargs: dict, optional
+        kwargs
             Additional arguments for Downwind
 
         """
@@ -131,7 +135,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        itr: bool
+        iterating
             True if currently iterating
 
         """
@@ -224,11 +228,14 @@ class Sequential(Iterative):
                 print(f"{self.name}: Running state {self.states.index()[0]}")
 
             self.reset_chunk_store()
-            fres, fres_dnwnd = super().calc_farm(
-                outputs=self.farm_vars,
-                finalize=False,
-                ret_dwnd_order=True,
-                **self.calc_pars,
+            fres, fres_dnwnd = cast(
+                tuple[Dataset, Dataset],
+                super().calc_farm(
+                    outputs=self.farm_vars,
+                    finalize=False,
+                    ret_dwnd_order=True,
+                    **self.calc_pars,
+                ),
             )
             assert fres_dnwnd is not None
 
@@ -250,7 +257,10 @@ class Sequential(Iterative):
                 return fres
 
             else:
-                pres = super().calc_points(fres, points=self.points, finalize=False)
+                pres = cast(
+                    Dataset,
+                    super().calc_points(fres, points=self.points, finalize=False),
+                )
 
                 if self._point_results is None:
                     assert self._model_data is not None
@@ -314,7 +324,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        s: int
+        size
             The total number of iteration steps
 
         """
@@ -327,7 +337,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        i: int
+        counter
             The current index counter
 
         """
@@ -340,7 +350,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        indx: int
+        index
             The current index
 
         """
@@ -352,15 +362,15 @@ class Sequential(Iterative):
 
         Parameters
         ----------
-        counter: bool
+        counter
             Flag for counter
-        algo: object, optional
+        algo
             Dummy argument, due to consistency with
             foxes.core.Data.states_i0
 
         Returns
         -------
-        i0: int
+        i0
             The counter or index
 
         """
@@ -373,7 +383,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The overall farm results
 
         """
@@ -388,7 +398,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The overall farm results
 
         """
@@ -402,7 +412,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The current farm results
 
         """
@@ -417,7 +427,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The overall point results
 
         """
@@ -430,7 +440,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The current point results
 
         """
@@ -444,7 +454,7 @@ class Sequential(Iterative):
 
         Returns
         -------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results. The calculated variables have
             dimensions (state, turbine)
 
@@ -464,19 +474,19 @@ class Sequential(Iterative):
 
         Parameters
         ----------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results. The calculated variables have
             dimensions (state, turbine)
-        points: numpy.ndarray
+        points
             The points of interest, shape: (n_states, n_points, 3)
-        states_sel: list, optional
+        states_sel
             Reduce to selected states
-        states_isel: list, optional
+        states_isel
             Reduce to the selected states indices
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 

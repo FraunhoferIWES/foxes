@@ -19,17 +19,15 @@ class OnePointFlowStates(States):
 
     Attributes
     ----------
-    ref_xy: list of float
+    ref_xy
         The [x, y] or [x, y, z] coordinates of the base states.
-        If [x, y, z] then z will serve as height
-    tl_heights: list of float
-        The heights at which timelines will be calculated
-    dt_min: float
-        The delta t value in minutes,
-        if not from timeseries data
-    intp_pars: dict
-        Parameters for height interpolation with
-        scipy.interpolate.interpn
+        If [x, y, z] then z will serve as height.
+    tl_heights
+        The heights at which timelines will be calculated.
+    dt_min
+        The delta-t value in minutes, if not taken from timeseries data.
+    intp_pars
+        Parameters for height interpolation with scipy.interpolate.interpn.
 
     :group: input.states
 
@@ -49,27 +47,25 @@ class OnePointFlowStates(States):
 
         Parameters
         ----------
-        ref_xy: list of float
+        ref_xy
             The [x, y] or [x, y, z] coordinates of the base states.
-            If [x, y, z] then z will serve as height
-        base_states_args: tuple, optional
-            Arguments for creating the base states from
-            States.new(), if not given as base_states
-        base_states: foxes.core.States, optional
-            The base states, representing horizontally
-            homogeneous inflow
-        tl_heights: list of float, optional
-            The heights at which timelines will be calculated
-        dt_min: float, optional
-            The delta t value in minutes,
-            if not from timeseries data
-        base_states_kwargs: dict, optional
-            Arguments for creating the base states from
-            States.new(), if not given as base_states
+            If [x, y, z] then z will serve as height.
+        base_states_args
+            Arguments for creating the base states from States.new(),
+            if not given as base_states.
+        base_states
+            The base states, representing horizontally homogeneous inflow.
+        tl_heights
+            The heights at which timelines will be calculated.
+        dt_min
+            The delta-t value in minutes, if not taken from timeseries data.
+        base_states_kwargs
+            Arguments for creating the base states from States.new(),
+            if not given as base_states.
 
         """
         super().__init__()
-        self.ref_xy = np.array(ref_xy, dtype=config.dtype_double)
+        self.ref_xy: np.ndarray = np.array(ref_xy, dtype=config.dtype_double)
         self.heights = tl_heights
         self.dt_min = dt_min
         self.timelines_data: Any = None
@@ -153,7 +149,7 @@ class OnePointFlowStates(States):
             cast(Timelines, self),
             algo,
             self.base_states,
-            self.heights,
+            np.asarray(self.heights, dtype=config.dtype_double),
             verbosity,
             needs_res=True,
         )

@@ -21,7 +21,7 @@ class FarmWakesCalculation(FarmDataModel):
 
     Attributes
     ----------
-    urelax: foxes.algorithms.iterative.models.URelax
+    urelax
         The under-relaxation model
 
     :group: algorithms.iterative.models
@@ -34,7 +34,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         Parameters
         ----------
-        urelax: foxes.algorithms.iterative.models.URelax, optional
+        urelax
             The under-relaxation model
 
         """
@@ -47,12 +47,12 @@ class FarmWakesCalculation(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -67,7 +67,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -84,18 +84,18 @@ class FarmWakesCalculation(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
 

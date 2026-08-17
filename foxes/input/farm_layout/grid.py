@@ -19,22 +19,22 @@ def add_grid(
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    xy_base: numpy.ndarray
+    xy_base
         The base point, shape: (2,)
-    step_vectors: numpy.ndarray
+    step_vectors
         The two step vectors in x and y,
         respectively, shape: (2, 2)
-    steps: array_like of int
+    steps
         The steps in x, y. Length 2
-    indices: list of int, optional
+    indices
         The turbine indices
-    names: list of str, optional
+    names
         The turbine names
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: dict, optional
+    turbine_parameters
         Parameters forwarded to `foxes.core.Turbine`
 
     :group: input.farm_layout

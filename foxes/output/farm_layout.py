@@ -91,7 +91,7 @@ class FarmLayoutOutput(Output):
 
         """
 
-        data = np.zeros([self.farm.n_turbines, 3], dtype=config.dtype_double)
+        data: np.ndarray = np.zeros([self.farm.n_turbines, 3], dtype=config.dtype_double)
 
         if lonlat:
             if not self.farm.has_lonlat():

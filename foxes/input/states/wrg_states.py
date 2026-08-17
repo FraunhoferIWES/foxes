@@ -114,7 +114,9 @@ class WRGStates(States):
         elif verbosity:
             print(f"States '{self.name}': Reading file {fpath}")
         wrg = ReaderWRG(fpath)
-        p0 = np.array([wrg.x0, wrg.y0], dtype=config.dtype_double)
+        p0: np.ndarray = np.array(
+            [wrg.x0, wrg.y0], dtype=config.dtype_double
+        )
         nx = wrg.nx
         ny = wrg.ny
         ns = wrg.n_sectors
@@ -130,8 +132,12 @@ class WRGStates(States):
             )
             if verbosity > 0:
                 print(f"States '{self.name}': Farm bounds {xy_min} - {xy_max}")
-            ij_min = np.asarray((xy_min - p0) / res, dtype=config.dtype_int)
-            ij_max = np.asarray((xy_max - p0) / res, dtype=config.dtype_int) + 1
+            ij_min: np.ndarray = np.asarray(
+                (xy_min - p0) / res, dtype=config.dtype_int
+            )
+            ij_max: np.ndarray = np.asarray(
+                (xy_max - p0) / res, dtype=config.dtype_int
+            ) + 1
             sx = slice(ij_min[0], ij_max[0])
             sy = slice(ij_min[1], ij_max[1])
         else:
@@ -151,18 +157,20 @@ class WRGStates(States):
             print(f"States '{self.name}':  New bounds {p0} - {p1}")
 
         # store data:
-        A = []
-        k = []
-        f = []
+        A: list[np.ndarray] = []
+        k: list[np.ndarray] = []
+        f: list[np.ndarray] = []
         for s in range(ns):
             A.append(wrg.data[f"As_{s}"].to_numpy().reshape(ny, nx)[sy, sx])
             k.append(wrg.data[f"Ks_{s}"].to_numpy().reshape(ny, nx)[sy, sx])
             f.append(wrg.data[f"fs_{s}"].to_numpy().reshape(ny, nx)[sy, sx])
         del wrg
-        A = np.stack(A, axis=0).T
-        k = np.stack(k, axis=0).T
-        f = np.stack(f, axis=0).T
-        self._data = np.stack([A, k, f], axis=-1)  # (x, y, wd, AKfs)
+        A_data = np.stack(A, axis=0).T
+        k_data = np.stack(k, axis=0).T
+        f_data = np.stack(f, axis=0).T
+        self._data = np.stack(
+            [A_data, k_data, f_data], axis=-1
+        )  # (x, y, wd, AKfs)
 
         # store ws and wd:
         self.VARS = self.var("VARS")
@@ -171,13 +179,15 @@ class WRGStates(States):
         self._wsd = self.ws_bins[1:] - self.ws_bins[:-1]
         self._wss = 0.5 * (self.ws_bins[:-1] + self.ws_bins[1:])
         self._N = len(self._wss) * ns
-        data = np.zeros((len(self._wss), ns, 3), dtype=config.dtype_double)
+        data: np.ndarray = np.zeros(
+            (len(self._wss), ns, 3), dtype=config.dtype_double
+        )
         data[..., 0] = self._wss[:, None]
         data[..., 1] = self._wds[None, :]
         data[..., 2] = self._wsd[:, None]
         data = data.reshape(self._N, 3)
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
-        loaded_data["coords"][self.VARS] = ["ws", "wd", "dws"]
+        loaded_data["coords"][self.VARS] = np.asarray(["ws", "wd", "dws"])
         loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
     def size(self) -> int:

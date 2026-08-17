@@ -253,7 +253,7 @@ class SingleTurbineWakeModel(WakeModel):
         The wind vector wake superposition model
     superp
         The superposition dict, key: variable name str,
-        value: `foxes.core.WakeSuperposition`
+        value: the corresponding wake superposition model
 
     :group: models.wake_models
 

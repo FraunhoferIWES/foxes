@@ -18,7 +18,7 @@ class ReorderFarmOutput(FarmDataModel):
 
     Attributes
     ----------
-    outputs: list of str, optional
+    outputs
         The output variables, or None for defaults
 
     :group: algorithms.downwind.models
@@ -31,7 +31,7 @@ class ReorderFarmOutput(FarmDataModel):
 
         Parameters
         ----------
-        outputs: list of str, optional
+        outputs
             The output variables, or None for defaults
 
         """
@@ -44,12 +44,12 @@ class ReorderFarmOutput(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -69,18 +69,18 @@ class ReorderFarmOutput(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
         ssel = fdata[FV.ORDER_SSEL]

@@ -87,12 +87,14 @@ class TurbineTypeCurves(Output):
             The farm results for the calculated states
 
         """
-        ws = np.arange(ws_min, ws_max + ws_step, ws_step, dtype=config.dtype_double)
+        ws: np.ndarray = np.arange(
+            ws_min, ws_max + ws_step, ws_step, dtype=config.dtype_double
+        )
         n_states = len(ws)
         sdata = pd.DataFrame(index=range(n_states))
         sdata.index.name = FC.STATE
         sdata[FV.WS] = ws
-        vars = [variables] if isinstance(variables, str) else variables
+        vars_list: list[str] = [variables] if isinstance(variables, str) else variables
 
         models = [turbine_type]
 
@@ -133,7 +135,7 @@ class TurbineTypeCurves(Output):
 
         parameters = dict(
             turbine_type=turbine_type,
-            vars=vars,
+            vars=vars_list,
             P_max=P_max,
             ws_min=ws_min,
             ws_max=ws_max,

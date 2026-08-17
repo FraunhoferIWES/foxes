@@ -1,4 +1,5 @@
 import numpy as np
+from typing import cast
 import matplotlib.pyplot as plt
 import xarray as xr
 from pathlib import Path
@@ -12,7 +13,7 @@ from foxes.output import FarmLayoutOutput
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .dataset_states import DatasetStates, InterpolationParameters
+from .dataset_states import DatasetStates
 
 
 class NEWAStates(DatasetStates):
@@ -67,7 +68,7 @@ class NEWAStates(DatasetStates):
         var2ncvar: dict[str, str] | None = None,
         load_mode: str = "fly",
         time_format: str | None = None,
-        interp_pars: InterpolationParameters = {},
+        interp_pars: dict[str, bool | float | str | None] = {},
         wrf_point_plot: str | Path | None = None,
         **kwargs: object,
     ) -> None:
@@ -387,7 +388,7 @@ class NEWAStates(DatasetStates):
                 assert self.H in loaded_data["coords"], (
                     f"States '{self.name}': Missing heights '{self.H}' in loaded_data, got {list(loaded_data['coords'].keys())}"
                 )
-                h = loaded_data["coords"][self.H]
+                h = cast(np.ndarray, loaded_data["coords"][self.H])
                 if height is None:
                     h = np.atleast_1d(np.max(h))
                 elif all_heights:
@@ -406,7 +407,9 @@ class NEWAStates(DatasetStates):
 
         return gpts
 
-    def get_interpolation_grid_data(self, mdata: MData, idims: list[str]) -> np.ndarray:
+    def get_interpolation_grid_data(
+        self, mdata: MData, idims: list[str]
+    ) -> tuple[np.ndarray, ...]:
         """
         Extracts interpolation grid data from chunk model data.
 
@@ -434,7 +437,7 @@ class NEWAStates(DatasetStates):
 
         # prepare grid points:
         n_dms = len(idims)
-        gpts = np.zeros(
+        gpts: np.ndarray = np.zeros(
             tuple([len(c) for c in icrds]) + (n_dms,), dtype=config.dtype_double
         )
         n_gpts = 1
@@ -465,7 +468,7 @@ class NEWAStates(DatasetStates):
             n_gpts *= xy.shape[0] * xy.shape[1]
 
         # reshape:
-        return gpts.reshape((n_gpts, n_dms))
+        return (gpts.reshape((n_gpts, n_dms)),)
 
     def interpolate_data(
         self,
@@ -475,7 +478,7 @@ class NEWAStates(DatasetStates):
         pts: np.ndarray,
         vrs: list[str],
         state_indices: np.ndarray | None = None,
-        gpts: np.ndarray | None = None,
+        gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
     ) -> np.ndarray:
         """
         Interpolates data to points.
@@ -522,23 +525,26 @@ class NEWAStates(DatasetStates):
         # get grid points if not provided:
         if gpts is None:
             gpts = self.get_interpolation_grid_data(mdata, idims)
-        else:
-            assert (
-                isinstance(gpts, np.ndarray)
-                and gpts.ndim == 2
-                and gpts.shape[1] == len(idims)
-            ), (
-                f"States '{self.name}': gpts must be a 2D numpy array with shape (n_points, {len(idims)}), got {gpts.shape}"
-            )
+        if isinstance(gpts, tuple):
+            assert len(gpts) == 1
+            gpts = gpts[0]
+        assert (
+            isinstance(gpts, np.ndarray)
+            and gpts.ndim == 2
+            and gpts.shape[1] == len(idims)
+        ), (
+            f"States '{self.name}': gpts must be a 2D numpy array with shape (n_points, {len(idims)}), got {gpts.shape}"
+        )
+        gpts_array: np.ndarray = gpts
 
         # check and reshape d, data is on a non-regular grid:
-        n_gpts, n_dms = gpts.shape
+        n_gpts, n_dms = gpts_array.shape
         if d.shape[0] != n_gpts:
             try:
                 d = d.reshape((n_gpts,) + d.shape[n_dms:])
             except Exception as e:
                 raise ValueError(
-                    f"States '{self.name}': Cannot reshape d with shape {d.shape} to match gpts with shape {gpts.shape} and vrs with length {len(vrs)}"
+                    f"States '{self.name}': Cannot reshape d with shape {d.shape} to match gpts with shape {gpts_array.shape} and vrs with length {len(vrs)}"
                 ) from e
 
         def _check_nan(
@@ -549,7 +555,8 @@ class NEWAStates(DatasetStates):
             results: np.ndarray,
         ) -> None:
             """Checks for NaN results and raises errors."""
-            if np.isnan(ipars.get("fill_value", np.nan)):
+            fill_value = ipars.get("fill_value", np.nan)
+            if isinstance(fill_value, (int, float)) and np.isnan(fill_value):
                 assert state_indices is not None, (
                     f"States '{self.name}': state_indices must be provided for NaN check, got None"
                 )
@@ -577,9 +584,9 @@ class NEWAStates(DatasetStates):
                     else:
                         sel2 = np.isnan(d)
                         if np.any(sel2):
-                            i = np.where(sel2)
-                            p = gpts[i[0][0]]
-                            v = vrs[i[1][0]]
+                            nan_indices = np.where(sel2)
+                            p = gpts[nan_indices[0][0]]
+                            v = vrs[nan_indices[1][0]]
                             print(
                                 f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:"
                             )
@@ -587,10 +594,10 @@ class NEWAStates(DatasetStates):
                             for ic, c in enumerate(idims):
                                 print(f"  {c}: {p[ic]}")
                             for iw, w in enumerate(vrs):
-                                print(f"  {w}: {d[i[0][0], iw]}")
+                                print(f"  {w}: {d[nan_indices[0][0], iw]}")
                             print("\n\n")
                             raise ValueError(
-                                f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[i[0]]} at time {t} with {v} = {d[i[0][0], i[1][0]]}."
+                                f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[nan_indices[0]]} at time {t} with {v} = {d[nan_indices[0][0], nan_indices[1][0]]}."
                             )
                         raise ValueError(
                             f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
@@ -600,13 +607,13 @@ class NEWAStates(DatasetStates):
         if not self.check_input_nans:
             sel = np.any(np.isnan(d), axis=tuple(range(1, d.ndim)))
             if np.any(sel):
-                gpts = gpts[~sel]
+                gpts_array = gpts_array[~sel]
                 d = d[~sel]
 
         # interpolate:
-        results = griddata(gpts, d, pts, **ipars)
+        results = griddata(gpts_array, d, pts, **ipars)
 
         # check for NaN results:
-        _check_nan(gpts, d, pts, idims, results)
+        _check_nan(gpts_array, d, pts, idims, results)
 
         return results

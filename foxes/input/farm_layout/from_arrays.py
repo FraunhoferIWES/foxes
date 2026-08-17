@@ -25,48 +25,57 @@ def add_from_arrays(
 
     Parameters
     ----------
-    farm: foxes.core.WindFarm
+    farm
         The wind farm
-    x: numpy.typing.ArrayLike
+    x
         The x-coordinates of the turbines
-    y: numpy.typing.ArrayLike
+    y
         The y-coordinates of the turbines
-    heights: numpy.typing.ArrayLike, optional
+    heights
         The hub heights of the turbines, or None
-    diameters: numpy.typing.ArrayLike, optional
+    diameters
         The rotor diameters of the turbines, or None
-    ids: collections.abc.Sequence[int] or numpy.ndarray, optional
+    ids
         The ids of the turbines, or None
-    names: collections.abc.Sequence[str] or numpy.ndarray, optional
+    names
         The names of the turbines, or None
-    turbine_base_name: str, optional
+    turbine_base_name
         The turbine base name, only used
         if col_name is None
-    turbine_base_name_count_shift: bool, optional
+    turbine_base_name_count_shift
         Start turbine names by 1 instead of 0
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: object, optional
+    turbine_parameters
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
     :group: input.farm_layout
 
     """
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    height_values = None if heights is None else np.asarray(heights, dtype=float)
+    diameter_values = (
+        None if diameters is None else np.asarray(diameters, dtype=float)
+    )
+    id_values = None if ids is None else np.asarray(ids)
+    name_values = None if names is None else np.asarray(names)
+
     tmodels = cast(list[str], turbine_parameters.pop("turbine_models", []))
     H = cast(float | None, turbine_parameters.pop("H", None))
     D = cast(float | None, turbine_parameters.pop("D", None))
 
     for i in range(len(x)):
         s = 1 if turbine_base_name_count_shift else 0
-        tname = f"{turbine_base_name}{i + s}" if names is None else names[i]
+        tname = f"{turbine_base_name}{i + s}" if name_values is None else name_values[i]
 
         farm.add_turbine(
             Turbine(
                 name=tname,
-                index=ids[i] if ids is not None else i,
+                index=id_values[i] if id_values is not None else i,
                 xy=[x[i], y[i]],
-                H=heights[i] if heights is not None else H,
-                D=diameters[i] if diameters is not None else D,
+                H=height_values[i] if height_values is not None else H,
+                D=diameter_values[i] if diameter_values is not None else D,
                 turbine_models=tmodels,
                 **turbine_parameters,  # type: ignore[arg-type]
             ),

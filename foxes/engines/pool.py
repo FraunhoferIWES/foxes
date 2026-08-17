@@ -21,13 +21,13 @@ class PoolEngine(Engine):
 
     Parameters
     ----------
-    share_cstore: bool
+    share_cstore
         Whether to share the chunk store between chunks.
-    pool_args: dict
+    pool_args
         Arguments for the pool constructor
-    supports_shared_data: bool
+    supports_shared_data
         Flag for whether this engine supports shared data for chunk calculations.
-    min_shared_array_bytes: int
+    min_shared_array_bytes
         Minimum array size in bytes for placing model data into process
         shared memory. Arrays with ``nbytes`` less than or equal to this
         threshold are transferred inline to workers.
@@ -50,19 +50,19 @@ class PoolEngine(Engine):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for the base class
-        pool_args: dict
+        pool_args
             Arguments for the pool constructor
-        share_cstore: bool
+        share_cstore
             Whether to share the chunk store between chunks.
-        supports_shared_data: bool
+        supports_shared_data
             Flag for whether this engine supports shared data for chunk calculations.
-        min_shared_array_bytes: int
+        min_shared_array_bytes
             Minimum array size in bytes for placing model data into process
             shared memory. Arrays with ``nbytes`` less than or equal to this
             threshold are transferred inline to workers.
-        kwargs: dict, optional
+        kwargs
             Additional arguments for the base class
 
         """
@@ -115,19 +115,19 @@ class PoolEngine(Engine):
 
         Parameters
         ----------
-        func: Callable
+        func
             Function to be called on each file,
             func(input, *args, **kwargs) -> data
-        inputs: array-like
+        inputs
             The input data list
-        args: tuple, optional
+        args
             Arguments for func
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for func
 
         Returns
         -------
-        results: list
+        results
             The list of results
 
         """
@@ -167,30 +167,30 @@ class PoolEngine(Engine):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm object
-        model: foxes.core.DataCalcModel
+        model
             The model that whose calculate function
             should be run
-        model_data: xarray.Dataset
+        model_data
             The initial model data
-        farm_data: xarray.Dataset, optional
+        farm_data
             The initial farm data
-        point_data: xarray.Dataset, optional
+        point_data
             The initial point data
-        extra_data: dict
+        extra_data
             Additional non-array input data from the models
-        out_vars: list of str, optional
+        out_vars
             Names of the output variables
-        chunk_store: foxes.utils.Dict
+        chunk_store
             The chunk store
-        sel: dict, optional
+        sel
             Selection of coordinate subsets
-        isel: dict, optional
+        isel
             Selection of coordinate subsets index values
-        iterative: bool
+        iterative
             Flag for use within the iterative algorithm
-        write_nc: dict, optional
+        write_nc
             Parameters for writing results to netCDF files, e.g.
             {'out_dir': 'results', 'base_name': 'calc_results',
             'ret_data': False, 'split': 1000}.
@@ -203,19 +203,19 @@ class PoolEngine(Engine):
 
             Use ret_data = False together with non-single file writing
             to avoid constructing the full Dataset in memory.
-        write_chunk_ani: dict, optional
+        write_chunk_ani
             Parameters for writing chunk animations, e.g.
             {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
             'resolution': 100, 'chunk': 5}.'}
             The chunk is either an integer that refers to a states chunk,
             or a  tuple (states_chunk_index, points_chunk_index), or a list
-            of such entries.
-        calc_pars: dict, optional
+                Parameters for writing chunk animations, e.g.
+        calc_pars
             Additional parameters for the model.calculate()
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The model results
 
         """
@@ -392,6 +392,8 @@ class PoolEngine(Engine):
         chunk_store.update(new_chunk_store)
         algo.reset_chunk_store(chunk_store)
 
+        if results_mgr.results is None:
+            raise RuntimeError(f"{type(self).__name__} did not produce calculation results")
         return results_mgr.results
 
     def init_shared_memory(
@@ -406,18 +408,18 @@ class PoolEngine(Engine):
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        mdata: foxes.core.MData
+        mdata
             The mdata to be used in the chunk calculation
-        shared_mdata: foxes.core.MData
+        shared_mdata
             The shared mdata to be used in the chunk calculation
-        verbosity: int
+        verbosity
             The verbosity level, 0=silent
 
         Returns
         -------
-        handle: object
+        handle
             The handle for accessing the shared data
 
         """
@@ -429,9 +431,9 @@ class PoolEngine(Engine):
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The chunk model data that will be sent to workers.
-        shared_handle: object
+        shared_handle
             The handle that describes shared data for worker recombination.
 
         """
@@ -445,9 +447,9 @@ class PoolEngine(Engine):
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        shared_handle: object
+        shared_handle
             The handle for accessing the shared data
 
         """

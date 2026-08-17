@@ -108,7 +108,7 @@ class PartialWakesModel(Model):
             The farm data
         amb_rotor_res
             The ambient results at rotor points,
-            key: variable name, value: numpy.ndarray
+            keyed by variable name, with array values
             of shape: (n_states, n_turbines, n_rotor_points)
         rotor_weights
             The rotor point weights, shape: (n_rotor_points,)
@@ -167,7 +167,7 @@ class PartialWakesModel(Model):
             The target point data for the wake points
         amb_rotor_res
             The ambient results at rotor points,
-            key: variable name, value: numpy.ndarray
+            keyed by variable name, with array values
             of shape: (n_states, n_turbines, n_rotor_points)
         rotor_weights
             The rotor point weights, shape: (n_rotor_points,)

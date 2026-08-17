@@ -238,11 +238,11 @@ class DaskEngine(ProcessEngine):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Additional parameters for the base class
-        progress_bar: bool
+        progress_bar
             Flag for showing progress bar
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -394,9 +394,9 @@ class LocalClusterEngine(ProcessEngine):
 
     Attributes
     ----------
-    cluster_pars: dict
+    cluster_pars
         Parameters for the cluster
-    client_pars: dict
+    client_pars
         Parameters for the client of the cluster
 
     :group: engines
@@ -419,16 +419,16 @@ class LocalClusterEngine(ProcessEngine):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Additional parameters for the ProcessEngine class
-        cluster_pars: dict
+        cluster_pars
             Parameters for the cluster
-        client_pars: dict
+        client_pars
             Parameters for the client of the cluster
-        min_submit_array_bytes: int
+        min_submit_array_bytes
             Minimum ndarray size in bytes to scatter as dask futures before
             task submission. Values <= 0 disable this conversion.
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -629,17 +629,17 @@ class LocalClusterEngine(ProcessEngine):
 
         Parameters
         ----------
-        f: Callable
+        f
             The function f(*args, **kwargs) to be
             submitted
-        args: tuple, optional
+        args
             Arguments for the function
-        kwargs: dict, optional
+        kwargs
             Arguments for the function
 
         Returns
         -------
-        future: object
+        future
             The future object
 
         """
@@ -654,12 +654,12 @@ class LocalClusterEngine(ProcessEngine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        is_done: bool
+        is_done
             True if the future is done
 
         """
@@ -671,12 +671,12 @@ class LocalClusterEngine(ProcessEngine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        result: object
+        result
             The calculation result
 
         """

@@ -230,7 +230,7 @@ def read_farm(wio_dict: dict, mbook: ModelBook, verbosity: int) -> WindFarm:
 
     farm = WindFarm()
     ws_exp_P = None
-    operating = None
+    operating: list[np.ndarray] | None = None
     for index, wio_farm in enumerate(wio_farms):
         fname = wio_farm.pop_item("name", None)
         if verbosity > 1:
@@ -287,8 +287,8 @@ def read_farm(wio_dict: dict, mbook: ModelBook, verbosity: int) -> WindFarm:
     if operating is None:
         mbook.farm_controllers["farm_cntrl"] = BasicFarmController()
     else:
-        operating = np.concatenate(operating, axis=1)
-        mbook.farm_controllers["farm_cntrl"] = OpFlagController(operating)
+        operating_data = np.concatenate(operating, axis=1)
+        mbook.farm_controllers["farm_cntrl"] = OpFlagController(operating_data)
     if verbosity > 1:
         print(
             f"Farm controller type: {type(mbook.farm_controllers['farm_cntrl']).__name__}"

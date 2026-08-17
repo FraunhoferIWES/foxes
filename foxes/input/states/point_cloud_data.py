@@ -19,17 +19,17 @@ class PointCloudData(DatasetStates):
 
     Attributes
     ----------
-    states_coord: str
+    states_coord
         The states coordinate name in the data
-    point_coord: str
+    point_coord
         The point coordinate name in the data
-    x_ncvar: str
+    x_ncvar
         The x variable name in the data
-    y_ncvar: str
+    y_ncvar
         The y variable name in the data
-    h_ncvar: str, optional
+    h_ncvar
         The height variable name in the data
-    weight_ncvar: str, optional
+    weight_ncvar
         The name of the weights variable in the data
 
     Examples
@@ -66,21 +66,21 @@ class PointCloudData(DatasetStates):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for the base class
-        states_coord: str
+        states_coord
             The states coordinate name in the data
-        point_coord: str
+        point_coord
             The point coordinate name in the data
-        x_ncvar: str
+        x_ncvar
             The x variable name in the data
-        y_ncvar: str
+        y_ncvar
             The y variable name in the data
-        h_ncvar: str, optional
+        h_ncvar
             The height variable name in the data
-        weight_ncvar: str, optional
+        weight_ncvar
             The name of the weights variable in the data
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -143,19 +143,19 @@ class PointCloudData(DatasetStates):
 
         Parameters
         ----------
-        loaded_data: LoadedData, optional
+            loaded_data
             The loaded data dictionary.
-        mdata: foxes.core.MData, optional
+            mdata
             The model data.
-        all_heights: bool, optional
+            all_heights
             Must be True because point-cloud states do not expose a separate
             height axis.
-        height: float, optional
+            height
             Must be None because point-cloud states contain explicit points.
 
         Returns
         -------
-        grid_points: numpy.ndarray
+        grid_points
             The explicit point coordinates, shape ``(n_points, n_coordinates)``.
 
         """
@@ -193,18 +193,18 @@ class PointCloudData(DatasetStates):
 
         Parameters
         ----------
-        ds: xarray.Dataset
+        ds
             The Dataset to read data from
-        cmap: dict[str, str], optional
+        cmap
             A mapping from foxes variable names to Dataset dimension names, if not given self._cmap will be used
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        coords: dict[str, numpy.ndarray]
+        coords
             keys: Foxes variable names, values: 1D coordinate value arrays
-        data: dict[str, tuple[tuple[str, ...], numpy.ndarray]]
+        data
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
             where dims is a tuple of dimension names and
@@ -233,7 +233,10 @@ class PointCloudData(DatasetStates):
             point_axes.append(FV.H)
             points.append(data.pop(FV.H)[1])
         coords[FC.XYH] = np.asarray(point_axes)
-        coords[FC.POINT] = ((FC.POINT, FC.XYH), np.stack(points, axis=-1))
+        cast(dict[str, Any], coords)[FC.POINT] = (
+            (FC.POINT, FC.XYH),
+            np.stack(points, axis=-1),
+        )
 
         return coords, data
 
@@ -248,18 +251,19 @@ class PointCloudData(DatasetStates):
         results: np.ndarray,
     ) -> None:
         """Checks for NaN results and raises errors."""
-        if np.isnan(ipars.get("fill_value", np.nan)):
+        fill_value = ipars.get("fill_value", np.nan)
+        if isinstance(fill_value, (int, float)) and np.isnan(fill_value):
             sel = np.isnan(results)
             if np.any(sel):
-                i = [j[0] for j in np.where(sel)]
-                p = pts[i[0]]
+                point_indices = [j[0] for j in np.where(sel)]
+                p = pts[point_indices[0]]
                 qmin = np.min(gpts, axis=0)
                 qmax = np.max(gpts, axis=0)
                 isin = (p >= qmin) & (p <= qmax)
                 method = "linear"
                 print("\n\nInterpolation error")
                 print("dims:   ", idims[1:] if FC.STATE in idims else idims)
-                print(f"point {i[0]}: ", p)
+                print(f"point {point_indices[0]}: ", p)
                 print("qmin:   ", qmin)
                 print("qmax:   ", qmax)
                 print("Inside: ", isin, "\n\n")
@@ -271,19 +275,19 @@ class PointCloudData(DatasetStates):
                 else:
                     sel2 = np.isnan(d)
                     if np.any(sel2):
-                        i = np.where(sel2)
-                        p = gpts[i[0][0]]
-                        v = vrs[i[1][0]]
+                        nan_indices = np.where(sel2)
+                        p = gpts[nan_indices[0][0]]
+                        v = vrs[nan_indices[1][0]]
                         print(
                             f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:"
                         )
                         for ic, c in enumerate(idims):
                             print(f"  {c}: {p[ic]}")
                         for iw, w in enumerate(vrs):
-                            print(f"  {w}: {d[i[0][0], iw]}")
+                            print(f"  {w}: {d[nan_indices[0][0], iw]}")
                         print("\n\n")
                         raise ValueError(
-                            f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[i[0]]} with {v} = {d[i[0][0], i[1][0]]}."
+                            f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[nan_indices[0][0]]} with {v} = {d[nan_indices[0][0], nan_indices[1][0]]}."
                         )
                     raise ValueError(
                         f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
@@ -304,19 +308,19 @@ class PointCloudData(DatasetStates):
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The model data.
-        idims: list of str
+        idims
             The input dimensions, typically ``[FC.POINT]``.
-        d: numpy.ndarray
+        d
             The data array to interpolate.
-        pts: numpy.ndarray
+        pts
             The points to interpolate to, shape ``(n_pts, n_idims)``.
-        vrs: list of str
+        vrs
             Variable names.
-        state_indices: numpy.ndarray, optional
+        state_indices
             State indices, unused here.
-        gpts: tuple or numpy.ndarray, optional
+        gpts
             Explicit grid points.
 
         Returns
@@ -326,7 +330,7 @@ class PointCloudData(DatasetStates):
 
         """
         # prepare interpolation parameters:
-        ipars = dict(
+        ipars: dict[str, bool | float | str | None] = dict(
             method="linear",
             rescale=True,
             fill_value=np.nan,
@@ -386,12 +390,12 @@ class WeibullPointCloud(PointCloudData):
 
     Attributes
     ----------
-    wd_coord: str
+    wd_coord
         The wind direction coordinate name
-    ws_coord: str
+    ws_coord
         The wind speed coordinate name, if wind speed bin
         centres are in data, else None
-    ws_bins: numpy.ndarray
+    ws_bins
         The wind speed bins, including
         lower and upper bounds, shape: (n_ws_bins+1,)
 
@@ -430,17 +434,17 @@ class WeibullPointCloud(PointCloudData):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Positional arguments for the base class
-        wd_coord: str
+        wd_coord
             The wind direction coordinate name
-        ws_coord: str, optional
+        ws_coord
             The wind speed coordinate name, if wind speed bin
             centres are in data
-        ws_bins: list of float, optional
+        ws_bins
             The wind speed bins, including
             lower and upper bounds
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for the base class
 
         """
@@ -498,18 +502,18 @@ class WeibullPointCloud(PointCloudData):
 
         Parameters
         ----------
-        ds: xarray.Dataset
+        ds
             The Dataset to read data from
-        cmap: dict[str, str], optional
+        cmap
             A mapping from foxes variable names to Dataset dimension names, if not given self._cmap will be used
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        coords: dict[str, numpy.ndarray]
+        coords
             keys: Foxes variable names, values: 1D coordinate value arrays
-        data: dict[str, tuple[tuple[str, ...], numpy.ndarray]]
+        data
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
             where dims is a tuple of dimension names and
@@ -603,8 +607,8 @@ class WeibullPointCloud(PointCloudData):
         self._N = n_ws * n_wd
         self._inds = np.arange(self._N, dtype=config.dtype_int)
         translated_data: dict[str, tuple[tuple[str, ...], np.ndarray]] = {}
-        ws_data = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
-        wd_data = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+        ws_data: np.ndarray = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+        wd_data: np.ndarray = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
         ws_data[:] = wss[:, None]
         wd_data[:] = wd[None, :]
         translated_data[FV.WS] = ((FC.STATE,), ws_data.reshape(self._N))
@@ -618,7 +622,9 @@ class WeibullPointCloud(PointCloudData):
             elif dims[0] == FV.WD:
                 dms = tuple([FC.STATE] + list(dims[1:]))
                 shape = [n_ws] + list(d.shape)
-                expanded_data = np.zeros(shape, dtype=config.dtype_double)
+                expanded_data: np.ndarray = np.zeros(
+                    shape, dtype=config.dtype_double
+                )
                 expanded_data[:] = d[None, ...]
                 translated_data[v] = (
                     dms,
@@ -645,9 +651,9 @@ class TurbinePointCloud(DatasetStates):
 
     Attributes
     ----------
-    states_coord: str
+    states_coord
         The coordinate name for the states dimension.
-    turbine_coord: str
+    turbine_coord
         The coordinate name for the turbine dimension.
 
     :group: input.states
@@ -667,15 +673,15 @@ class TurbinePointCloud(DatasetStates):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Positional arguments for the base class
-        states_coord: str
+        states_coord
             The states coordinate name in the data
-        turbine_coord: str
+        turbine_coord
             The turbine coordinate name in the data
-        weight_ncvar: str, optional
+        weight_ncvar
             The name of the weights variable in the data
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for the base class
 
         """
@@ -736,20 +742,20 @@ class TurbinePointCloud(DatasetStates):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-        bounds_extra_space: float or str or None, optional
+        bounds_extra_space
             Extra horizontal bounds; unsupported for turbine point-cloud data.
-        height_bounds: tuple[float, float] or None, optional
+        height_bounds
             Height bounds; unsupported for turbine point-cloud data.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -785,20 +791,20 @@ class TurbinePointCloud(DatasetStates):
 
         Parameters
         ----------
-        loaded_data: dict, optional
+            loaded_data
             The loaded data dictionary.
-        mdata: foxes.core.MData, optional
+            mdata
             The model data.
-        all_heights: bool, optional
+            all_heights
             Must be True because turbine point-cloud states do not expose a
             separate height axis.
-        height: float, optional
+            height
             Must be None because turbine heights are part of the explicit
             turbine coordinates.
 
         Returns
         -------
-        grid_points: numpy.ndarray
+        grid_points
             The explicit turbine coordinates, shape
             ``(n_states * n_turbines, 3)``.
 
@@ -841,19 +847,19 @@ class TurbinePointCloud(DatasetStates):
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The model data.
-        idims: list of str
+        idims
             The input dimensions, typically ``[FC.TURBINE]``.
-        d: numpy.ndarray
+        d
             The turbine data array.
-        pts: numpy.ndarray
+        pts
             The evaluation points, shape ``(n_pts, n_idims)``.
-        vrs: list of str
+        vrs
             Variable names.
-        state_indices: numpy.ndarray, optional
+        state_indices
             State indices, unused here.
-        gpts: tuple or numpy.ndarray, optional
+        gpts
             Explicit grid points.
 
         Returns
@@ -901,7 +907,7 @@ class TurbinePointCloud(DatasetStates):
             return d
 
         # prepare interpolation parameters:
-        ipars = dict(
+        ipars: dict[str, bool | float | str | None] = dict(
             method="linear",
             rescale=True,
             fill_value=np.nan,

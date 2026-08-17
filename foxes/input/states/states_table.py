@@ -24,36 +24,30 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-ProfileDefinition = str | dict[str, object] | VerticalProfile
-StateSelection = slice | range | list[int] | None
-StateLocations = list[object] | None
-
-
 class StatesTable(States):
     """
     States from a `pandas.DataFrame` or a pandas readable file.
 
     Attributes
     ----------
-    data_source: str or pathlib.Path or pandas.DataFrame or None
-        Either path to a file or data
-    ovars: list of str
-        The output variables
-    var2col: dict[str, str]
-        Mapping from variable names to data column names
-    fixed_vars: dict[str, float]
-        Fixed uniform variable values, instead of
-        reading from data
-    profdicts: dict[str, str or dict[str, object] or foxes.core.VerticalProfile]
-        Key: output variable name, value: profile definition.
-    rpars: dict[str, object]
-        pandas file reading parameters
-    states_sel: slice or range or list of int
-        States subset selection
-    states_loc: list[object]
-        State index selection via pandas loc function
-    RDICT: dict
-        Default pandas file reading parameters
+    data_source
+        Either a path to a file or the data itself.
+    ovars
+        The output variables.
+    var2col
+        Mapping from variable names to data column names.
+    fixed_vars
+        Fixed uniform variable values, instead of reading from data.
+    profdicts
+        Mapping from output variable names to profile definitions.
+    rpars
+        Pandas file reading parameters.
+    states_sel
+        State subset selection.
+    states_loc
+        State index selection via pandas loc.
+    RDICT
+        Default pandas file reading parameters.
 
     :group: input.states
 
@@ -67,33 +61,32 @@ class StatesTable(States):
         output_vars: Collection[str],
         var2col: dict[str, str] | None = None,
         fixed_vars: dict[str, float] | None = None,
-        profiles: dict[str, ProfileDefinition] | None = None,
+        profiles: dict[str, str | dict[str, object] | VerticalProfile] | None = None,
         read_pars: dict[str, object] | None = None,
-        states_sel: StateSelection = None,
-        states_loc: StateLocations = None,
+        states_sel: slice | range | list[int] | None = None,
+        states_loc: list[object] | None = None,
     ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str or pathlib.Path or pandas.DataFrame or None
-            Either path to a file or data
-        output_vars: collections.abc.Collection[str]
-            The output variables
-        var2col: dict[str, str], optional
-            Mapping from variable names to data column names
-        fixed_vars: dict[str, float], optional
-            Fixed uniform variable values, instead of
-            reading from data
-        profiles: dict[str, str or dict[str, object] or foxes.core.VerticalProfile], optional
-            Key: output variable name, value: profile definition.
-        read_pars: dict[str, object], optional
-            pandas file reading parameters
-        states_sel: slice or range or list of int, optional
-            States subset selection
-        states_loc: list[object], optional
-            State index selection via pandas loc function
+        data_source
+            Either a path to a file or the data itself.
+        output_vars
+            The output variables.
+        var2col
+            Mapping from variable names to data column names.
+        fixed_vars
+            Fixed uniform variable values, instead of reading from data.
+        profiles
+            Mapping from output variable names to profile definitions.
+        read_pars
+            Pandas file reading parameters.
+        states_sel
+            State subset selection.
+        states_loc
+            State index selection via pandas loc.
 
         """
         super().__init__()
@@ -124,7 +117,7 @@ class StatesTable(States):
 
         Returns
         -------
-        s: pandas.DataFrame or pathlib.Path or str or None
+        s
             The data source
 
         """
@@ -137,8 +130,8 @@ class StatesTable(States):
     def reset(
         self,
         algo: Algorithm | None = None,
-        states_sel: StateSelection = None,
-        states_loc: StateLocations = None,
+        states_sel: slice | range | list[int] | None = None,
+        states_loc: list[object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -146,11 +139,11 @@ class StatesTable(States):
 
         Parameters
         ----------
-        states_sel: slice or range or list of int, optional
+        states_sel
             States subset selection
-        states_loc: list[object], optional
+        states_loc
             State index selection via pandas loc function
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -175,16 +168,16 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -214,7 +207,7 @@ class StatesTable(States):
 
         Returns
         -------
-        smdls: list of str
+        smdls
             Names of all sub models
 
         """
@@ -230,16 +223,16 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -306,7 +299,7 @@ class StatesTable(States):
                 )
         data = data[tcols]
 
-        loaded_data["coords"][self.VARS] = self._tvars
+        loaded_data["coords"][self.VARS] = np.asarray(self._tvars, dtype=str)
         loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
         if weights is not None:
             loaded_data["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
@@ -317,7 +310,7 @@ class StatesTable(States):
 
         Returns
         -------
-        int:
+        int
             The total number of states
 
         """
@@ -329,7 +322,7 @@ class StatesTable(States):
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
@@ -343,12 +336,12 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -371,16 +364,16 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict[str, dict[str, object]] or None
+        data_stash
             Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
-        sel: dict[str, object], optional
+        sel
             The subset selection dictionary
-        isel: dict[str, object], optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -407,16 +400,16 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict[str, dict[str, object]] or None
+        data_stash
             Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
-        sel: dict[str, object], optional
+        sel
             The subset selection dictionary
-        isel: dict[str, object], optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -425,7 +418,7 @@ class StatesTable(States):
         if data_stash is not None:
             data = data_stash[self.name]
             self._data = data.pop("data_source")
-            self.__inds = data.pop("inds")
+            self.__inds = np.asarray(data.pop("inds"))
 
     def calculate(  # type: ignore[override]
         self,
@@ -444,22 +437,22 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData, optional
+        mdata
             The model data
-        fdata: foxes.core.FData, optional
+        fdata
             The farm data
-        tdata: foxes.core.TData, optional
+        tdata
             The target point data
-        args: object
+        args
             Additional positional parameters for extension compatibility
-        parameters: object
+        parameters
             Additional keyword parameters for extension compatibility
 
         Returns
         -------
-        results: dict[str, numpy.ndarray]
+        results
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
@@ -518,10 +511,10 @@ class TabStates(StatesTable):
         output_vars: Collection[str],
         var2col: dict[str, str] | None = None,
         fixed_vars: dict[str, float] | None = None,
-        profiles: dict[str, ProfileDefinition] | None = None,
+        profiles: dict[str, str | dict[str, object] | VerticalProfile] | None = None,
         read_pars: dict[str, object] | None = None,
-        states_sel: StateSelection = None,
-        states_loc: StateLocations = None,
+        states_sel: slice | range | list[int] | None = None,
+        states_loc: list[object] | None = None,
         normalize: bool = True,
     ) -> None:
         """
@@ -529,27 +522,28 @@ class TabStates(StatesTable):
 
         Parameters
         ----------
-        data_source: str or pathlib.Path or xarray.Dataset
+        data_source
             The tab file data file name, or its data
-        output_vars: collections.abc.Collection[str]
+        output_vars
             The output variables
-        var2col: dict[str, str], optional
+        var2col
             Mapping from variable names to data column names
-        fixed_vars: dict[str, float], optional
+        fixed_vars
             Fixed uniform variable values
-        profiles: dict[str, str or dict[str, object] or foxes.core.VerticalProfile], optional
+        profiles
             Vertical profile definitions by variable.
-        read_pars: dict[str, object], optional
+        read_pars
             pandas file reading parameters
-        states_sel: slice or range or list of int, optional
+        states_sel
             States subset selection
-        states_loc: list[object], optional
+        states_loc
             State index selection via pandas loc function
-        normalize: bool
+        normalize
             Normalize the tab file data
 
         """
         self._normalize = normalize
+        self.__tab_data: Dataset | None
         if isinstance(data_source, Dataset):
             self.__tab_source = None
             self.__tab_data = data_source
@@ -588,16 +582,16 @@ class TabStates(StatesTable):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -635,8 +629,8 @@ class TabStates(StatesTable):
 
             n_ws = self.__tab_data.sizes["ws"]
             n_wd = self.__tab_data.sizes["wd"]
-            ws = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
-            wd = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+            ws: np.ndarray = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+            wd: np.ndarray = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
             ws[:] = ws0[:, None]
             wd[:] = wd0[None, :]
 
@@ -675,16 +669,16 @@ class TabStates(StatesTable):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict[str, dict[str, object]] or None
+        data_stash
             Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
-        sel: dict[str, object], optional
+        sel
             The subset selection dictionary
-        isel: dict[str, object], optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -713,16 +707,16 @@ class TabStates(StatesTable):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict[str, dict[str, object]] or None
+        data_stash
             Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
-        sel: dict[str, object], optional
+        sel
             The subset selection dictionary
-        isel: dict[str, object], optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """

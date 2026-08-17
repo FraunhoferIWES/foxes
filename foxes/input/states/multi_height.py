@@ -106,7 +106,7 @@ class MultiHeightStates(States):
         super().__init__()
 
         self.ovars = list(output_vars)
-        self.heights = np.array(heights, dtype=config.dtype_double)
+        self.heights: np.ndarray = np.array(heights, dtype=config.dtype_double)
         self.rpars = read_pars
         self.var2col = var2col
         self.fixed_vars = fixed_vars
@@ -313,7 +313,7 @@ class MultiHeightStates(States):
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
         loaded_data["coords"][self.H] = self.heights
-        loaded_data["coords"][self.VARS] = list(cmap.keys())
+        loaded_data["coords"][self.VARS] = np.asarray(list(cmap.keys()), dtype=str)
 
         n_hts = len(self.heights)
         n_vrs = int(len(data.columns) / n_hts)
@@ -448,7 +448,7 @@ class MultiHeightStates(States):
 
     def calculate(  # type: ignore[override]
         self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
-    ) -> dict[str, np.ndarray]:  # type: ignore[override]
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -485,7 +485,9 @@ class MultiHeightStates(States):
         vrs = list(mdata[self.VARS])
         n_vars = len(vrs)
 
-        coeffs = np.zeros((n_h, n_h), dtype=config.dtype_double)
+        coeffs: np.ndarray = np.zeros(
+            (n_h, n_h), dtype=config.dtype_double
+        )
         np.fill_diagonal(coeffs, 1.0)
         ipars = dict(
             assume_sorted=True,
@@ -767,7 +769,7 @@ class MultiHeightNCStates(MultiHeightStates):
 
         States.load_data(self, algo, loaded_data, force=force, verbosity=verbosity)
         loaded_data["coords"][self.H] = self.heights
-        loaded_data["coords"][self.VARS] = list(cols.keys())
+        loaded_data["coords"][self.VARS] = np.asarray(list(cols.keys()), dtype=str)
 
         dims = (FC.STATE, self.VARS, self.H)
         loaded_data["data_vars"][self.DATA] = (

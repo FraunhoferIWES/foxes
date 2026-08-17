@@ -1,13 +1,14 @@
 from foxes.data import FARM, StaticData
 from foxes.config import get_input_path
 from typing import Any
+from foxes.core import WindFarm
 
 from .from_json import add_from_json
 from .from_csv import add_from_csv
 
 
 def add_from_file(
-    farm,
+    farm: WindFarm,
     file_path: str,
     *args: Any,
     verbosity: int = 1,
@@ -21,18 +22,18 @@ def add_from_file(
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    file_path: str
+    file_path
         Path to the file
     verbosity
-    args: tuple, optional
+    args
         Parameters forwarded to the method
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    dbook: foxes.DataBook, optional
+    dbook
         The data book, or None for default
-    kwargs: dict, optional
+    kwargs
         Parameters forwarded to the method
 
     :group: input.farm_layout

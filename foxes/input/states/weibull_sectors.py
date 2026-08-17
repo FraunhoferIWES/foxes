@@ -5,6 +5,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 from os import PathLike
 from pathlib import Path
+from typing import Any, cast
 from xarray import Dataset, open_dataset
 
 from foxes.data import STATES
@@ -14,7 +15,6 @@ from foxes.config import config, get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .dataset_states import DatasetSelection
 from .states_table import StatesTable
 
 
@@ -52,8 +52,8 @@ class WeibullSectors(StatesTable):
         output_vars: list[str],
         ws_bins: ArrayLike | None = None,
         var2ncvar: dict[str, str] | None = None,
-        sel: DatasetSelection | None = None,
-        isel: DatasetSelection | None = None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
         read_pars: dict[str, object] | None = None,
         **kwargs: object,
     ) -> None:
@@ -147,7 +147,7 @@ class WeibullSectors(StatesTable):
                     print(f"Path: {fpath}")
             elif verbosity > 0:
                 print(f"States '{self.name}': Reading file {fpath}")
-            rpars = dict(self.RDICT, **self.rpars)
+            rpars: dict[str, Any] = dict(self.RDICT, **self.rpars)
             if fpath.suffix == ".nc":
                 data = open_dataset(fpath, engine=config.nc_engine, **rpars)
             else:
@@ -166,9 +166,11 @@ class WeibullSectors(StatesTable):
 
         # optionally select a subset
         if self.isel is not None and len(self.isel):
-            data = data.isel(**self.isel)
+            isel: dict[str, Any] = dict(self.isel)
+            data = data.isel(**isel)
         if self.sel is not None and len(self.sel):
-            data = data.sel(**self.sel)
+            sel: dict[str, Any] = dict(self.sel)
+            data = data.sel(**sel)
 
         # remove wd 360 from the end, if wd 0 is given:
         wd = data[cwd].to_numpy()
@@ -234,53 +236,57 @@ class WeibullSectors(StatesTable):
                     raise KeyError(
                         f"States '{self.name}': Missing variable '{w}' in data, found {list(data.data_vars.keys())}"
                     )
-                d = data[w]
-                iws = d.dims.index(cws) if cws in d.dims else -1
-                iwd = d.dims.index(cwd) if cwd in d.dims else -1
-                ipt = d.dims.index(cpt) if cpt is not None and cpt in d.dims else -1
-                d = d.to_numpy()
+                data_array = data[w]
+                iws = data_array.dims.index(cws) if cws in data_array.dims else -1
+                iwd = data_array.dims.index(cwd) if cwd in data_array.dims else -1
+                ipt = (
+                    data_array.dims.index(cpt)
+                    if cpt is not None and cpt in data_array.dims
+                    else -1
+                )
+                d_array: np.ndarray = data_array.to_numpy()
                 if v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT]:
-                    if cws in data[w].dims:
+                    if cws in data_array.dims:
                         raise ValueError(
-                            f"States '{self.name}': Cannot have '{cws}' as dimension in variable '{v}', got {data[w].dims}"
+                            f"States '{self.name}': Cannot have '{cws}' as dimension in variable '{v}', got {data_array.dims}"
                         )
-                    if cwd not in data[w].dims:
+                    if cwd not in data_array.dims:
                         raise ValueError(
-                            f"States '{self.name}': Expecting '{cwd}' as dimension in variable '{v}', got {data[w].dims}"
+                            f"States '{self.name}': Expecting '{cwd}' as dimension in variable '{v}', got {data_array.dims}"
                         )
                 if iws < 0 and iwd < 0 and ipt < 0:
-                    self.fixed_vars[v] = d.to_numpy()
+                    self.fixed_vars[v] = cast(Any, d_array)
                 elif iws >= 0 and iwd >= 0 and ipt >= 0:
-                    self._data[v] = np.moveaxis(d, [iwd, iws, ipt], [0, 1, 2])
+                    self._data[v] = np.moveaxis(d_array, [iwd, iws, ipt], [0, 1, 2])
                 elif iws >= 0 and iwd >= 0 and ipt < 0:
                     if cpt is None:
-                        self._data[v] = np.moveaxis(d, [iwd, iws], [0, 1])
+                        self._data[v] = np.moveaxis(d_array, [iwd, iws], [0, 1])
                     else:
                         self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                        self._data[v][:] = np.moveaxis(d, [iwd, iws], [0, 1])[
+                        self._data[v][:] = np.moveaxis(d_array, [iwd, iws], [0, 1])[
                             :, :, None
                         ]
                 elif iws >= 0 and iwd < 0 and ipt >= 0:
                     self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                    self._data[v][:] = np.moveaxis(d, [iws, ipt], [0, 1])[None, :, :]
+                    self._data[v][:] = np.moveaxis(d_array, [iws, ipt], [0, 1])[None, :, :]
                 elif iws < 0 and iwd >= 0 and ipt >= 0:
                     self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                    self._data[v][:] = np.moveaxis(d, [iwd, ipt], [0, 1])[:, None, :]
+                    self._data[v][:] = np.moveaxis(d_array, [iwd, ipt], [0, 1])[:, None, :]
                 elif iws >= 0 and iwd < 0 and ipt < 0:
                     self._data[v] = np.zeros(shp, dtype=config.dtype_double)
                     if cpt is None:
-                        self._data[v][:] = d[None, :]
+                        self._data[v][:] = d_array[None, :]
                     else:
-                        self._data[v][:] = d[None, :, None]
+                        self._data[v][:] = d_array[None, :, None]
                 elif iws < 0 and iwd >= 0 and ipt < 0:
                     self._data[v] = np.zeros(shp, dtype=config.dtype_double)
                     if cpt is None:
-                        self._data[v][:] = d[:, None]
+                        self._data[v][:] = d_array[:, None]
                     else:
-                        self._data[v][:] = d[:, None, None]
+                        self._data[v][:] = d_array[:, None, None]
                 elif iws < 0 and iwd < 0 and ipt >= 0:
                     self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                    self._data[v][:] = d[None, None, :]
+                    self._data[v][:] = d_array[None, None, :]
 
         # compute Weibull weights
         self._data[FV.WEIGHT] *= weibull_weights(

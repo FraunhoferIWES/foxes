@@ -66,15 +66,15 @@ class SingleChunkEngine(Engine):
 
         Parameters
         ----------
-        chunk_size_states: int, optional
+        chunk_size_states
             Ignored for single chunk engine
-        chunk_size_points: int, optional
+        chunk_size_points
             Ignored for single chunk engine
-        n_procs: int
+        n_procs
             Ignored for single chunk engine
-        progress_bar: bool, optional
+        progress_bar
             Progress display mode
-        verbosity: int
+        verbosity
             Verbosity level
 
         """
@@ -106,7 +106,7 @@ class SingleChunkEngine(Engine):
 
         Returns
         -------
-        runner: foxes.core.EngineRunner
+        runner
             The engine runner
 
         """
@@ -118,16 +118,16 @@ class SingleChunkEngine(Engine):
 
         Parameters
         ----------
-        f: Callable
+        f
             The function f(*args, **kwargs) to be
             submitted
-        args: tuple, optional
+        args
             Arguments for the function
-        kwargs: dict, optional
+        kwargs
             Arguments for the function
 
         -------
-        future: object
+        future
             The future object
 
         """
@@ -139,12 +139,12 @@ class SingleChunkEngine(Engine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        result: object
+        result
             The calculation result
 
         """
@@ -161,12 +161,12 @@ class SingleChunkEngine(Engine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        is_done: bool
+        is_done
             True if the future is done
 
         """
@@ -184,19 +184,19 @@ class SingleChunkEngine(Engine):
 
         Parameters
         ----------
-        func: Callable
+        func
             Function to be called on each file,
             func(input, *args, **kwargs) -> data
-        inputs: array-like
+        inputs
             The input data list
-        args: tuple, optional
+        args
             Arguments for func
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for func
 
         Returns
         -------
-        results: list
+        results
             The list of results
 
         """
@@ -224,28 +224,28 @@ class SingleChunkEngine(Engine):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm object
-        model: foxes.core.DataCalcModel
+        model
             The model that whose calculate function
             should be run
-        model_data: xarray.Dataset
+        model_data
             The initial model data
-        farm_data: xarray.Dataset, optional
+        farm_data
             The initial farm data
-        point_data: xarray.Dataset, optional
+        point_data
             The initial point data
-        out_vars: list of str, optional
+        out_vars
             Names of the output variables
-        chunk_store: foxes.utils.Dict
+        chunk_store
             The chunk store
-        sel: dict, optional
+        sel
             Selection of coordinate subsets
-        isel: dict, optional
+        isel
             Selection of coordinate subsets index values
-        iterative: bool
+        iterative
             Flag for use within the iterative algorithm
-        write_nc: dict, optional
+        write_nc
             Parameters for writing results to netCDF files, e.g.
             {'out_dir': 'results', 'base_name': 'calc_results',
             'ret_data': False, 'split': 1000}.
@@ -258,19 +258,19 @@ class SingleChunkEngine(Engine):
 
             Use ret_data = False together with non-single file writing
             to avoid constructing the full Dataset in memory.
-        write_chunk_ani: dict, optional
-            Parameters for writing chunk animations, e.g.
+        write_chunk_ani
+                Parameters for writing chunk animations, e.g.
             {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
             'resolution': 100, 'chunk': 5}.'}
             The chunk is either an integer that refers to a states chunk,
             or a  tuple (states_chunk_index, points_chunk_index), or a list
             of such entries.
-        calc_pars: dict, optional
+        calc_pars
             Additional parameters for the model.calculate()
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The model results
         """
         if model_data is None:
@@ -364,4 +364,6 @@ class SingleChunkEngine(Engine):
                 calc_pars,
             )
 
+        if results_mgr.results is None:
+            raise RuntimeError("SingleChunkEngine did not produce calculation results")
         return results_mgr.results

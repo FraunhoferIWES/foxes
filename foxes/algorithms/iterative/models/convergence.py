@@ -19,7 +19,7 @@ class ConvCrit(metaclass=ABCMeta):
 
     Attributes
     ----------
-    name: str, optional
+    name
         The convergence criteria name
 
     :group: algorithms.iterative.models
@@ -32,7 +32,7 @@ class ConvCrit(metaclass=ABCMeta):
 
         Parameters
         ----------
-        name: str, optional
+        name
             The convergence criteria name
 
         """
@@ -51,7 +51,7 @@ class ConvCrit(metaclass=ABCMeta):
 
         Parameters
         ----------
-        no_subs: bool
+        no_subs
             Disable subsets flag
 
         """
@@ -64,7 +64,7 @@ class ConvCrit(metaclass=ABCMeta):
 
         Returns
         -------
-        no_subs: bool
+        no_subs
             Disable subsets flag
 
         """
@@ -83,20 +83,20 @@ class ConvCrit(metaclass=ABCMeta):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        prev_results: xarray.Dataset
+        prev_results
             The farm results of previous
             iteration, or None if first
-        results: xarray.Dataset
+        results
             The farm results of current
             iteration
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        convergence: bool
+        convergence
             Convergence flag, true if converged
 
         """
@@ -109,7 +109,7 @@ class ConvCrit(metaclass=ABCMeta):
 
         Returns
         -------
-        deltas: dict
+        deltas
             The most recent evaluation deltas
 
         """
@@ -122,7 +122,7 @@ class ConvCrit(metaclass=ABCMeta):
 
         Returns
         -------
-        conv_states: numpy.ndarray, bool
+        conv_states
             The convergence state per state
 
         """
@@ -131,11 +131,11 @@ class ConvCrit(metaclass=ABCMeta):
 
 class ConvCritList(ConvCrit):
     """
-    A list of convergence criteria
+    Combines multiple convergence criteria.
 
     Attributes
     ----------
-    crits: list of ConvCrit
+    crits
         The criteria
 
     :group: algorithms.iterative.models
@@ -148,9 +148,9 @@ class ConvCritList(ConvCrit):
 
         Parameters
         ----------
-        crits: list of ConvCrit
+        crits
             The criteria
-        name: str, optional
+        name
             The convergence criteria name
 
         """
@@ -168,7 +168,7 @@ class ConvCritList(ConvCrit):
 
         Parameters
         ----------
-        crit: ConvCrit
+        crit
             The criterion
 
         """
@@ -186,20 +186,20 @@ class ConvCritList(ConvCrit):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        prev_results: xarray.Dataset
+        prev_results
             The farm results of previous
             iteration, or None if first
-        results: xarray.Dataset
+        results
             The farm results of current
             iteration
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        convergence: bool
+        convergence
             Convergence flag, true if converged
 
         """
@@ -231,10 +231,10 @@ class ConvVarDelta(ConvCrit):
 
     Attributes
     ----------
-    limits: dict
+    limits
         The convergence limits. Keys: variables str,
-        values: float values
-    wd_vars: list of str
+        values are convergence thresholds
+    wd_vars
         The wind direction type variables (unit deg)
 
     :group: algorithms.iterative.models
@@ -252,12 +252,12 @@ class ConvVarDelta(ConvCrit):
 
         Parameters
         ----------
-        limits: dict
+        limits
             The convergence limits. Keys: variables str,
-            values: float values
-        wd_vars: list of str, optional
+            values are convergence thresholds
+        wd_vars
             The wind direction type variables (unit deg)
-        name: str, optional
+        name
             The convergence criteria name
 
         """
@@ -280,20 +280,20 @@ class ConvVarDelta(ConvCrit):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        prev_results: xarray.Dataset
+        prev_results
             The farm results of previous
             iteration, or None if first
-        results: xarray.Dataset
+        results
             The farm results of current
             iteration
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        convergence: bool
+        convergence
             Convergence flag, true if converged
 
         """

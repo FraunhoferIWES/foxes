@@ -28,12 +28,12 @@ class InitFarmData(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -60,27 +60,30 @@ class InitFarmData(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
 
         # prepare:
         n_states = fdata.n_states
+        assert n_states is not None
         n_turbines = algo.n_turbines
 
         # initialize with farm order, will be corrected later:
-        order = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
+        order: np.ndarray = np.zeros(
+            (n_states, n_turbines), dtype=config.dtype_int
+        )
         order[:] = np.arange(n_turbines)[None, :]
         ssel = np.zeros_like(order)
         ssel[:] = np.arange(n_states)[:, None]

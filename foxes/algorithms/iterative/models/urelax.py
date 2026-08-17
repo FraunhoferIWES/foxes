@@ -18,7 +18,7 @@ class URelax(FarmDataModel):
 
     Attributes
     ----------
-    urel: dict
+    urel
         The variables and their under-relaxation
         factors between 0 and 1
 
@@ -32,7 +32,7 @@ class URelax(FarmDataModel):
 
         Parameters
         ----------
-        urel: dict
+        urel
             The variables and their under-relaxation
             factors between 0 and 1
 
@@ -47,12 +47,12 @@ class URelax(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -73,18 +73,18 @@ class URelax(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
         i0 = fdata.states_i0(counter=True)

@@ -14,7 +14,7 @@ class SequentialPlugin:
 
     Parameters
     ----------
-    algo: foxes.algorithms.sequential.Sequential
+    algo
         The sequential algorithm
 
     :group: algorithms.sequential.models
@@ -33,7 +33,7 @@ class SequentialPlugin:
 
         Parameters
         ----------
-        algo: foxes.algorithms.sequential.Sequential
+        algo
             The current sequential algorithm
 
         """
@@ -47,11 +47,11 @@ class SequentialPlugin:
 
         Parameters
         ----------
-        algo: foxes.algorithms.sequential.Sequential
+        algo
             The latest sequential algorithm
-        fres: xarray.Dataset
+        fres
             The latest farm results
-        pres: xarray.Dataset, optional
+        pres
             The latest point results
 
         """
@@ -63,7 +63,7 @@ class SequentialPlugin:
 
         Parameters
         ----------
-        algo: foxes.algorithms.sequential.Sequential
+        algo
             The final sequential algorithm
 
         """

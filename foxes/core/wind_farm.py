@@ -303,11 +303,11 @@ class WindFarm:
         ----------
         areas
             The areas to map turbines to. Accepted forms are:
-            - list of AreaGeometry objects
-            - list of (name, AreaGeometry) tuples for named areas
-            - dict mapping names to AreaGeometry objects
+            - area geometry objects
+            - (name, area geometry) pairs for named areas
+            - a mapping of names to area geometry objects
             - path to GeoJSON file
-            - GeoJSON dictionary
+            - GeoJSON object
         set_cluster
             If True, set each mapped turbine's cluster_name to
             the mapped area name.

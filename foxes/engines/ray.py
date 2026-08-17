@@ -86,7 +86,7 @@ class RayEngine(PoolEngine):
 
         Returns
         -------
-        runner: foxes.core.EngineRunner
+        runner
             The engine runner
 
         """
@@ -184,17 +184,17 @@ class RayEngine(PoolEngine):
 
         Parameters
         ----------
-        f: Callable
+        f
             The function f(*args, **kwargs) to be
             submitted
-        args: tuple, optional
+        args
             Arguments for the function
-        kwargs: dict, optional
+        kwargs
             Arguments for the function
 
         Returns
         -------
-        future: object
+        future
             The future object
 
         """
@@ -213,12 +213,12 @@ class RayEngine(PoolEngine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        is_done: bool
+        is_done
             True if the future is done
 
         """
@@ -232,12 +232,12 @@ class RayEngine(PoolEngine):
 
         Parameters
         ----------
-        future: object
+        future
             The future
 
         Returns
         -------
-        result: object
+        result
             The calculation result
 
         """

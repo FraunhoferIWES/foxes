@@ -23,6 +23,7 @@ if TYPE_CHECKING:
         WakeDeflection,
         WakeFrame,
         WakeModel,
+        WindFarm,
     )
     from .models.population import PopulationModel
 
@@ -37,26 +38,26 @@ class Downwind(Algorithm):
 
     Attributes
     ----------
-    states: foxes.core.States
+    states
         The ambient states
-    wake_models: dict
+    wake_models
         The wake models. Key: wake model name,
-        value: foxes.core.WakeModel
-    rotor_model: foxes.core.RotorModel
+        value: the wake model
+    rotor_model
         The rotor model, for all turbines
-    wake_frame: foxes.core.WakeFrame
+    wake_frame
         The wake frame
-    partial_wakes: dict
+    partial_wakes
         The partial wakes mapping. Key: wake model name,
-        value: foxes.core.PartialWakesModel
-    deflection: foxes.core.WakeDeflection
+        value: the partial wake model
+    deflection
         The wake deflection model
-    ground_models: dict
+    ground_models
         The ground models mapping. Key: wake model name,
-        value: foxes.core.GroundModel
-    farm_controller: foxes.core.FarmController
+        value: the ground model
+    farm_controller
         The farm controller
-    n_states: int
+    n_states
         The number of states
 
     :group: algorithms.downwind
@@ -84,8 +85,8 @@ class Downwind(Algorithm):
 
     def __init__(
         self,
-        farm: Any,
-        states: Any,
+        farm: WindFarm,
+        states: States,
         wake_models: list[str],
         rotor_model: str = "centre",
         wake_frame: str = "rotor_wd",
@@ -103,38 +104,38 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        farm: foxes.WindFarm
+        farm
             The wind farm
-        states: foxes.core.States
+        states
             The ambient states
-        wake_models: list of str
+        wake_models
             The wake models, applied to all turbines.
             Will be looked up in the model book
-        rotor_model: str
+        rotor_model
             The rotor model, for all turbines. Will be
             looked up in the model book
-        wake_frame: str
+        wake_frame
             The wake frame. Will be looked up in the
             model book
-        deflection: foxes.core.WakeDeflection, optional
+        wake_deflection
             The wake deflection model
-        partial_wakes: dict, list or str, optional
+        partial_wakes
             The partial wakes mapping. Key: wake model name,
             value: partial wake model name
-        ground_models: dict, list or str, optional
+        ground_models
             The ground models mapping. Key: wake model name,
             value: ground model name
-        farm_controller: str
+        farm_controller
             The farm controller. Will be
             looked up in the model book
-        mbook: foxes.ModelBook, optional
+        mbook
             The model book
-        max_wake_length_km: float, optional
+        max_wake_length_km
             The maximum wake length in km. If None, no maximum length is applied.
-        population_params: dict, optional
+        population_params
             The population parameters. If provided, this will be
             used to create the population model.
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -256,14 +257,14 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        m: foxes.core.States
+        states
             The states
 
         """
         return self.__states
 
     @states.setter
-    def states(self, value: Any) -> None:
+    def states(self, value: States) -> None:
         """Resets the states"""
         if self.__states is not value:
             if self.running:
@@ -280,7 +281,7 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        m: foxes.core.RotorModel
+        rotor_model
             The rotor model
 
         """
@@ -293,9 +294,9 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        m: dict
+        wake_models
             The wake models. Key: name,
-            value: foxes.core.WakeModel
+            value: the wake model
 
         """
         return self.__wake_models
@@ -307,7 +308,7 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        m: foxes.core.WakeFrame
+        wake_frame
             The wake frame
 
         """
@@ -320,7 +321,7 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        m: foxes.core.WakeDeflection
+        wake_deflection
             The wake deflection model
 
         """
@@ -333,9 +334,9 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        m: dict
+        partial_wakes
             The partial wakes models. Key: name,
-            value: foxes.core.PartialWakesModel
+            value: the partial wake model
 
         """
         return self.__partial_wakes
@@ -347,9 +348,9 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        m: dict
+        ground_models
             The ground models, key: name,
-            value: foxes.core.GroundModel
+            value: the ground model
 
         """
         return self.__ground_models
@@ -361,7 +362,7 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        m: foxes.core.FarmController
+        farm_controller
             The farm controller
 
         """
@@ -374,7 +375,7 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        m: foxes.core.PopulationModel
+        population_model
             The population model, or None if not used
 
         """
@@ -389,7 +390,7 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        l: float or None
+        max_wake_length_km
             The maximum wake length in km, or None if not set
 
         """
@@ -404,7 +405,7 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        has: bool
+        has_max_wake_length
             True if a maximum wake length is set, False otherwise
 
         """
@@ -420,15 +421,15 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        pop_farm_results: xarray.Dataset
+        pop_farm_results
             The farm results including population index dimension
-        pop_index: int or numpy.ndarray
+        pop_index
             The population index to select. Either a single index
             for all states, or an array of shape (n_states,)
 
         Returns
         -------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results for the selected population member.
 
         """
@@ -478,12 +479,12 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        name: str
+        name
             The model name
 
         Returns
         -------
-        model: foxes.core.model
+        model
             The model
 
         """
@@ -507,9 +508,9 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        func_name: str, optional
+        func_name
             Name of the calling function
-        n_points: int, optional
+        n_points
             The number of points
 
         """
@@ -592,7 +593,7 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        force: bool
+        force
             Force initialization even if already initialized
 
         """
@@ -611,7 +612,7 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -634,7 +635,7 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        force: bool
+        force
             Overwrite existing data
 
         """
@@ -713,20 +714,20 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        mlist: foxes.models.FarmDataModelList
+        mlist
             The model list
-        model_data: xarray.Dataset
+        model_data
             The initial model data
-        outputs: list of str, optional
+        outputs
             The output variables, or None for defaults
-        normalize: bool
+        normalize
             Normalize the weights to 1 wrt sum over states
-        kwargs: dict, optional
+        kwargs
             Additional parameters for running
 
         Returns
         -------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results. The calculated variables have
             dimensions (state, turbine)
 
@@ -755,23 +756,23 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        calc_parameters: dict
+        calc_parameters
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        outputs: list of str, optional
+        outputs
             The output variables, or None for defaults
-        ambient: bool
+        ambient
             Flag for ambient instead of waked calculation
-        finalize: bool
+        finalize
             Flag for finalization after calculation
-        clear_mem: bool
+        clear_mem
             Clear idata memory after starting the run
-        kwargs: dict, optional
+        kwargs
             Additional parameters for run_calculation
 
         Returns
         -------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results. The calculated variables have
             dimensions (state, turbine)
 
@@ -906,18 +907,18 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        mlist: foxes.models.FarmDataModelList
+        mlist
             The model list
-        data: tuple of xarray.Dataset
+        data
             The (mdata, fdata) inputs
-        outputs: list of str, optional
+        outputs
             The output variables, or None for defaults
-        kwargs: dict, optional
+        kwargs
             Additional parameters for running
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 
@@ -950,39 +951,39 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results. The calculated variables have
             dimensions (state, turbine)
-        points: numpy.ndarray
+        points
             The points of interest, shape: (n_states, n_points, 3)
-        outputs: list of str, optional
+        outputs
             The output variables, or None for defaults
-        point_models: str or foxes.core.PointDataModel
+        point_models
             Additional point models to be executed
-        calc_parameters: dict
+        calc_parameters
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        persist_fdata: bool
+        persist_pdata
             Switch for forcing dask to load all farm data
             into memory
-        finalize: bool
+        finalize
             Flag for finalization after calculation
-        ambient: bool
+        ambient
             Flag for ambient instead of waked calculation
-        chunked_results: bool
+        chunked_results
             Flag for chunked results
-        states_sel: list, optional
+        states_sel
             Reduce to selected states
-        states_isel: list, optional
+        states_isel
             Reduce to the selected states indices
-        clear_mem: bool
+        clear_mem
             Clear idata memory after starting the run
-        kwargs: dict, optional
+        kwargs
             Additional parameters for run_calculation
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 

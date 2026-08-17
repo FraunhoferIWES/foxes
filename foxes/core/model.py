@@ -15,7 +15,10 @@ if TYPE_CHECKING:
 
 
 class LoadedData(TypedDict):
-    coords: dict[str, np.ndarray]
+    coords: dict[
+        str,
+        np.ndarray | list[str] | tuple[tuple[str, ...], np.ndarray],
+    ]
     data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]]
     extra_data: dict[str, Any]
 

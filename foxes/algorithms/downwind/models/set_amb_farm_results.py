@@ -17,7 +17,7 @@ class SetAmbFarmResults(FarmDataModel):
 
     Attributes
     ----------
-    vars: list of str
+    vars
         The variables to be copied, or `None` for all
 
     :group: algorithms.downwind.models
@@ -37,12 +37,12 @@ class SetAmbFarmResults(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -59,18 +59,18 @@ class SetAmbFarmResults(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
         ovars = self.output_farm_vars(algo)

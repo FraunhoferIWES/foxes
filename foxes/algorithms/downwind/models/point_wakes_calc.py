@@ -21,13 +21,13 @@ class PointWakesCalculation(PointDataModel):
 
     Attributes
     ----------
-    pvars: list of str
+    pvars
         The variables of interest
-    emodels: foxes.core.PointDataModelList
+    emodels
         The extra evaluation models
-    emodels_cpars: list of dict
+    emodels_cpars
         The calculation parameters for extra models
-    wake_models: list of foxes.core.WakeModel
+    wake_models
         The wake models to be used
 
     :group: algorithms.downwind.models
@@ -45,11 +45,11 @@ class PointWakesCalculation(PointDataModel):
 
         Parameters
         ----------
-        emodels: foxes.core.PointDataModelList, optional
+        emodels
             The extra evaluation models
-        emodels_cpars: list of dict, optional
+        emodels_cpars
             The calculation parameters for extra models
-        wake_models: list of foxes.core.WakeModel, optional
+        wake_models
             Specific wake models to be used
 
         """
@@ -65,7 +65,7 @@ class PointWakesCalculation(PointDataModel):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -83,25 +83,21 @@ class PointWakesCalculation(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force: bool
+            It contains coordinate data, model variables, and additional data.
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
+            It contains coordinate data, model variables, and additional data.
 
         """
         loaded_data = super().initialize(algo, loaded_data, force, verbosity)
@@ -114,12 +110,12 @@ class PointWakesCalculation(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -141,22 +137,22 @@ class PointWakesCalculation(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
-        tdata: foxes.core.Data
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order of the wake
             causing turbine
 
         Returns
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values with shape
             (n_states, n_targets, n_tpoints)
 
         """

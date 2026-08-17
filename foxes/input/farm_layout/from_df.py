@@ -1,24 +1,30 @@
+from typing import Any
+
+import pandas as pd
+
+from foxes.core import WindFarm
+
 from .from_csv import add_from_csv
 
 
 def add_from_df(
-    farm,
-    data_source,
-    *args,
-    **kwargs,
-):
+    farm: WindFarm,
+    data_source: str | pd.DataFrame,
+    *args: Any,
+    **kwargs: Any,
+) -> None:
     """
     Add turbines to wind farm via pandas DataFrame.
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    data_source: str or pandas.DataFrame
+    data_source
         The input csv file or data source
-    args: tuple, optional
+    args
         Additional parameters for add_from_csv()
-    kwargs: dict, optional
+    kwargs
         Additional parameters for add_from_csv()
 
     :group: input.farm_layout

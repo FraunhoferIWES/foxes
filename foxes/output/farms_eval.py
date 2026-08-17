@@ -84,16 +84,16 @@ class WindFarmsEval(FarmResultsEval):
                 f"Mapping from {self._LEVEL} to turbine indices is required to get power units for each element"
             )
 
-        P_unit_W = []
+        P_unit_W: list[float] = []
         for f in self.results[self._LEVEL].values:
             u = np.unique(data[mapping[f]])
             assert len(u) == 1, (
                 f"Multiple power units found for {self._LEVEL} '{f}': {u}"
             )
-            P_unit_W.append(u[0])
-        P_unit_W = np.array(P_unit_W, dtype=data.dtype)
+            P_unit_W.append(float(u[0]))
+        P_unit_W_arr = np.array(P_unit_W, dtype=data.dtype)
 
-        return P_unit_W
+        return P_unit_W_arr
 
     def _aggregate(self, mapping=None) -> Dataset:
         assert self.farm_results is not None, (
@@ -119,7 +119,7 @@ class WindFarmsEval(FarmResultsEval):
         gb = self.farm_results.groupby(self._LEVEL)
         aggsum = gb.sum().transpose(FC.STATE, self._LEVEL).sortby(self._LEVEL)
         aggmean = gb.mean().transpose(FC.STATE, self._LEVEL).sortby(self._LEVEL)
-        results = []
+        results: list[DataArray] = []
         for v in self.farm_results.data_vars.keys():
             if v in FV.extensive_farm and v in aggsum:
                 results.append(aggsum[v])
@@ -153,7 +153,7 @@ class WindFarmsEval(FarmResultsEval):
             if weight.dims == (FC.STATE,):
                 results.append(weight)
             elif weight.dims == (FC.STATE, FC.TURBINE):
-                wgts = {}
+                wgts: dict[Any, np.ndarray] = {}
                 for f, i in mapping.items():
                     if f is not None:
                         wgts[f] = weight.values[:, i].mean(axis=1)
@@ -164,10 +164,10 @@ class WindFarmsEval(FarmResultsEval):
                             )
                         wgts[f] /= wsum
                 keys = list(wgts.keys())
-                wgts = np.stack(list(wgts.values()), axis=-1)
+                wgts_arr = np.stack(list(wgts.values()), axis=-1)
                 results.append(
                     DataArray(
-                        wgts,
+                        wgts_arr,
                         coords={
                             FC.STATE: self.farm_results[FC.STATE].values,
                             self._LEVEL: keys,

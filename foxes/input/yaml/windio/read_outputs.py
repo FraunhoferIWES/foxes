@@ -89,7 +89,7 @@ def _read_flow_field(wio_outs, olist: list, algo, states_isel, verbosity: int) -
             _name="vmap",
         )
 
-        z_list = []
+        z_list: list[Any] | np.ndarray = []
         if z_sampling == "plane_list":
             z_list = z_planes.pop_item("z_list")
         elif z_sampling == "hub_heights":

@@ -20,11 +20,11 @@ class Iterative(Downwind):
 
     Attributes
     ----------
-    max_it: int
+    max_it
         The maximal number of iterations
-    conv_crit: foxes.algorithms.iterative.ConvCrit
+    conv_crit
         The convergence criteria
-    prev_farm_results: xarray.Dataset
+    prev_farm_results
         Results from the previous iteration
 
     :group: algorithms.iterative
@@ -38,12 +38,12 @@ class Iterative(Downwind):
 
         Parameters
         ----------
-        name: str
+        name
             The model name
 
         Returns
         -------
-        model: foxes.core.model
+        model
             The model
 
         """
@@ -65,15 +65,15 @@ class Iterative(Downwind):
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for Downwind
-        max_it: int, optional
+        max_it
             The maximal number of iterations
-        conv_crit: foxes.algorithms.iterative.ConvCrit, optional
+        conv_crit
             The convergence criteria
-        mod_cutin: dict, optional
+        mod_cutin
             Parameters for cutin modification
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for Downwind
 
         """
@@ -102,7 +102,7 @@ class Iterative(Downwind):
 
         Returns
         -------
-        fres: xarray.Datatset
+        fres
             The all-chunks farm results during calculations
 
         """
@@ -118,10 +118,10 @@ class Iterative(Downwind):
 
         Parameters
         ----------
-        entry_point: str
+        entry_point
             The entry point: first, pre_rotor, post_rotor,
             pre_wake, last
-        urel: dict
+        urel
             The variables and their under-relaxation values
 
         """
@@ -154,7 +154,7 @@ class Iterative(Downwind):
 
         Returns
         -------
-        urlx: foxes.utils.Dict
+        urelax
             The under-relaxation parameters
 
         """
@@ -167,7 +167,7 @@ class Iterative(Downwind):
 
         Returns
         -------
-        it: int
+        iterations
             The current iteration number
 
         """
@@ -179,7 +179,7 @@ class Iterative(Downwind):
 
         Parameters
         ----------
-        force: bool
+        force
             Force initialization even if already initialized
 
         """
@@ -301,7 +301,7 @@ class Iterative(Downwind):
 
         Returns
         -------
-        flag: bool
+        final_iteration
             Flag for the final iteration
 
         """
@@ -319,16 +319,16 @@ class Iterative(Downwind):
 
         Parameters
         ----------
-        finalize: bool
+        finalize
             Flag for finalization after calculation
-        ret_dwnd_order: bool
+        ret_dwnd_order
             Also return the results in downwind order
-        kwargs: dict, optional
+        kwargs
             Arguments for calc_farm in the base class.
 
         Returns
         -------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results. The calculated variables have
             dimensions (state, turbine)
 

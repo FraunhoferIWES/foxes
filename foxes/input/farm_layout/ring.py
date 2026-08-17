@@ -20,24 +20,24 @@ def add_ring(
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    xy_base: numpy.ndarray
+    xy_base
         The base point, shape: (2,)
-    dist: float
+    dist
         The distance between turbines
-    n_turbines: int
+    n_turbines
         The number of turbines
-    offset_deg: float
+    offset_deg
         The offset from north in degrees,
         following wind direction conventions
-    indices: list of int, optional
+    indices
         The turbine indices
-    names: list of str, optional
+    names
         The turbine names
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: dict, optional
+    turbine_parameters
         Parameters forwarded to `foxes.core.Turbine`
 
     :group: input.farm_layout

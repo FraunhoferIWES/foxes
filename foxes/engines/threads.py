@@ -73,7 +73,7 @@ class ThreadsEngine(ProcessEngine):
 
         Returns
         -------
-        runner: foxes.core.EngineRunner
+        runner
             The engine runner
 
         """
