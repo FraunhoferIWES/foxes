@@ -33,7 +33,7 @@ class ScanStates(States):
         scans
             The scans, key: variable name,
             value: scan values
-        kwargs: object
+        kwargs
             Parameters for the base class
 
         """
@@ -58,7 +58,7 @@ class ScanStates(States):
         ----------
         algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             It contains coordinate data, model variables, and additional data.
         force
@@ -171,12 +171,12 @@ class ScanStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -193,20 +193,20 @@ class ScanStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict[str, numpy.ndarray]
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """

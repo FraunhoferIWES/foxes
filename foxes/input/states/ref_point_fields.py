@@ -29,19 +29,19 @@ class SectorSimRefPointField(States):
 
     Attributes
     ----------
-    field_states: foxes.core.States
+    field_states
         Field data states
-    ref_point_states: foxes.core.States
+    ref_point_states
         Reference point states
-    ref_point: array_like
+    ref_point
         The [x, y, h] reference point coordinates
-    output_vars: list of str
+    output_vars
         The output variables, if None, all field_states variables are used
-    fixed_vars: dict
+    fixed_vars
         Fixed variables, e.g. {"var_name": var_value}
-    apply_blending: bool
+    apply_blending
         Whether to blend between wind direction sectors
-    check_nans: bool
+    check_nans
         Whether to check for NaN values
 
     :group: input.states
@@ -66,25 +66,25 @@ class SectorSimRefPointField(States):
 
         Parameters
         ----------
-        field_states: foxes.core.States
+        field_states
             Field data states
-        ref_point_states: foxes.core.States
+        ref_point_states
             Reference point states
-        ref_point: array_like
+        ref_point
             The [x, y, h] reference point coordinates
-        ref_point_is_lonlat: bool, optional
+        ref_point_is_lonlat
             Whether the reference point coordinates are in longitude/latitude
-        utm_zone: str, optional
+        utm_zone
             The UTM zone for the reference point coordinates, if applicable.
             Either a string like "32N" or None for definition by field or ref point states
             or automatic detection based on the reference point coordinates.
-        output_vars: list of str, optional
+        output_vars
             The output variables, if None, all field_states variables are used
-        fixed_vars: dict[str, float], optional
+        fixed_vars
             Fixed variables, e.g. {"var_name": var_value}
-        apply_blending: bool, optional
+        apply_blending
             Whether to blend between wind direction sectors
-        check_nans: bool, optional
+        check_nans
             Whether to check for NaN values
 
         """
@@ -110,12 +110,12 @@ class SectorSimRefPointField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -128,7 +128,7 @@ class SectorSimRefPointField(States):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -185,16 +185,16 @@ class SectorSimRefPointField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -384,7 +384,7 @@ class SectorSimRefPointField(States):
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
@@ -401,20 +401,20 @@ class SectorSimRefPointField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict[str, numpy.ndarray]
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """
@@ -433,9 +433,7 @@ class SectorSimRefPointField(States):
         wd_bin_plus = mdata[self.WD_BIN_DATA][:, 2]
         n_bins = len(wd_bin_centre)
         ovars = self.output_point_vars(algo)
-        out: dict[str, np.ndarray] = {
-            v: np.zeros_like(tdata[v]) for v in ovars
-        }
+        out: dict[str, np.ndarray] = {v: np.zeros_like(tdata[v]) for v in ovars}
 
         assert (
             FV.WD in ovars
@@ -564,9 +562,7 @@ class SectorSimRefPointField(States):
             mdict: dict[str, np.ndarray] = {c: mdata[c] for c in field_coords0}
             mdims: dict[str, tuple[str, ...]] = {c: (c,) for c in field_coords0}
             mdict.update({v: mdata[v] for v in field_vars0})
-            mdims.update(
-                {v: cast(tuple[str, ...], mdata.dims[v]) for v in field_vars0}
-            )
+            mdims.update({v: cast(tuple[str, ...], mdata.dims[v]) for v in field_vars0})
             if FC.STATE in mdict:
                 mdict[FC.STATE] = mdict[FC.STATE][fstates]
             else:

@@ -3,7 +3,7 @@ import argparse
 import matplotlib.pyplot as plt
 from pathlib import Path
 from xarray import open_dataset, Dataset, concat
-from typing import Any
+from typing import Any, Callable
 
 from foxes.config import config
 from foxes.core import Engine, get_engine
@@ -247,52 +247,53 @@ def _write_file(data, fpath, write_pars=None, verbosity: int = 0) -> None:
 
 
 def era52foxes(
-    source_files,
-    out_dir,
-    cmap=None,
-    var2ncvar=None,
-    lon_bounds=None,
-    lat_bounds=None,
-    preprocess=None,
-    write_points_png=False,
-    check_nan=False,
-    write_pars=None,
-    max_ti=1.0,
-    verbosity=1,
-):
+    source_files: str | Path,
+    out_dir: str | Path,
+    cmap: dict[str, str] | None = None,
+    var2ncvar: dict[str, str] | None = None,
+    lon_bounds: tuple[float, float] | None = None,
+    lat_bounds: tuple[float, float] | None = None,
+    preprocess: Callable[[Dataset], Dataset] | None = None,
+    write_points_png: bool = False,
+    check_nan: bool = False,
+    write_pars: dict[str, Any] | None = None,
+    max_ti: float = 1.0,
+    verbosity: int = 1,
+) -> None:
     """
     Convert ERA5 NetCDF files to the foxes format expected by
     the FieldData states class.
 
     Parameters
     ----------
-    source_files : str
+    source_files
         Source files to process, either a single file or a glob pattern.
-    out_dir : str
+    out_dir
         Output directory for resulting NetCDF files.
-    cmap: dict, optional
+    cmap
         Mapping from foxes dimension name to ERA5 dimension name
-    var2ncvar: dict, optional
+    var2ncvar
         Mapping from foxes variable to ERA5 variable name
-    lon_bounds: tuple, optional
+    lon_bounds
         The longitude bounds (min, max) to subset the data, in degrees
-    lat_bounds: tuple, optional
+    lat_bounds
         The latitude bounds (min, max) to subset the data, in degrees
-    preprocess: function, optional
+    preprocess
         A function that takes the opened ERA5 dataset and returns a modified dataset,
-    write_points_png: bool, optional
+    write_points_png
         Whether to save a plot of the grid points
-    write_pars: dict, optional
+    write_pars
         Parameters for writing the NetCDF file, e.g. pack
-    max_ti: float, optional
+    max_ti
         The maximum turbulence intensity (TI) value to compute
-    verbosity : int, optional
+    verbosity
         The verbosity level, 0 = silent, by default 1
 
     """
 
     # prepare:
     engine = get_engine()
+    assert engine is not None
     source_files = Path(source_files)
     out_dir = Path(out_dir).expanduser()
     out_dir.mkdir(parents=True, exist_ok=True)

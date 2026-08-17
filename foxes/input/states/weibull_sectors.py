@@ -25,19 +25,19 @@ class WeibullSectors(StatesTable):
 
     Attributes
     ----------
-    ws_bins: numpy.ndarray
+    ws_bins
         The wind speed bins, including
         lower and upper bounds, shape: (n_ws_bins+1,)
-    var2ncvar: dict[str, str]
+    var2ncvar
         Mapping from variable names to variable names
         in the nc file
-    sel: dict[str, object]
+    sel
         Subset selection via xr.Dataset.sel()
-    isel: dict[str, object]
+    isel
         Subset selection via xr.Dataset.isel()
-    rpars: dict[str, object]
+    rpars
         Additional parameters for reading the file
-    RDICT: dict
+    RDICT
         Default xarray file reading parameters
 
     :group: input.states
@@ -62,23 +62,23 @@ class WeibullSectors(StatesTable):
 
         Parameters
         ----------
-        data_source: str or pathlib.Path or xarray.Dataset or pandas.DataFrame
+        data_source
             Either path to NetCDF or csv file or data
-        output_vars: list of str
+        output_vars
             The output variables
-        ws_bins: numpy.typing.ArrayLike, optional
+        ws_bins
             The wind speed bins, including
             lower and upper bounds
-        var2ncvar: dict[str, str], optional
+        var2ncvar
             Mapping from variable names to variable names
             in the nc file
-        sel: dict[str, object], optional
+        sel
             Subset selection via xr.Dataset.sel()
-        isel: dict[str, object], optional
+        isel
             Subset selection via xr.Dataset.isel()
-        read_pars: dict[str, object], optional
+        read_pars
             Additional parameters for reading the file
-        kwargs: object
+        kwargs
             Additional arguments for the base class
 
         """
@@ -115,16 +115,16 @@ class WeibullSectors(StatesTable):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        point_coord: str, optional
+        point_coord
             The coordinate name representing the point index
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        data: xarray.Dataset
+        data
             The input data
 
         """
@@ -268,10 +268,14 @@ class WeibullSectors(StatesTable):
                         ]
                 elif iws >= 0 and iwd < 0 and ipt >= 0:
                     self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                    self._data[v][:] = np.moveaxis(d_array, [iws, ipt], [0, 1])[None, :, :]
+                    self._data[v][:] = np.moveaxis(d_array, [iws, ipt], [0, 1])[
+                        None, :, :
+                    ]
                 elif iws < 0 and iwd >= 0 and ipt >= 0:
                     self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                    self._data[v][:] = np.moveaxis(d_array, [iwd, ipt], [0, 1])[:, None, :]
+                    self._data[v][:] = np.moveaxis(d_array, [iwd, ipt], [0, 1])[
+                        :, None, :
+                    ]
                 elif iws >= 0 and iwd < 0 and ipt < 0:
                     self._data[v] = np.zeros(shp, dtype=config.dtype_double)
                     if cpt is None:
@@ -323,16 +327,16 @@ class WeibullSectors(StatesTable):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """

@@ -22,17 +22,17 @@ class NEWAStates(DatasetStates):
 
     Attributes
     ----------
-    states_coord: str
+    states_coord
         The states coordinate name in the data
-    x_coord: str
+    x_coord
         The x coordinate name in the data
-    y_coord: str
+    y_coord
         The y coordinate name in the data
-    h_coord: str
+    h_coord
         The height coordinate name in the data
-    weight_ncvar: str
+    weight_ncvar
         Name of the weight data variable in the nc file(s)
-    interpn_pars: dict, optional
+    interpn_pars
         Additional parameters for scipy.interpolate.interpn
 
     Examples
@@ -77,44 +77,44 @@ class NEWAStates(DatasetStates):
 
         Parameters
         ----------
-        input_files_nc: str or pathlib.Path or xarray.Dataset
+        input_files_nc
             The input netcdf file(s), can contain
             wildcards, e.g. 'wrfout_2025*.nc'
-        time_coord: str
+        time_coord
             The time coordinate name in the data
-        west_east_coord: str
+        west_east_coord
             The west-east coordinate name in the data
-        south_north_coord: str
+        south_north_coord
             The south-north coordinate name in the data
-        height_coord: str, optional
+        height_coord
             The height coordinate name in the data
-        xlat_coord: str
+        xlat_coord
             The latitude coordinate name in the data
-        xlon_coord: str
+        xlon_coord
             The longitude coordinate name in the data
-        output_vars: list of str, optional
+        output_vars
             The output variables to load, if None,
             the default variables are loaded
             (FV.WS, FV.WD, FV.TI, FV.RHO)
-        var2ncvar: dict[str, str], optional
+        var2ncvar
             A dictionary mapping foxes variable names
             to the corresponding netcdf variable names.
-        load_mode: str
+        load_mode
             The load mode, choices: preload, lazy, fly.
             preload loads all data during initialization,
             lazy lazy-loads the data using dask, and fly
             reads only states index and weights during initialization
             and then opens the relevant files again within
             the chunk calculations.
-        time_format: str or None, optional
+        time_format
             The datetime parsing format string
-        interp_pars: dict[str, bool or float or str or None], optional
+        interp_pars
             Additional parameters for scipy.interpolate.griddata,
             e.g. {'method': 'linear', 'fill_value': None, 'rescale': True}
-        wrf_point_plot: str or pathlib.Path or None, optional
+        wrf_point_plot
             Path to a plot file, e.g. wrf_points.png, to visualize the
             selected WRF grid points and the layout of the farm.
-        kwargs: object
+        kwargs
             Additional parameters for the base class
 
         """
@@ -172,19 +172,19 @@ class NEWAStates(DatasetStates):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data: xarray.Dataset
+        data
             The dataset to preprocess
-        bounds_extra_space: float or str or None, optional
+        bounds_extra_space
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        height_bounds: tuple[float, float], optional
+        height_bounds
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        loaded_data: LoadedData, optional
+        loaded_data
             If given, optionally add to this loaded data dict with entries
             {"coords": {}, "data_vars": {}, "extra_data": {}}
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -334,19 +334,19 @@ class NEWAStates(DatasetStates):
 
         Parameters
         ----------
-        loaded_data: LoadedData, optional
+        loaded_data
             The loaded data dictionary
-        mdata: foxes.core.MData, optional
+        mdata
             The model data
-        all_heights: bool, optional
+        all_heights
             If True, return all heights, otherwise only the highest.
-        height: float, optional
+        height
             The height to use. If None, the highest height is used if
             all_heights is False.
 
         Returns
         -------
-        grid_points: numpy.ndarray
+        grid_points
             The grid points, shape (n_points, 3)
 
         """
@@ -415,14 +415,14 @@ class NEWAStates(DatasetStates):
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The model data
-        idims: list of str
+        idims
             The dimensions for interpolation, e.g. ['x', 'y', 'height']
 
         Returns
         -------
-        gpts: numpy.ndarray
+        gpts
             A 2D array with shape (n_points, n_idims).
 
         """
@@ -485,27 +485,27 @@ class NEWAStates(DatasetStates):
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The model data
-        idims: list of str
+        idims
             The input dimensions, e.g. ['x', 'y', 'height']
-        d: numpy.ndarray
+        d
             The data array, with shape (n1, n2, ..., nv)
             where ni represents the dimension sizes of the ordered
             icoords keys, and nv is the number of variables
-        pts: numpy.ndarray
+        pts
             The points to interpolate to, with shape (n_pts, n_idims)
-        vrs: list of str
+        vrs
             The variable names, length nv
-        state_indices: numpy.ndarray, optional
+        state_indices
             The indices of the states, with shape (n_states,)
-        gpts: numpy.ndarray or None, optional
+        gpts
             A 2D array with shape (n_points, n_dims), or None to extract the
             grid points from mdata.
 
         Returns
         -------
-        d_interp: numpy.ndarray
+        d_interp
             The interpolated data array with shape (n_pts, nv)
 
         """

@@ -454,7 +454,7 @@ class StatesTable(States):
         -------
         results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """

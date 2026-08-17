@@ -5,6 +5,7 @@ from pandas import DataFrame
 from pathlib import Path
 from tqdm.autonotebook import tqdm
 from shutil import rmtree
+from typing import Any
 
 from foxes.core import get_engine, Engine
 from foxes.config import config
@@ -338,63 +339,64 @@ def _process(
 
 
 def iconDream2foxes(
-    out_dir,
-    region,
-    min_year,
-    min_month,
-    max_year,
-    max_month,
-    base_url="https://opendata.dwd.de/climate_environment/REA/ICON-DREAM-EU/hourly",
-    url_icon_grid="http://icon-downloads.mpimet.mpg.de/grids/public/edzw/icon_grid_0027_R03B08_N02.nc",
-    levels=None,
-    skip_download=False,
-    check_grb=False,
-    check_nans=True,
-    pack=True,
-    cdo_tmp_dir="cdo_tmp",
-    verbosity=1,
-):
+    out_dir: str | Path,
+    region: str,
+    min_year: int,
+    min_month: int,
+    max_year: int,
+    max_month: int,
+    base_url: str = "https://opendata.dwd.de/climate_environment/REA/ICON-DREAM-EU/hourly",
+    url_icon_grid: str = "http://icon-downloads.mpimet.mpg.de/grids/public/edzw/icon_grid_0027_R03B08_N02.nc",
+    levels: list[int] | None = None,
+    skip_download: bool = False,
+    check_grb: bool = False,
+    check_nans: bool = True,
+    pack: bool = True,
+    cdo_tmp_dir: str | Path = "cdo_tmp",
+    verbosity: int = 1,
+) -> None:
     """
     Download ICON-DREAM-EU hourly files for specified variables and time range,
     and convert them into foxes compatible NetCDF files.
 
     Parameters
     ----------
-    out_dir: str or Path
+    out_dir
         Directory to save downloaded files.
-    region: str
+    region
         Region for which to download data ("northsea" or "baltic").
-    min_year: int
+    min_year
         Minimal year (inclusive).
-    min_month: int
+    min_month
         Minimal month (inclusive).
-    max_year: int
+    max_year
         Maximal year (inclusive).
-    max_month: int
+    max_month
         Maximal month (inclusive).
-    base_url: str
+    base_url
         Base URL of the FTP server.
-    url_icon_grid: str
+    url_icon_grid
         URL to download the ICON grid file if not present.
-    levels: list of int, optional
+    levels
         The ICON height levels, e.g. [69,70,71,72,73,74].
-    skip_download: bool
+    skip_download
         If True, skip the download step and assume all files are present.
-    check_grb: bool
+    check_grb
         If True, check the grb files for expected dimensions before processing
-    check_nans: bool
+    check_nans
         If True, check for NaNs in the data
-    pack: bool
+    pack
         Whether to pack data using scale_factor and add_offset
-    cdo_tmp_dir: str
+    cdo_tmp_dir
         Temporary directory for CDO intermediate files.
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent, 1 = progress bars and summary.
 
     :group: input.states.create
 
     """
     engine = get_engine()
+    assert engine is not None
     out_dir = Path(out_dir).expanduser()
     grb_dir = out_dir / "grb"
     nc0_dir = out_dir / "nc"
@@ -507,6 +509,10 @@ def iconDream2foxes(
 
     # check grb files in parallel:
     if check_grb:
+        valid: Any
+        fname: Any
+        reason: Any
+        details: Any
         futures = [
             engine.submit(
                 _check_grb,

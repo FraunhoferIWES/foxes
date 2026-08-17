@@ -451,7 +451,7 @@ class LatLonFieldData(DatasetStates):
         state_indices
             The indices of the states, with shape (n_states,)
         gpts
-            Either a list of 1D arrays for each dimension, or a single 2D array
+            Either one-dimensional arrays for each dimension, or a single array
             with shape (n_points, n_dims). If None, the grid points are extracted
             from mdata.
 
@@ -590,8 +590,8 @@ class WeibullField(FieldData):
         data
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
-            where dims is a tuple of dimension names and
-            data_array is a numpy.ndarray with the data values
+            where dims is a sequence of dimension names and
+            data_array contains the data values
 
         """
         # read data, using wd_coord as state coordinate
@@ -690,9 +690,7 @@ class WeibullField(FieldData):
             if dims[0] == FV.WD:
                 dms = tuple([FC.STATE] + list(dims[1:]))
                 shape = [n_ws] + list(d.shape)
-                expanded_data: np.ndarray = np.zeros(
-                    shape, dtype=config.dtype_double
-                )
+                expanded_data: np.ndarray = np.zeros(shape, dtype=config.dtype_double)
                 expanded_data[:] = d[None, ...]
                 translated_data[v] = (
                     dms,

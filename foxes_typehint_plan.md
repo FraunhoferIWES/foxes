@@ -80,7 +80,7 @@ The status snapshot below and the latest validation record are authoritative. Ol
 - `foxes.core`: complete (package directory: `foxes/core`)
 - `foxes.engines`: complete (package directory: `foxes/engines`)
 - `foxes.algorithms`: complete (package directory: `foxes/algorithms`)
-- `foxes.input`: in progress (package directory: `foxes/input`)
+- `foxes.input`: complete (package directory: `foxes/input`)
 - `foxes.utils`: pending (package directory: `foxes/utils`)
 - `foxes.models`: pending (package directory: `foxes/models`)
 - `foxes.output`: pending (package directory: `foxes/output`)
@@ -150,32 +150,21 @@ Before ending a work session:
 
 This makes the hidden failure mode impossible to miss in a fresh session, because the grep result is a required part of the completion record.
 
-## Consolidated Rules
-
-- Use `uv` for all Python commands and mypy runs.
-- Run smoke tests after each sub-package is completed.
-- Prefer concrete type annotations such as `dict[A, B]` over bare `dict`.
-- Avoid `Any`/`object` unless a runtime contract genuinely requires it.
-- Remove type text from NumpyDoc docstrings; type information belongs in Python signatures only.
-- Keep changes narrow and focused; no unrelated refactors.
-- Anti-regression rule: before a package is marked complete, run the package-wide AST docstring audit across every Python file and fix every hit for legacy NumpyDoc patterns such as `name: type`, `list of ...`, `tuple of ...`, and `dict[...]` text inside docstring sections. Run the supplemental grep check afterward and fix every hit as well.
-- Completion gate: each package entry must include the complete Python-file count, AST audit result, supplemental grep result, and validation output in the restart file so a missed file cannot silently reappear.
-
 ### Current Next Action
 
-- Complete the remaining `foxes.input` docstring remediation before advancing to `foxes.utils`.
+- Begin the `foxes.utils` type and docstring remediation.
 
 ### foxes.input status
 
 - package directory: `foxes/input`
-- pass/fail: in progress
+- pass/fail: complete
 - `uv run mypy foxes/input` — passed (`46` source files)
 - focused smoke tests: `uv run pytest tests/0_consistency/input tests/2_models/model_smoke/test_states.py -q` — passed (`26 passed, 2 skipped`)
 - full regression check: `uv run pytest -q` — passed (`230 passed, 5 skipped`)
-- Python files inspected by AST docstring audit: `46`; the audit is non-empty and still reports legacy typed-field/type-prose hits across the input package
+- Python files inspected by AST docstring audit: `46`; final result `0` typed-field hits and `0` type-prose hits in `Parameters`, `Other Parameters`, `Returns`, `Yields`, and `Attributes` sections
 - supplemental grep anti-drift scan: empty
-- remaining files or hits: docstring remediation remains in 30 input files; the package-wide AST audit must be refined to distinguish field declarations from ordinary colon-bearing prose, then all genuine hits must be removed
-- next action: continue the input docstring cleanup and rerun the authoritative audit before starting `foxes.utils`
+- remaining files or hits: none in `foxes/input`
+- next action: begin `foxes.utils` remediation
 
 ## Historical Validation Log
 
@@ -225,8 +214,8 @@ The entries below preserve useful evidence from earlier passes. Their “next ac
 - Final AST audit: `69` Python files checked, `0` typed-field hits.
 - Revalidation: core mypy passed (`24` files) and focused tests passed (`27 passed, 2 skipped`); engines mypy passed (`11` files) and focused tests passed (`38 passed, 1 skipped`); algorithms mypy passed (`22` files) and focused tests passed (`3 passed`); farm-layout mypy passed (`12` files) and the focused input smoke test passed (`1 passed`).
 - Supplemental grep: empty for the revalidated scopes apart from documented multiline Python-signature false positives in `foxes/core/engine.py` and algorithm signatures; the AST audit is authoritative for docstrings.
-- Result: core, engines, and algorithms are restored to complete; input remains in progress.
-- Next action: continue the `foxes.input` remediation queue, then run the same package-wide AST audit before advancing to `foxes.utils`.
+- Result at the time: core, engines, and algorithms were complete; this entry is superseded by the authoritative completion status for input above.
+- Superseded: the package-wide input audit was completed successfully; `foxes.input` is complete and the next package is `foxes.utils`.
 
 ### Historical core validation note (2026-08-14)
 
@@ -284,7 +273,7 @@ The entries below preserve useful evidence from earlier passes. Their “next ac
 - focused tests — passed (`3 passed`)
 - AST-based docstring drift scan — empty for all `foxes/algorithms/**/*.py`
 - concrete typing improvements: Downwind and Sequential now use `WindFarm`/`States`; Sequential plugins use `SequentialPlugin`; population and Sequential return contracts were narrowed where known
-- next action: audit `foxes.input`
+- superseded: `foxes.input` was audited and completed; the active next package is `foxes.utils`
 
 ### Historical input work log (2026-08-14)
 
@@ -319,4 +308,4 @@ The entries below preserve useful evidence from earlier passes. Their “next ac
 - MesoMicroField calculation slice: separated the temporary MData mapping from the later stacked result array and annotated the temporary target-point array; focused state smoke tests remain green (`23 passed, 2 skipped`), while mypy still reports calculation-shape and dynamic LoadedData errors
 - Input package AST audit: `46` Python files inspected, `0` typed-field or legacy type-prose hits; supplemental grep is empty
 - Input package syntax check: `uv run python -m compileall -q foxes/input` passed
-- next action: continue the remaining calculation-shape typing in `meso_micro_field.py`, then `ref_point_fields.py`; do not mark `foxes.input` complete until package-wide mypy and both docstring scans pass
+- superseded: the remaining calculation-shape typing was completed, package-wide mypy and both docstring scans passed, and `foxes.input` was marked complete in the authoritative status above

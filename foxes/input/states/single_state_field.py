@@ -24,7 +24,7 @@ class SingleStateField(States):
     data_source
         The NetCDF dataset to read from, or a path to it.
     output_vars
-        List of variable names to read.
+        Names of variables to read.
     var2ncvar
         Mapping from variable names to netCDF variable names.
     fixed_vars
@@ -75,7 +75,7 @@ class SingleStateField(States):
         data_source
             The NetCDF dataset to read from, or a path to it.
         output_vars
-            List of variable names to read.
+            Names of variables to read.
         var2ncvar
             Mapping from variable names to netCDF variable names.
         fixed_vars
@@ -130,12 +130,12 @@ class SingleStateField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -148,7 +148,7 @@ class SingleStateField(States):
 
         Returns
         -------
-        d: xrarray.Dataset
+        d
             The field data
 
         """
@@ -170,16 +170,16 @@ class SingleStateField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -291,7 +291,7 @@ class SingleStateField(States):
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
@@ -308,20 +308,20 @@ class SingleStateField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict[str, numpy.ndarray]
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """

@@ -116,22 +116,22 @@ def read_wind_resource_field(
 
     Parameters
     ----------
-    name: str
+    name
         The windio variable name
-    wio_data: object
+    wio_data
         The windio data
-    coords: dict
+    coords
         The coordinates dict, filled on the fly
-    fields: dict
+    fields
         The fields dict, filled on the fly
-    dims: dict
+    dims
         The dimensions dict, filled on the fly
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     Returns
     -------
-    success: bool
+    success
         Flag for successful data extraction
 
     :group: input.yaml.windio

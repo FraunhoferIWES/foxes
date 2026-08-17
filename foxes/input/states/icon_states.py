@@ -37,34 +37,34 @@ class ICONStates(LatLonFieldData):
 
         Parameters
         ----------
-        data_source: str or pathlib.Path or xarray.Dataset
+        data_source
             The input netcdf file(s) containing, can contain
             wildcards, e.g. '2025*_icon.nc'
-        height_coord_default: str or None, optional
+        height_coord_default
             The default height level coordinate name in the data
-        height_coord_tke: str or None, optional
+        height_coord_tke
             The height level coordinate name for TKE in the data
-        time_coord: str
+        time_coord
             The time coordinate name in the data
-        lat_coord: str
+        lat_coord
             The latitude coordinate name in the data
-        lon_coord: str
+        lon_coord
             The longitude coordinate name in the data
-        output_vars: list of str, optional
+        output_vars
             The output variables to load, if None,
             the default variables are loaded
             (FV.WS, FV.WD, FV.TI, FV.RHO)
-        var2ncvar: dict[str, str], optional
+        var2ncvar
             A dictionary mapping foxes variable names
             to the corresponding netcdf variable names.
-        load_mode: str
+        load_mode
             The load mode, choices: preload, lazy, fly.
             preload loads all data during initialization,
             lazy lazy-loads the data using dask, and fly
             reads only states index and weights during initialization
             and then opens the relevant files again within
             the chunk calculations.
-        kwargs: object
+        kwargs
             Additional parameters for the base class
 
         """
@@ -123,12 +123,12 @@ class ICONStates(LatLonFieldData):
 
         Parameters
         ----------
-        ds: xarray.Dataset
+        ds
             The dataset to preprocess.
 
         Returns
         -------
-        dataset: xarray.Dataset
+        dataset
             The preprocessed dataset.
 
         """
@@ -158,20 +158,20 @@ class ICONStates(LatLonFieldData):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        bounds_extra_space: float or str or None, optional
+        bounds_extra_space
             The extra space to add to the horizontal wind farm bounds.
-        height_bounds: tuple[float, float], optional
+        height_bounds
             The height bounds in m.
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -203,20 +203,20 @@ class ICONStates(LatLonFieldData):
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The mdata object
-        fdata: foxes.core.FData
+        fdata
             The fdata object
 
         Returns
         -------
-        data: dict[tuple[str, ...], tuple[list[str], numpy.ndarray]]
+        data
             The extracted data, keys are dimension tuples,
             values are tuples (variables, data_array)
-            where variables is a list of variable names, and
-            data_array is a numpy.ndarray with the data values,
+            where variables contains variable names, and
+            data_array contains the data values,
             the last dimension corresponds to the variables
-        weights: numpy.ndarray or None
+        weights
             The weights array, if only state dependent, otherwise
             weights are among data. Shape: (n_states,)
 
@@ -241,16 +241,16 @@ class ICONStates(LatLonFieldData):
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The model data
-        idims: list of str
+        idims
             The input dimensions, e.g. [x, y, height]
 
         Returns
         -------
-        icoords: dict[str, numpy.ndarray]
+        icoords
             The extracted interpolation coordinates, keys are dimension names,
-            values are 1D numpy.ndarray with the coordinate values
+            values are one-dimensional arrays with the coordinate values
 
         """
         icoords = super().get_interpolation_coords(mdata, idims)  # type: ignore[misc]

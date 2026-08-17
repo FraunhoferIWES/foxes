@@ -19,18 +19,18 @@ class WRGStates(States):
 
     Attributes
     ----------
-    wrg_fname: str
+    wrg_fname
         Name of the WRG file
-    ws_bins: numpy.ndarray
+    ws_bins
         The wind speed bins, including
         lower and upper bounds, shape: (n_ws_bins+1,)
-    fixed_vars: dict[str, float]
+    fixed_vars
         Fixed uniform variable values, instead of
         reading from data
-    bounds_extra_space: float or str
+    bounds_extra_space
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-    interp_pars: dict[str, object]
+    interp_pars
         Additional parameters for scipy.interpolate.interpn
 
     :group: input.states
@@ -50,18 +50,18 @@ class WRGStates(States):
 
         Parameters
         ----------
-        wrg_fname: str
+        wrg_fname
             Name of the WRG file
-        ws_bins: numpy.typing.ArrayLike
+        ws_bins
             The wind speed bins, including
             lower and upper bounds
-        fixed_vars: dict[str, float], optional
+        fixed_vars
             Fixed uniform variable values, instead of
             reading from data
-        bounds_extra_space: float or str, optional
+        bounds_extra_space
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        interp_pars: object
+        interp_pars
             Additional parameters for scipy.interpolate.interpn
 
         """
@@ -88,16 +88,16 @@ class WRGStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -114,9 +114,7 @@ class WRGStates(States):
         elif verbosity:
             print(f"States '{self.name}': Reading file {fpath}")
         wrg = ReaderWRG(fpath)
-        p0: np.ndarray = np.array(
-            [wrg.x0, wrg.y0], dtype=config.dtype_double
-        )
+        p0: np.ndarray = np.array([wrg.x0, wrg.y0], dtype=config.dtype_double)
         nx = wrg.nx
         ny = wrg.ny
         ns = wrg.n_sectors
@@ -132,12 +130,10 @@ class WRGStates(States):
             )
             if verbosity > 0:
                 print(f"States '{self.name}': Farm bounds {xy_min} - {xy_max}")
-            ij_min: np.ndarray = np.asarray(
-                (xy_min - p0) / res, dtype=config.dtype_int
+            ij_min: np.ndarray = np.asarray((xy_min - p0) / res, dtype=config.dtype_int)
+            ij_max: np.ndarray = (
+                np.asarray((xy_max - p0) / res, dtype=config.dtype_int) + 1
             )
-            ij_max: np.ndarray = np.asarray(
-                (xy_max - p0) / res, dtype=config.dtype_int
-            ) + 1
             sx = slice(ij_min[0], ij_max[0])
             sy = slice(ij_min[1], ij_max[1])
         else:
@@ -168,9 +164,7 @@ class WRGStates(States):
         A_data = np.stack(A, axis=0).T
         k_data = np.stack(k, axis=0).T
         f_data = np.stack(f, axis=0).T
-        self._data = np.stack(
-            [A_data, k_data, f_data], axis=-1
-        )  # (x, y, wd, AKfs)
+        self._data = np.stack([A_data, k_data, f_data], axis=-1)  # (x, y, wd, AKfs)
 
         # store ws and wd:
         self.VARS = self.var("VARS")
@@ -179,9 +173,7 @@ class WRGStates(States):
         self._wsd = self.ws_bins[1:] - self.ws_bins[:-1]
         self._wss = 0.5 * (self.ws_bins[:-1] + self.ws_bins[1:])
         self._N = len(self._wss) * ns
-        data: np.ndarray = np.zeros(
-            (len(self._wss), ns, 3), dtype=config.dtype_double
-        )
+        data: np.ndarray = np.zeros((len(self._wss), ns, 3), dtype=config.dtype_double)
         data[..., 0] = self._wss[:, None]
         data[..., 1] = self._wds[None, :]
         data[..., 2] = self._wsd[:, None]
@@ -208,12 +200,12 @@ class WRGStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -232,20 +224,20 @@ class WRGStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict[str, numpy.ndarray]
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """

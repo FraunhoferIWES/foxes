@@ -11,6 +11,7 @@ from scipy.interpolate import (
     NearestNDInterpolator,
     CloughTocher2DInterpolator,
 )
+from typing import Any, Callable
 
 from foxes.config import config
 from foxes.core import Engine, get_engine
@@ -511,65 +512,66 @@ def _process_file(
 
 
 def wrf2foxes(
-    source_files,
-    out_dir,
-    cmap=None,
-    var2ncvar=None,
-    resolution=None,
-    lon_bounds=None,
-    lat_bounds=None,
-    height_bounds=(0.0, 400.0),
-    chunk_size_states=None,
-    chunk_size_points=None,
-    preprocess=None,
-    write_points_png=False,
-    check_nan=False,
-    interp_pars=None,
-    write_pars=None,
-    verbosity=1,
-):
+    source_files: str | Path,
+    out_dir: str | Path,
+    cmap: dict[str, str] | None = None,
+    var2ncvar: dict[str, str] | None = None,
+    resolution: float | None = None,
+    lon_bounds: tuple[float, float] | None = None,
+    lat_bounds: tuple[float, float] | None = None,
+    height_bounds: tuple[float, float] | None = (0.0, 400.0),
+    chunk_size_states: int | None = None,
+    chunk_size_points: int | None = None,
+    preprocess: Callable[[Dataset], Dataset] | None = None,
+    write_points_png: bool = False,
+    check_nan: bool = False,
+    interp_pars: dict[str, Any] | None = None,
+    write_pars: dict[str, Any] | None = None,
+    verbosity: int = 1,
+) -> None:
     """
     Convert WRF NetCDF files to the foxes format expected by
     the FieldData states class.
 
     Parameters
     ----------
-    source_files : str
+    source_files
         Source files to process, either a single file or a glob pattern.
-    out_dir : str
+    out_dir
         Output directory for resulting NetCDF files.
-    cmap: dict, optional
+    cmap
         Mapping from foxes dimension name to WRF dimension name
-    var2ncvar: dict, optional
+    var2ncvar
         Mapping from foxes variable to WRF variable name
-    resolution: float, optional
+    resolution
         The grid resolution in m, if not provided, it will be determined
-    lon_bounds: tuple, optional
+    lon_bounds
         The longitude bounds (min, max) to subset the data, in degrees
-    lat_bounds: tuple, optional
+    lat_bounds
         The latitude bounds (min, max) to subset the data, in degrees
-    height_bounds: tuple, optional
+    height_bounds
         The height bounds (min, max) to subset the data, in meters
-    chunk_size_states: int, optional
+    chunk_size_states
         The chunk size for time dimension during interpolation
-    chunk_size_points: int, optional
+    chunk_size_points
         The chunk size for target points during interpolation
-    preprocess: function, optional
+    preprocess
         A function that takes the opened WRF dataset and returns a modified dataset,
-    write_points_png: bool, optional
+    write_points_png
         Whether to save a plot of the grid points
-    interp_pars: dict, optional
+    interp_pars
         Parameters for the interpolation via griddata,
         e.g. method, rescale, fill_value
-    write_pars: dict, optional
+    write_pars
         Parameters for writing the NetCDF file, e.g. pack
-    verbosity : int, optional
+    verbosity
         The verbosity level, 0 = silent, by default 1
 
     """
 
     # prepare:
     engine = get_engine()
+    assert engine is not None
     source_files = Path(source_files)
     out_dir = Path(out_dir).expanduser()
     out_dir.mkdir(parents=True, exist_ok=True)

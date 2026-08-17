@@ -32,40 +32,40 @@ def read_dict(
 
     Parameters
     ----------
-    idict: foxes.utils.Dict
+    idict
         The input parameter dictionary
-    farm: foxes.core.WindFarm, optional
+    farm
         The wind farm, overrules settings from idict
-    states: foxes.core.States, optional
+    states
         The ambient states, overrules settings from idict
-    mbook: foxes.models.ModelBook, optional
+    mbook
         The model book, overrules settings from idict
-    algo: foxes.core.Algorithm, optional
+    algo
         The algorithm, overrules settings from idict
-    engine_pars: dict, optional
+    engine_pars
         Parameters for engine creation, overrules
         settings from idict
-    iterative: bool, optional
+    iterative
         Force iterative calculations, overrules
         settings from idict
-    verbosity: int, optional
+    verbosity
         Force a verbosity level, 0 = silent, overrules
         settings from idict
-    work_dir: str or pathlib.Path, optional
+    work_dir
         Path to the working directory
-    input_dir: str or pathlib.Path, optional
+    input_dir
         The default input directory
-    output_dir: str or pathlib.Path, optional
+    output_dir
         The default output directory
-    algo_pars: dict, optional
+    algo_pars
         Additional parameters for the algorithm, overrules
         settings from idict
 
     Returns
     -------
-    algo: foxes.core.Algorithm
+    algo
         The algorithm
-    engine: foxes.core.Engine
+    engine
         The engine, or None if not set
 
     :group: input.yaml
@@ -190,25 +190,25 @@ def get_output_obj(
 
     Parameters
     ----------
-    ocls: str
+    ocls
         Name of the output class
-    odict: dict
+    odict
         The output dict
-    algo: foxes.core.Algorithm
+    algo
         The algorithm
-    farm_results: xarray.Dataset, optional
+    farm_results
         The farm results
-    point_results: xarray.Dataset, optional
+    point_results
         The point results
-    base_class: object
+    base_class
         The output's base class
-    extra_sig: dict
+    extra_sig
         Extra function signature check, sets
         arguments (key) with data (value)
 
     Returns
     -------
-    obj: object or None
+    obj
         The output object
 
     :group: input.yaml
@@ -260,24 +260,24 @@ def run_obj_function(
 
     Parameters
     ----------
-    obj: object
+    obj
         The object
-    fdict: dict
+    fdict
         The function call dict
-    algo: foxes.core.Algorithm
+    algo
         The algorithm
-    with_engine: bool
+    with_engine
         Flag for running from within engine context
-    results_storage: dict
+    results_storage
         Storage for result variables
-    nofig: bool
+    nofig
         Do not show figures, overrules settings from fdict
-    verbosity: int, optional
+    verbosity
         The verbosity level, 0 = silent
 
     Returns
     -------
-    results: object
+    results
         The returns of the function
 
     :group: input.yaml
@@ -362,37 +362,37 @@ def run_outputs(
 
     Parameters
     ----------
-    engine: foxes.core.Engine
+    engine
         The engine object
-    idict: foxes.utils.Dict
+    idict
         The input parameter dictionary
-    algo: foxes.core.Algorithm, optional
+    algo
         The algorithm
-    farm_results: xarray.Dataset, optional
+    farm_results
         The farm results
-    point_results: xarray.Dataset, optional
+    point_results
         The point results
-    with_engine: bool
+    with_engine
         Flag for running from within engine context
-    extra_sig: dict
+    extra_sig
         Extra function signature check, sets
         arguments (key) with data (value)
-    results_storage: dict, optional
+    results_storage
         Storage for result variables
-    ret_results_storage: bool
+    ret_results_storage
         Flag for returning results variables
-    nofig: bool
+    nofig
         Do not show figures, overrules settings from idict
-    verbosity: int, optional
+    verbosity
         The verbosity level, 0 = silent
 
     Returns
     -------
-    outputs: list of tuple
+    outputs
         For each output enty, a tuple (dict, results),
         where results is a list that represents one
         entry per function call
-    results_storage: dict, optional
+    results_storage
         The results variables
 
     :group: input.yaml
@@ -511,41 +511,41 @@ def run_dict(
 
     Parameters
     ----------
-    idict: foxes.utils.Dict
+    idict
         The input parameter dictionary
-    farm: foxes.core.WindFarm, optional
+    farm
         The wind farm, overrules settings from idict
-    states: foxes.core.States, optional
+    states
         The ambient states, overrules settings from idict
-    mbook: foxes.models.ModelBook, optional
+    mbook
         The model book, overrules settings from idict
-    algo: foxes.core.Algorithm, optional
+    algo
         The algorithm, overrules settings from idict
-    engine_pars: dict, optional
+    engine_pars
         Parameters for engine generation, overrules idict
-    iterative: bool, optional
+    iterative
         Add iterative algorithm wrapper, overrules idict
-    nofig: bool
+    nofig
         Do not show figures, overrules settings from idict
-    verbosity: int, optional
+    verbosity
         Force a verbosity level, 0 = silent, overrules
         settings from idict
-    work_dir: pathlib.Path, optional
+    work_dir
         The main working directory path
-    input_dir: pathlib.Path, optional
+    input_dir
         The input directory path
-    output_dir: pathlib.Path, optional
+    output_dir
         The output directory path
-    algo_pars: dict, optional
+    algo_pars
         Additional parameters for read_dict
 
     Returns
     -------
-    farm_results: xarray.Dataset, optional
+    farm_results
         The farm results
-    point_results: xarray.Dataset, optional
+    point_results
         The point results
-    outputs: list of tuple
+    outputs
         For each output enty, a tuple (dict, results),
         where results is a list that represents one
         entry per function call

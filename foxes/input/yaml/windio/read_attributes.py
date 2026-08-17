@@ -397,13 +397,13 @@ def read_attributes(wio_attrs, idict, mbook, verbosity: int = 1) -> None:
 
     Parameters
     ----------
-    wio_attrs: foxes.utils.Dict
+    wio_attrs
         The windio attributes data
-    idict: foxes.utils.Dict
+    idict
         The foxes input data dictionary
-    mbook: foxes.models.ModelBook
+    mbook
         The model book
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     :group: input.yaml.windio

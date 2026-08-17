@@ -23,20 +23,20 @@ def read_turbine_types(
 
     Parameters
     ----------
-    wio_farm: dict
+    wio_farm
         The windio farm data
-    mbook: foxes.models.ModelBook
+    mbook
         The model book
-    ws_exp_P: int
+    ws_exp_P
         The REWS exponent for power
-    ws_exp_ct: int
+    ws_exp_ct
         The REWS exponent for ct
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     Returns
     -------
-    ttypes: dict
+    ttypes
         Mapping from turbine type key to turbine
         type name in the model book
 
@@ -167,18 +167,18 @@ def read_layout(
 
     Parameters
     ----------
-    lname: str
+    lname
         The layout name
-    ldict: dict
+    ldict
         The layout data
-    farm: foxes.core.WindFarm
+    farm
         The wind farm
-    ttypes: dict
+    ttypes
         Mapping from turbine type key to turbine
         type name in the model book
-    fname: str, optional
+    fname
         Name of the sub-farm, if any
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     :group: input.yaml.windio
@@ -210,14 +210,14 @@ def read_farm(wio_dict: dict, mbook: ModelBook, verbosity: int) -> WindFarm:
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     Returns
     -------
-    farm: foxes.core.WindFarm
+    farm
         The wind farm
 
     :group: input.yaml.windio
@@ -303,12 +303,12 @@ def read_n_turbines(wio_dict: dict) -> int:
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
 
     Returns
     -------
-    n_turbines: int
+    n_turbines
         The number of turbines
 
     :group: input.yaml.windio
@@ -339,12 +339,12 @@ def read_hub_heights(wio_dict: dict) -> list[float]:
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
 
     Returns
     -------
-    hub_heights: list of float
+    hub_heights
         The hub heights of all turbines
 
     :group: input.yaml.windio
@@ -367,12 +367,12 @@ def read_rotor_diameters(wio_dict: dict) -> list[float]:
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
 
     Returns
     -------
-    rotor_diameters: list of float
+    rotor_diameters
         The rotor diameters of all turbines
 
     :group: input.yaml.windio

@@ -178,18 +178,18 @@ def read_outputs(wio_outs, idict, algo, verbosity: int = 1):
 
     Parameters
     ----------
-    wio_outs: foxes.utils.Dict
+    wio_outs
         The windio output data dict
-    idict: foxes.utils.Dict
+    idict
         The foxes input data dictionary
-    algo: foxes.core.Algorithm
+    algo
         The algorithm
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     Returns
     -------
-    odir: pathlib.Path
+    odir
         The output directory
 
     :group: input.yaml.windio

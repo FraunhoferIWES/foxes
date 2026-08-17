@@ -364,18 +364,18 @@ def get_states(coords, fields, dims, verbosity: int = 1) -> States:
 
     Parameters
     ----------
-    coords: dict
+    coords
         The coordinates data
-    fields: dict
+    fields
         The fields data
-    dims: dict
+    dims
         The dimensions data
-    verbosity: int
+    verbosity
         The verbosity level
 
     Returns
     -------
-    states: foxes.core.States
+    states
         The states object
 
     :group: input.yaml.windio
@@ -425,14 +425,14 @@ def read_site(wio_dict, verbosity: int = 1) -> States:
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     Returns
     -------
-    states: foxes.core.States
+    states
         The states object
 
     :group: input.yaml.windio

@@ -29,28 +29,28 @@ class MultiHeightStates(States):
 
     Attributes
     ----------
-    data_source: str or pathlib.Path or pandas.DataFrame
+    data_source
         Either path to a file or data
-    ovars: list of str
+    ovars
         The output variables
-    heights: list of float
+    heights
         The heights at which to search data
-    var2col: dict[str, str], optional
+    var2col
         Mapping from variable names to data column names
-    fixed_vars: dict[str, float], optional
+    fixed_vars
         Fixed uniform variable values, instead of
         reading from data
-    read_pars: dict[str, object], optional
+    read_pars
         pandas file reading parameters
-    states_sel: slice or range or list of int
+    states_sel
         States subset selection
-    states_loc: list[object]
+    states_loc
         State index selection via pandas loc function
-    check_nans: bool
+    check_nans
         Whether to check for NaN values in the data
-    interpolate_nans_pars: dict, optional
+    interpolate_nans_pars
         Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
-    RDICT: dict[str, int | list[int]]
+    RDICT
         Default pandas file reading parameters
 
     :group: input.states
@@ -78,28 +78,28 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        data_source: str or pathlib.Path or pandas.DataFrame
+        data_source
             Either path to a file or data
-        output_vars: list of str
+        output_vars
             The output variables
-        heights: list of float
+        heights
             The heights at which to search data
-        var2col: dict[str, str], optional
+        var2col
             Mapping from variable names to data column names
-        fixed_vars: dict[str, float], optional
+        fixed_vars
             Fixed uniform variable values, instead of
             reading from data
-        read_pars: dict[str, object], optional
+        read_pars
             pandas file reading parameters
-        states_sel: slice or range or list of int, optional
+            states_sel
             States subset selection
-        states_loc: list[object], optional
+        states_loc
             State index selection via pandas loc function
-        check_nans: bool, optional
+        check_nans
             Whether to check for NaN values in the data
-        interpolate_nans_pars: dict[str, object], optional
+        interpolate_nans_pars
             Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
-        ipars: object
+        ipars
             Parameters for scipy.interpolate.interp1d
 
         """
@@ -133,7 +133,7 @@ class MultiHeightStates(States):
 
         Returns
         -------
-        s: str or pathlib.Path or pandas.DataFrame or xarray.Dataset
+        s
             The data source
 
         """
@@ -155,11 +155,11 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        states_sel: slice or range or list of int, optional
+            states_sel
             States subset selection
-        states_loc: list[object], optional
+        states_loc
             State index selection via pandas loc function
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -226,16 +226,16 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -346,16 +346,16 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash
             Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -382,16 +382,16 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash
             Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -421,7 +421,7 @@ class MultiHeightStates(States):
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
@@ -435,12 +435,12 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -457,20 +457,20 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict[str, numpy.ndarray]
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """
@@ -485,9 +485,7 @@ class MultiHeightStates(States):
         vrs = list(mdata[self.VARS])
         n_vars = len(vrs)
 
-        coeffs: np.ndarray = np.zeros(
-            (n_h, n_h), dtype=config.dtype_double
-        )
+        coeffs: np.ndarray = np.zeros((n_h, n_h), dtype=config.dtype_double)
         np.fill_diagonal(coeffs, 1.0)
         ipars = dict(
             assume_sorted=True,
@@ -570,14 +568,14 @@ class MultiHeightNCStates(MultiHeightStates):
 
     Attributes
     ----------
-    data_source: str or xarray.Dataset
+    data_source
         Either path to a file or data
-    state_coord: str
+    state_coord
         Name of the state coordinate
-    h_coord: str
+    h_coord
         Name of the height coordinate
-    xr_read_pars: dict
-        Parameters for xarray.open_dataset
+    xr_read_pars
+        Parameters for reading the xarray dataset
 
     Examples
     --------
@@ -613,24 +611,24 @@ class MultiHeightNCStates(MultiHeightStates):
 
         Parameters
         ----------
-        data_source: str or pandas.DataFrame
+        data_source
             Either path to a file or data
-        args: tuple, optional
+        args
             Parameters for the base class
-        state_coord: str
+        state_coord
             Name of the state coordinate
-        h_coord: str
+        h_coord
             Name of the height coordinate
-        output_vars: list of str
+        output_vars
             The output variables
-        heights: list of float, optional
+        heights
             The heights at which to search data
-        format_times_func: Function or 'default', optional
+        format_times_func
             The function that maps state_coord values
             to datetime dtype format
-        xr_read_pars: dict, optional
-            Parameters for xarray.open_dataset
-        kwargs: dict, optional
+        xr_read_pars
+            Parameters for reading the xarray dataset
+        kwargs
             Parameters for the base class
 
         """
@@ -664,16 +662,16 @@ class MultiHeightNCStates(MultiHeightStates):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -808,11 +806,11 @@ class MultiHeightTimeseries(MultiHeightStates):
 
         Parameters
         ----------
-        args: Any
+        args
             Parameters for the base class
-        interpolate_nans_pars: dict[str, object], optional
+        interpolate_nans_pars
             Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
-        kwargs: object
+        kwargs
             Parameters for the base class
 
         """
@@ -838,11 +836,11 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
 
         Parameters
         ----------
-        args: object
+        args
             Parameters for the base class
-        time_coord: str
+        time_coord
             Name of the state coordinate
-        kwargs: object
+        kwargs
             Parameters for the base class
 
         """

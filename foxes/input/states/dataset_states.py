@@ -29,6 +29,7 @@ import foxes.constants as FC
 # Serialize netcdf4 file opens to avoid HDF5 attribute access errors in threaded reads.
 _NETCDF4_OPEN_LOCK = threading.Lock()
 
+
 def _read_nc_file(
     fpath: Path,
     coords: list[str],
@@ -245,7 +246,7 @@ class DatasetStates(States):
             Whether to check input data for NaNs, otherwise NaNs are removed
         sort
             Whether to sort the data by the state coordinate, or selected coordinates
-        preprocess_nc: Callable[[xarray.Dataset], xarray.Dataset] or None, optional
+        preprocess_nc
             A function to preprocess the netcdf Dataset before use
         force_keep_vars
             Variables to remove from the drop_vars list when reading the nc files
@@ -374,9 +375,7 @@ class DatasetStates(States):
             if len(coords):
                 print(f"\n{self.name}: Coordinate ranges")
                 for c, coord_data in coords.items():
-                    print(
-                        f"  {c}: {np.min(coord_data)} --> {np.max(coord_data)}"
-                    )
+                    print(f"  {c}: {np.min(coord_data)} --> {np.max(coord_data)}")
             print(f"\n{self.name}: Data ranges")
             for v, data_entry in data.items():
                 nn = np.sum(np.isnan(data_entry[1]))
@@ -441,9 +440,7 @@ class DatasetStates(States):
             if data0[FV.WEIGHT][0] == (FC.STATE,):
                 weights = data0.pop(FV.WEIGHT)[1]
 
-        data_groups: dict[
-            tuple[str, ...], tuple[str, list[str], list[np.ndarray]]
-        ] = {}
+        data_groups: dict[tuple[str, ...], tuple[str, list[str], list[np.ndarray]]] = {}
         for v, (dims, d) in data0.items():
             if dims not in data_groups:
                 i = len(data_groups)
@@ -796,9 +793,7 @@ class DatasetStates(States):
 
             elif self.load_mode == "fly":
                 file_inds = [cast(np.ndarray, inds) for inds in data]
-                self._files_maxi = {
-                    f: len(inds) for f, inds in zip(files, file_inds)
-                }
+                self._files_maxi = {f: len(inds) for f, inds in zip(files, file_inds)}
                 self._input_sizes = list(self._files_maxi.values())
                 self._inds = np.concatenate(file_inds, axis=0)
                 self._N = len(self._inds)
@@ -1765,9 +1760,7 @@ class DatasetStates(States):
 
         # set fixed variables:
         for v, fixed_value in self.fixed_vars.items():
-            out[v] = np.full(
-                (n_states, n_pts), fixed_value, dtype=config.dtype_double
-            )
+            out[v] = np.full((n_states, n_pts), fixed_value, dtype=config.dtype_double)
 
         # add weights:
         if weights is not None:

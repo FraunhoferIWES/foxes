@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from typing import Any
 
 from foxes.config import config, get_output_path
 import foxes.variables as FV
@@ -7,35 +8,40 @@ import foxes.constants as FC
 
 
 def create_random_abl_states(
-    n_states, cols_minmax, var2col={}, mol_abs_range=(50.0, 5000.0), normalize=True
-):
+    n_states: int,
+    cols_minmax: dict[str, tuple[float, float]],
+    var2col: dict[str, str] | None = None,
+    mol_abs_range: tuple[float, float] | None = (50.0, 5000.0),
+    normalize: bool = True,
+) -> pd.DataFrame:
     """
     Create random abl states.
 
     Parameters
     ----------
-    n_states: int
+    n_states
         The number of states
-    cols_minmax: dict
-        For each variable the min and max values,
-        keys: variable name str, values: array_like
-        with length 2
-    var2col: dict, optional
+    cols_minmax
+        For each variable, the minimum and maximum values.
+    var2col
         Mapping from variables to column names
-    mol_abs_range: tuple
+    mol_abs_range
         Min and max of allowed MOL values, set to
         nan if exceeded (i.e., neutral stratification)
-    normalize: bool
+    normalize
         Normalize weights to 1
 
     Returns
     -------
-    data: pandas.DataFrame
+    data
         The created states data
 
     :group: input.states.create
 
     """
+
+    if var2col is None:
+        var2col = {}
 
     data = pd.DataFrame(index=range(n_states))
     data.index.name = FC.STATE
@@ -60,44 +66,45 @@ def create_random_abl_states(
 
 
 def write_random_abl_states(
-    file_path,
-    n_states,
-    cols_minmax,
-    var2col={},
-    mol_abs_range=(50.0, 5000.0),
-    normalize=True,
-    verbosity=1,
-    digits="auto",
-    **kwargs,
-):
+    file_path: str,
+    n_states: int,
+    cols_minmax: dict[str, tuple[float, float]],
+    var2col: dict[str, str] | None = None,
+    mol_abs_range: tuple[float, float] | None = (50.0, 5000.0),
+    normalize: bool = True,
+    verbosity: int = 1,
+    digits: int | str | dict[str, int | None] | None = "auto",
+    **kwargs: Any,
+) -> None:
     """
     Writes random abl states to file
 
     Parameters
     ----------
-    file_path: str
+    file_path
         Path to the file
-    n_states: int
+    n_states
         The number of states
-    cols_minmax: dict
-        For each variable the min and max values,
-        keys: variable name str, values: array_like
-        with length 2
-    var2col: dict, optional
+    cols_minmax
+        For each variable, the minimum and maximum values.
+    var2col
         Mapping from variables to column names
-    mol_abs_range: tuple
+    mol_abs_range
         Min and max of allowed MOL values, set to
         nan if exceeded (i.e., neutral stratification)
-    normalize: bool
+    normalize
         Normalize weights to 1
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    digits: int or auto
+    digits
         The number of digits to be written
-    kwargs: dict, optional
+    kwargs
         Parameters for `pandas.DataFrame.to_csv`
 
     """
+
+    if var2col is None:
+        var2col = {}
 
     fpath = get_output_path(file_path)
     if verbosity:
@@ -108,7 +115,7 @@ def write_random_abl_states(
     )
 
     if digits is not None:
-        hdigits = {c: 4 for c in cols_minmax.keys()}
+        hdigits: dict[str, int | None] = {c: 4 for c in cols_minmax.keys()}
 
         wcol = var2col.get(FV.WEIGHT, FV.WEIGHT)
         if wcol in cols_minmax:

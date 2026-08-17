@@ -128,12 +128,12 @@ class MesoMicroField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -146,7 +146,7 @@ class MesoMicroField(States):
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
@@ -204,16 +204,16 @@ class MesoMicroField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: LoadedData
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -436,7 +436,7 @@ class MesoMicroField(States):
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
@@ -459,16 +459,16 @@ class MesoMicroField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash
             Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -494,16 +494,16 @@ class MesoMicroField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash
             Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -524,20 +524,20 @@ class MesoMicroField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict[str, numpy.ndarray]
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """
@@ -634,9 +634,7 @@ class MesoMicroField(States):
             dbins = np.abs(delta_wd(wd_bin_centre[b0, bp], wd_bin_centre[b1, bp]))
             blend: np.ndarray = np.zeros_like(dwd_sel, dtype=config.dtype_double)
             np.divide(np.abs(dwd_sel), dbins, out=blend, where=dbins > 0.0)
-            bf0: np.ndarray = np.zeros(
-                (n_states, n_points), dtype=config.dtype_double
-            )
+            bf0: np.ndarray = np.zeros((n_states, n_points), dtype=config.dtype_double)
             bf0[bs, bp] = 1.0 - blend
             del dwd_sel, dbins, blend, dwd, b0
 
@@ -665,12 +663,8 @@ class MesoMicroField(States):
         n_bins = len(fstates)
 
         # create mdata:
-        mdata_dict: dict[str, np.ndarray] = {
-            c: mdata[c] for c in micro_coords0
-        }
-        mdata_dims: dict[str, tuple[str, ...]] = {
-            c: (c,) for c in micro_coords0
-        }
+        mdata_dict: dict[str, np.ndarray] = {c: mdata[c] for c in micro_coords0}
+        mdata_dims: dict[str, tuple[str, ...]] = {c: (c,) for c in micro_coords0}
         mdata_dict.update({v: mdata[v] for v in micro_vars0})
         mdata_dims.update({v: mdata.dims[v] for v in micro_vars0})
         if FC.STATE in mdata_dict:
@@ -787,9 +781,7 @@ class MesoMicroField(States):
         del mires
 
         # prepare ref point selection:
-        refw: np.ndarray = np.zeros(
-            (n_points, n_points), dtype=config.dtype_double
-        )
+        refw: np.ndarray = np.zeros((n_points, n_points), dtype=config.dtype_double)
         np.fill_diagonal(refw, 1.0)
         refv = [f"ref_point_{pi}" for pi in range(n_points)]
 

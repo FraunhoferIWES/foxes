@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 from xarray import open_dataset, Dataset
 from pathlib import Path
+from typing import Any, Callable
 
 from foxes.core import get_engine, Engine
 from foxes.config import config
@@ -155,54 +156,54 @@ def _read_nc(
 
 
 def create_dataset_mean(
-    data_source,
-    coord,
-    var2ncvar,
-    vname_mean_ws=FV.MEAN_WS,
-    vname_main_wd=FV.MAIN_WD,
-    wd_histo_width=10.0,
-    add_uv=False,
-    add_counts=False,
-    to_file=None,
-    preprocess=None,
-    verbosity=1,
-    **kwargs,
-):
+    data_source: str | Dataset,
+    coord: str,
+    var2ncvar: dict[str, str],
+    vname_mean_ws: str = FV.MEAN_WS,
+    vname_main_wd: str | None = FV.MAIN_WD,
+    wd_histo_width: float = 10.0,
+    add_uv: bool = False,
+    add_counts: bool = False,
+    to_file: str | None = None,
+    preprocess: Callable[[Dataset], Dataset] | None = None,
+    verbosity: int = 1,
+    **kwargs: Any,
+) -> Dataset:
     """
     Create dataset mean state data and optionally write to file.
 
     Parameters
     ----------
-    data_source: str or xarray.Dataset
+    data_source
         The data or the file search pattern, should end with
         suffix '.nc'. One or many files.
-    coord: str
+    coord
         Name of the coordinate which should be averaged over
-    var2ncvar: dict
+    var2ncvar
         Mapping from variable names to netCDF variable names
-    vname_mean_ws: str
+    vname_mean_ws
         The variable name to use for the mean wind speed
-    vname_main_wd: str
+    vname_main_wd
         The variable name to use for the main wind direction
-    wd_histo_width: float
+    wd_histo_width
         The minimal wind direction histogramm bin width
-    add_uv: bool
+    add_uv
         Flag for adding U and V to the resulting data
-    add_counts: bool
+    add_counts
         Flag for adding the counts of each data variable
-    to_file: str, optional
+    to_file
         If given, write the mean state to this file
-    preprocess: callable, optional
+    preprocess
         Preprocessing function with signature ds = preprocess(ds)
         which is applied to each dataset after reading.
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    kwargs: dict, optional
-        Additional keyword arguments passed to xarray.open_dataset
+    kwargs
+        Additional keyword arguments passed to the dataset reader
 
     Returns
     -------
-    data: xarray.Dataset
+    data
         The created mean state data
 
     :group: input.states.create
@@ -210,11 +211,12 @@ def create_dataset_mean(
     """
     # prepare:
     engine = get_engine()
-    crds = {}
-    dvrs = {}
-    counts = {}
-    wd_histo = None
-    wd_bin_wd = None
+    assert engine is not None
+    crds: dict[str, np.ndarray] = {}
+    dvrs: dict[str, Any] = {}
+    counts: dict[str, Any] = {}
+    wd_histo: np.ndarray | None = None
+    wd_bin_wd: np.ndarray | None = None
 
     # extend names by defaults:
     v2nc = {v: v for v in {FV.WS, FV.WD, FV.U, FV.V, FV.TI, FV.RHO}}
@@ -303,7 +305,7 @@ def create_dataset_mean(
                 proc = hproc
                 print(f"Processed files: {proc}% ({i + 1}/{len(files)})")
 
-    cnts = {}
+    cnts: dict[str, Any] = {}
     for v in dvrs:
         if coord in dvrs[v][0]:
             dvrs[v][0] = tuple(d for d in dvrs[v][0] if d != coord)
@@ -322,6 +324,8 @@ def create_dataset_mean(
     if wd_histo is not None:
         if verbosity > 0:
             print("Computing main wind direction")
+        assert vname_main_wd is not None
+        assert wd_bin_wd is not None
 
         vname_histo_counts = f"{vname_main_wd}_counts"
         dms = dvrs[FV.WD][0]
@@ -363,6 +367,7 @@ def create_dataset_mean(
     )
 
     if to_file is not None:
+        assert config.nc_engine is not None
         write_nc(data, to_file, nc_engine=config.nc_engine, verbosity=verbosity)
 
     return data
