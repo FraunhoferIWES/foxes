@@ -1,5 +1,8 @@
-foxes.data
-===========
+foxes.data API
+==============
 Static *foxes* data and functions to read/find it.
 
-    .. python-apigen-group:: data
+.. toctree::
+    :maxdepth: 2
+
+    autoapi/foxes/data/index

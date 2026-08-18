@@ -1,11 +1,9 @@
 Downwind algorithm
 ==================
-Orders turbines in downwind direction, then applies a single sweep.
+Orders turbines in downwind direction in a single sweep.
 
-    .. python-apigen-group:: algorithms.downwind
+.. toctree::
+    :maxdepth: 2
 
-Downwind algorithm models
--------------------------
-Algorithm specific models
-
-    .. python-apigen-group:: algorithms.downwind.models
+    autoapi/foxes/algorithms/downwind/index
+    autoapi/foxes/algorithms/downwind/models/index

@@ -1,18 +1,10 @@
 foxes.output
 ============
-Classes and functions that create output from *foxes* calculation
-results.
+Classes and functions that create output from *foxes* calculation results.
 
-    .. python-apigen-group:: output
+.. toctree::
+    :maxdepth: 2
 
-foxes.output.flow_plots_2d
---------------------------
-Classes and functions that create two dimensional flow plots
-
-    .. python-apigen-group:: output.flow_plots_2d
-
-foxes.output.seq_plugins
-------------------------
-Plugins for the `Sequential` algorithm
-
-    .. python-apigen-group:: output.seq_plugins
+    autoapi/foxes/output/index
+    autoapi/foxes/output/flow_plots_2d/index
+    autoapi/foxes/output/seq_plugins/index

@@ -1,5 +1,8 @@
-foxes.engines
-=============
+foxes.engines API
+=================
 Engines are responsible for vectorization and parallelization.
 
-    .. python-apigen-group:: engines
+.. toctree::
+    :maxdepth: 2
+
+    autoapi/foxes/engines/index

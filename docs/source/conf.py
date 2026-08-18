@@ -66,7 +66,7 @@ release = __version__
 extensions = [
     "numpydoc",
     "sphinx_immaterial",
-    "sphinx_immaterial.apidoc.python.apigen",
+    "autoapi.extension",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
@@ -110,9 +110,12 @@ language = "en"
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
     "build",
+    "_foxes/**",
     "Thumbs.db",
     ".DS_Store",
     "**.ipynb_checkpoints",
+    "notebooks/timelines.ipynb",
+    "notebooks/sequential.ipynb",
     # "_templates/*",
     # DEBUG
     # "examples.rst",
@@ -134,6 +137,7 @@ pygments_style = None
 # autosummary_generate = True
 numpydoc_use_rtype = False
 numpydoc_show_class_members = False
+autosectionlabel_prefix_document = True
 
 
 # Additional files needed for generating LaTeX/PDF output:
@@ -144,7 +148,7 @@ numpydoc_show_class_members = False
 
 # Automatically extract typehints when specified and place them in
 # descriptions of the relevant function/method.
-autodoc_typehints = "description"
+autodoc_typehints = "signature"
 
 # Don't show class signature with the class' name.
 autodoc_class_signature = "separated"
@@ -246,7 +250,6 @@ texinfo_documents = [
     ),
 ]
 
-
 # -- Options for Epub output -------------------------------------------------
 
 # Bibliographic Dublin Core info.
@@ -264,57 +267,13 @@ epub_title = project
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ["search.html"]
 
-# -- python_apigen configuration -------------------------------------------------
+# -- AutoAPI configuration ------------------------------------------------------
 
-python_apigen_modules = {
-    "foxes.variables": "_foxes/variables/",
-    "foxes.constants": "_foxes/constants/",
-    "foxes.algorithms": "_foxes/algorithms/",
-    "foxes.algorithms.downwind": "_foxes/algorithms/downwind/",
-    "foxes.algorithms.downwind.models": "_foxes/algorithms/downwind/models/",
-    "foxes.algorithms.iterative": "_foxes/algorithms/iterative/",
-    "foxes.algorithms.iterative.models": "_foxes/algorithms/iterative/models/",
-    "foxes.algorithms.sequential": "_foxes/algorithms/sequential/",
-    "foxes.algorithms.sequential.models": "_foxes/algorithms/sequential/models/",
-    "foxes.config": "_foxes/config/",
-    "foxes.core": "_foxes/core/",
-    "foxes.data": "_foxes/data/",
-    "foxes.engines": "_foxes/engines/",
-    "foxes.input.farm_layout": "_foxes/input/farm_layout/",
-    "foxes.input.states": "_foxes/input/states/",
-    "foxes.input.states.create": "_foxes/input/states/create/",
-    "foxes.input.yaml": "_foxes/input/yaml/",
-    "foxes.input.yaml.windio": "_foxes/input/yaml/windio/",
-    "foxes.output": "_foxes/output/",
-    "foxes.output.flow_plots_2d": "_foxes/output/flow_plots_2d/",
-    "foxes.output.seq_plugins": "_foxes/output/seq_plugins/",
-    "foxes.models": "_foxes/models/",
-    "foxes.models.farm_controllers": "_foxes/models/farm_controllers/",
-    "foxes.models.farm_models": "_foxes/models/farm_models/",
-    "foxes.models.partial_wakes": "_foxes/models/partial_wakes/",
-    "foxes.models.point_models": "_foxes/models/point_models/",
-    "foxes.models.rotor_models": "_foxes/models/rotor_models/",
-    "foxes.models.turbine_models": "_foxes/models/turbine_models/",
-    "foxes.models.turbine_types": "_foxes/models/turbine_types/",
-    "foxes.models.vertical_profiles": "_foxes/models/vertical_profiles/",
-    "foxes.models.axial_induction": "_foxes/models/axial_induction",
-    "foxes.models.ground_models": "_foxes/models/ground_models",
-    "foxes.models.wake_deflections": "_foxes/models/wake_deflections",
-    "foxes.models.wake_frames": "_foxes/models/wake_frames/",
-    "foxes.models.wake_models": "_foxes/models/wake_models/",
-    "foxes.models.wake_models.induction": "_foxes/models/wake_models/induction/",
-    "foxes.models.wake_models.wind": "_foxes/models/wake_models/wind/",
-    "foxes.models.wake_models.ti": "_foxes/models/wake_models/ti/",
-    "foxes.models.wake_superpositions": "_foxes/models/wake_superpositions/",
-    "foxes.utils": "_foxes/utils/",
-    "foxes.utils.abl": "_foxes/utils/abl",
-    "foxes.utils.geom2d": "_foxes/utils/geom2d/",
-    "foxes.utils.two_circles": "_foxes/utils/two_circles/",
-    "foxes.utils.abl.neutral": "_foxes/utils/abl/neutral/",
-    "foxes.utils.abl.stable": "_foxes/utils/abl/stable/",
-    "foxes.utils.abl.unstable": "_foxes/utils/abl/unstable/",
-    "foxes.utils.abl.sheared": "_foxes/utils/abl/sheared/",
-}
+autoapi_dirs = [
+    str(repository_root / "foxes"),
+]
+autoapi_add_toctree_entry = False
+autoapi_options = ["members", "undoc-members", "show-inheritance"]
 
 # myst-nb parameters
 
@@ -326,7 +285,7 @@ myst_enable_extensions = [
     "html_image",
 ]
 
-nb_execution_mode = "off"
+nb_execution_mode = "auto"
 nb_execution_timeout = 300
 nb_ipywidgets_js = {
     "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js": {
@@ -345,6 +304,8 @@ nb_ipywidgets_js = {
 def mark_generated_pages_as_orphans(app, docname, source):
     is_generated = source[0].startswith("..\n  DO NOT EDIT. GENERATED by ")
     is_api_index = docname.startswith("api_")
+    if docname.startswith("autoapi/") and docname.endswith("/index"):
+        source[0] = source[0].replace("Submodules\n----------\n\n", "")
     if is_generated or is_api_index:
         source[0] = ":orphan:\n\n" + source[0]
 

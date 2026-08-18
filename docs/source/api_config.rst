@@ -1,5 +1,8 @@
-foxes.config
-============
+foxes.config API
+================
 The *foxes* configurational data
 
-    .. python-apigen-group:: foxes.config
+.. toctree::
+    :maxdepth: 2
+
+    autoapi/foxes/config/index

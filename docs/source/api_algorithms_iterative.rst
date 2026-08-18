@@ -1,11 +1,9 @@
 Iterative algorithm
 ===================
-Iterates wake and turbine model evaluations until convergence has been reached.
+Iterates until convergence has been reached.
 
-    .. python-apigen-group:: algorithms.iterative
+.. toctree::
+    :maxdepth: 2
 
-Iterative algorithm models
---------------------------
-Algorithm specific models, extending/overloading the list of :ref:`Downwind algorithm models`.
-
-    .. python-apigen-group:: algorithms.iterative.models
+    autoapi/foxes/algorithms/iterative/index
+    autoapi/foxes/algorithms/iterative/models/index

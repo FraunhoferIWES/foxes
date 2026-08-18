@@ -2,4 +2,7 @@ foxes.constants
 ===============
 Constants and identifiers.
 
-    .. python-apigen-group:: foxes.constants
+.. toctree::
+    :maxdepth: 2
+
+    autoapi/foxes/constants
