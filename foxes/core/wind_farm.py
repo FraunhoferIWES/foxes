@@ -28,7 +28,6 @@ class WindFarm:
     boundary
         The wind farm boundary
 
-    :group: core
 
     """
 

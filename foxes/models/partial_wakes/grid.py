@@ -11,7 +11,6 @@ class PartialGrid(PartialSegregated):
     Partial wakes on a grid rotor that may
     differ from the one in the algorithm.
 
-    :group: models.partial_wakes
 
     """
 

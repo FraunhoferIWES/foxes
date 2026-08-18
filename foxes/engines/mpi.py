@@ -88,7 +88,6 @@ class MPIEngineRunner(ProcessEngineRunner):
     """
     Engine runner for MPIEngine.
 
-    :group: engines
 
     """
 
@@ -140,7 +139,6 @@ class MPIEngine(ProcessEngine):
 
     >>> mpiexec -n 12 -m mpi4py.futures run.py
 
-    :group: engines
 
     """
 

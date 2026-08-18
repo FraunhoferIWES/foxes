@@ -31,7 +31,6 @@ def get_object_nbytes(
         unknown object types. If False, return 0 for unknown object types to
         preserve payload-only semantics.
 
-    :group: utils
 
     """
     if seen is None:
@@ -160,7 +159,6 @@ def print_mem(
     pre_str
         String to be printed before
 
-    :group: utils
 
     """
     objsize = import_module("objsize")
@@ -207,7 +205,6 @@ def deep_split(condition: Any, data: Any, fill_None: bool = True) -> tuple[Any, 
     data_1
         data filled only with elements that evaluate the condition to True
 
-    :group: utils
 
     """
 
@@ -283,7 +280,6 @@ def deep_split_by_nbytes(
         Data filled only with elements that satisfy
         ``get_object_nbytes(element) >= max_nbytes``.
 
-    :group: utils
 
     """
     if not isinstance(max_nbytes, int) or max_nbytes < 0:
@@ -321,7 +317,6 @@ def deep_update(data_0: Any, data_1: Any) -> Any:
     updated_data
         The updated data after merging data_0 and data_1.
 
-    :group: utils
 
     """
 

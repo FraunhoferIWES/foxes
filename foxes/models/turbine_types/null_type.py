@@ -14,7 +14,6 @@ class NullType(TurbineType):
     """
     A turbine type that does not compute any data.
 
-    :group: models.turbine_types
 
     """
 

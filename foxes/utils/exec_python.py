@@ -38,7 +38,6 @@ def exec_python(
         The same structure, but all python
         strings evaluated
 
-    :group: utils
 
     """
     if globals is None:
@@ -101,7 +100,6 @@ def eval_dict_values(
     d
         The dictionary with evaluated values
 
-    :group: utils
 
     """
     if globals is None:

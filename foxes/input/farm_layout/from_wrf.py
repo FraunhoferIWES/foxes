@@ -61,7 +61,6 @@ def add_from_wrf(
     >>>    57.233467 -1.989579 2
     >>>    ...
 
-    :group: input.farm_layout
 
     """
     assert farm.data_is_lonlat, "Require `input_is_lonlat=True` in WindFarm constructor"

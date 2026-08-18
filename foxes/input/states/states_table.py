@@ -49,7 +49,6 @@ class StatesTable(States):
     RDICT
         Default pandas file reading parameters.
 
-    :group: input.states
 
     """
 
@@ -494,7 +493,6 @@ class Timeseries(StatesTable):
     """
     Timeseries states data.
 
-    :group: input.states
 
     """
 
@@ -505,7 +503,6 @@ class TabStates(StatesTable):
     """
     States created from a single tab file
 
-    :group: input.states
 
     """
 

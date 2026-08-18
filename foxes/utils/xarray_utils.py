@@ -81,7 +81,6 @@ def pack_value(
     packed_value
         The packed integer value(s)
 
-    :group: utils
 
     """
     if fill_value is None:
@@ -122,7 +121,6 @@ def unpack_value(
     unpacked_value
         The unpacked floating point value(s)
 
-    :group: utils
 
     """
     if fill_value is None:
@@ -158,7 +156,6 @@ def get_encoding(
     encoding
         The encoding information of the numpy array.
 
-    :group: utils
 
     """
     enc: dict[str, Any] = {"zlib": True, "complevel": complevel}
@@ -220,7 +217,6 @@ def write_nc(
     kwargs
             Additional parameters for writing the NetCDF file.
 
-    :group: utils
 
     """
     fpath = Path(fpath)

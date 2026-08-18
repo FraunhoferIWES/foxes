@@ -24,7 +24,6 @@ class WakeDeltas(PointDataModel):
     normalize
         Divide resulting deltas by ambient values
 
-    :group: models.point_models
 
     """
 

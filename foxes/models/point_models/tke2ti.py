@@ -16,7 +16,6 @@ class TKE2TI(PointDataModel):
     """
     Calculates TI from TKE, using TI = sqrt( 3/2 * TKE) / WS
 
-    :group: models.point_models
 
     """
 

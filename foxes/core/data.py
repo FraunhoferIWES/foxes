@@ -36,7 +36,6 @@ class Data(Dict[str, np.ndarray]):
     extra_data
         Additional data that is not dimensioned
 
-    :group: core
 
     """
 
@@ -763,7 +762,6 @@ class MData(Data):
     """
     Container for foxes model data.
 
-    :group: core
 
     """
 
@@ -791,7 +789,6 @@ class FData(Data):
     Each farm data entry has (n_states, n_turbines) shape,
     except the dimensions.
 
-    :group: core
 
     """
 
@@ -971,7 +968,6 @@ class TData(Data):
     Each target consists of a fixed number of
     target points.
 
-    :group: core
 
     """
 

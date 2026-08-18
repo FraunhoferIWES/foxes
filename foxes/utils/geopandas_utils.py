@@ -65,7 +65,6 @@ def read_shp(fname: str, **kwargs: Any) -> Any:
     data
         The data frame in WSG84
 
-    :group: utils
 
     """
     check_import_gpd()
@@ -96,7 +95,6 @@ def shp2csv(
     verbosity
         The verbosity level, 0 = silent
 
-    :group: utils
 
     """
     if verbosity > 0:
@@ -196,7 +194,6 @@ def read_shp_polygons(
     utm_zone_str
         The UTM zone plus letter as str, e.g. "32U"
 
-    :group: utils
 
     """
 
@@ -284,7 +281,6 @@ def shp2geom2d(
     utm_zone_str
         The UTM zone plus letter as str, e.g. "32U"
 
-    :group: utils
 
     """
 

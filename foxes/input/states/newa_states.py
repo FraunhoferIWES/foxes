@@ -51,7 +51,6 @@ class NEWAStates(DatasetStates):
     >>>        WS           (time, height, south_north, west_east) float32 334MB ...
     >>>        ...
 
-    :group: input.states
 
     """
 

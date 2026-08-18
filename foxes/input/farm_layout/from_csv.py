@@ -75,7 +75,6 @@ def add_from_csv(
     turbine_parameters
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
-    :group: input.farm_layout
 
     """
 

@@ -21,7 +21,6 @@ class FlowPlots2D(SliceData):
     """
     Class for horizontal or vertical 2D flow plots
 
-    :group: output.flow_plots_2d
 
     """
 

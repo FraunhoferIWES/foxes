@@ -27,7 +27,6 @@ def add_from_df(
     kwargs
         Additional parameters for add_from_csv()
 
-    :group: input.farm_layout
 
     """
     add_from_csv(farm, data_source, *args, **kwargs)

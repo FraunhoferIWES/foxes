@@ -37,7 +37,6 @@ def random_xy_square(
     xy
         The positions, shape: (n, 2)
 
-    :group: utils
 
     """
     if seed:

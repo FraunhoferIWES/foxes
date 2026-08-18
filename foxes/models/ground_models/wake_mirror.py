@@ -22,7 +22,6 @@ class WakeMirror(GroundModel):
     heights
         The reflection heights
 
-    :group: models.ground_models
 
     """
 
@@ -170,7 +169,6 @@ class GroundMirror(WakeMirror):
     """
     Wake reflection from the ground.
 
-    :group: models.ground_models
 
     """
 

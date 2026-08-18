@@ -33,7 +33,6 @@ class RotorModel(FarmDataModel):
         The variables that are calculated by the model
         (Their ambients are added automatically)
 
-    :group: core
 
     """
 

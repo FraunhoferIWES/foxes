@@ -20,7 +20,6 @@ class CentreRotor(RotorModel):
     Evaluates states at a single point, located
     at the rotor centre.
 
-    :group: models.rotor_models
 
     """
 

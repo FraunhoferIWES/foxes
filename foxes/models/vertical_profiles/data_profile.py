@@ -23,7 +23,6 @@ class DataProfile(VerticalProfile):
     interp_pars
         Additional parameters for interpolation
 
-    :group: models.vertical_profiles
 
     """
 

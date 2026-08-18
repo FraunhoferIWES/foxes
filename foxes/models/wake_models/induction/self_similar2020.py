@@ -23,7 +23,6 @@ class SelfSimilar2020(SelfSimilar):
     Renewable Energy (2023).
     https://www.sciencedirect.com/science/article/pii/S0960148123007620
 
-    :group: models.wake_models.induction
 
     """
 

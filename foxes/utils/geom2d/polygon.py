@@ -21,7 +21,6 @@ class ClosedPolygon(AreaGeometry):
     poly
         The closed polygon geometry
 
-    :group: utils.geom2d
 
     """
 

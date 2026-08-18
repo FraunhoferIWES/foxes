@@ -21,7 +21,6 @@ def logz(height: float | np.ndarray, z0: float | np.ndarray) -> float | np.ndarr
     lz
         The log factor
 
-    :group: utils.abl.stable
 
     """
     return cast(float | np.ndarray, lgz(height, z0))
@@ -43,7 +42,6 @@ def psi(height: float | np.ndarray, mol: float | np.ndarray) -> float | np.ndarr
     psi
         The Psi function value
 
-    :group: utils.abl.stable
 
     """
     h = np.minimum(height, np.abs(mol))
@@ -79,7 +77,6 @@ def ustar(
     ustar
         The friction velocity
 
-    :group: utils.abl.stable
 
     """
     return cast(
@@ -115,7 +112,6 @@ def calc_ws(
     ws
         The wind speed
 
-    :group: utils.abl.stable
 
     """
     return cast(float | np.ndarray, ustar / kappa * (logz(height, z0) - psi))

@@ -19,7 +19,6 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
     The ability to evaluate multiple r values per x
     is used by the `PartialAxiwake` partial wakes model.
 
-    :group: models.wake_models
 
     """
 

@@ -23,7 +23,6 @@ class TIPow(WakeSuperposition):
         The method for combining ambient with wake deltas:
         linear or quadratic
 
-    :group: models.wake_superpositions
 
     """
 

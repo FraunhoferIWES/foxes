@@ -22,7 +22,6 @@ class ConvCrit(metaclass=ABCMeta):
     name
         The convergence criteria name
 
-    :group: algorithms.iterative.models
 
     """
 
@@ -138,7 +137,6 @@ class ConvCritList(ConvCrit):
     crits
         The criteria
 
-    :group: algorithms.iterative.models
 
     """
 
@@ -237,7 +235,6 @@ class ConvVarDelta(ConvCrit):
     wd_vars
         The wind direction type variables (unit deg)
 
-    :group: algorithms.iterative.models
 
     """
 
@@ -337,7 +334,6 @@ class DefaultConv(ConvVarDelta):
     """
     Default convergence criteria.
 
-    :group: algorithms.iterative.models
 
     """
 

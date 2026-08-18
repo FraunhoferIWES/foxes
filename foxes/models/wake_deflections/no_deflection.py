@@ -13,7 +13,6 @@ class NoDeflection(WakeDeflection):
     """
     Switch of wake deflection
 
-    :group: models.wake_deflections
 
     """
 

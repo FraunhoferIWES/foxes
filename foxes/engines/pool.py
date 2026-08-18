@@ -32,7 +32,6 @@ class PoolEngine(Engine):
         shared memory. Arrays with ``nbytes`` less than or equal to this
         threshold are transferred inline to workers.
 
-    :group: engines
 
     """
 

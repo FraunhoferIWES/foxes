@@ -26,7 +26,6 @@ class PointCalculator(Output):
     farm_results
         The farm results
 
-    :group: output
 
     """
 

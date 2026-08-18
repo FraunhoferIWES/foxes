@@ -31,7 +31,6 @@ class VortexSheet(TurbineInductionModel):
     induction
         The induction model
 
-    :group: models.wake_models.induction
 
     """
 

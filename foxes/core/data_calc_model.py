@@ -22,7 +22,6 @@ class DataCalcModel(Model):
     load_mode
         The data loading mode
 
-    :group: core
 
     """
 

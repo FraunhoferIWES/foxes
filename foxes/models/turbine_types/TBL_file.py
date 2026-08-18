@@ -35,7 +35,6 @@ class TBLFile(PCtFile):
     6.5 0.830 5061.7
     7.0 0.810 6379.0
 
-    :group: models.turbine_types
 
     """
 

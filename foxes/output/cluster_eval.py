@@ -12,7 +12,6 @@ class ClusterEval(WindFarmsEval):
     """
     Output class for cluster-aware aggregation and area mapping plots.
 
-    :group: output
 
     """
 

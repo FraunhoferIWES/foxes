@@ -75,7 +75,6 @@ class ModelBook:
     base_classes: foxes.utils.FDict
         The base classes for all model types
 
-    :group: models
 
     """
 

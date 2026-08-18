@@ -30,7 +30,6 @@ def add_from_json(
     turbine_parameters
         Parameters forwarded to `foxes.core.Turbine`
 
-    :group: input.farm_layout
 
     """
     fpath = get_input_path(file_path)

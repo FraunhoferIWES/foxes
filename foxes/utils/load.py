@@ -31,7 +31,6 @@ def import_module(
     mdl
         The imported package
 
-    :group: utils
 
     """
     try:
@@ -64,7 +63,6 @@ def load_module(name: str, path: str | Path) -> ModuleType:
     module
         The module object
 
-    :group: utils
 
     """
     spec = importlib.util.spec_from_file_location(name, path)

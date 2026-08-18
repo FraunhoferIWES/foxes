@@ -60,7 +60,6 @@ class Downwind(Algorithm):
     n_states
         The number of states
 
-    :group: algorithms.downwind
 
     """
 

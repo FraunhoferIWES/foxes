@@ -39,7 +39,6 @@ def area(
     area
         The intersectional area
 
-    :group: utils.two_circles
 
     """
     d1 = (r1**2 - r2**2 + d**2) / (2 * d)
@@ -83,7 +82,6 @@ def calc_area(r1: np.ndarray, r2: np.ndarray, d: np.ndarray) -> np.ndarray:
     area
         The intersectional area
 
-    :group: utils.two_circles
 
     """
 

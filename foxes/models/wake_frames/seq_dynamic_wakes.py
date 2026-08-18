@@ -35,7 +35,6 @@ class SeqDynamicWakes(FarmOrder):
     induction
         The induction model
 
-    :group: models.wake_frames.sequential
 
     """
 

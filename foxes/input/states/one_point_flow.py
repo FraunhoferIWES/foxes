@@ -29,7 +29,6 @@ class OnePointFlowStates(States):
     intp_pars
         Parameters for height interpolation with scipy.interpolate.interpn.
 
-    :group: input.states
 
     """
 
@@ -539,7 +538,6 @@ class OnePointFlowTimeseries(OnePointFlowStates):
     Inhomogeneous inflow from homogeneous timeseries data
     at one point
 
-    :group: input.states
 
     """
 
@@ -582,7 +580,6 @@ class OnePointFlowMultiHeightTimeseries(OnePointFlowStates):
     Inhomogeneous inflow from height dependent homogeneous
     timeseries data at one point
 
-    :group: input.states
 
     """
 
@@ -606,7 +603,6 @@ class OnePointFlowMultiHeightNCTimeseries(OnePointFlowStates):
     Inhomogeneous inflow from height dependent homogeneous
     timeseries data at one point based on NetCDF input
 
-    :group: input.states
 
     """
 

@@ -23,7 +23,6 @@ class WakeSuperposition(Model):
     wake model computes the total wake result by
     other means.
 
-    :group: core
 
     """
 
@@ -147,7 +146,6 @@ class WindVectorWakeSuperposition(Model):
     wake model computes the total wake result by
     other means.
 
-    :group: core
 
     """
 

@@ -22,7 +22,6 @@ class TurbineModel(FarmDataModel):
     Turbine models are FarmDataModels that run
     on a selection of turbines.
 
-    :group: core
 
     """
 

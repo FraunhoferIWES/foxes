@@ -29,7 +29,6 @@ class GridRotor(RotorModel):
     nint
         Integration steps per element
 
-    :group: models.rotor_models
 
     """
 

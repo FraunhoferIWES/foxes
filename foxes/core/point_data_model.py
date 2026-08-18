@@ -22,7 +22,6 @@ class PointDataModel(DataCalcModel):
     Abstract base class for models that modify
     point based data.
 
-    :group: core
 
     """
 
@@ -180,7 +179,6 @@ class PointDataModelList(PointDataModel):
     models
         The model list
 
-    :group: core
 
     """
 

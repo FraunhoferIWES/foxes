@@ -53,7 +53,6 @@ class WsTI2PCtFromTwo(TurbineType):
         The air density for which the data is valid
         or None for no correction
 
-    :group: models.turbine_types
 
     """
 

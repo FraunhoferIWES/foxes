@@ -52,8 +52,8 @@ jobs:
 
       - name: Build documentation
         run: |
-          cd docs
-          uv run make html
+          rm -rf docs/build
+          uv run sphinx-build -E -b html docs/source docs/build/html
 
       - name: Upload artifacts
         uses: actions/upload-pages-artifact@v3

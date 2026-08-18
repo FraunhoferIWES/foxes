@@ -35,7 +35,6 @@ class Turbine:
     cluster_name
         The name of the cluster the wind farm belongs to
 
-    :group: core
 
     """
 

@@ -19,7 +19,6 @@ class StateTurbineTable(Output):
     farm_results
         The farm results
 
-    :group: output
 
     """
 

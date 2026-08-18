@@ -20,7 +20,6 @@ def to_lonlat(xy: np.ndarray) -> np.ndarray:
         The longitude and latitude coordinates, shape: (n_points, 2), where
         the last dimension is (lon, lat).
 
-    :group: utils
 
     """
     from foxes.config.conf import config
@@ -52,7 +51,6 @@ def from_lonlat(lonlat: np.ndarray) -> np.ndarray:
         The cartesian coordinates, shape: (n_points, 2), where
         the last dimension is (x, y).
 
-    :group: utils
 
     """
     from foxes.config import config
@@ -82,7 +80,6 @@ def get_utm_zone(lonlat: np.ndarray) -> tuple[int, str]:
     utm_zone
         The UTM zone as (zone_number, zone_letter).
 
-    :group: utils
 
     """
     lat = lonlat[:, 1].astype(np.float64)

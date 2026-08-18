@@ -437,7 +437,6 @@ def read_attributes(
     verbosity
         The verbosity level, 0=silent
 
-    :group: input.yaml.windio
 
     """
     if verbosity > 1:

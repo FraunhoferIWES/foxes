@@ -26,7 +26,6 @@ class WSQuadratic(WakeSuperposition):
     lim_high
         Upper limit of the final waked wind speed
 
-    :group: models.wake_superpositions
 
     """
 
@@ -204,7 +203,6 @@ class WSQuadraticLocal(WakeSuperposition):
     lim_high
         Upper limit of the final waked wind speed
 
-    :group: models.wake_superpositions
 
     """
 

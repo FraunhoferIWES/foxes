@@ -12,7 +12,6 @@ class ShearedProfile(VerticalProfile):
     """
     A wind shear profile, based on a shear exponent.
 
-    :group: models.vertical_profiles
 
     """
 

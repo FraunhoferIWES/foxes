@@ -10,7 +10,6 @@ class plt(Output):
     """
     Class that runs plt commands
 
-    :group: output
 
     """
 

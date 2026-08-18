@@ -36,7 +36,6 @@ def random_timseries_data(
     sdata
         The timeseries data
 
-    :group: input.states.create
 
     """
     if seed:

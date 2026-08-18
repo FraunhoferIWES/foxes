@@ -18,7 +18,6 @@ class InitFarmData(FarmDataModel):
     """
     Sets basic turbine data and applies downwind order
 
-    :group: algorithms.downwind.models
 
     """
 

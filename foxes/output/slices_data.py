@@ -14,7 +14,6 @@ class SlicesData(Output):
     Create data for horizontal or vertical 2D slices, all in a
     single Dataset
 
-    :group: output
 
     """
 

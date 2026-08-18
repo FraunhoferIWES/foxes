@@ -36,7 +36,6 @@ class Bastankhah2016Model(Model):
     induction
         The induction model
 
-    :group: models.wake_models.wind
 
     """
 
@@ -448,7 +447,6 @@ class Bastankhah2016(DistSlicedWakeModel):
     wake_k
         Parameters for the WakeK class
 
-    :group: models.wake_models.wind
 
     """
 

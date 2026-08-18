@@ -21,7 +21,6 @@ class Ustar2TI(PointDataModel):
     max_ti
         Upper limit of the computed TI values
 
-    :group: models.point_models
 
     """
 

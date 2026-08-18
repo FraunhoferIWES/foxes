@@ -13,7 +13,6 @@ class ThreadsEngineRunner(ProcessEngineRunner):
     """
     Engine runner for ThreadsEngine.
 
-    :group: engines
 
     """
 
@@ -55,7 +54,6 @@ class ThreadsEngine(ProcessEngine):
     """
     The threads engine for foxes calculations.
 
-    :group: engines
 
     """
 

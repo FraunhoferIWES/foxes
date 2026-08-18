@@ -42,7 +42,6 @@ class Streamlines2D(WakeFrame):
         Whether to check for streamline
         self-intersections
 
-    :group: models.wake_frames
 
     """
 

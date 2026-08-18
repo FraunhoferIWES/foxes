@@ -33,7 +33,6 @@ class PartialAxiwake(PartialCentre):
     n
         The number of radial evaluation points
 
-    :group: models.partial_wakes
 
     """
 

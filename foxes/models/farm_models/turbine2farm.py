@@ -24,7 +24,6 @@ class Turbine2FarmModel(FarmModel):
     turbine_model
         The turbine model
 
-    :group: models.farm_models
 
     """
 

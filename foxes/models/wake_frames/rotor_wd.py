@@ -25,7 +25,6 @@ class RotorWD(WakeFrame):
     var_wd
         The wind direction variable
 
-    :group: models.wake_frames
 
     """
 

@@ -34,7 +34,6 @@ class Factory:
         For each variable, e.g. A, B or C, the list or dict
         or function that maps a str to the actual value
 
-    :group: utils
 
     """
 
@@ -357,7 +356,6 @@ class WakeKFactory:
     factories
         The individual factories
 
-    :group: utils
 
     """
 
@@ -563,7 +561,6 @@ class FDict(Dict):
     factories
         The factories
 
-    :group: utils
 
     """
 

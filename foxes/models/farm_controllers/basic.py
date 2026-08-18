@@ -7,7 +7,6 @@ class BasicFarmController(FarmController):
     all turbine models in their order, without
     conditions.
 
-    :group: models.farm_controllers
 
     """
 

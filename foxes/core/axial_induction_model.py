@@ -11,7 +11,6 @@ class AxialInductionModel(Model):
     """
     Abstract base class for axial induction models
 
-    :group: core
 
     """
 

@@ -41,7 +41,6 @@ def add_grid(
     turbine_parameters
         Parameters forwarded to `foxes.core.Turbine`
 
-    :group: input.farm_layout
 
     """
 

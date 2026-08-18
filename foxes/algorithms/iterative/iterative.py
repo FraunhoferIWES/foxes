@@ -27,7 +27,6 @@ class Iterative(Downwind):
     prev_farm_results
         Results from the previous iteration
 
-    :group: algorithms.iterative
 
     """
 

@@ -41,7 +41,6 @@ class Sequential(Iterative):
         The plugins, updated with every iteration
     outputs
         The output variables
-    :group: algorithms.sequential
 
     """
 

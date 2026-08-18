@@ -17,7 +17,6 @@ class RotorPoints(PartialWakesModel):
     Partial wakes calculation directly by the
     rotor model.
 
-    :group: models.partial_wakes
 
     """
 

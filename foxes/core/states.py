@@ -21,7 +21,6 @@ class States(PointDataModel):
     typically wind speed, wind direction, turbulence
     intensity and air density.
 
-    :group: core
 
     """
 
@@ -148,7 +147,6 @@ class ExtendedStates(States):
     pmodels
         The point models, including states as first model
 
-    :group: core
 
     """
 

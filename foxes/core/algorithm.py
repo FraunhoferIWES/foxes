@@ -32,7 +32,6 @@ class Algorithm(Model):
     verbosity
         The verbosity level, 0 means silent
 
-    :group: core
 
     """
 

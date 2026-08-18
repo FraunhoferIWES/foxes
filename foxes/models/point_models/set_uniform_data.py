@@ -31,7 +31,6 @@ class SetUniformData(PointDataModel):
     var2col
         Mapping from variable names to data column names
 
-    :group: models.point_models
 
     """
 

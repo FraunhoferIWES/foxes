@@ -46,7 +46,6 @@ class PointCloudData(DatasetStates):
     >>>        ti       (point) float32 120B ...
     >>>        rho      (state) float32 400B ...
 
-    :group: input.states
 
     """
 
@@ -418,7 +417,6 @@ class WeibullPointCloud(PointCloudData):
     >>>        y                     (wind_turbine) float64 64B ...
     >>>        height                (wind_turbine) float64 64B ...
 
-    :group: input.states
 
     """
 
@@ -658,7 +656,6 @@ class TurbinePointCloud(DatasetStates):
     turbine_coord
         The coordinate name for the turbine dimension.
 
-    :group: input.states
 
     """
 

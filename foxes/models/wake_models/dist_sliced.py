@@ -22,7 +22,6 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
     The multi-yz ability is used by the `PartialDistSlicedWake`
     partial wakes model.
 
-    :group: models.wake_models
 
     """
 

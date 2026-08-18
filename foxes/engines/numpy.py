@@ -9,7 +9,6 @@ class NumpyEngine(ThreadsEngine):
     """
     The numpy engine for foxes calculations.
 
-    :group: engines
 
     """
 

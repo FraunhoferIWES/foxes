@@ -18,7 +18,6 @@ class Circle(AreaGeometry):
     radius
         The radius
 
-    :group: utils.geom2d
 
     """
 

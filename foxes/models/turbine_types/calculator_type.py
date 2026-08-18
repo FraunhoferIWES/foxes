@@ -14,7 +14,6 @@ class CalculatorType(TurbineType):
     """
     Direct data infusion by a user function.
 
-    :group: models.turbine_types
 
     """
 

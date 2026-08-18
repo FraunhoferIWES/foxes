@@ -20,7 +20,6 @@ class ScanStates(States):
         The scans, key: variable name,
         value: scan values
 
-    :group: input.states
 
     """
 

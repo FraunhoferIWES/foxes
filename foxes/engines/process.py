@@ -89,7 +89,6 @@ class ProcessEngineRunner(EngineRunner):
     """
     Engine runner for ProcessEngine.
 
-    :group: engines
 
     """
 
@@ -184,7 +183,6 @@ class ProcessEngine(PoolEngine):
     """
     The processes engine for foxes calculations.
 
-    :group: engines
 
     """
 

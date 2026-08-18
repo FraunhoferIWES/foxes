@@ -24,7 +24,6 @@ class Output:
     nofig
         Do not show figures
 
-    :group: output
 
     """
 

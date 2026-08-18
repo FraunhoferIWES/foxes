@@ -18,7 +18,6 @@ class ABLLogNeutralWsProfile(VerticalProfile):
     ustar_input
         Flag for using ustar as an input
 
-    :group: models.vertical_profiles
 
     """
 

@@ -15,7 +15,6 @@ class Dict(dict[K, V]):
     """
     A slightly enhanced dictionary.
 
-    :group: utils
 
     """
 

@@ -16,7 +16,6 @@ class ICONStates(LatLonFieldData):
     """
     Heterogeneous ambient states in DWD-ICON format.
 
-    :group: input.states
 
     """
 

@@ -30,7 +30,6 @@ class Timelines(WakeFrame):
         The delta t value in minutes,
         if not from timeseries data
 
-    :group: models.wake_frames
 
     """
 

@@ -21,7 +21,6 @@ class ReorderFarmOutput(FarmDataModel):
     outputs
         The output variables, or None for defaults
 
-    :group: algorithms.downwind.models
 
     """
 

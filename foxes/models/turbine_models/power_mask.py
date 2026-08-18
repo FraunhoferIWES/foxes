@@ -39,7 +39,6 @@ class PowerMask(TurbineModel):
     induction
         The induction model
 
-    :group: models.turbine_models
 
     """
 

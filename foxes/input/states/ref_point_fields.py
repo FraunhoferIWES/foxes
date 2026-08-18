@@ -44,7 +44,6 @@ class SectorSimRefPointField(States):
     check_nans
         Whether to check for NaN values
 
-    :group: input.states
 
     """
 

@@ -47,7 +47,6 @@ class Bastankhah2016Deflection(WakeDeflection):
     induction
         The induction model, if not found in wake model
 
-    :group: models.wake_deflections
 
     """
 

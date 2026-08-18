@@ -15,7 +15,6 @@ class BetzAxialInduction(AxialInductionModel):
     ct_max
         The maximal ct value
 
-    :group: models.axial_induction
 
     """
 

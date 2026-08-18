@@ -17,7 +17,6 @@ class YAWM2YAW(TurbineModel):
     Calculates absolute yaw (i.e. YAWM) from delta
     yaw (i.e. YAWM)
 
-    :group: models.turbine_models
 
     """
 

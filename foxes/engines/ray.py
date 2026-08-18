@@ -33,7 +33,6 @@ class RayEngineRunner(ProcessEngineRunner):
     """
     Engine runner for RayEngine.
 
-    :group: engines
 
     """
 
@@ -67,7 +66,6 @@ class RayEngine(PoolEngine):
     """
     The ray engine for foxes calculations.
 
-    :group: engines
 
     """
 

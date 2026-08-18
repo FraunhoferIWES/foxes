@@ -15,7 +15,6 @@ class Config(Dict):
     """
     Container for configurational data
 
-    :group: foxes.config
     """
 
     def __init__(self) -> None:
@@ -203,7 +202,6 @@ class Config(Dict):
 
 config = Config()
 """Foxes configurational data object
-:group: foxes.config
 """
 
 
@@ -223,7 +221,6 @@ def get_path(pth: str | Path, base: Path) -> Path:
     out
         The path, absolute or relative to base directory
 
-    :group: foxes.config
 
     """
     if not isinstance(pth, Path):
@@ -250,7 +247,6 @@ def get_input_path(pth: str | Path) -> Path:
         The path, absolute or relative to input directory
         from config
 
-    :group: foxes.config
 
     """
     return get_path(pth, base=config.input_dir)
@@ -272,7 +268,6 @@ def get_output_path(pth: str | Path) -> Path:
         The path, absolute or relative to output directory
         from config
 
-    :group: foxes.config
 
     """
     return get_path(pth, base=config.output_dir)

@@ -28,7 +28,6 @@ class TurbineTypeCurves(Output):
     mbook
         The model book
 
-    :group: output
 
     """
 

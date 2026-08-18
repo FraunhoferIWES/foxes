@@ -208,7 +208,6 @@ def read_outputs(
     odir
         The output directory
 
-    :group: input.yaml.windio
 
     """
     odir = wio_outs.pop_item("output_folder", ".")

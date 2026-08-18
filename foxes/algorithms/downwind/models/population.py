@@ -31,7 +31,6 @@ class PopulationStates(States):
     n_pop
         The population size
 
-    :group: core
 
     """
 
@@ -376,7 +375,6 @@ class PopulationModel(TurbineModel):
         The variables to be set. If None, all variables
         fields from the dataset are used
 
-    :group: core
 
     """
 

@@ -29,7 +29,6 @@ def windio_file2dict(yml_file: Path | str, verbosity: int = 1) -> Dict[Any, Any]
     wio_dict
         The windio data dictionary
 
-    :group: input.yaml.windio
 
     """
 
@@ -75,7 +74,6 @@ def read_windio_dict(
     odir
         The output directory
 
-    :group: input.yaml.windio
 
     """
 
@@ -168,7 +166,6 @@ def read_windio_file(
     odir
         The output directory
 
-    :group: input.yaml.windio
 
     """
     wio = windio_file2dict(yml_file, verbosity)
@@ -285,7 +282,6 @@ def main() -> None:
     --------
     >>> foxes_windio input.yaml
 
-    :group: input.yaml.windio
 
     """
 

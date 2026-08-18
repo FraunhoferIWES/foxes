@@ -15,7 +15,6 @@ class UniformProfile(VerticalProfile):
     var
         The value
 
-    :group: models.vertical_profiles
 
     """
 

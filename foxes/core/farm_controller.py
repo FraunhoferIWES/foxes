@@ -36,7 +36,6 @@ class FarmController(FarmDataModel):
         Parameters for the turbine models, stored
         under their respecitve name
 
-    :group: core
 
     """
 

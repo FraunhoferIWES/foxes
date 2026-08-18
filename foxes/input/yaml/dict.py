@@ -70,7 +70,6 @@ def read_dict(
     engine
         The engine, or None if not set
 
-    :group: input.yaml
 
     """
 
@@ -213,7 +212,6 @@ def get_output_obj(
     obj
         The output object
 
-    :group: input.yaml
 
     """
     cls = new_cls(base_class, ocls)
@@ -284,7 +282,6 @@ def run_obj_function(
     results
         The returns of the function
 
-    :group: input.yaml
 
     """
 
@@ -400,7 +397,6 @@ def run_outputs(
     results_storage
         The results variables
 
-    :group: input.yaml
 
     """
 
@@ -555,7 +551,6 @@ def run_dict(
         where results is a list that represents one
         entry per function call
 
-    :group: input.yaml
 
     """
 

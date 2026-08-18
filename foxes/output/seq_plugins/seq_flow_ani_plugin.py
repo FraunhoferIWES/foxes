@@ -27,7 +27,6 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
     data_pars
         Additional parameters for plot data calculation
 
-    :group: output.seq_plugins
 
     """
 

@@ -217,7 +217,6 @@ def create_dataset_mean(
     data
         The created mean state data
 
-    :group: input.states.create
 
     """
     # prepare:

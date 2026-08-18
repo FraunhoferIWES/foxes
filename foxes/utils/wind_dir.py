@@ -23,7 +23,6 @@ def wd2wdvec(
     wdvec
         The wind direction vectors
 
-    :group: utils
 
     """
     wdr = wd * np.pi / 180.0
@@ -55,7 +54,6 @@ def wd2uv(wd: np.ndarray, ws: float | np.ndarray = 1.0, axis: int = -1) -> np.nd
     uv
         The wind vectors
 
-    :group: utils
 
     """
     return -wd2wdvec(wd, ws, axis)
@@ -77,7 +75,6 @@ def uv2wd(uv: np.ndarray, axis: int = -1) -> np.ndarray:
     wd
         The wind direction array
 
-    :group: utils
 
     """
     if axis == -1:
@@ -108,7 +105,6 @@ def wdvec2wd(wdvec: np.ndarray, axis: int = -1) -> np.ndarray:
     wd
         The wind direction array
 
-    :group: utils
 
     """
     return uv2wd(-wdvec, axis)
@@ -133,7 +129,6 @@ def delta_wd(wd_a: np.ndarray, wd_b: np.ndarray) -> np.ndarray:
         Array of wind direction deltas.
         Shape: same as wd_a, wd_b
 
-    :group: utils
 
     """
     out = wd_b - wd_a

@@ -47,7 +47,6 @@ class SingleStateField(States):
     height_bounds
         The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D.
 
-    :group: input.states
 
     """
 

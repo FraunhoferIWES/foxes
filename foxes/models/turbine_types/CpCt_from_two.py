@@ -47,7 +47,6 @@ class CpCtFromTwo(TurbineType):
     rpars_ct
         Parameters for pandas ct file reading
 
-    :group: models.turbine_types
 
     """
 

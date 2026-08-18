@@ -22,7 +22,6 @@ class URelax(FarmDataModel):
         The variables and their under-relaxation
         factors between 0 and 1
 
-    :group: algorithms.iterative.models
 
     """
 

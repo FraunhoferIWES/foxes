@@ -22,7 +22,6 @@ def download_file(url: str, out_path: str | Path, verbosity: int = 1) -> int:
         Success indicator. 0 = File already there,
         1 = Success, -1 = Failure
 
-    :group: utils
 
     """
     out_path = Path(out_path)

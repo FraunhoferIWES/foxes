@@ -20,7 +20,6 @@ def sqrt_reg(x: np.ndarray, x0: float = 0.01) -> np.ndarray:
     out
         The regularized sqrt(x) results
 
-    :group: utils
 
     """
     b = x0 * (1 - np.log(x0))

@@ -11,7 +11,6 @@ class SingleChunkEngineRunner(EngineRunner):
     """
     Engine runner for SingleChunkEngine.
 
-    :group: engines
 
     """
 
@@ -49,7 +48,6 @@ class SingleChunkEngine(Engine):
     """
     Runs computations in a single chunk.
 
-    :group: engines
 
     """
 

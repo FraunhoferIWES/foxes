@@ -41,7 +41,6 @@ class FarmLayoutOutput(Output):
     D
         The rotor diameter, if not from data
 
-    :group: output
 
     """
 

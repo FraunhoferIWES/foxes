@@ -17,7 +17,6 @@ class SequentialPlugin:
     algo
         The sequential algorithm
 
-    :group: algorithms.sequential.models
 
     """
 

@@ -22,14 +22,13 @@ from .output import Output
 
 class RosePlotOutput(Output):
     """
-     Class for rose plot creation
+    Class for rose plot creation
 
-     Attributes
-     ----------
-     results
-         The calculation results (farm or points)
+    Attributes
+    ----------
+    results
+        The calculation results (farm or points)
 
-    :group: output
 
     """
 
@@ -365,7 +364,6 @@ class RosePlotOutput(Output):
 class StatesRosePlotOutput(RosePlotOutput):
     """
     Class for rose plot creation directly from states
-    :group: output
     """
 
     def __init__(
@@ -420,7 +418,6 @@ class WindRoseBinPlot(Output):
     farm_results
         The wind farm results
 
-    :group: output
 
     """
 

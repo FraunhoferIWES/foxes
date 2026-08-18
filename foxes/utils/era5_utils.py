@@ -27,7 +27,6 @@ def calc_era5_density(
     rho
         The air density in kg/m3
 
-    :group: utils
 
     """
     # dynamically import packages:

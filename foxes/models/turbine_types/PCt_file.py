@@ -43,7 +43,6 @@ class PCtFile(TurbineType):
     rpars
         Parameters for pandas file reading
 
-    :group: models.turbine_types
 
     """
 

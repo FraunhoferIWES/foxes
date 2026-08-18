@@ -18,7 +18,6 @@ def logz(height: float | np.ndarray, z0: float | np.ndarray) -> float | np.ndarr
     lz
         The log factor
 
-    :group: utils.abl.neutral
 
     """
     h = np.maximum(height, z0)
@@ -51,7 +50,6 @@ def ustar(
     ustar
         The friction velocity
 
-    :group: utils.abl.neutral
 
     """
     lz = logz(h_ref, z0)
@@ -83,7 +81,6 @@ def calc_ws(
     ws
         The wind speed
 
-    :group: utils.abl.neutral
 
     """
     return ustar / kappa * logz(height, z0)

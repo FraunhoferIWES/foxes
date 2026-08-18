@@ -52,7 +52,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
     wake_k
         Handler for the wake growth parameter k
 
-    :group: models.wake_models.ti
 
     """
 

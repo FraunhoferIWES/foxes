@@ -28,7 +28,6 @@ class FarmOrder(WakeFrame):
     base_frame
         The wake frame from which to start
 
-    :group: models.wake_frames
 
     """
 

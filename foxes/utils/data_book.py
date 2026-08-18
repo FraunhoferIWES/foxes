@@ -22,7 +22,6 @@ class DataBook:
         The data base. Key: context str,
         value
 
-    :group: utils
 
     """
 

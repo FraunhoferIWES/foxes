@@ -28,7 +28,6 @@ class PartialSegregated(PartialWakesModel):
     grotor
         The grid rotor model
 
-    :group: models.partial_wakes
 
     """
 

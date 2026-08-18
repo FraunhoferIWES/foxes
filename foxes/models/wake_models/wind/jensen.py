@@ -21,7 +21,6 @@ class JensenWake(TopHatWakeModel):
     wake_k
         Handler for the wake growth parameter k
 
-    :group: models.wake_models.wind
 
     """
 

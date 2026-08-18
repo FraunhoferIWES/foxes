@@ -25,7 +25,6 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     induction
         The induction model
 
-    :group: models.wake_models
 
     """
 

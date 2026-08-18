@@ -23,7 +23,6 @@ def tke2ti(tke: np.ndarray, ws: np.ndarray, max_ti: float | None = None) -> np.n
     ti
         Turbulence intensity.
 
-    :group: utils
 
     """
     ti = np.sqrt(1.5 * tke) / ws
@@ -53,7 +52,6 @@ def ustar2ti(
     ti
         Turbulence intensity.
 
-    :group: utils
 
     """
 

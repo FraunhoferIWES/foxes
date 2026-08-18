@@ -25,7 +25,6 @@ class HalfPlane(AreaGeometry):
     n
         The direction vector orthogonal to n, shape: (2,)
 
-    :group: utils.geom2d
 
     """
 

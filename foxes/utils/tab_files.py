@@ -21,7 +21,6 @@ def read_tab_file(fname: str | Path, normalize: bool = True) -> Dataset:
     out
         The data
 
-    :group: utils
 
     """
 

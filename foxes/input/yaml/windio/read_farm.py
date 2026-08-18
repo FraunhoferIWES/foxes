@@ -40,7 +40,6 @@ def read_turbine_types(
         Mapping from turbine type key to turbine
         type name in the model book
 
-    :group: input.yaml.windio
 
     """
 
@@ -181,7 +180,6 @@ def read_layout(
     verbosity
         The verbosity level, 0=silent
 
-    :group: input.yaml.windio
 
     """
     if verbosity > 2:
@@ -220,7 +218,6 @@ def read_farm(wio_dict: dict[str, Any], mbook: ModelBook, verbosity: int) -> Win
     farm
         The wind farm
 
-    :group: input.yaml.windio
 
     """
     if not isinstance(wio_dict["wind_farm"], list):
@@ -311,7 +308,6 @@ def read_n_turbines(wio_dict: dict[str, Any]) -> int:
     n_turbines
         The number of turbines
 
-    :group: input.yaml.windio
 
     """
     wio_farm = wio_dict["wind_farm"]
@@ -347,7 +343,6 @@ def read_hub_heights(wio_dict: dict[str, Any]) -> list[float]:
     hub_heights
         The hub heights of all turbines
 
-    :group: input.yaml.windio
 
     """
     wio_farm = wio_dict["wind_farm"]
@@ -375,7 +370,6 @@ def read_rotor_diameters(wio_dict: dict[str, Any]) -> list[float]:
     rotor_diameters
         The rotor diameters of all turbines
 
-    :group: input.yaml.windio
 
     """
     wio_farm = wio_dict["wind_farm"]

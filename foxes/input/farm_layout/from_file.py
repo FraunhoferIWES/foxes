@@ -37,7 +37,6 @@ def add_from_file(
     kwargs
         Parameters forwarded to the method
 
-    :group: input.farm_layout
 
     """
 

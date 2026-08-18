@@ -31,7 +31,6 @@ class DirectMDataInfusion(CentreRotor):
         the second coordinate is used as a candidate if the mdata variable
         has three dimensions.
 
-    :group: models.turbine_types
 
     """
 

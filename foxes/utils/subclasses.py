@@ -18,7 +18,6 @@ def all_subclasses(cls: type[Any]) -> set[type[Any]]:
     The derived classes
         The derived classes
 
-    :group: utils
 
     """
     return set(cls.__subclasses__()).union(
@@ -42,7 +41,6 @@ def new_cls(base_cls: type[Any], cls_name: str | None) -> type[Any] | None:
     cls
         The derived class
 
-    :group: utils
 
     """
 
@@ -89,7 +87,6 @@ def new_instance(
     obj
         The instance of the derived class
 
-    :group: utils
 
     """
 

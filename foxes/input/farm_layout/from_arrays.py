@@ -49,7 +49,6 @@ def add_from_arrays(
     turbine_parameters
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
-    :group: input.farm_layout
 
     """
     x = np.asarray(x, dtype=float)

@@ -24,7 +24,6 @@ class SliceData(Output):
     verbosity_delta
         Verbosity threshold for printing calculation info
 
-    :group: output
 
     """
 

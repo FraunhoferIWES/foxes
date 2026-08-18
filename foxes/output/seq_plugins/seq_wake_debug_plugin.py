@@ -25,7 +25,6 @@ class SeqWakeDebugPlugin(SequentialPlugin):
     ppars
         Additional parameters for point scatter
 
-    :group: output.seq_plugins
 
     """
 

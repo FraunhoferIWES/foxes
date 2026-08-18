@@ -26,7 +26,6 @@ class MadsenAxialInduction(AxialInductionModel):
     k3
         Model coefficient
 
-    :group: models.axial_induction
 
     """
 

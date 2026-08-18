@@ -32,7 +32,6 @@ class Model(ABC):
     name
         The model name
 
-    :group: core
 
     """
 

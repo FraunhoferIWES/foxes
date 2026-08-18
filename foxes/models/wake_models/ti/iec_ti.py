@@ -39,7 +39,6 @@ class IECTIWake(TopHatWakeModel):
     c2
         The c2 parameter for the wake decay
 
-    :group: models.wake_models.ti
 
     """
 

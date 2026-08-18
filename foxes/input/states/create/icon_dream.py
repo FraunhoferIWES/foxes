@@ -399,7 +399,6 @@ def iconDream2foxes(
     verbosity
         The verbosity level, 0 = silent, 1 = progress bars and summary.
 
-    :group: input.states.create
 
     """
     engine = get_engine()

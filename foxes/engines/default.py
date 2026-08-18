@@ -11,7 +11,6 @@ class DefaultEngine(Engine):
     """
     The case size dependent default engine.
 
-    :group: engines
 
     """
 

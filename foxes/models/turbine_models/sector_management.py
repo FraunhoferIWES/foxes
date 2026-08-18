@@ -26,7 +26,6 @@ class SectorManagement(TurbineModel):
     source
         The file path or data
 
-    :group: models.turbine_models
 
     """
 

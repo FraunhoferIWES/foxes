@@ -24,7 +24,6 @@ class EngineRunner(ABC):
     """
     Helper class for running calculations in engines
 
-    :group: core
     """
 
     def _write_chunk_results(
@@ -137,7 +136,6 @@ class Engine(ABC):
     >>> with engine:
     >>>     ...
 
-    :group: core
 
     """
 
@@ -1254,7 +1252,6 @@ def get_engine(error: bool = True) -> Engine | None:
     engine
         The foxes calculation engine.
 
-    :group: core
 
     """
     engine = __global_engine_data__.get("engine", None)
@@ -1272,7 +1269,6 @@ def has_engine() -> bool:
     flag
         ``True`` if an engine has been set.
 
-    :group: core
 
     """
     return __global_engine_data__.get("engine", None) is not None

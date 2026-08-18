@@ -55,7 +55,6 @@ class MultiHeightStates(States):
     RDICT
         Default pandas file reading parameters
 
-    :group: input.states
 
     """
 
@@ -595,7 +594,6 @@ class MultiHeightNCStates(MultiHeightStates):
     >>>        ti       (Time, height) float32 96kB ...
     >>>        rho      (Time) float32 12kB ...
 
-    :group: input.states
 
     """
 
@@ -797,7 +795,6 @@ class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
 
-    :group: input.states
 
     """
 
@@ -829,7 +826,6 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
     """
     Multi-height timeseries from xarray Dataset.
 
-    :group: input.states
 
     """
 

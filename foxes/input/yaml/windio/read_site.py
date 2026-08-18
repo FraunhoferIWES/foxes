@@ -28,9 +28,7 @@ def _get_profiles(
     fixval: dict[str, Any],
     verbosity: int,
 ) -> dict[str, str]:
-    """Read ABL profiles information
-    :group: input.yaml.windio
-    """
+    """Read ABL profiles information"""
     profiles = {}
     if FV.Z0 in fields:
         if FV.H not in fields:
@@ -69,9 +67,7 @@ def _get_SingleStateStates(
     profiles: dict[str, str],
     verbosity: int,
 ) -> bool:
-    """Try to generate single state parameters
-    :group: input.yaml.windio
-    """
+    """Try to generate single state parameters"""
     for c in coords:
         if not isinstance(c, Number):
             return False
@@ -115,9 +111,7 @@ def _get_Timeseries(
     profiles: dict[str, str],
     verbosity: int,
 ) -> bool:
-    """Try to generate time series parameters
-    :group: input.yaml.windio
-    """
+    """Try to generate time series parameters"""
     if len(coords) == 1 and FC.TIME in coords:
         if verbosity > 2:
             print("        selecting class 'Timeseries'")
@@ -157,9 +151,7 @@ def _get_MultiHeightNCTimeseries(
     profiles: dict[str, str],
     verbosity: int,
 ) -> bool:
-    """Try to generate time series parameters
-    :group: input.yaml.windio
-    """
+    """Try to generate time series parameters"""
     if len(coords) == 2 and FC.TIME in coords and FV.H in coords:
         if verbosity > 2:
             print("        selecting class 'MultiHeightNCTimeseries'")
@@ -207,9 +199,7 @@ def _get_TurbinePointCloud(
     profiles: dict[str, str],
     verbosity: int,
 ) -> bool:
-    """Try to generate a point cloud with support at turbine locations
-    :group: input.yaml.windio
-    """
+    """Try to generate a point cloud with support at turbine locations"""
     if FC.TIME in coords and FC.TURBINE in coords:
         if verbosity > 2:
             print("        selecting class 'TurbinePointCloud'")
@@ -252,9 +242,7 @@ def _get_WeibullSectors(
     profiles: dict[str, str],
     verbosity: int,
 ) -> bool:
-    """Try to generate Weibull sector parameters
-    :group: input.yaml.windio
-    """
+    """Try to generate Weibull sector parameters"""
     if (
         FV.WEIBULL_A in fields
         and FV.WEIBULL_k in fields
@@ -305,9 +293,7 @@ def _get_WeibullPointCloud(
     profiles: dict[str, str],
     verbosity: int,
 ) -> bool:
-    """Try to generate Weibull sector parameters
-    :group: input.yaml.windio
-    """
+    """Try to generate Weibull sector parameters"""
     if (
         FV.WD in coords
         and FV.WEIBULL_A in fields
@@ -367,9 +353,7 @@ def _get_WeibullField(
     profiles: dict[str, str],
     verbosity: int,
 ) -> bool:
-    """Try to generate Weibull sector parameters
-    :group: input.yaml.windio
-    """
+    """Try to generate Weibull sector parameters"""
     if (
         FV.WD in coords
         and FV.X in coords
@@ -439,7 +423,6 @@ def get_states(
     states
         The states object
 
-    :group: input.yaml.windio
 
     """
     if verbosity > 2:
@@ -496,7 +479,6 @@ def read_site(wio_dict: Dict[Any, Any], verbosity: int = 1) -> States:
     states
         The states object
 
-    :group: input.yaml.windio
 
     """
 

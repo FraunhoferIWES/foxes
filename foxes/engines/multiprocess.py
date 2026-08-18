@@ -12,7 +12,6 @@ class MultiprocessEngine(PoolEngine):
     """
     The multiprocessing engine for foxes calculations.
 
-    :group: engines
 
     """
 

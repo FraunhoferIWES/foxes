@@ -33,7 +33,6 @@ class WRGStates(States):
     interp_pars
         Additional parameters for scipy.interpolate.interpn
 
-    :group: input.states
 
     """
 

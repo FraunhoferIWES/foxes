@@ -22,7 +22,6 @@ class FarmDataModel(DataCalcModel):
     Abstract base class for models that modify
     farm data.
 
-    :group: core
 
     """
 
@@ -187,7 +186,6 @@ class FarmDataModelList(FarmDataModel):
     models
         The model list
 
-    :group: core
 
     """
 

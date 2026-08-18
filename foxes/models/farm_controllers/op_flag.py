@@ -30,7 +30,6 @@ class OpFlagController(FarmController):
         The mapping of variable names to NetCDF variable names,
         only needed if data_source is a path to a NetCDF file
 
-    :group: models.farm_controllers
 
     """
 

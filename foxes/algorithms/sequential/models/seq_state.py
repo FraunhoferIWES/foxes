@@ -21,7 +21,6 @@ class SeqState(States):
     states
         The original states set
 
-    :group: algorithms.sequential.models
 
     """
 

@@ -21,7 +21,6 @@ def psi(height: float | np.ndarray, mol: float | np.ndarray) -> float | np.ndarr
     psi
         The Psi function value
 
-    :group: utils.abl.unstable
 
     """
     x = (1.0 - 16.0 * height / mol) ** 0.25
@@ -63,7 +62,6 @@ def ustar(
     ustar
         The friction velocity
 
-    :group: utils.abl.unstable
 
     """
     return cast(
@@ -99,7 +97,6 @@ def calc_ws(
     ws
         The wind speed
 
-    :group: utils.abl.unstable
 
     """
     return cast(float | np.ndarray, ustar / kappa * (logz(height, z0) - psi))

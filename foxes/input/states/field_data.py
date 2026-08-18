@@ -49,7 +49,6 @@ class FieldData(DatasetStates):
     >>>        ws       (state, h, y, x) float32 64B ...
     >>>        wd       (state, h, y, x) float32 64B ...
 
-    :group: input.states
 
     """
 
@@ -224,7 +223,6 @@ class LatLonFieldData(DatasetStates):
         Path to a plot file, e.g. wrf_points.png, to visualize the
         selected grid points and the layout of the farm.
 
-    :group: input.states
 
     """
 
@@ -494,7 +492,6 @@ class WeibullField(FieldData):
         The wind speed bins, including
         lower and upper bounds, shape: (n_ws_bins+1,)
 
-    :group: input.states
 
     """
 

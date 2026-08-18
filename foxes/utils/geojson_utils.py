@@ -25,7 +25,6 @@ def area_contains_point(area: Any, point: np.ndarray) -> bool:
     inside
         True if the point is inside area
 
-    :group: utils
 
     """
     if hasattr(area, "contains_point"):
@@ -52,7 +51,6 @@ def geojson_geometry_to_area(geometry: dict[str, Any]) -> Any | None:
     area
         The area geometry or None for empty polygon coordinate arrays
 
-    :group: utils
 
     """
     gtype = geometry.get("type", None)
@@ -116,7 +114,6 @@ def load_areas_from_geojson(
         Missing, empty, or duplicate names are replaced with
         default names of the form ``area_XXX``.
 
-    :group: utils
 
     """
     geojson_path = Path(geojson_path)
@@ -156,7 +153,6 @@ def load_areas_from_geojson_data(
         Missing, empty, or duplicate names are replaced with
         default names of the form ``area_XXX``.
 
-    :group: utils
 
     """
     if not isinstance(data, dict):
@@ -241,7 +237,6 @@ def normalize_areas_input(
         Missing, empty, or duplicate names are replaced with default
         names of the form ``area_XXX``.
 
-    :group: utils
 
     """
     area_names: list[str | None] | None = None

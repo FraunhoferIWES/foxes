@@ -54,7 +54,6 @@ def foxes_yaml(
     verbosity
         The verbosity level, 0 = silent, default: 1
 
-    :group: input.yaml
 
     """
 
@@ -101,7 +100,6 @@ def main() -> None:
     --------
     >>> foxes_yaml input.yaml
 
-    :group: input.yaml
 
     """
 

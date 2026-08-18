@@ -26,7 +26,6 @@ class SetFarmVars(TurbineModel):
     once
         Flag for running only once
 
-    :group: models.turbine_models
 
     """
 

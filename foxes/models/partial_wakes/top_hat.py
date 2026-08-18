@@ -30,7 +30,6 @@ class PartialTopHat(PartialCentre):
     rotor_model
         The rotor model, default is the one from the algorithm
 
-    :group: models.partial_wakes
 
     """
 

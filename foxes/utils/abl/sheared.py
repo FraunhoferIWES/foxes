@@ -23,7 +23,6 @@ def calc_ws(
     ws
         The wind speed
 
-    :group: utils.abl.sheared
 
     """
     return WS0 * (height / height0) ** shear

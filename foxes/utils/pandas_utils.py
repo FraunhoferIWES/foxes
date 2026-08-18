@@ -25,7 +25,6 @@ class PandasFileHelper:
     DEFAULT_FORMAT_DICT
         Default column formatting
 
-    :group: utils
 
     """
 

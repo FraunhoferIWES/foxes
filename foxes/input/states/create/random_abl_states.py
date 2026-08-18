@@ -36,7 +36,6 @@ def create_random_abl_states(
     data
         The created states data
 
-    :group: input.states.create
 
     """
 

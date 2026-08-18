@@ -30,7 +30,6 @@ class PointWakesCalculation(PointDataModel):
     wake_models
         The wake models to be used
 
-    :group: algorithms.downwind.models
 
     """
 

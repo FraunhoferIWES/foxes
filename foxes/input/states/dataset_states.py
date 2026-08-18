@@ -178,7 +178,6 @@ class DatasetStates(States):
     interp_pars
         Additional parameters the interpolation
 
-    :group: input.states
 
     """
 

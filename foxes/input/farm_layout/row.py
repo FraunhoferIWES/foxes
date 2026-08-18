@@ -39,7 +39,6 @@ def add_row(
     turbine_parameters
         Parameters forwarded to `foxes.core.Turbine`
 
-    :group: input.farm_layout
 
     """
     p0 = np.array(xy_base)

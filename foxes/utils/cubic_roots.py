@@ -37,7 +37,6 @@ def cubic_roots(
         shape: (n_a0, 3). If one root only
         the two last columns will be np.nan
 
-    :group: utils
 
     """
 

@@ -29,7 +29,6 @@ class WakeFrame(Model):
     They are also responsible for the calculation of
     the turbine evaluation order.
 
-    :group: core
 
     """
 

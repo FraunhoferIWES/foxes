@@ -18,7 +18,6 @@ class FarmWakesCalculation(FarmDataModel):
     """
     This model calculates wakes effects on farm data.
 
-    :group: algorithms.downwind.models
 
     """
 

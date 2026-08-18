@@ -25,7 +25,6 @@ class StateTurbineMap(Output):
     results
         The farm results
 
-    :group: output
 
     """
 

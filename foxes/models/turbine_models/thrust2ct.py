@@ -23,7 +23,6 @@ class Thrust2Ct(TurbineModel):
     WSCT
         The wind speed variable for ct lookup
 
-    :group: models.turbine_models
 
     """
 

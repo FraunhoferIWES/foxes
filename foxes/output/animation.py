@@ -15,7 +15,6 @@ class Animator:
     fig
         The figure object
 
-    :group: output
 
     """
 

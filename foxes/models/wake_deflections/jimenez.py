@@ -35,7 +35,6 @@ class JimenezDeflection(WakeDeflection):
     step_x
         The x step in m for integration
 
-    :group: models.wake_deflections
 
     """
 

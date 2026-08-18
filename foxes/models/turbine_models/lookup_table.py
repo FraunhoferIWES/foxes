@@ -34,7 +34,6 @@ class LookupTable(TurbineModel):
         Mapping from foxes variable names
         to column names in the data_source
 
-    :group: models.turbine_models
 
     """
 

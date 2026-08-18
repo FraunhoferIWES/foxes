@@ -62,7 +62,6 @@ def add_from_eww(
     >>>    2,Aberdeen Offshore Wind Farm,Vestas,57.2169301,-2.0055697,United Kingdom,8.4,164.0,108.5,V164-8.4 MW,2018-09
     >>>    ...
 
-    :group: input.farm_layout
 
     """
     assert farm.data_is_lonlat, "Require `input_is_lonlat=True` in WindFarm constructor"

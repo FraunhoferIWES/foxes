@@ -20,7 +20,6 @@ class ResultsWriter(Output):
     data
         The farm results
 
-    :group: output
 
     """
 

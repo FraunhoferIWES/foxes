@@ -36,7 +36,6 @@ class TableFactors(TurbineModel):
         The variables onto which the factors
         are multiplied
 
-    :group: models.turbine_models
 
     """
 

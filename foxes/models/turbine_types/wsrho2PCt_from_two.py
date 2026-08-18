@@ -50,7 +50,6 @@ class WsRho2PCtFromTwo(TurbineType):
     ipars_ct
         Parameters for scipy.interpolate.interpn
 
-    :group: models.turbine_types
 
     """
 

@@ -28,7 +28,6 @@ class WindFarmsEval(FarmResultsEval):
     results
         The farm results
 
-    :group: output
 
     """
 
@@ -322,7 +321,6 @@ class WindFarmsEval(FarmResultsEval):
         scatter_size
             Scatter marker size passed to matplotlib ``s``.
 
-        :group: output
 
         """
         bounds = []
@@ -382,7 +380,6 @@ class WindFarmsEval(FarmResultsEval):
         verbosity
             The verbosity level. 0 = silent
 
-        :group: output
 
         """
         from foxes.utils.geojson_utils import normalize_areas_input

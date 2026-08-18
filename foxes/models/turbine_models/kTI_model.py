@@ -26,7 +26,6 @@ class kTI(TurbineModel):
     k_var
         The variable name for k
 
-    :group: models.turbine_models
 
     """
 

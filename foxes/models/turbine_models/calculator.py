@@ -32,7 +32,6 @@ class Calculator(TurbineModel):
         ssel = fdata[FV.ORDER_SSEL], order = fdata[FV.ORDER]
         before using it in combination with fdata variables.
 
-    :group: models.turbine_models
 
     """
 

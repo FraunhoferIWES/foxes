@@ -18,7 +18,6 @@ class PartialCentre(RotorPoints):
     Partial wakes calculated only at the
     rotor centre point.
 
-    :group: models.partial_wakes
 
     """
 

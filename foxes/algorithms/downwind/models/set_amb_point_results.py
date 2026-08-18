@@ -24,7 +24,6 @@ class SetAmbPointResults(PointDataModel):
     vars
         The variables to be copied to output
 
-    :group: algorithms.downwind.models
 
     """
 

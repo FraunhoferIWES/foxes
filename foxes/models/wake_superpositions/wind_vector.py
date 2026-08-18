@@ -23,7 +23,6 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         Flag for scaling wind deficit with ambient wind speed
         instead of waked wind speed
 
-    :group: models.wake_superpositions
 
     """
 

@@ -25,7 +25,6 @@ class RotorCentreCalc(TurbineModel):
         The variables that are calculated by the model,
         keys: var names, values: rotor var names
 
-    :group: models.turbine_models
 
     """
 

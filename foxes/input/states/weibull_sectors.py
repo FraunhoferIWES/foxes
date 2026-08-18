@@ -40,7 +40,6 @@ class WeibullSectors(StatesTable):
     RDICT
         Default xarray file reading parameters
 
-    :group: input.states
 
     """
 

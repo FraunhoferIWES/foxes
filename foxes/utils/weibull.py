@@ -28,7 +28,6 @@ def weibull_weights(
     weights
         The weights, same shape as ws
 
-    :group: utils
 
     """
     wsA = ws / A

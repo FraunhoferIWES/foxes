@@ -15,7 +15,6 @@ class AreaGeometry(metaclass=ABCMeta):
     """
     Abstract base class for closed 2D geometries.
 
-    :group: utils.geom2d
 
     """
 
@@ -276,7 +275,6 @@ class AreaGeometry(metaclass=ABCMeta):
         utm_zone_str
             Returned only if ``ret_utm_zone`` is True
 
-        :group: utils.geom2d
 
         """
         from ..geopandas_utils import shp2geom2d
@@ -311,7 +309,6 @@ class InvertedAreaGeometry(AreaGeometry):
     """
     Base class for inverted geometries.
 
-    :group: utils.geom2d
 
     """
 
@@ -482,7 +479,6 @@ class AreaUnion(AreaGeometry):
     geometries
         The geometries
 
-    :group: utils.geom2d
 
     """
 
@@ -706,7 +702,6 @@ class InvertedAreaUnion(InvertedAreaGeometry):
     """
     Inversion of a union of areas
 
-    :group: utils.geom2d
 
     """
 
@@ -785,7 +780,6 @@ class AreaIntersection(AreaGeometry):
     """
     The intersection of area geometries.
 
-    :group: utils.geom2d
 
     """
 
@@ -840,7 +834,6 @@ def from_shp(*args: Any, **kwargs: Any) -> Any:
     utm_zone_str
         Returned only if ``ret_utm_zone`` is True
 
-    :group: utils.geom2d
 
     """
     return AreaGeometry.from_shp(*args, **kwargs)

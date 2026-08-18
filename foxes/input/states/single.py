@@ -36,7 +36,6 @@ class SingleStateStates(States):
     profdata
         Additional data for profiles.
 
-    :group: input.states
 
     """
 

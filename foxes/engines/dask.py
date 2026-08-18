@@ -220,7 +220,6 @@ class DaskEngine(ProcessEngine):
     """
     The dask engine for delayed foxes calculations.
 
-    :group: engines
 
     """
 
@@ -399,7 +398,6 @@ class LocalClusterEngine(ProcessEngine):
     client_pars
         Parameters for the client of the cluster
 
-    :group: engines
 
     """
 
@@ -691,7 +689,6 @@ class SlurmClusterEngine(LocalClusterEngine):
     """
     The dask engine for foxes calculations on a SLURM cluster.
 
-    :group: engines
 
     """
 

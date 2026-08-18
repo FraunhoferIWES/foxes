@@ -30,7 +30,6 @@ class RotorPointPlot(Output):
     algo
         The algorithm
 
-    :group: output
 
     """
 

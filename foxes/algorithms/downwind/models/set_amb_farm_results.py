@@ -20,7 +20,6 @@ class SetAmbFarmResults(FarmDataModel):
     vars
         The variables to be copied, or `None` for all
 
-    :group: algorithms.downwind.models
 
     """
 

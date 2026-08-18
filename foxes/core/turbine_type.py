@@ -55,7 +55,6 @@ class TurbineType(TurbineModel):
     yawm_corr_p_ct
         The exponent for yaw dependency of ct
 
-    :group: core
 
     """
 

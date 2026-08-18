@@ -38,7 +38,6 @@ class Bastankhah2014(GaussianWakeModel):
     wake_k
         Handler for the wake growth parameter k
 
-    :group: models.wake_models.wind
 
     """
 

@@ -24,7 +24,6 @@ class FarmWakesCalculation(FarmDataModel):
     urelax
         The under-relaxation model
 
-    :group: algorithms.iterative.models
 
     """
 

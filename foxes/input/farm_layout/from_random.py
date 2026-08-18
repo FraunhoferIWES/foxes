@@ -35,7 +35,6 @@ def add_random(
     turbine_parameters
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
-    :group: input.farm_layout
 
     """
     xy = random_xy_square(n_turbines, min_dist, seed=seed, verbosity=verbosity)

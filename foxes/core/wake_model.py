@@ -22,7 +22,6 @@ class WakeModel(Model):
     """
     Abstract base class for wake models.
 
-    :group: core
 
     """
 
@@ -255,7 +254,6 @@ class SingleTurbineWakeModel(WakeModel):
         The superposition dict, key: variable name str,
         value: the corresponding wake superposition model
 
-    :group: models.wake_models
 
     """
 
@@ -433,7 +431,6 @@ class TurbineInductionModel(SingleTurbineWakeModel):
     """
     Abstract base class for turbine induction models.
 
-    :group: core
 
     """
 
@@ -487,7 +484,6 @@ class WakeK(Model):
     ti_var
         The name of the TI variable
 
-    :group: core
 
     """
 

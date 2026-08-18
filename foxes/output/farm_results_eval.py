@@ -33,7 +33,6 @@ class FarmResultsEval(Output):
     algo
         The algorithm object
 
-    :group: output
 
     """
 

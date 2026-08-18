@@ -32,7 +32,6 @@ class PartialWakesModel(Model):
     wake_frame
         The wake frame
 
-    :group: core
 
     """
 
