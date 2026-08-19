@@ -645,7 +645,7 @@ class MultiHeightNCStates(MultiHeightStates):
             **kwargs,
         )  # type: ignore[misc]
         self.state_coord = state_coord
-        self.heights = heights  # type: ignore[assignment]
+        self.heights = heights
         self.h_coord = h_coord
         self.xr_read_pars = {} if xr_read_pars is None else dict(xr_read_pars)
         self.xr_read_pars.setdefault("engine", config.nc_engine)

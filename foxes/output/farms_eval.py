@@ -215,7 +215,7 @@ class WindFarmsEval(FarmResultsEval):
 
         """
         if self._results is None:
-            mapping = self.farm.get_wind_farm_mapping()
+            mapping = self.get_mapping()
             self._results = self._aggregate(mapping)
         return self._results
 

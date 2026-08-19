@@ -1025,9 +1025,5 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed `FarmResultsEval.calc_yield` default output selection, `TurbinePointCloud` initialization/interpolation issues, `SingleStateField` NaN handling, `Downwind` state-subset propagation, `Sequential` state-count behavior, and several plotting and memory-splitting edge cases
   - Fixed `TurbinePointCloud` ambient-data corruption for non-collinear layouts with varying wind direction by preserving state/turbine point ordering, and avoided quadratic point-reconstruction scaling in that path
   - Removed Python 3.9 from the CI matrix and gated MPI smoke coverage behind `FOXES_RUN_MPI_TESTS=1` for deterministic constrained-runner behavior
-  - Fixed the CI pre-commit job by moving `pre-commit` into the `test` optional dependencies and installing `--extra test` before running hooks
-  - Fixed CI mypy crashes in pre-commit by running pre-commit jobs on Python 3.10 (matching the configured mypy target version)
-  - Excluded `mypy==2.3.1` from test dependencies due upstream internal-error crashes during pre-commit runs
-  - Fixed GitLab CI pre-commit failures on the uv slim image by installing `git` before running hooks
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
