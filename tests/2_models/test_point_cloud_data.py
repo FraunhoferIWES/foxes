@@ -1,5 +1,7 @@
 import numpy as np
+import pandas as pd
 import xarray as xr
+import foxes
 
 from foxes.core import MData, TData
 from foxes.input.states.dataset_states import DatasetStates
@@ -203,3 +205,86 @@ def test_dataset_states_calculate_handles_turbine_dim_without_not_implemented():
         states.received_pts, np.array([[0.0, 0.0, 90.0], [100.0, 0.0, 90.0]])
     )
     assert np.allclose(results[FV.WS][0, :, 0], np.array([8.0, 9.0]))
+
+
+def _run_ambient_rews(
+    ws: np.ndarray,
+    wd: np.ndarray,
+    turbine_xy: np.ndarray,
+    hubs: np.ndarray,
+) -> np.ndarray:
+    sdata = xr.Dataset(
+        coords={
+            FC.STATE: pd.date_range("2000-01-01", periods=ws.shape[0], freq="1h"),
+            FC.TURBINE: np.arange(ws.shape[1]),
+        },
+        data_vars={
+            "ws": ((FC.STATE, FC.TURBINE), ws),
+            "wd": ((FC.STATE, FC.TURBINE), wd),
+        },
+    )
+
+    states = TurbinePointCloud(
+        data_source=sdata,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        var2ncvar={FV.WS: "ws", FV.WD: "wd"},
+        fixed_vars={FV.TI: 0.06, FV.RHO: 1.225},
+    )
+    farm = foxes.WindFarm()
+    for i, h in enumerate(hubs):
+        farm.add_turbine(
+            foxes.Turbine(
+                xy=turbine_xy[i],
+                H=float(h),
+                turbine_models=["null_type"],
+            ),
+            verbosity=0,
+        )
+
+    algo = foxes.algorithms.Downwind(
+        farm,
+        states,
+        wake_models=[],
+        rotor_model="centre",
+        mbook=foxes.models.ModelBook(),
+        verbosity=0,
+    )
+    with foxes.core.Engine.new("single", verbosity=0):
+        return algo.calc_farm()[FV.AMB_REWS].to_numpy()
+
+
+def test_turbine_point_cloud_preserves_values_for_mixed_hub_heights():
+    ws = np.array([[10.0, 10.5, 9.5]] * 2)
+    wd = np.full_like(ws, 270.0)
+    turbine_xy = np.array([[0.0, 0.0], [500.0, 0.0], [1000.0, 0.0]])
+
+    for hubs in (
+        np.array([100.0, 100.0, 100.0]),
+        np.array([100.0, 100.0, 90.0]),
+        np.array([120.0, 100.0, 90.0]),
+    ):
+        got = _run_ambient_rews(ws, wd, turbine_xy, hubs)
+        assert np.allclose(got, ws)
+
+
+def test_turbine_point_cloud_preserves_values_for_grid_layout_with_varying_wd():
+    rng = np.random.default_rng(3)
+    n_states = 40
+    n_turb = 6
+    ws = rng.uniform(7.0, 12.0, size=(n_states, n_turb))
+    wd = rng.uniform(240.0, 300.0, size=(n_states, 1))
+    wd = np.repeat(wd, n_turb, axis=1)
+    turbine_xy = np.array(
+        [
+            [0.0, 0.0],
+            [500.0, 0.0],
+            [1000.0, 0.0],
+            [0.0, 500.0],
+            [500.0, 500.0],
+            [1000.0, 500.0],
+        ]
+    )
+    hubs = np.full(n_turb, 100.0)
+
+    got = _run_ambient_rews(ws, wd, turbine_xy, hubs)
+    assert np.allclose(got, ws)

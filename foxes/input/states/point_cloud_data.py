@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 from typing import Any, cast
-from foxes.core import Algorithm, FData, LoadedData, MData
+from foxes.core import Algorithm, FData, LoadedData, MData, TData
 from scipy.interpolate import griddata
 from scipy.spatial import QhullError
 
@@ -720,6 +720,43 @@ class TurbinePointCloud(DatasetStates):
             FC.TURBINE: self.turbine_coord,
         }
 
+    def calculate(  # type: ignore[override]
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, np.ndarray]:
+        """
+        The main model calculation for turbine point-cloud states.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target point data.
+
+        Returns
+        -------
+        results
+            The resulting data, keys: output variable str.
+            Values with shape
+            (n_states, n_targets, n_tpoints).
+
+        """
+        return super().calculate(
+            algo,
+            mdata,
+            fdata,
+            tdata,
+            is_turbine_point_cloud=True,
+        )
+
     def load_data(  # type: ignore[override]
         self,
         algo: Algorithm,
@@ -874,6 +911,13 @@ class TurbinePointCloud(DatasetStates):
         assert len(idims) == 1 and idims[0] == FC.TURBINE, (
             f"States '{self.name}': Only turbine point cloud interpolation supported, got dimensions {idims}"
         )
+
+        # For state-aware turbine coordinates, data is already aligned with the
+        # evaluation points and can be passed through verbatim.
+        if pts.ndim == 3 and d.ndim >= 3:
+            n_states, n_turbines = pts.shape[:2]
+            if d.shape[0] == n_turbines and d.shape[-2] == n_states:
+                return d
 
         if gpts is None:
             gpts = (self.get_grid_points(mdata=mdata),)

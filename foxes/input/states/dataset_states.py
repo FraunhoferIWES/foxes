@@ -1525,7 +1525,12 @@ class DatasetStates(States):
         return d
 
     def calculate(  # type: ignore[override]
-        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        is_turbine_point_cloud: bool = False,
     ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
@@ -1543,6 +1548,9 @@ class DatasetStates(States):
             The farm data
         tdata
             The target point data
+        is_turbine_point_cloud
+            Flag indicating that interpolation points are turbine point-cloud
+            coordinates that must preserve per-state/per-turbine ordering.
 
         Returns
         -------
@@ -1578,6 +1586,7 @@ class DatasetStates(States):
         def _analyze_points(
             has_p: bool,
             has_h: bool,
+            is_turbine_point_cloud: bool = False,
             hcoords: dict[str, np.ndarray] | None = None,
         ) -> dict[str, Any]:
             """Helper function for points analysis."""
@@ -1594,7 +1603,14 @@ class DatasetStates(States):
                 pmax = _points_data["pmax"]
 
             if has_p and "points_vary" not in _points_data:
-                if (
+                if is_turbine_point_cloud:
+                    # Turbine point clouds already provide per-state/per-turbine
+                    # coordinates. Keep that ordering and skip unique-point
+                    # reconstruction that can silently remap turbines.
+                    _points_data["up"] = points
+                    _points_data["up2p"] = None
+                    _points_data["points_vary"] = False
+                elif (
                     hcoords is not None
                     and FC.TURBINE in hcoords
                     and len(hcoords[FC.TURBINE].shape) == 3
@@ -1612,7 +1628,11 @@ class DatasetStates(States):
                     _points_data["points_vary"] = False
 
             if has_h and "heights_vary" not in _points_data:
-                if np.any(pmax[:, 2] - pmin[:, 2] > 1e-4):
+                if is_turbine_point_cloud:
+                    _points_data["uh"] = points[:, :, 2]
+                    _points_data["uh2h"] = None
+                    _points_data["heights_vary"] = False
+                elif np.any(pmax[:, 2] - pmin[:, 2] > 1e-4):
                     _points_data["uh"], _points_data["uh2h"] = np.unique(
                         points[:, :, 2].reshape(n_states * n_pts), return_inverse=True
                     )
@@ -1671,9 +1691,14 @@ class DatasetStates(States):
                     or FC.TURBINE in idims
                 )
                 has_h = FV.H in idims or FC.TURBINE in idims
+                is_tpc_dims = is_turbine_point_cloud and FC.TURBINE in idims
                 for c in idims.copy():
                     if c in [FV.X, FV.Y, FV.H]:
-                        points_data = _analyze_points(has_p, has_h)
+                        points_data = _analyze_points(
+                            has_p,
+                            has_h,
+                            is_turbine_point_cloud=is_tpc_dims,
+                        )
                         if c in [FV.X, FV.Y]:
                             i = 0 if c == FV.X else 1
                             pts.append(points_data["up"][:, i])
@@ -1682,11 +1707,19 @@ class DatasetStates(States):
                         else:
                             pts.append(points_data["uh"])
                     elif c == FC.POINT:
-                        points_data = _analyze_points(has_p, has_h)
+                        points_data = _analyze_points(
+                            has_p,
+                            has_h,
+                            is_turbine_point_cloud=is_tpc_dims,
+                        )
                         pts.append(points_data["up"][..., 0])
                         pts.append(points_data["up"][..., 1])
                     elif c == FC.TURBINE:
-                        points_data = _analyze_points(has_p, has_h)
+                        points_data = _analyze_points(
+                            has_p,
+                            has_h,
+                            is_turbine_point_cloud=is_tpc_dims,
+                        )
                         pts.append(points_data["up"][..., 0])
                         pts.append(points_data["up"][..., 1])
                         if points_data["up"].shape[-1] >= 3:
