@@ -31,8 +31,9 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: env MYPY_CACHE_DIR=/tmp/mypy_cache uv run mypy --no-incremental --ignore-missing-imports --follow-imports=silent
+        entry: uv run mypy --cache-dir=/tmp/mypy_cache --no-incremental --ignore-missing-imports --follow-imports=silent
         language: system
+        pass_filenames: false
         files: ^foxes/.*\.py$
         exclude: ^foxes/(tests?/|notebooks?/)
 
