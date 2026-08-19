@@ -19,6 +19,9 @@ pre-commit:
     refs:
       - main
       - dev
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends git
   script:
     - uv sync --extra test
     - uv run pre-commit run --all-files
