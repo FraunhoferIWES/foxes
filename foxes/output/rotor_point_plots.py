@@ -1,12 +1,22 @@
+# mypy: disable-error-code=arg-type
+
+from __future__ import annotations
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colormaps
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from typing import TYPE_CHECKING, Any
 
 from foxes.input.states import SingleStateStates
 from foxes.core import WindFarm
 from foxes.algorithms import Downwind
 
 from .output import Output
+
+if TYPE_CHECKING:
+    from foxes.core import Algorithm, RotorModel
 
 
 class RotorPointPlot(Output):
@@ -15,26 +25,27 @@ class RotorPointPlot(Output):
 
     Attributes
     ----------
-    rotor_model: foxes.core.RotorModel
+    rotor_model
         The rotor model
-    algo: foxes.core.Algorithm, optional
+    algo
         The algorithm
 
-    :group: output
 
     """
 
-    def __init__(self, rotor_model, algo=None, **kwargs):
+    def __init__(
+        self, rotor_model: RotorModel, algo: Algorithm | None = None, **kwargs: Any
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        rotor_model: foxes.core.RotorModel
+        rotor_model
             The rotor model
-        algo: foxes.core.Algorithm, optional
+        algo
             The algorithm
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -49,31 +60,34 @@ class RotorPointPlot(Output):
 
     def get_point_figure(
         self,
-        ax=None,
-        fig=None,
-        figsize=(5, 5),
-        title=None,
-        **kwargs,
-    ):
+        ax: Axes | None = None,
+        fig: Figure | None = None,
+        figsize: tuple[int, int] = (5, 5),
+        title: str | None = None,
+        cmap: str = "viridis_r",
+        **kwargs: Any,
+    ) -> Any:
         """
         Get a scatter plot of the rotor points.
 
         Parameters
         ----------
-        ax: matplotlib.Axes, optional
+        ax
             The plot axes
-        fig: matplotlib.Figure, optional
+        fig
             The figure object
-        figsize: tuple
+        figsize
             The default figure size
-        title: str, optional
+        title
             The plot title
-        kwargs: dict, optional
+        cmap
+            The colormap name
+        kwargs
             Additional arguments for pyplot.scatter
 
         Returns
         -------
-        ax: matplotlib.Axes
+        ax
             The plot axes
 
         """
@@ -92,10 +106,10 @@ class RotorPointPlot(Output):
         points = self.rotor_model.design_points()
         weights = self.rotor_model.rotor_point_weights() * 100
 
-        cmap = colormaps[kwargs.pop("cmap", "viridis_r")]
+        cmap_obj = colormaps[cmap]
         wlist = np.sort(np.unique(weights))
 
-        im = ax.scatter(points[:, 1], points[:, 2], c=weights, cmap=cmap, **kwargs)
+        im = ax.scatter(points[:, 1], points[:, 2], c=weights, cmap=cmap_obj, **kwargs)
         ax.add_patch(plt.Circle((0, 0), 1, color="black", fill=False, alpha=0.8))
 
         ax.set_xlabel("x/D")

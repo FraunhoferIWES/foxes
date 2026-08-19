@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import Model
 
 
 class CrespoHernandezTIWake(TopHatWakeModel):
@@ -23,78 +31,77 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     Attributes
     ----------
-    a_near: float
+    a_near
         Model parameter
-    a_far: float
+    a_far
         Model parameter
-    e1: float
+    e1
         Model parameter
-    e2: float
+    e2
         Model parameter
-    e3: float
+    e3
         Model parameter
-    use_ambti: bool
+    use_ambti
         Flag for using ambient TI instead of local
         wake corrected TI
-    sbeta_factor: float
+    sbeta_factor
         Factor multiplying sbeta
-    near_wake_D: float
+    near_wake_D
         The near wake distance in units of D,
         calculated from TI and ct if None
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
 
-    :group: models.wake_models.ti
 
     """
 
     def __init__(
         self,
-        superposition,
-        use_ambti=False,
-        sbeta_factor=0.25,
-        near_wake_D=None,
-        a_near=0.362,
-        a_far=0.73,
-        e1=0.83,
-        e2=-0.0325,
-        e3=-0.32,
-        induction="Betz",
-        **wake_k,
-    ):
+        superposition: str,
+        use_ambti: bool = False,
+        sbeta_factor: float = 0.25,
+        near_wake_D: float | None = None,
+        a_near: float = 0.362,
+        a_far: float = 0.73,
+        e1: float = 0.83,
+        e2: float = -0.0325,
+        e3: float = -0.32,
+        induction: str = "Betz",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The TI wake superposition.
-        k: float, optional
+        k
             The wake growth parameter k. If not given here
             it will be searched in the farm data.
-        use_ambti: bool
+        use_ambti
             Flag for using ambient TI instead of local
             wake corrected TI
-        sbeta_factor: float
+        sbeta_factor
             Factor multiplying sbeta
-        near_wake_D: float, optional
+        near_wake_D
             The near wake distance in units of D,
             calculated from TI and ct if not given here
-        a_near: float
+        a_near
             Model parameter
-        a_far: float
+        a_far
             Model parameter
-        e1: float
+        e1
             Model parameter
-        e2: float
+        e2
             Model parameter
-        e3: float
+        e3
             Model parameter
-        k_var: str
+        k_var
             The variable name for k
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
@@ -112,7 +119,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         self.near_wake_D = near_wake_D
         self.wake_k = WakeK(**wake_k)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -121,36 +128,38 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         s += self.wake_k.repr() + ")"
         return s
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
         return super().sub_models() + [self.wake_k]
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
@@ -159,41 +168,43 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     def calc_wake_radius(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        ct: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the wake radius, depending on x only (not r).
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        ct: numpy.ndarray
+        ct
             The ct values of the wake-causing turbines,
             shape: (n_states, n_targets)
 
         Returns
         -------
-        wake_r: numpy.ndarray
+        wake_r
             The wake radii, shape: (n_states, n_targets)
 
         """
+        assert not isinstance(self.induction, str)
+
         # get D:
         D = self.get_data(
             FV.D,
@@ -225,84 +236,90 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     def calc_centreline(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        x,
-        wake_r,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        x: np.ndarray,
+        wake_r: np.ndarray,
+        ct: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Calculate centre line results of wake deltas.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
-        x: numpy.ndarray
+        x
             The x values, shape: (n_st_sel,)
-        wake_r: numpy.ndarray
+        wake_r
             The wake radii, shape: (n_st_sel,)
-        ct: numpy.ndarray
+        ct
             The ct values of the wake-causing turbines,
             shape: (n_st_sel,)
 
         Returns
         -------
-        cl_del: dict
+        cl_del
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_st_sel,)
+            varlue
 
         """
+        assert not isinstance(self.induction, str)
+
         # prepare:
         n_targts = np.sum(st_sel)
         TI = FV.AMB_TI if self.use_ambti else FV.TI
 
         # get D:
-        D = self.get_data(
-            FV.D,
-            FC.STATE_TARGET,
-            lookup="w",
-            algo=algo,
-            fdata=fdata,
-            tdata=tdata,
-            downwind_index=downwind_index,
-            upcast=False,
-            selection=st_sel,
+        D = np.asarray(
+            self.get_data(
+                FV.D,
+                FC.STATE_TARGET,
+                lookup="w",
+                algo=algo,
+                fdata=fdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
+                upcast=False,
+                selection=st_sel,
+            )
         )
 
         # get TI:
-        ti = self.get_data(
-            TI,
-            FC.STATE_TARGET,
-            lookup="w",
-            algo=algo,
-            fdata=fdata,
-            tdata=tdata,
-            downwind_index=downwind_index,
-            upcast=False,
-            selection=st_sel,
+        ti = np.asarray(
+            self.get_data(
+                TI,
+                FC.STATE_TARGET,
+                lookup="w",
+                algo=algo,
+                fdata=fdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
+                upcast=False,
+                selection=st_sel,
+            )
         )
 
         # avoid zero ti values:
         ti = np.maximum(ti, 1e-10)
 
         # calculate induction factor:
-        twoa = 2 * self.induction.ct2a(ct)
+        twoa = np.asarray(2 * self.induction.ct2a(ct))
 
         # prepare output:
         wake_deltas = np.zeros(n_targts, dtype=config.dtype_double)
@@ -316,7 +333,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
                 * twoa ** (1 - self.e1)
             ) ** (1 / self.e3)
         else:
-            near_wake_D = self.near_wake_D
+            near_wake_D = np.full_like(x, self.near_wake_D, dtype=config.dtype_double)
 
         # calc near wake:
         sel = x < near_wake_D * D

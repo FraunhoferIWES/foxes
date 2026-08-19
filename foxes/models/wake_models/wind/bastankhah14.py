@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeK
 from foxes.models.wake_models.gaussian import GaussianWakeModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData, Model
 
 
 class Bastankhah2014(GaussianWakeModel):
@@ -20,43 +28,42 @@ class Bastankhah2014(GaussianWakeModel):
 
     Attributes
     ----------
-    sbeta_factor: float
+    sbeta_factor
         Factor multiplying sbeta, only relevant if sbeta is not set
-    sbeta: float
+    sbeta
         If set, sbeta is fixed to this value, otherwise it
         is calculated from axial induction
-    induction: foxes.core.AxialInductionModel
+    induction
         The axial induction model
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
 
-    :group: models.wake_models.wind
 
     """
 
     def __init__(
         self,
-        superposition,
-        sbeta_factor=0.2,
-        sbeta=None,
-        induction="Madsen",
-        **wake_k,
-    ):
+        superposition: str,
+        sbeta_factor: float = 0.2,
+        sbeta: float | None = None,
+        induction: str = "Madsen",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind speed deficit superposition.
-        sbeta_factor: float
+        sbeta_factor
             Factor multiplying sbeta, only relevant if sbeta is not set
-        sbeta: float, optional
+        sbeta
             If set, sbeta is fixed to this value, otherwise it
             is calculated from axial induction
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The axial induction model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
@@ -66,7 +73,7 @@ class Bastankhah2014(GaussianWakeModel):
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -76,51 +83,60 @@ class Bastankhah2014(GaussianWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
-        return super().sub_models() + [self.wake_k, self.induction]
+        smdls = super().sub_models() + [self.wake_k]
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -135,42 +151,44 @@ class Bastankhah2014(GaussianWakeModel):
 
     def calc_amplitude_sigma(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> tuple[dict[str, tuple[np.ndarray, np.ndarray]], np.ndarray]:
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
 
         Returns
         -------
-        amsi: tuple
-            The amplitude and sigma, both numpy.ndarray
+        amsi
+            The amplitude and sigma arrays
             with shape (n_st_sel,)
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
         """
+        assert not isinstance(self.induction, str)
+
         # get ct:
         ct = self.get_data(
             FV.CT,

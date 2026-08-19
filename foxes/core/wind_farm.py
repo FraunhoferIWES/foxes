@@ -1,4 +1,9 @@
+from __future__ import annotations
+
+from pathlib import Path
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
 from foxes.utils import get_utm_zone, from_lonlat, to_lonlat
@@ -7,6 +12,12 @@ from foxes.utils.geojson_utils import (
     normalize_areas_input,
 )
 
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.farm_controller import FarmController
+    from foxes.core.turbine import Turbine
+    from foxes.utils.geom2d.area_geometry import AreaGeometry
+
 
 class WindFarm:
     """
@@ -14,92 +25,88 @@ class WindFarm:
 
     Attributes
     ----------
-    name: str
+    name
         The wind farm name
-    turbines: list of foxes.core.Turbine
+    turbines
         The wind turbines
-    boundary: foxes.utils.geom2d.AreaGeometry, optional
+    boundary
         The wind farm boundary
 
-    :group: core
 
     """
 
     def __init__(
         self,
-        name="wind_farm",
-        boundary=None,
-        input_is_lonlat=False,
-        utm_zone=None,
-    ):
+        name: str = "wind_farm",
+        boundary: AreaGeometry | None = None,
+        input_is_lonlat: bool = False,
+        utm_zone: str | tuple[int, str] | tuple[float, float] | None = None,
+    ) -> None:
         """
-        Constructor.
+        Construct the wind farm.
 
         Parameters
         ----------
-        name: str
-            The wind farm name
-        boundary: foxes.utils.geom2d.AreaGeometry, optional
-            The wind farm boundary
-        input_is_lonlat: bool, optional
-            Whether the input coordinates are given in lon, lat. If True,
-            the coordinates are converted to UTM as specified by the
-            utm_zone parameter.
-        utm_zone: str or tuple, optional
-            Method for setting UTM zone in config, if not already set.
-            Options are:
-            - "from_turbine_X": use turbine X coordinates
-            - "from_farm": use farm center coordinates
-            - "XA": use given number X, letter A
-            - (lon, lat): use given lon, lat values
-            - None: do not set UTM zone, assume it is already set
+        name
+            The wind farm name.
+        boundary
+            The wind farm boundary.
+        input_is_lonlat
+            Whether the input coordinates are given as lon/lat. If True, the
+            coordinates are converted to UTM as specified by the utm_zone
+            parameter.
+        utm_zone
+            Method for setting the UTM zone in the config if it is not already
+            set. Supported options include values such as "from_turbine_X",
+            "from_farm", "XA", a (lon, lat) tuple, or None.
 
         """
         self.name = name
-        self.__turbines = []
+        self.__turbines: list[Turbine] = []
         self.boundary = boundary
 
         self.__data_is_lonlat = input_is_lonlat
         self.__utm_zone = utm_zone
         self.__locked = False
-        self.__cluster_areas = None
-        self.__lonlat = None
+        self.__cluster_areas: dict[str, AreaGeometry] | None = None
+        self.__lonlat: np.ndarray | None = None
 
     @property
-    def data_is_lonlat(self):
+    def data_is_lonlat(self) -> bool:
         """
-        Whether the input coordinates are given in lat, lon.
+        Return whether input coordinates are given as latitude/longitude.
 
         Returns
         -------
-        data_is_lonlat: bool
-            True if the input coordinates are given in lat, lon
+        data_is_lonlat
+            ``True`` if the input coordinates are given in latitude/longitude.
 
         """
         return self.__data_is_lonlat
 
     @property
-    def locked(self):
+    def locked(self) -> bool:
         """
-        Whether the wind farm is locked (no more turbines can be added)
+        Return whether the wind farm is locked.
 
         Returns
         -------
-        locked: bool
-            True if the wind farm is locked
+        locked
+            ``True`` if the wind farm is locked and no more turbines may be
+            added.
 
         """
         return self.__locked
 
     @property
-    def turbines(self):
+    def turbines(self) -> list[Turbine]:
         """
-        The list of wind turbines
+        Return the list of wind turbines.
 
         Returns
         -------
-        turbines: list of foxes.core.Turbine
-            The wind turbines
+        turbines
+            The wind turbines.
 
         """
         if not self.__locked:
@@ -108,6 +115,7 @@ class WindFarm:
                 self.__lonlat = np.zeros(
                     (self.n_turbines, 2), dtype=config.dtype_double
                 )
+                assert self.__lonlat is not None
                 for i, t in enumerate(self.__turbines):
                     self.__lonlat[i, :] = t.xy
                 if not config.utm_zone_set and self.__utm_zone is None:
@@ -165,14 +173,14 @@ class WindFarm:
 
         return self.__turbines
 
-    def lock(self, verbosity=1):
+    def lock(self, verbosity: int = 1) -> None:
         """
-        Lock the wind farm (no more turbines can be added)
+        Lock the wind farm so no more turbines can be added.
 
         Parameters
         ----------
-        verbosity: int
-            The output verbosity, 0 = silent
+        verbosity
+            The output verbosity; ``0`` is silent.
 
         """
         self.turbines
@@ -190,16 +198,20 @@ class WindFarm:
             else:
                 print(f"WindFarm '{self.name}': locked with {self.n_turbines} turbines")
 
-    def reset_turbines(self, algo, turbines=None):
+    def reset_turbines(
+        self,
+        algo: Algorithm,
+        turbines: list[Turbine] | None = None,
+    ) -> None:
         """
         Reset the wind farm turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The algorithm
-        turbines: list of foxes.core.Turbine, optional
-            The new list of turbines. If None, the turbine list is cleared.
+        algo
+            The algorithm.
+        turbines
+            The new turbine collection. If None, the turbine collection is cleared.
 
         """
         assert not algo.initialized, (
@@ -212,16 +224,16 @@ class WindFarm:
             self.__turbines = turbines
         algo.update_n_turbines()
 
-    def add_turbine(self, turbine, verbosity=1):
+    def add_turbine(self, turbine: Turbine, verbosity: int = 1) -> None:
         """
         Add a wind turbine to the list.
 
         Parameters
         ----------
-        turbine: foxes.core.Turbine
-            The wind turbine
-        verbosity: int
-            The output verbosity, 0 = silent
+        turbine
+            The wind turbine.
+        verbosity
+            The output verbosity; ``0`` is silent.
 
         """
         assert not self.__locked, (
@@ -256,26 +268,26 @@ class WindFarm:
                 )
 
     @property
-    def lonlat(self):
+    def lonlat(self) -> np.ndarray | None:
         """
         The lon, lat coordinates of the turbines, if input_is_lonlat was True.
 
         Returns
         -------
-        lonlat: numpy.ndarray or None
+        lonlat
             The lon, lat coordinates of the turbines, shape: (n_turbines, 2), or None if input_is_lonlat was False
 
         """
         self.turbines
         return self.__lonlat
 
-    def has_lonlat(self):
+    def has_lonlat(self) -> bool:
         """
         Check if lon-lat coordinates are available
 
         Returns
         -------
-        has_lonlat: bool
+        has_lonlat
             True if lon-lat coordinates are available, False otherwise
 
         """
@@ -283,39 +295,46 @@ class WindFarm:
 
     def map_turbines_to_areas(
         self,
-        areas,
-        set_cluster=True,
-        geojson_name_key="name",
-    ):
+        areas: (
+            dict[str, AreaGeometry]
+            | list[AreaGeometry]
+            | list[tuple[str, AreaGeometry]]
+            | str
+            | Path
+            | dict[str, Any]
+        ),
+        set_cluster: bool = True,
+        geojson_name_key: str | list[str] = "name",
+    ) -> dict[str, list[int]]:
         """
         Maps turbines to areas.
 
         Parameters
         ----------
-        areas: list or str or pathlib.Path or dict
+        areas
             The areas to map turbines to. Accepted forms are:
-            - list of AreaGeometry objects
-            - list of (name, AreaGeometry) tuples for named areas
-            - dict mapping names to AreaGeometry objects
+            - area geometry objects
+            - (name, area geometry) pairs for named areas
+            - a mapping of names to area geometry objects
             - path to GeoJSON file
-            - GeoJSON dictionary
-        set_cluster: bool
+            - GeoJSON object
+        set_cluster
             If True, set each mapped turbine's cluster_name to
             the mapped area name.
-        geojson_name_key: str or list of str
+        geojson_name_key
             Preferred GeoJSON feature property key(s) used
             to read area names from GeoJSON inputs.
 
         Returns
         -------
-        mapping: dict
+        mapping
             A dictionary, where keys are area names and values are
             lists of turbine indices belonging to that area.
 
         """
         area_map = normalize_areas_input(areas, geojson_name_key)
 
-        mapping = {name: [] for name in area_map}
+        mapping: dict[str, list[int]] = {name: [] for name in area_map}
         for i, t in enumerate(self.__turbines):
             for name, area in area_map.items():
                 if area_contains_point(area, t.xy):
@@ -333,13 +352,13 @@ class WindFarm:
         return mapping
 
     @property
-    def cluster_areas(self):
+    def cluster_areas(self) -> dict[str, AreaGeometry] | None:
         """
         The cluster areas, if set by map_turbines_to_areas.
 
         Returns
         -------
-        cluster_areas: dict or None
+        cluster_areas
             The mapping from cluster names to AreaGeometry objects, or
             None if not set
 
@@ -347,13 +366,13 @@ class WindFarm:
         return self.__cluster_areas
 
     @property
-    def utm_zone(self):
+    def utm_zone(self) -> str | None:
         """
         The UTM zone of the wind farm, if set.
 
         Returns
         -------
-        utm_zone: str or None
+        utm_zone
             The UTM zone as a string, or None if not set
 
         """
@@ -362,52 +381,54 @@ class WindFarm:
         )
 
     @property
-    def n_turbines(self):
+    def n_turbines(self) -> int:
         """
         The number of turbines in the wind farm
 
         Returns
         -------
-        n_turbines: int
+        n_turbines
             The total number of turbines
 
         """
         return len(self.__turbines)
 
     @property
-    def turbine_names(self):
+    def turbine_names(self) -> list[str]:
         """
         The list of names of all turbines
 
         Returns
         -------
-        names: list of str
+        names
             The names of all turbines
 
         """
-        return [t.name for t in self.__turbines]
+        return [
+            t.name if t.name is not None else f"T{t.index}" for t in self.__turbines
+        ]
 
     @property
-    def xy_array(self):
+    def xy_array(self) -> np.ndarray:
         """
         Returns an array of the wind farm ground points
 
         Returns
         -------
-        xya: numpy.ndarray
+        xya
             The turbine ground positions, shape: (n_turbines, 2)
 
         """
         return np.array([t.xy for t in self.__turbines], dtype=config.dtype_double)
 
     @property
-    def wind_farm_names(self):
+    def wind_farm_names(self) -> list[str] | None:
         """
         The list of wind farm names for all turbines
 
         Returns
         -------
-        names: list of str
+        names
             The wind farm names for all turbines
 
         """
@@ -421,18 +442,18 @@ class WindFarm:
         )
         return fnames if fnames != [None] else None
 
-    def get_wind_farm_mapping(self):
+    def get_wind_farm_mapping(self) -> dict[str, list[int]]:
         """
         Returns a mapping from wind farm names to turbine indices
 
         Returns
         -------
-        mapping: dict
+        mapping
             A dictionary, where keys are wind farm names and
             values are lists of turbine indices belonging to that wind farm
 
         """
-        mapping = {}
+        mapping: dict[str, list[int]] = {}
         for i, t in enumerate(self.__turbines):
             wf_name = t.wind_farm_name if t.wind_farm_name is not None else self.name
             if wf_name not in mapping:
@@ -441,14 +462,14 @@ class WindFarm:
         return mapping
 
     @property
-    def wind_farm_list(self):
+    def wind_farm_list(self) -> list[str]:
         """
         Returns a list of wind farm names for all turbines
 
         Returns
         -------
-        wf_list: list of str
-            A list of wind farm names for all turbines
+        wf_list
+            Wind farm names assigned to all turbines
 
         """
         return [
@@ -457,13 +478,13 @@ class WindFarm:
         ]
 
     @property
-    def cluster_names(self):
+    def cluster_names(self) -> list[str | None] | None:
         """
         The list of cluster names for all turbines
 
         Returns
         -------
-        names: list of str
+        names
             The cluster names for all turbines
 
         """
@@ -477,18 +498,18 @@ class WindFarm:
         )
         return clusters if clusters != [None] else None
 
-    def get_cluster_mapping(self):
+    def get_cluster_mapping(self) -> dict[str | None, list[int]] | None:
         """
         Returns a mapping from cluster names to turbine indices
 
         Returns
         -------
-        mapping: dict
+        mapping
             A dictionary, where keys are cluster names and
             values are lists of turbine indices belonging to that cluster
 
         """
-        mapping = {}
+        mapping: dict[str | None, list[int]] = {}
         for i, t in enumerate(self.__turbines):
             cluster_name = t.cluster_name if t.cluster_name is not None else None
             if cluster_name not in mapping:
@@ -497,14 +518,14 @@ class WindFarm:
         return mapping if list(mapping.keys()) != [None] else None
 
     @property
-    def cluster_list(self):
+    def cluster_list(self) -> list[str | None]:
         """
         Returns a list of cluster names for all turbines
 
         Returns
         -------
-        cluster_list: list of str
-            A list of cluster names for all turbines
+        cluster_list
+            Cluster names assigned to all turbines
 
         """
         return [
@@ -512,27 +533,33 @@ class WindFarm:
             for t in self.__turbines
         ]
 
-    def get_xy_bounds(self, extra_space=None, algo=None, lonlat=False, sample_dx=10.0):
+    def get_xy_bounds(
+        self,
+        extra_space: float | str | None = None,
+        algo: Algorithm | None = None,
+        lonlat: bool = False,
+        sample_dx: float = 10.0,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Returns min max points of the wind farm ground points
 
         Parameters
         ----------
-        extra_space: float or str, optional
+        extra_space
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        algo: foxes.core.Algorithm, optional
+        algo
             The algorithm
-        lonlat: bool
+        lonlat
             Whether to return the points in lon, lat coordinates
-        sample_dx: float
+        sample_dx
             The sampling distance in m for boundary conversion to lonlat
 
         Returns
         -------
-        x_mima: numpy.ndarray
+        x_mima
             The (x_min, x_max) point
-        y_mima: numpy.ndarray
+        y_mima
             The (y_min, y_max) point
 
         """
@@ -542,6 +569,7 @@ class WindFarm:
             xy = self.xy_array
 
         if extra_space is not None:
+            extra_space_value: float | np.ndarray
             if isinstance(extra_space, str):
                 assert algo is not None, (
                     f"WindFarm: require algo argument for extra_space '{extra_space}'"
@@ -549,14 +577,18 @@ class WindFarm:
                 assert len(extra_space) > 1 and extra_space[-1] == "D", (
                     f"Expecting float or str like '2.5D', got extra_space = '{extra_space}'"
                 )
-                extra_space = float(extra_space[:-1])
+                extra_space_value = float(extra_space[:-1])
                 rds = self.get_rotor_diameters(algo)
                 if self.boundary is not None:
-                    extra_space *= np.max(rds)
+                    extra_space_value *= np.max(rds)
                 else:
-                    extra_space *= rds[:, None]
+                    extra_space_value = extra_space_value * rds[:, None]
+            else:
+                extra_space_value = float(extra_space)
 
-            xy = np.concatenate((xy - extra_space, xy + extra_space), axis=0)
+            xy = np.concatenate(
+                (xy - extra_space_value, xy + extra_space_value), axis=0
+            )
 
         p_min = np.min(xy, axis=0)
         p_max = np.max(xy, axis=0)
@@ -581,66 +613,77 @@ class WindFarm:
 
         return p_min, p_max
 
-    def get_rotor_diameters(self, algo):
+    def get_rotor_diameters(self, algo: Algorithm) -> np.ndarray:
         """
         Gets the rotor diameters
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm
 
         Returns
         -------
-        rds: numpy.ndarray
+        rds
             The rotor diameters, shape: (n_turbienes,)
 
         """
+        farm_controller = self._get_farm_controller(algo)
+        ttypes = farm_controller.turbine_types
+        assert ttypes is not None, (
+            f"WindFarm '{self.name}': turbine types not set in farm controller {farm_controller.name}"
+        )
         rds = [
-            t.D if t.D is not None else algo.farm_controller.turbine_types[i].D
+            t.D if t.D is not None else ttypes[i].D
             for i, t in enumerate(self.__turbines)
         ]
         return np.array(rds, dtype=config.dtype_double)
 
-    def get_hub_heights(self, algo):
+    def get_hub_heights(self, algo: Algorithm) -> np.ndarray:
         """
         Gets the hub heights
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm
 
         Returns
         -------
-        hhs: numpy.ndarray
+        hhs
             The hub heights, shape: (n_turbines,)
 
         """
+        farm_controller = self._get_farm_controller(algo)
+        ttypes = farm_controller.turbine_types
+        assert ttypes is not None, (
+            f"WindFarm '{self.name}': turbine types not set in farm controller {farm_controller.name}"
+        )
         hhs = [
-            t.H if t.H is not None else algo.farm_controller.turbine_types[i].H
+            t.H if t.H is not None else ttypes[i].H
             for i, t in enumerate(self.__turbines)
         ]
         return np.array(hhs, dtype=config.dtype_double)
 
-    def get_capacity(self, algo):
+    def get_capacity(self, algo: Algorithm) -> float:
         """
         Gets the total capacity of the wind farm
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm
 
         Returns
         -------
-        capa: float
+        capa
             The total capacity in W
 
         """
-        ttypes = algo.farm_controller.turbine_types
+        farm_controller = self._get_farm_controller(algo)
+        ttypes = farm_controller.turbine_types
         assert ttypes is not None, (
-            f"WindFarm '{self.name}': turbine types not set in farm controller {algo.farm_controller.name}"
+            f"WindFarm '{self.name}': turbine types not set in farm controller {farm_controller.name}"
         )
 
         cap = 0.0
@@ -651,27 +694,30 @@ class WindFarm:
             cap += tt.P_nominal
         return cap
 
-    def get_capacity_array(self, algo):
+    def get_capacity_array(self, algo: Algorithm) -> np.ndarray:
         """
         Gets the capacity array for all turbines (nominal power)
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm
 
         Returns
         -------
-        capacity_array: numpy.ndarray
+        capacity_array
             The capacity array (nominal power) for all turbines, shape: (n_turbines,)
 
         """
-        ttypes = algo.farm_controller.turbine_types
+        farm_controller = self._get_farm_controller(algo)
+        ttypes = farm_controller.turbine_types
         assert ttypes is not None, (
-            f"WindFarm '{self.name}': turbine types not set in farm controller {algo.farm_controller.name}"
+            f"WindFarm '{self.name}': turbine types not set in farm controller {farm_controller.name}"
         )
 
-        capacity_array = np.zeros(self.n_turbines, dtype=config.dtype_double)
+        capacity_array: np.ndarray = np.zeros(
+            self.n_turbines, dtype=config.dtype_double
+        )
         for i, t in enumerate(self.__turbines):
             tt = ttypes[i]
             assert tt.P_nominal is not None, (
@@ -679,3 +725,6 @@ class WindFarm:
             )
             capacity_array[i] = tt.P_nominal
         return capacity_array
+
+    def _get_farm_controller(self, algo: Algorithm) -> FarmController:
+        return algo.farm_controller

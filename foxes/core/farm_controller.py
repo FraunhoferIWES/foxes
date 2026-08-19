@@ -1,4 +1,8 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.config import config
 import foxes.constants as FC
@@ -8,6 +12,11 @@ from .farm_data_model import FarmDataModelList, FarmDataModel
 from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
 
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
+
 
 class FarmController(FarmDataModel):
     """
@@ -15,50 +24,51 @@ class FarmController(FarmDataModel):
 
     Attributes
     ----------
-    turbine_types: list of foxes.core.TurbineType
+    turbine_types
         The turbine type of each turbine
-    turbine_model_names: list of str
+    turbine_model_names
         Names of all turbine models found in the farm
-    pre_rotor_models: foxes.core.FarmDataModelList
+    pre_rotor_models
         The turbine models with pre-rotor flag
-    post_rotor_models: foxes.core.FarmDataModelList
+    post_rotor_models
         The turbine models without pre-rotor flag
-    pars: dict
+    pars
         Parameters for the turbine models, stored
         under their respecitve name
 
-    :group: core
 
     """
 
-    def __init__(self, pars={}):
+    def __init__(
+        self, pars: dict[str, dict[str, dict[str, Any]]] | None = None
+    ) -> None:
         """
-        Constructor.
+        Construct the farm controller.
 
         Parameters
         ----------
-        pars: dict
-            Parameters for the turbine models, stored
-            under their respective name
+        pars
+            Parameters for the turbine models, stored under their respective
+            names.
 
         """
         super().__init__()
 
-        self.turbine_types = None
-        self.turbine_model_names = None
-        self.pre_rotor_models = None
-        self.post_rotor_models = None
-        self.pars = pars
-        self._tmall = None
-        self._tmsels = None
+        self.turbine_types: list[TurbineType] | None = None
+        self.turbine_model_names: list[str] | None = None
+        self.pre_rotor_models: FarmDataModelList | None = None
+        self.post_rotor_models: FarmDataModelList | None = None
+        self.pars = {} if pars is None else pars
+        self._tmall: list[bool] | None = None
+        self._tmsels: dict[int, np.ndarray] | None = None
 
-    def sub_models(self):
+    def sub_models(self) -> list[FarmDataModelList | None]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
@@ -67,20 +77,26 @@ class FarmController(FarmDataModel):
             self.post_rotor_models,
         ]
 
-    def set_pars(self, model_name, init_pars, calc_pars, final_pars):
+    def set_pars(
+        self,
+        model_name: str,
+        init_pars: dict[str, Any],
+        calc_pars: dict[str, Any],
+        final_pars: dict[str, Any],
+    ) -> None:
         """
-        Set parameters for a turbine model
+        Set parameters for a turbine model.
 
         Parameters
         ----------
-        model_name: str
-            Name of the model
-        init_pars: dict
-            Parameters for initialization
-        calc_pars: dict
-            Parameters for calculation
-        final_pars: dict
-            Parameters for finalization
+        model_name
+            Name of the model.
+        init_pars
+            Parameters for initialization.
+        calc_pars
+            Parameters for calculation.
+        final_pars
+            Parameters for finalization.
 
         """
         self.pars[model_name] = {
@@ -89,44 +105,51 @@ class FarmController(FarmDataModel):
             "final": final_pars,
         }
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
         Returns
         -------
-        flag: bool
+        needs_rews2
             True if REWS2 is required
 
         """
+        assert self.turbine_types is not None
         for tt in self.turbine_types:
             if tt.needs_rews2():
                 return True
         return False
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
         Returns
         -------
-        flag: bool
+        needs_rews3
             True if REWS3 is required
 
         """
+        assert self.turbine_types is not None
         for tt in self.turbine_types:
             if tt.needs_rews3():
                 return True
         return False
 
-    def _analyze_models(self, algo, pre_rotor, models):
+    def _analyze_models(
+        self,
+        algo: Algorithm,
+        pre_rotor: bool,
+        models: list[list[Any]],
+    ) -> tuple[list[str], list[np.ndarray]]:
         """
         Helper function for model analysis
         """
-        tmodels = []
-        tmsels = []
-        mnames = [[m.name for m in mlist] for mlist in models]
-        tmis = np.zeros(algo.n_turbines, dtype=config.dtype_int)
+        tmodels: list[FarmDataModel] = []
+        tmsels: list[np.ndarray] = []
+        mnames: list[list[str]] = [[m.name for m in mlist] for mlist in models]
+        tmis: np.ndarray = np.zeros(algo.n_turbines, dtype=config.dtype_int)
         news = True
         while news:
             news = False
@@ -149,7 +172,9 @@ class FarmController(FarmDataModel):
                         m = models[ti][tmis[ti]]
                         tmodels.append(m)
 
-                        tsel = np.zeros((algo.n_states, algo.n_turbines), dtype=bool)
+                        tsel: np.ndarray = np.zeros(
+                            (algo.n_states, algo.n_turbines), dtype=bool
+                        )
                         for tj, jnames in enumerate(mnames):
                             mi = tmis[tj]
                             if mi < len(jnames) and jnames[mi] == mname:
@@ -178,31 +203,32 @@ class FarmController(FarmDataModel):
 
         return [m.name for m in tmodels], tmsels
 
-    def _tmodel_sels_var(self, mi):
+    def _tmodel_sels_var(self, mi: int) -> str:
         """
         Gets the mdata variable name of turbine model selections.
 
         Parameters
         ----------
-        mi: int
+        mi
             The turbine model index
 
         Returns
         -------
-        str:
+        model_selection_variable
             The per-model selection variable name
 
         """
+        assert self.turbine_model_names is not None
         return self.var("tsel_" + self.turbine_model_names[mi])
 
     @property
-    def has_pre_rotor_models(self):
+    def has_pre_rotor_models(self) -> bool:
         """
         Flag for having pre-rotor models
 
         Returns
         -------
-        flag: bool
+        has_pre_rotor_models
             True if pre-rotor models are present
 
         """
@@ -211,13 +237,13 @@ class FarmController(FarmDataModel):
         )
 
     @property
-    def has_post_rotor_models(self):
+    def has_post_rotor_models(self) -> bool:
         """
         Flag for having post-rotor models
 
         Returns
         -------
-        flag: bool
+        has_post_rotor_models
             True if post-rotor models are present
 
         """
@@ -226,19 +252,19 @@ class FarmController(FarmDataModel):
             and len(self.post_rotor_models.models) > 0
         )
 
-    def find_turbine_types(self, algo):
+    def find_turbine_types(self, algo: Algorithm) -> None:
         """
-        Collects the turbine types.
+        Collect the turbine types.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The algorithm
+        algo
+            The algorithm.
 
         """
 
         # check turbine models, and find turbine types and pre/post-rotor models:
-        self.turbine_types = [None for t in algo.farm.turbines]
+        turbine_types: list[TurbineType | None] = [None for t in algo.farm.turbines]
         for ti, t in enumerate(algo.farm.turbines):
             for mname in t.models:
                 if mname in algo.mbook.turbine_types:
@@ -247,27 +273,30 @@ class FarmController(FarmDataModel):
                         raise TypeError(
                             f"Model {mname} type {type(m).__name__} is not derived from {TurbineType.__name__}"
                         )
-                    if self.turbine_types[ti] is not None:
+                    if turbine_types[ti] is not None:
+                        prev_tt = turbine_types[ti]
+                        assert prev_tt is not None
                         raise TypeError(
-                            f"Two turbine type models found for turbine {ti}: {self.turbine_types[ti].name} and {mname}"
+                            f"Two turbine type models found for turbine {ti}: {prev_tt.name} and {mname}"
                         )
                     m.name = mname
-                    self.turbine_types[ti] = m
+                    turbine_types[ti] = m
 
-            if self.turbine_types[ti] is None:
+            if turbine_types[ti] is None:
                 raise ValueError(
                     f"Turbine {ti}, {t.name}: Missing a turbine type model among models {t.models}"
                 )
 
-    def collect_models(self, algo):
+        self.turbine_types = cast(list[TurbineType], turbine_types)
+
+    def collect_models(self, algo: Algorithm) -> None:
         """
-        Analyze and gather turbine models, based on the
-        turbines of the wind farm.
+        Analyze and gather turbine models based on the wind farm turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
+        algo
+            The calculation algorithm.
 
         """
 
@@ -275,20 +304,24 @@ class FarmController(FarmDataModel):
             self.find_turbine_types(algo)
 
         # check turbine models, and find turbine types and pre/post-rotor models:
-        prer_models = [[] for t in algo.farm.turbines]
-        postr_models = [[] for t in algo.farm.turbines]
+        prer_models: list[list[TurbineModel]] = [[] for t in algo.farm.turbines]
+        postr_models: list[list[TurbineModel]] = [[] for t in algo.farm.turbines]
+        assert self.turbine_types is not None
         ttypes = {m.name: m for m in self.turbine_types}
-        rotor_inputs = set(algo.rotor_model.input_variables())
+        rotor_model = algo.rotor_model
+        rotor_inputs = set(rotor_model.input_variables())
         for ti, t in enumerate(algo.farm.turbines):
-            mlist = []
+            mlist: list[TurbineModel] = []
             ttp = None
             for mi, mname in enumerate(t.models):
+                models: list[TurbineModel]
                 if mname in ttypes:
                     models = [ttypes[mname]]
                     ttp = mname
                 elif mname in algo.mbook.turbine_models:
                     m = algo.mbook.turbine_models[mname]
-                    models = m.models if isinstance(m, FarmDataModelList) else [m]
+                    models_raw = m.models if isinstance(m, FarmDataModelList) else [m]
+                    models = [cast(TurbineModel, mm) for mm in models_raw]
                     for mm in models:
                         if not isinstance(mm, TurbineModel):
                             raise TypeError(
@@ -329,23 +362,33 @@ class FarmController(FarmDataModel):
             algo, pre_rotor=False, models=postr_models
         )
         tmsels = tmsels_pre + tmsels_post
-        self._tmall = [np.all(t) for t in tmsels]
+        self._tmall = [bool(np.all(t)) for t in tmsels]
         self.turbine_model_names = mnames_pre + mnames_post
         if len(self.turbine_model_names):
             self._tmsels = {mi: t for mi, t in enumerate(tmsels) if not self._tmall[mi]}
         else:
             raise ValueError(f"Controller '{self.name}': No turbine model found.")
 
-    def __get_pars(self, algo, models, ptype, mdata=None, downwind_index=None):
+    def __get_pars(
+        self,
+        algo: Algorithm,
+        models: list[Any],
+        ptype: str,
+        mdata: MData | None = None,
+        downwind_index: int | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Private helper function for gathering model parameters.
         """
         pars = []
+        assert self.turbine_model_names is not None
+        assert self._tmall is not None
         for m in models:
             mi = self.turbine_model_names.index(m.name)
             if self._tmall[mi]:
                 s = np.s_[:, :] if downwind_index is None else np.s_[:, downwind_index]
             else:
+                assert mdata is not None
                 vsel = self._tmodel_sels_var(mi)
                 if downwind_index is None:
                     s = mdata[vsel]
@@ -357,31 +400,33 @@ class FarmController(FarmDataModel):
 
         return pars
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
-        Initializes the model.
+        Initialize the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-        loaded_data: dict
+        algo
+            The calculation algorithm.
+        verbosity
+            The verbosity level, where 0 is silent.
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force: bool
-            Overwrite existing data
+            It contains coordinate data, model variables, and additional data.
+        force
+            Overwrite existing data.
 
         Returns
         -------
-        loaded_data: dict
-            The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
+        loaded_data
+            The loaded data, containing the keys "coords", "data_vars", and
+            "extra_data".
 
         """
         self.collect_models(algo)
@@ -392,34 +437,41 @@ class FarmController(FarmDataModel):
             verbosity=verbosity,
         )
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
-        Load and/or create all model data that is subject to chunking.
+        Load and/or create the model data subject to chunking.
 
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
+        Such data should not be stored under self for memory reasons. The data
+        returned here will automatically be chunked and then provided as part of
+        the mdata object during calculations.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        loaded_data: dict
+        algo
+            The calculation algorithm.
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force: bool
-            Overwrite existing data
-        verbosity: int
-            The verbosity level, 0 = silent
+            It contains coordinate data, model variables, and additional data.
+        force
+            Overwrite existing data.
+        verbosity
+            The verbosity level, where 0 is silent.
 
         """
         if force or FC.TMODELS not in loaded_data["coords"]:
             super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
-            loaded_data["coords"][FC.TMODELS] = self.turbine_model_names
-            for mi, tsel in self._tmsels.items():
+            assert self.turbine_model_names is not None
+            loaded_data["coords"][FC.TMODELS] = np.asarray(
+                self.turbine_model_names, dtype=str
+            )
+            for mi, tsel in (self._tmsels or {}).items():
                 loaded_data["data_vars"][self._tmodel_sels_var(mi)] = (
                     (FC.STATE, FC.TURBINE),
                     tsel,
@@ -427,87 +479,101 @@ class FarmController(FarmDataModel):
             loaded_data["data_vars"].pop(FC.TMODEL_SELS, None)
             self._tmsels = None
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
-        The variables which are being modified by the model.
+        Return the variables modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
+        algo
+            The calculation algorithm.
 
         Returns
         -------
-        output_vars: list of str
-            The output variable names
+        output_vars
+            The output variable names.
 
         """
+        assert self.pre_rotor_models is not None
+        assert self.post_rotor_models is not None
         ovars = set(self.pre_rotor_models.output_farm_vars(algo))
         ovars.update(self.post_rotor_models.output_farm_vars(algo))
 
         return list(ovars)
 
-    def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        pre_rotor: bool,
+        downwind_index: int | None = None,
+    ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
+        Run the main model calculation for a single chunk of data.
 
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        This function is executed on a single chunk of data, and all
+        computations should be based on numpy arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        pre_rotor: bool
-            Flag for running pre-rotor or post-rotor
-            models
-        downwind_index: int, optional
-            The index in the downwind order
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        pre_rotor
+            Flag indicating whether to run pre-rotor or post-rotor models.
+        downwind_index
+            The index in the downwind order.
 
         Returns
         -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+        results
+            The resulting data. Keys are output variable names and values are
+            arrays with shape ``(n_states, n_turbines)``.
 
         """
         s = self.pre_rotor_models if pre_rotor else self.post_rotor_models
+        assert s is not None
         pars = self.__get_pars(algo, s.models, "calc", mdata, downwind_index)
         res = s.calculate(algo, mdata, fdata, parameters=pars)
         return res
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
-        Finalizes the model.
+        Finalize the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 means silent
+        algo
+            The calculation algorithm.
+        verbosity
+            The verbosity level, where 0 is silent.
 
         """
         super().finalize(algo, verbosity)
         self.turbine_model_names = None
 
     @classmethod
-    def new(cls, controller_type, *args, **kwargs):
+    def new(
+        cls,
+        controller_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> FarmController:
         """
-        Run-time farm controller factory.
+        Create a farm controller instance at runtime.
 
         Parameters
         ----------
-        controller_type: str
-            The selected derived class name
-        args: tuple, optional
-            Additional parameters for the constructor
-        kwargs: dict, optional
-            Additional parameters for the constructor
+        controller_type
+            The selected derived class name.
+        args
+            Additional positional arguments for the constructor.
+        kwargs
+            Additional keyword arguments for the constructor.
 
         """
-        return new_instance(cls, controller_type, *args, **kwargs)
+        return cast(FarmController, new_instance(cls, controller_type, *args, **kwargs))

@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
+from typing import Any
 
 from foxes.core import VerticalProfile
 
@@ -11,50 +14,50 @@ class DataProfile(VerticalProfile):
 
     Attributes
     ----------
-    var: float
+    var
         The value
-    data_z: numpy.ndarray
+    data_z
         The z values, shape: (n_z,)
-    data_v: numpy.ndarray
+    data_v
         The variable values, shape: (n_z,)
-    interp_pars: dict
+    interp_pars
         Additional parameters for interpolation
 
-    :group: models.vertical_profiles
 
     """
 
     def __init__(
         self,
-        data_source,
-        variable,
-        col_z=None,
-        col_var=None,
-        pd_read_pars={},
-        **interp_pars,
-    ):
+        data_source: str | np.ndarray | pd.DataFrame,
+        variable: str,
+        col_z: str | int | None = None,
+        col_var: str | int | None = None,
+        pd_read_pars: dict[str, Any] | None = None,
+        **interp_pars: Any,
+    ) -> None:
         """
         Constructor
 
         Parameters
         ----------
-        data_source: str or numpy.ndarray or pandas.DataFrame
+        data_source
             The profile data
-        variable: float
+        variable
             The value
-        col_z: str or int, optional
+        col_z
             The column of z data
-        col_var: str or int, optional
+        col_var
             The column of variable data
-        pd_read_pars: dict
+        pd_read_pars
             Additional parameters for pandas.read_csv()
-        interp_pars: dict, optional
+        interp_pars
             Additional parameters for interpolation
 
         """
         super().__init__()
-        self.var = variable
+        self.variable = variable
         self.interp_pars = interp_pars
+        pd_read_pars = {} if pd_read_pars is None else pd_read_pars
 
         if isinstance(data_source, np.ndarray):
             col_z = col_z if col_z is not None else 0
@@ -78,33 +81,33 @@ class DataProfile(VerticalProfile):
             self.data_z = self.data_z[inds]
             self.data_v = self.data_v[inds]
 
-    def input_vars(self):
+    def input_vars(self) -> list[str]:
         """
         The input variables needed for the profile
         calculation.
 
         Returns
         -------
-        vars: list of str
+        vars
             The variable names
 
         """
         return []
 
-    def calculate(self, data, heights):
+    def calculate(self, data: dict[str, Any], heights: np.ndarray) -> np.ndarray:
         """
         Run the profile calculation.
 
         Parameters
         ----------
-        data: dict
+        data
             The input data
-        heights: numpy.ndarray
+        heights
             The evaluation heights
 
         Returns
         -------
-        results: numpy.ndarray
+        results
             The profile results, same
             shape as heights
 

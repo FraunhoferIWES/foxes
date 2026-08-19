@@ -3,6 +3,7 @@ import argparse
 import matplotlib.pyplot as plt
 from pathlib import Path
 from xarray import open_dataset, Dataset, concat
+from typing import Any, Callable
 
 from foxes.config import config
 from foxes.core import Engine, get_engine
@@ -12,15 +13,15 @@ import foxes.constants as FC
 
 
 def _process_first_file(
-    fpath,
-    cmap,
-    var2ncvar,
-    lon_bounds=None,
-    lat_bounds=None,
-    preprocess=None,
-    points_png=None,
-    verbosity=1,
-):
+    fpath: Path,
+    cmap: dict[str, str],
+    var2ncvar: dict[str, str],
+    lon_bounds: tuple[float, float] | None = None,
+    lat_bounds: tuple[float, float] | None = None,
+    preprocess: Callable[[Dataset], Dataset] | None = None,
+    points_png: Path | None = None,
+    verbosity: int = 1,
+) -> tuple[list[str], dict[str, np.ndarray]]:
     """Process the first file to find variables and dimensions"""
 
     # read file:
@@ -137,16 +138,16 @@ def _process_first_file(
 
 
 def _process_file(
-    fpath,
-    cmap,
-    var2ncvar,
-    drop_vars,
-    points_isel,
-    preprocess=None,
-    check_nan=True,
-    max_ti=1.0,
-    verbosity=0,
-):
+    fpath: Path,
+    cmap: dict[str, str],
+    var2ncvar: dict[str, str],
+    drop_vars: list[str],
+    points_isel: dict[str, np.ndarray],
+    preprocess: Callable[[Dataset], Dataset] | None = None,
+    check_nan: bool = True,
+    max_ti: float = 1.0,
+    verbosity: int = 0,
+) -> tuple[Dataset, str]:
     """Process a single file"""
     # prepare:
     cs = cmap[FC.STATE]
@@ -187,37 +188,37 @@ def _process_file(
     # extract data:
     ocmap = {FC.STATE: "Time", FV.LAT: FV.LAT, FV.LON: FV.LON}
     crds = {ocmap[c]: era5_data.coords[nc].values for c, nc in cmap.items()}
-    data = []
+    data_arrays: list[np.ndarray] = []
     for w in var2ncvar.values():
         assert era5_data[w].dims == (cs, clat, clon), (
             f"Expected dimensions ({cs}, {clat}, {clon}) for variable {w}, found {era5_data[w].dims}"
         )
-        data.append(era5_data[w].values)
+        data_arrays.append(era5_data[w].values)
 
     # compute air density:
-    data.append(calc_era5_density(era5_data, z=100.0, var2ncvar=var2ncvar))
+    data_arrays.append(calc_era5_density(era5_data, z=100.0, var2ncvar=var2ncvar))
     vrs = list(var2ncvar.keys()) + [FV.RHO]
     for v in [c_msl, c_t2m, c_d2m]:
         if v in vrs:
             i = vrs.index(v)
-            data.pop(i)
+            data_arrays.pop(i)
             vrs.pop(i)
 
     # compute ti:
     ws = np.sqrt(era5_data[c_u].values ** 2 + era5_data[c_v].values ** 2)
     ustar = era5_data[c_zust].values
-    data.append(ustar2ti(ustar, ws, max_ti=max_ti))
+    data_arrays.append(ustar2ti(ustar, ws, max_ti=max_ti))
     vrs.append(FV.TI)
     if c_zust in vrs:
         i = vrs.index(c_zust)
-        data.pop(i)
+        data_arrays.pop(i)
         vrs.pop(i)
     del era5_data, ws, ustar
 
     # check for nan values:
     if check_nan:
         for i, w in enumerate(vrs):
-            n_nan = np.sum(np.isnan(data[i]))
+            n_nan = np.sum(np.isnan(data_arrays[i]))
             if n_nan > 0:
                 raise ValueError(
                     f"{fpath.name}: Found {n_nan} NaN values in variable {w}"
@@ -226,7 +227,9 @@ def _process_file(
     # create Dataset:
     data = Dataset(
         coords=crds,
-        data_vars={v: (tuple(ocmap.values()), data[i]) for i, v in enumerate(vrs)},
+        data_vars={
+            v: (tuple(ocmap.values()), data_arrays[i]) for i, v in enumerate(vrs)
+        },
         attrs={
             "source_file": fpath.name,
             f"height_{FV.U}": 100.0,
@@ -237,61 +240,67 @@ def _process_file(
     return data, f"{year:04d}{month:02d}"
 
 
-def _write_file(data, fpath, write_pars=None, verbosity=0):
+def _write_file(
+    data: Dataset,
+    fpath: Path,
+    write_pars: dict[str, Any] | None = None,
+    verbosity: int = 0,
+) -> None:
     """Write the processed data to a NetCDF file"""
-    wpars = dict(pack=True)
+    wpars: dict[str, Any] = dict(pack=True)
     if write_pars is not None:
         wpars.update(write_pars)
     write_nc(data, fpath, verbosity=verbosity, **wpars)
 
 
 def era52foxes(
-    source_files,
-    out_dir,
-    cmap=None,
-    var2ncvar=None,
-    lon_bounds=None,
-    lat_bounds=None,
-    preprocess=None,
-    write_points_png=False,
-    check_nan=False,
-    write_pars=None,
-    max_ti=1.0,
-    verbosity=1,
-):
+    source_files: str | Path,
+    out_dir: str | Path,
+    cmap: dict[str, str] | None = None,
+    var2ncvar: dict[str, str] | None = None,
+    lon_bounds: tuple[float, float] | None = None,
+    lat_bounds: tuple[float, float] | None = None,
+    preprocess: Callable[[Dataset], Dataset] | None = None,
+    write_points_png: bool = False,
+    check_nan: bool = False,
+    write_pars: dict[str, Any] | None = None,
+    max_ti: float = 1.0,
+    verbosity: int = 1,
+) -> None:
     """
     Convert ERA5 NetCDF files to the foxes format expected by
     the FieldData states class.
 
     Parameters
     ----------
-    source_files : str
+    source_files
         Source files to process, either a single file or a glob pattern.
-    out_dir : str
+    out_dir
         Output directory for resulting NetCDF files.
-    cmap: dict, optional
+    cmap
         Mapping from foxes dimension name to ERA5 dimension name
-    var2ncvar: dict, optional
+    var2ncvar
         Mapping from foxes variable to ERA5 variable name
-    lon_bounds: tuple, optional
+    lon_bounds
         The longitude bounds (min, max) to subset the data, in degrees
-    lat_bounds: tuple, optional
+    lat_bounds
         The latitude bounds (min, max) to subset the data, in degrees
-    preprocess: function, optional
+    preprocess
         A function that takes the opened ERA5 dataset and returns a modified dataset,
-    write_points_png: bool, optional
+    write_points_png
         Whether to save a plot of the grid points
-    write_pars: dict, optional
+    write_pars
         Parameters for writing the NetCDF file, e.g. pack
-    max_ti: float, optional
+    max_ti
         The maximum turbulence intensity (TI) value to compute
-    verbosity : int, optional
+    verbosity
         The verbosity level, 0 = silent, by default 1
 
     """
 
     # prepare:
     engine = get_engine()
+    assert engine is not None
     source_files = Path(source_files)
     out_dir = Path(out_dir).expanduser()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -387,7 +396,7 @@ def era52foxes(
                 print(f"Progress: {proc}% ({done}/{total} files processed)")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "source_files",

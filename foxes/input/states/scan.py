@@ -1,6 +1,10 @@
-import numpy as np
+from __future__ import annotations
 
-from foxes.core import States
+import numpy as np
+from numpy.typing import ArrayLike
+from typing import cast
+
+from foxes.core import Algorithm, FData, LoadedData, MData, States, TData
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -12,31 +16,36 @@ class ScanStates(States):
 
     Parameters
     ----------
-    scans: dict
+    scans
         The scans, key: variable name,
         value: scan values
 
-    :group: input.states
 
     """
 
-    def __init__(self, scans, **kwargs):
+    def __init__(self, scans: dict[str, ArrayLike], **kwargs: object) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        scans: dict
+        scans
             The scans, key: variable name,
             value: scan values
-        kwargs: dict, optional
+        kwargs
             Parameters for the base class
 
         """
-        super().__init__(**kwargs)
+        super().__init__(**kwargs)  # type: ignore[arg-type]
         self.scans = {v: np.asarray(d) for v, d in scans.items()}
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -46,46 +55,44 @@ class ScanStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force: bool
+            It contains coordinate data, model variables, and additional data.
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
         n_v = len(self.scans)
-        shp = [len(v) for v in self.scans.values()]
-        self._N = np.prod(shp)
+        shp: list[int] = [len(v) for v in self.scans.values()]
+        self._N = int(np.prod(shp))
         self._vars = list(self.scans.keys())
 
-        data = np.zeros(shp + [n_v], dtype=config.dtype_double)
+        data: np.ndarray = np.zeros(tuple(shp + [n_v]), dtype=config.dtype_double)
         for i, d in enumerate(self.scans.values()):
-            s = [None] * n_v
-            s[i] = np.s_[:]
-            s = tuple(s)
-            data[..., i] = d[s]
+            s: list[slice | None] = [None] * n_v
+            s[i] = slice(None)
+            st = tuple(s)
+            data[..., i] = d[st]
         data = data.reshape(self._N, n_v)
 
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
-        loaded_data["coords"][self.VARS] = self._vars
+        loaded_data["coords"][self.VARS] = np.asarray(self._vars, dtype=str)
         loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -95,17 +102,16 @@ class ScanStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict, optional
-            Large data stash, this function adds data here, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            Large data stash. This function adds data here if given.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level, 0 = silent.
 
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
@@ -116,38 +122,37 @@ class ScanStates(States):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict, optional
-            Reconstruct model data from this stash, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            Reconstruct model data from this stash if given.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level, 0 = silent.
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
         if data_stash is not None:
             data = data_stash[self.name]
-            self.scans = data.pop("scans")
+            self.scans = cast(dict[str, np.ndarray], data.pop("scans"))
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -159,24 +164,26 @@ class ScanStates(States):
         """
         return self._N
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return self._vars
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(  # type: ignore[override]
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -185,20 +192,20 @@ class ScanStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """

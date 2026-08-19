@@ -1,4 +1,7 @@
 from abc import abstractmethod
+from typing import Any, cast
+
+import numpy as np
 
 from foxes.utils import new_instance
 from .model import Model
@@ -8,41 +11,47 @@ class AxialInductionModel(Model):
     """
     Abstract base class for axial induction models
 
-    :group: core
 
     """
 
     @abstractmethod
-    def ct2a(self, ct):
+    def ct2a(self, ct: np.ndarray | float) -> np.ndarray | float:
         """
-        Computes induction from ct
+        Compute induction from the thrust coefficient.
 
         Parameters
         ----------
-        ct: numpy.ndarray or float
-            The ct values
+        ct
+            The thrust coefficient values.
 
         Returns
         -------
-        ct: numpy.ndarray or float
-            The induction values
+        ct
+            The induction values.
 
         """
         pass
 
     @classmethod
-    def new(cls, induction_type, *args, **kwargs):
+    def new(
+        cls,
+        induction_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> "AxialInductionModel":
         """
-        Run-time axial induction model factory.
+        Create an axial induction model instance at runtime.
 
         Parameters
         ----------
-        induction_type: str
-            The selected derived class name
-        args: tuple, optional
-            Additional parameters for the constructor
-        kwargs: dict, optional
-            Additional parameters for the constructor
+        induction_type
+            The selected derived class name.
+        args
+            Additional positional arguments for the constructor.
+        kwargs
+            Additional keyword arguments for the constructor.
 
         """
-        return new_instance(cls, induction_type, *args, **kwargs)
+        return cast(
+            AxialInductionModel, new_instance(cls, induction_type, *args, **kwargs)
+        )

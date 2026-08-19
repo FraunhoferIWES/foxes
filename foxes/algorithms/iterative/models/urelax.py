@@ -1,4 +1,14 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
+from typing import TYPE_CHECKING, Any
+import numpy as np
+
 from foxes.core import FarmDataModel
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class URelax(FarmDataModel):
@@ -8,21 +18,20 @@ class URelax(FarmDataModel):
 
     Attributes
     ----------
-    urel: dict
+    urel
         The variables and their under-relaxation
         factors between 0 and 1
 
-    :group: algorithms.iterative.models
 
     """
 
-    def __init__(self, **urel):
+    def __init__(self, **urel: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        urel: dict
+        urel
             The variables and their under-relaxation
             factors between 0 and 1
 
@@ -31,24 +40,30 @@ class URelax(FarmDataModel):
         self.urel = urel
         self.name += "_" + "_".join(list(urel.keys()))
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return list(self.urel.keys())
 
-    def calculate(self, algo, mdata, fdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        res: dict[str, np.ndarray] | None = None,
+    ) -> dict[str, Any]:
         """
         The main model calculation.
 
@@ -57,30 +72,33 @@ class URelax(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
-        i0 = fdata.states_i0(counter=True, algo=algo)
+        i0 = fdata.states_i0(counter=True)
+        assert i0 is not None
+        assert fdata.n_states is not None
         i1 = i0 + fdata.n_states
         pres = algo.prev_farm_results
 
+        cur = fdata if res is None else res
         out = {}
         for v, u in self.urel.items():
             if u > 0 and pres is not None:
                 odata = pres[v].to_numpy()[i0:i1]
-                out[v] = u * odata + (1 - u) * fdata[v]
+                out[v] = u * odata + (1 - u) * cur[v]
             else:
-                out[v] = fdata[v]
+                out[v] = cur[v]
 
         return out

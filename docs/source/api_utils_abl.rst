@@ -1,19 +1,12 @@
-foxes.utils.abl.neutral
------------------------
+foxes.utils.abl
+===============
+Atmospheric boundary layer utilities.
 
-    .. python-apigen-group:: utils.abl.neutral
+.. toctree::
+    :maxdepth: 2
 
-foxes.utils.abl.stable
-----------------------
-
-    .. python-apigen-group:: utils.abl.stable
-
-foxes.utils.abl.unstable
-------------------------
-
-    .. python-apigen-group:: utils.abl.unstable
-
-foxes.utils.abl.sheared
------------------------
-
-    .. python-apigen-group:: utils.abl.sheared
+    autoapi/foxes/utils/abl/index
+    autoapi/foxes/utils/abl/neutral/index
+    autoapi/foxes/utils/abl/stable/index
+    autoapi/foxes/utils/abl/unstable/index
+    autoapi/foxes/utils/abl/sheared/index

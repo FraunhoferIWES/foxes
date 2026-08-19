@@ -1,12 +1,12 @@
 import numpy as np
 from numbers import Number
+from typing import Any
 
 import foxes.variables as FV
 import foxes.constants as FC
 
 
 """ Mapping from windio to foxes variables
-:group: input.yaml.windio
 """
 wio2foxes = {
     "time": FC.TIME,
@@ -29,25 +29,24 @@ wio2foxes = {
 }
 
 """ Mapping from foxes to windio variables
-:group: input.yaml.windio
 """
 foxes2wio = {d: k for k, d in wio2foxes.items()}
 
 
-def _read_nondimensional_coordinate(name, wio_data, coords):
-    """read nondimensional coordinate
-    :group: input.yaml.windio
-    """
+def _read_nondimensional_coordinate(
+    name: str, wio_data: Any, coords: dict[str, Any]
+) -> bool:
+    """read nondimensional coordinate"""
     if isinstance(wio_data, Number):
         coords[wio2foxes[name]] = wio_data
         return True
     return False
 
 
-def _read_dimensional_coordinate(name, wio_data, coords):
-    """read dimensional coordinate
-    :group: input.yaml.windio
-    """
+def _read_dimensional_coordinate(
+    name: str, wio_data: Any, coords: dict[str, Any]
+) -> bool:
+    """read dimensional coordinate"""
     if isinstance(wio_data, list):
         wio_data = np.array(wio_data)
     if isinstance(wio_data, np.ndarray) and len(wio_data.shape) == 1:
@@ -56,19 +55,22 @@ def _read_dimensional_coordinate(name, wio_data, coords):
     return False
 
 
-def _read_multi_dimensional_coordinate(name, wio_data, coords):
-    """Read multi dimensional coordinate
-    :group: input.yaml.windio
-    """
+def _read_multi_dimensional_coordinate(
+    name: str, wio_data: Any, coords: dict[str, Any]
+) -> bool:
+    """Read multi dimensional coordinate"""
     return _read_nondimensional_coordinate(
         name, wio_data, coords
     ) or _read_dimensional_coordinate(name, wio_data, coords)
 
 
-def _read_nondimensional_data(name, wio_data, fields, dims):
-    """read nondimensional data
-    :group: input.yaml.windio
-    """
+def _read_nondimensional_data(
+    name: str,
+    wio_data: Any,
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+) -> bool:
+    """read nondimensional data"""
     if isinstance(wio_data, Number):
         v = wio2foxes[name]
         fields[v] = wio_data
@@ -77,10 +79,13 @@ def _read_nondimensional_data(name, wio_data, fields, dims):
     return False
 
 
-def _read_dimensional_data(name, wio_data, fields, dims):
-    """read dimensional data
-    :group: input.yaml.windio
-    """
+def _read_dimensional_data(
+    name: str,
+    wio_data: Any,
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+) -> bool:
+    """read dimensional data"""
     if isinstance(wio_data, dict) and "data" in wio_data and "dims" in wio_data:
         d = wio_data["data"]
         v = wio2foxes[name]
@@ -94,47 +99,49 @@ def _read_dimensional_data(name, wio_data, fields, dims):
     return False
 
 
-def _read_multi_dimensional_data(name, wio_data, fields, dims):
-    """Read multi dimensional data
-    :group: input.yaml.windio
-    """
+def _read_multi_dimensional_data(
+    name: str,
+    wio_data: Any,
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+) -> bool:
+    """Read multi dimensional data"""
     return _read_nondimensional_data(
         name, wio_data, fields, dims
     ) or _read_dimensional_data(name, wio_data, fields, dims)
 
 
 def read_wind_resource_field(
-    name,
-    wio_data,
-    coords,
-    fields,
-    dims,
-    verbosity,
-):
+    name: str,
+    wio_data: Any,
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    verbosity: int,
+) -> bool:
     """
     Reads wind resource data into fields and dims
 
     Parameters
     ----------
-    name: str
+    name
         The windio variable name
-    wio_data: object
+    wio_data
         The windio data
-    coords: dict
+    coords
         The coordinates dict, filled on the fly
-    fields: dict
+    fields
         The fields dict, filled on the fly
-    dims: dict
+    dims
         The dimensions dict, filled on the fly
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     Returns
     -------
-    success: bool
+    success
         Flag for successful data extraction
 
-    :group: input.yaml.windio
 
     """
     if name in [

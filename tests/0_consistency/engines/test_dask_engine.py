@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.core import MData
+from foxes.core import MData, FData
 from foxes.engines.dask import DaskProcessRunner, LocalClusterEngine
 
 
@@ -19,9 +19,9 @@ class _DummyAlgo:
 
 
 class _DummyModel:
-    def calculate(self, algo, mdata, payload, **cpars):
+    def calculate(self, algo, mdata, fdata, tdata=None, **cpars):
         assert isinstance(mdata["A"], np.ndarray)
-        assert isinstance(payload["nested"][0], np.ndarray)
+        assert isinstance(fdata.extra_data["payload"]["nested"][0], np.ndarray)
         assert isinstance(cpars["vector"], np.ndarray)
         return {"out": np.array([mdata["A"].sum()], dtype=np.float64)}
 
@@ -112,13 +112,17 @@ def test_dask_runner_resolves_nested_future_payloads():
         name="chunk",
     )
     mdata["A"] = _FakeFuture(np.arange(8, dtype=np.float64))
-    payload = {"nested": [_FakeFuture(np.arange(5, dtype=np.float64))]}
+    fdata = FData.from_sizes(8, 1)
+    fdata.extra_data = {
+        "payload": {"nested": [_FakeFuture(np.arange(5, dtype=np.float64))]}
+    }
 
     results, cstore = runner.run(
         _DummyAlgo(),
         _DummyModel(),
         mdata,
-        payload,
+        fdata,
+        None,
         shared=None,
         chunk_store={},
         chunk_key=(0, 0),

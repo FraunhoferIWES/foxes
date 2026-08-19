@@ -1,11 +1,20 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
 import xarray as xr
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
 from foxes.config import config, get_input_path
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class LookupTable(TurbineModel):
@@ -15,52 +24,51 @@ class LookupTable(TurbineModel):
 
     Attributes
     ----------
-    data_source: str or pandas.DataFrame
+    data_source
         The lookup-table data
-    input_vars: list of str
+    input_vars
         The foxes input variables
-    output_vars: list of str
+    output_vars
         The foxes output variables
-    varmap: dict
+    varmap
         Mapping from foxes variable names
         to column names in the data_source
 
-    :group: models.turbine_models
 
     """
 
     def __init__(
         self,
-        data_source,
-        input_vars,
-        output_vars,
-        varmap={},
-        pd_file_read_pars={},
-        xr_interp_args={},
-        interpn_args={},
-        **kwargs,
-    ):
+        data_source: str | pd.DataFrame,
+        input_vars: list[str],
+        output_vars: list[str],
+        varmap: dict[str, str] = {},
+        pd_file_read_pars: dict[str, Any] = {},
+        xr_interp_args: dict[str, Any] = {},
+        interpn_args: dict[str, Any] = {},
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str or pandas.DataFrame
+        data_source
             The lookup-table data
-        input_vars: list of str
+        input_vars
             The foxes input variables
-        output_vars: list of str
+        output_vars
             The foxes output variables
-        varmap: dict
+        varmap
             Mapping from foxes variable names
             to column names in the data_source
-        pd_file_read_pars: dict
+        pd_file_read_pars
             Parameters for pandas file reading
-        xr_interp_args: dict
+        xr_interp_args
             Parameters for xarray interpolation method
-        interpn_args: dict
+        interpn_args
             Parameters for scipy intern or interp1d
-        kwargs: dict, optional
+        kwargs
             Additional parameters, added as default
             values if not in data
 
@@ -75,7 +83,7 @@ class LookupTable(TurbineModel):
         self._rpars = pd_file_read_pars
         self._xargs = xr_interp_args
         self._iargs = interpn_args
-        self._data = None
+        self._data: xr.Dataset | None = None
 
         for v, d in kwargs.items():
             if v not in input_vars:
@@ -84,24 +92,30 @@ class LookupTable(TurbineModel):
                 )
             setattr(self, v, d)
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return self.output_vars
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -111,16 +125,16 @@ class LookupTable(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -139,7 +153,7 @@ class LookupTable(TurbineModel):
                 data = data.rename(columns={c: v for v, c in self.varmap.items()})
             data = data[self.input_vars + self.output_vars]
             data.sort_values(by=self.input_vars, inplace=True)
-            coords = {
+            coords: dict[str, np.ndarray] = {
                 v: np.asarray(data[v].unique(), dtype=config.dtype_double)
                 for v in self.input_vars
             }
@@ -162,7 +176,13 @@ class LookupTable(TurbineModel):
 
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -171,24 +191,38 @@ class LookupTable(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel: slice or array of bool
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)
+        table = self._data
+        assert table is not None, "Lookup table data not initialized"
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        assert n_states is not None and n_turbines is not None
+        sel_data: np.ndarray | None
+        if isinstance(st_sel, slice) and st_sel == slice(None):
+            sel_data = None
+        elif isinstance(st_sel, slice):
+            sel_arr = np.zeros((n_states, n_turbines), dtype=np.bool_)
+            sel_arr[st_sel] = True
+            sel_data = sel_arr
+        else:
+            sel_data = st_sel
 
         data = {
             v: self.get_data(
@@ -197,7 +231,7 @@ class LookupTable(TurbineModel):
                 lookup="fs",
                 fdata=fdata,
                 upcast=False,
-                selection=st_sel,
+                selection=sel_data,
             )
             for v in self.input_vars
         }
@@ -218,14 +252,17 @@ class LookupTable(TurbineModel):
         iargs = dict(bounds_error=True)
         iargs.update(self._iargs)
         try:
-            odata = self._data.interp(**indata, kwargs=iargs, **self._xargs)
+            table_any: Any = table
+            odata = cast(
+                xr.Dataset, table_any.interp(**indata, kwargs=iargs, **self._xargs)
+            )
         except ValueError as e:
             print("\nBOUNDS ERROR", self.name)
             print("Variables:", list(indata.keys()))
             print(
                 "DATA min/max:",
-                [float(np.min(self._data[v].to_numpy())) for v in indata.keys()],
-                [float(np.max(self._data[v].to_numpy())) for v in indata.keys()],
+                [float(np.min(table[v].to_numpy())) for v in indata.keys()],
+                [float(np.max(table[v].to_numpy())) for v in indata.keys()],
             )
             print(
                 "EVAL min/max:",
@@ -240,6 +277,6 @@ class LookupTable(TurbineModel):
         out = {}
         for v in self.output_vars:
             out[v] = fdata[v]
-            out[v][st_sel] = odata[v]
+            out[v][st_sel] = odata[v].to_numpy()
 
         return out

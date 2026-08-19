@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, cast
 
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 from foxes.utils.two_circles import calc_area
@@ -6,6 +9,13 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 from .centre import PartialCentre
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData, Model
+    from foxes.core.wake_model import WakeModel
+    from foxes.core.rotor_model import RotorModel
 
 
 class PartialTopHat(PartialCentre):
@@ -17,27 +27,26 @@ class PartialTopHat(PartialCentre):
 
     Attributes
     ----------
-    rotor_model: foxes.core.RotorModel
+    rotor_model
         The rotor model, default is the one from the algorithm
 
-    :group: models.partial_wakes
 
     """
 
-    def check_wmodel(self, wmodel, error=True):
+    def check_wmodel(self, wmodel: WakeModel, error: bool = True) -> bool:
         """
         Checks the wake model type
 
         Parameters
         ----------
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model to be tested
-        error: bool
+        error
             Flag for raising TypeError
 
         Returns
         -------
-        chk: bool
+        chk
             True if wake model is compatible
 
         """
@@ -49,40 +58,46 @@ class PartialTopHat(PartialCentre):
             return False
         return True
 
-    def __init__(self, rotor_model=None):
+    def __init__(self, rotor_model: RotorModel | None = None) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        rotor_model: foxes.core.RotorModel, optional
+        rotor_model
             The rotor model, default is the one from the algorithm
 
         """
         super().__init__()
         self.rotor_model = rotor_model
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -101,52 +116,56 @@ class PartialTopHat(PartialCentre):
         self.WCOOS_R = self.var("WCOOS_R")
         return loaded_data
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
-        return super().sub_models() + [self.rotor_model]
+        smdls = super().sub_models()
+        if self.rotor_model is not None:
+            smdls.append(self.rotor_model)
+        return smdls
 
     def contribute(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            value
             (n_states, n_targets, n_tpoints, ...)
 
         """
         self.check_wmodel(wmodel, error=True)
+        wmodel = cast(TopHatWakeModel, wmodel)
 
         wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         x = wcoos[:, :, 0, 0]
@@ -203,18 +222,20 @@ class PartialTopHat(PartialCentre):
                     assert wmodel.has_vector_wind_superp, (
                         f"{self.name}: Expecting vector wind superposition in wake model '{wmodel.name}', got '{wmodel.wind_superposition}'"
                     )
+                    vec_superp = wmodel.vec_superp
+                    assert vec_superp is not None
                     if FV.UV in clw:
                         duv = clw.pop(FV.UV)
                     else:
                         clwe = {v: d[:, None] for v, d in clw.items()}
-                        wmodel.vec_superp.wdeltas_ws2uv(
+                        vec_superp.wdeltas_ws2uv(
                             algo, fdata, tdata, downwind_index, clwe, st_sel
                         )
                         duv = np.einsum("sd,s->sd", clwe.pop(FV.UV)[:, 0], weights)
                         del clwe, clw[FV.WS]
                         if FV.WD in clw:
                             del clw[FV.WD]
-                    wake_deltas[FV.UV] = wmodel.vec_superp.add_wake_vector(
+                    wake_deltas[FV.UV] = vec_superp.add_wake_vector(
                         algo,
                         mdata,
                         fdata,

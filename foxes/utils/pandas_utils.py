@@ -2,6 +2,7 @@ import pandas as pd
 from pathlib import Path
 import xarray
 from copy import deepcopy
+from typing import Any
 
 import foxes.variables as FV
 
@@ -13,22 +14,21 @@ class PandasFileHelper:
 
     Attributes
     ----------
-    DEFAULT_READING_PARAMETERS: dict
+    DEFAULT_READING_PARAMETERS
         Default parameters for file reading
         for the supported file formats
-    DEFAULT_WRITING_PARAMETERS: dict
+    DEFAULT_WRITING_PARAMETERS
         Default parameters for file writing
         for the supported file formats
-    DATA_FILE_FORMAT: list:str
+    DATA_FILE_FORMAT
         The supported file formats for data export
-    DEFAULT_FORMAT_DICT: dict
+    DEFAULT_FORMAT_DICT
         Default column formatting
 
-    :group: utils
 
     """
 
-    DEFAULT_READING_PARAMETERS = {
+    DEFAULT_READING_PARAMETERS: dict[str, dict[str, Any]] = {
         "csv": {},
         "csv.gz": {},
         "csv.bz2": {},
@@ -79,13 +79,13 @@ class PandasFileHelper:
     DATA_FILE_FORMATS = list(DEFAULT_READING_PARAMETERS.keys())
 
     @classmethod
-    def read_file(cls, file_path, **kwargs):
+    def read_file(cls, file_path: str | Path, **kwargs: Any) -> pd.DataFrame:
         """
         Helper for reading data according to file ending.
 
         Parameters
         ----------
-        file_path: str
+        file_path
             The path to the file
         **kwargs: dict, optional
             Parameters forwarded to the pandas reading method.
@@ -107,7 +107,7 @@ class PandasFileHelper:
                     f = pd.read_hdf
                 elif fmt == "nc":
 
-                    def f(fname, **pars):
+                    def f(fname: str | Path, **pars: Any) -> pd.DataFrame:
                         """little helper to read netcdf files"""
                         return xarray.open_dataset(fname, **pars).to_dataframe()
 
@@ -121,17 +121,23 @@ class PandasFileHelper:
         )
 
     @classmethod
-    def write_file(cls, data, file_path, format_dict={}, **kwargs):
+    def write_file(
+        cls,
+        data: pd.DataFrame,
+        file_path: str | Path,
+        format_dict: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Helper for writing data according to file ending.
 
         Parameters
         ----------
-        data: pandas.DataFrame
+        data
             The data
-        file_path: str
+        file_path
             The path to the file
-        format_dict: dict
+        format_dict
             Dictionary with format entries for
             columns, e.g. '{:.4f}'
         **kwargs: dict, optional
@@ -140,7 +146,7 @@ class PandasFileHelper:
         """
 
         fdict = deepcopy(cls.DEFAULT_FORMAT_DICT)
-        fdict.update(format_dict)
+        fdict.update({} if format_dict is None else format_dict)
 
         out = pd.DataFrame(index=data.index, columns=data.columns)
         for c in data.columns:

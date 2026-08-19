@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core.wake_deflection import WakeDeflection
 from foxes.algorithms import Sequential
 import foxes.constants as FC
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class JimenezDeflection(WakeDeflection):
@@ -19,32 +26,36 @@ class JimenezDeflection(WakeDeflection):
 
     Attributes
     ----------
-    rotate: bool
+    rotate
         If True, rotate local wind vector at evaluation points.
         If False, multiply wind speed with cos(angle) instead.
         If None, do not modify the wind vector, only the path.
-    beta: float
+    beta
         The beta coefficient of the Jimenez model
-    step_x: float
+    step_x
         The x step in m for integration
 
-    :group: models.wake_deflections
 
     """
 
-    def __init__(self, rotate=True, beta=0.1, step_x=10.0):
+    def __init__(
+        self,
+        rotate: bool | None = True,
+        beta: float = 0.1,
+        step_x: float = 10.0,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        rotate: bool, optional
+        rotate
             If True, rotate local wind vector at evaluation points.
             If False, multiply wind speed with cos(angle) instead.
             If None, do not modify the wind vector, only the path.
-        beta: float
+        beta
             The beta coefficient of the Jimenez model
-        step_x: float
+        step_x
             The x step in m for integration
 
         """
@@ -53,20 +64,20 @@ class JimenezDeflection(WakeDeflection):
         self.beta = beta
         self.step_x = step_x
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = f"{type(self).__name__}("
         s += f"rotate={self.rotate}, beta={self.beta}, step_x={self.step_x}"
         s += ")"
         return s
 
     @property
-    def has_uv(self):
+    def has_uv(self) -> bool:
         """
         This model uses wind vector data
 
         Returns
         -------
-        hasuv: bool
+        has_uv
             Flag for wind vector data
 
         """
@@ -74,13 +85,13 @@ class JimenezDeflection(WakeDeflection):
 
     def calc_deflection(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        coos,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        coos: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculates the wake deflection.
 
@@ -89,24 +100,24 @@ class JimenezDeflection(WakeDeflection):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         Returns
         -------
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
@@ -206,13 +217,13 @@ class JimenezDeflection(WakeDeflection):
 
     def get_yaw_alpha_seq(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Computes sequential wind vector rotation angles.
 
@@ -222,25 +233,25 @@ class JimenezDeflection(WakeDeflection):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        x: numpy.ndarray
+        x
             The distance from the wake causing rotor
             for the first n_times subsequent time steps,
             shape: (n_times,)
 
         Returns
         -------
-        alpha: numpy.ndarray
+        alpha
             The delta WD result at the x locations,
             shape: (n_times,)
 
@@ -251,7 +262,7 @@ class JimenezDeflection(WakeDeflection):
 
         n_times = len(x)
 
-        def _get_data(var):
+        def _get_data(var: str) -> np.ndarray:
             data = algo.farm_results_downwind[var].to_numpy()[:n_times, downwind_index]
             data[-1] = fdata[var][0, downwind_index]
             return data

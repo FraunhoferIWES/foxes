@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import RotorModel
 from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 from foxes.config import config
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class CentreRotor(RotorModel):
@@ -13,35 +20,34 @@ class CentreRotor(RotorModel):
     Evaluates states at a single point, located
     at the rotor centre.
 
-    :group: models.rotor_models
 
     """
 
-    def input_variables(self):
+    def input_variables(self) -> list[str]:
         """
         The input variables which are required by the model.
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
         return [FV.TXYH]
 
-    def n_rotor_points(self):
+    def n_rotor_points(self) -> int:
         """
         The number of rotor points
 
         Returns
         -------
-        n_rpoints: int
+        n_rpoints
             The number of rotor points
 
         """
         return 1
 
-    def design_points(self):
+    def design_points(self) -> np.ndarray:
         """
         The rotor model design points.
 
@@ -54,41 +60,43 @@ class CentreRotor(RotorModel):
 
         Returns
         -------
-        dpoints: numpy.ndarray
+        dpoints
             The design points, shape: (n_points, 3)
 
         """
         return np.array([[0.0, 0.0, 0.0]])
 
-    def rotor_point_weights(self):
+    def rotor_point_weights(self) -> np.ndarray:
         """
         The weights of the rotor points
 
         Returns
         -------
-        weights: numpy.ndarray
+        weights
             The weights of the rotor points,
             add to one, shape: (n_rpoints,)
 
         """
         return np.array([1.0])
 
-    def get_rotor_points(self, algo, mdata, fdata):
+    def get_rotor_points(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> np.ndarray:
         """
         Calculates rotor points from design points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        points: numpy.ndarray
+        points
             The rotor points, shape:
             (n_states, n_turbines, n_rpoints, 3)
 
@@ -97,15 +105,15 @@ class CentreRotor(RotorModel):
 
     def eval_rpoint_results(
         self,
-        algo,
-        mdata,
-        fdata,
-        rpoint_results,
-        rpoint_weights,
-        downwind_index=None,
-        copy_to_ambient=False,
-        set_wd=False,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        rpoint_weights: np.ndarray,
+        downwind_index: int | None = None,
+        copy_to_ambient: bool = False,
+        set_wd: bool = False,
+    ) -> None:
         """
         Evaluate rotor point results.
 
@@ -117,31 +125,35 @@ class CentreRotor(RotorModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        rpoint_results: dict
+        rpoint_results
             The results at rotor points. Keys: variable str.
-            Values: numpy.ndarray, shape if `states_turbine`
+            Values
             is None: (n_states, n_turbines, n_rpoints).
             Else: (n_states, 1, n_rpoints)
-        weights: numpy.ndarray
+        weights
             The rotor point weights, shape: (n_rpoints,)
-        downwind_index: int, optional
+        downwind_index
             The index in the downwind order
-        copy_to_ambient: bool
+        copy_to_ambient
             If `True`, the fdata results are copied to ambient
             variables after calculation
-        set_wd: bool
+        set_wd
             If `True`, the wind direction is updated
 
         """
+        if self.calc_vars is None:
+            self.output_farm_vars(algo)
+        assert self.calc_vars is not None
+
         if len(rpoint_weights) > 1:
             return super().eval_rpoint_results(
-                algo, mdata, fdata, rpoint_results, rpoint_weights, downwind_index
+                algo, mdata, fdata, tdata, rpoint_weights, downwind_index
             )
 
         n_states = mdata.n_states
@@ -161,8 +173,8 @@ class CentreRotor(RotorModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-            wd = rpoint_results[FV.WD]
-            ws = rpoint_results[FV.WS]
+            wd = tdata[FV.WD]
+            ws = tdata[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
             uv = uvp[:, :, 0]
 
@@ -174,6 +186,7 @@ class CentreRotor(RotorModel):
 
             if (set_wd and v == FV.WD) or v == FV.YAW:
                 if wd is None:
+                    assert uv is not None
                     wd = uv2wd(uv, axis=-1)
                 self._set_res(fdata, v, wd, downwind_index)
                 vdone.append(v)
@@ -194,6 +207,7 @@ class CentreRotor(RotorModel):
             else:
                 yaw = fdata[FV.YAW][:, downwind_index, None]
             nax = wd2uv(yaw, axis=-1)
+            assert uvp is not None
             wsp = np.einsum("stpd,std->stp", uvp, nax)
 
             for v in self.calc_vars:
@@ -213,7 +227,7 @@ class CentreRotor(RotorModel):
                     or downwind_index is None
                     or downwind_index == 0
                 ):
-                    res = rpoint_results[v][:, :, 0]
+                    res = tdata[v][:, :, 0]
                     self._set_res(fdata, v, res, downwind_index)
                     del res
                 if copy_to_ambient and v in FV.var2amb:

@@ -1,13 +1,19 @@
+from __future__ import annotations
+
 import numpy as np
 from xarray import Dataset
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
 from foxes.core import Engine
 import foxes.constants as FC
 
+if TYPE_CHECKING:
+    from foxes.core import Algorithm, DataCalcModel, MData
 
-def _run_map(func, inputs, *args, **kwargs):
+
+def _run_map(func: Any, inputs: Any, *args: Any, **kwargs: Any) -> list[Any]:
     """Helper function for running map func on proc"""
     return [func(x, *args, **kwargs) for x in inputs]
 
@@ -18,68 +24,68 @@ class PoolEngine(Engine):
 
     Parameters
     ----------
-    share_cstore: bool
+    share_cstore
         Whether to share the chunk store between chunks.
-    pool_args: dict
+    pool_args
         Arguments for the pool constructor
-    supports_shared_data: bool
+    supports_shared_data
         Flag for whether this engine supports shared data for chunk calculations.
-    min_shared_array_bytes: int
+    min_shared_array_bytes
         Minimum array size in bytes for placing model data into process
         shared memory. Arrays with ``nbytes`` less than or equal to this
         threshold are transferred inline to workers.
 
-    :group: engines
 
     """
 
     def __init__(
         self,
-        *args,
-        share_cstore=False,
-        pool_args={},
-        supports_shared_data=True,
-        min_shared_array_bytes=65536,
-        **kwargs,
-    ):
+        *args: Any,
+        share_cstore: bool = False,
+        pool_args: dict[str, Any] | None = None,
+        supports_shared_data: bool = True,
+        min_shared_array_bytes: int = 65536,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for the base class
-        pool_args: dict
+        pool_args
             Arguments for the pool constructor
-        share_cstore: bool
+        share_cstore
             Whether to share the chunk store between chunks.
-        supports_shared_data: bool
+        supports_shared_data
             Flag for whether this engine supports shared data for chunk calculations.
-        min_shared_array_bytes: int
+        min_shared_array_bytes
             Minimum array size in bytes for placing model data into process
             shared memory. Arrays with ``nbytes`` less than or equal to this
             threshold are transferred inline to workers.
-        kwargs: dict, optional
+        kwargs
             Additional arguments for the base class
 
         """
         super().__init__(*args, **kwargs)
+        self._pool: Any = None
         self.share_cstore = share_cstore
-        self.pool_args = pool_args
+        self.pool_args = {} if pool_args is None else pool_args
         self.supports_shared_data = supports_shared_data
         self.min_shared_array_bytes = int(min_shared_array_bytes)
 
     @abstractmethod
-    def _create_pool(self):
+    def _create_pool(self) -> None:
         """Creates the pool"""
         pass
 
     @abstractmethod
-    def _shutdown_pool(self):
+    def _shutdown_pool(self) -> None:
         """Shuts down the pool"""
         pass
 
-    def _print_shared_data(self, shared_mdata, verbosity):
+    def _print_shared_data(self, shared_mdata: Any, verbosity: int) -> None:
         """Print diagnostics for data that is actually backed by shared storage."""
         if (
             verbosity > 1
@@ -90,40 +96,41 @@ class PoolEngine(Engine):
             print(shared_mdata)
             print()
 
-    def __enter__(self):
+    def __enter__(self) -> PoolEngine:
         self._create_pool()
-        return super().__enter__()
+        super().__enter__()
+        return self
 
-    def __exit__(self, *exit_args):
+    def __exit__(self, *exit_args: Any) -> None:
         self._shutdown_pool()
         super().__exit__(*exit_args)
 
     def map(
         self,
-        func,
-        inputs,
-        *args,
-        **kwargs,
-    ):
+        func: Any,
+        inputs: Any,
+        *args: Any,
+        **kwargs: Any,
+    ) -> list[Any]:
         """
         Runs a function on a list of files
 
         Parameters
         ----------
-        func: Callable
+        func
             Function to be called on each file,
             func(input, *args, **kwargs) -> data
-        inputs: array-like
+        inputs
             The input data list
-        args: tuple, optional
+        args
             Arguments for func
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for func
 
         Returns
         -------
-        results: list
-            The list of results
+        results
+            Results for the submitted inputs
 
         """
         if len(inputs) == 0:
@@ -142,50 +149,50 @@ class PoolEngine(Engine):
 
     def run_calculation(
         self,
-        algo,
-        model,
-        model_data,
-        farm_data=None,
-        point_data=None,
-        extra_data={},
-        out_vars=[],
-        chunk_store={},
-        sel=None,
-        isel=None,
-        iterative=False,
-        write_nc=None,
-        write_chunk_ani=None,
-        **calc_pars,
-    ):
+        algo: Algorithm,
+        model: DataCalcModel,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+        out_vars: list[str] | None = None,
+        chunk_store: dict[Any, Any] | None = None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        iterative: bool = False,
+        write_nc: dict[str, Any] | None = None,
+        write_chunk_ani: dict[str, Any] | None = None,
+        **calc_pars: Any,
+    ) -> Dataset:
         """
         Runs the model calculation
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The algorithm object
-        model: foxes.core.DataCalcModel
+        model
             The model that whose calculate function
             should be run
-        model_data: xarray.Dataset
+        model_data
             The initial model data
-        farm_data: xarray.Dataset, optional
+        farm_data
             The initial farm data
-        point_data: xarray.Dataset, optional
+        point_data
             The initial point data
-        extra_data: dict
+        extra_data
             Additional non-array input data from the models
-        out_vars: list of str, optional
+        out_vars
             Names of the output variables
-        chunk_store: foxes.utils.Dict
+        chunk_store
             The chunk store
-        sel: dict, optional
+        sel
             Selection of coordinate subsets
-        isel: dict, optional
+        isel
             Selection of coordinate subsets index values
-        iterative: bool
+        iterative
             Flag for use within the iterative algorithm
-        write_nc: dict, optional
+        write_nc
             Parameters for writing results to netCDF files, e.g.
             {'out_dir': 'results', 'base_name': 'calc_results',
             'ret_data': False, 'split': 1000}.
@@ -198,22 +205,26 @@ class PoolEngine(Engine):
 
             Use ret_data = False together with non-single file writing
             to avoid constructing the full Dataset in memory.
-        write_chunk_ani: dict, optional
+        write_chunk_ani
             Parameters for writing chunk animations, e.g.
             {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
             'resolution': 100, 'chunk': 5}.'}
             The chunk is either an integer that refers to a states chunk,
-            or a  tuple (states_chunk_index, points_chunk_index), or a list
-            of such entries.
-        calc_pars: dict, optional
+            a tuple (states_chunk_index, points_chunk_index), or a list
+            of chunk indices.
+        calc_pars
             Additional parameters for the model.calculate()
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The model results
 
         """
+
+        extra_data = {} if extra_data is None else extra_data
+        out_vars = [] if out_vars is None else out_vars
+        chunk_store = {} if chunk_store is None else chunk_store
 
         # reset chunk store:
         if self.share_cstore:
@@ -231,6 +242,10 @@ class PoolEngine(Engine):
             isel=isel,
             default_n_states=algo.n_states,
         )
+        if model_data is None:
+            raise ValueError(f"Engine '{self.name}': Missing model_data")
+        if n_states is None:
+            raise ValueError(f"Engine '{self.name}': Could not determine n_states")
 
         # basic checks:
         super().run_calculation(algo, model, model_data, farm_data, point_data)
@@ -263,7 +278,7 @@ class PoolEngine(Engine):
 
         # start calculation:
         runner = self.new_runner()
-        shared_memory = []
+        shared_memory: list[Any] = []
         shared_handle = None
         try:
             with self.new_chunk_results_manager(
@@ -302,27 +317,30 @@ class PoolEngine(Engine):
                             n_chunks_states=n_chunks_states,
                             n_chunks_points=n_chunks_targets,
                         )
+                        mdata_chunk = data[0]
+                        fdata_chunk = data[1]
+                        tdata_chunk = data[2] if len(data) > 2 else None
 
                         if len(extra_data) > 0:
-                            data[0].extra_data.update(extra_data)
+                            mdata_chunk.extra_data.update(extra_data)
 
                         if self.supports_shared_data:
                             if shared_handle is None and (
-                                len(data[0]) > 0 or len(extra_data) > 0
+                                len(mdata_chunk) > 0 or len(extra_data) > 0
                             ):
-                                shared_mdata = data[0].pop_shared(
+                                shared_mdata = mdata_chunk.pop_shared(
                                     min_shared_array_bytes=self.min_shared_array_bytes
                                 )
                                 shared_handle = self.init_shared_memory(
                                     shared_memory,
-                                    mdata=data[0],
+                                    mdata=mdata_chunk,
                                     shared_mdata=shared_mdata,
                                     verbosity=max(self.verbosity, algo.verbosity),
                                 )
                                 del shared_mdata
                             elif shared_handle is not None:
                                 self.prepare_chunk_mdata_for_shared(
-                                    data[0], shared_handle
+                                    mdata_chunk, shared_handle
                                 )
 
                         """
@@ -344,7 +362,9 @@ class PoolEngine(Engine):
                             runner.run,
                             algo,
                             model,
-                            *data,
+                            mdata_chunk,
+                            fdata_chunk,
+                            tdata_chunk,
                             shared=shared_handle,
                             chunk_store=chunk_store,
                             chunk_key=key,
@@ -354,12 +374,12 @@ class PoolEngine(Engine):
                             utm_zone=utm_zone,
                             **calc_pars,
                         )
-                        del data
+                        del data, mdata_chunk, fdata_chunk, tdata_chunk
 
                         while len(futures) > self.n_workers * 3:
                             k = next(iter(futures))
                             results[k] = self.await_result(futures.pop(k))
-                            results_mgr.update(results, futures)
+                            results_mgr.update(results, list(futures.values()))
 
                         i0_targets = i1_targets
                     i0_states = i1_states
@@ -367,7 +387,7 @@ class PoolEngine(Engine):
                 fkeys = list(futures.keys())
                 for k in fkeys:
                     results[k] = self.await_result(futures.pop(k))
-                    results_mgr.update(results, futures)
+                    results_mgr.update(results, list(futures.values()))
 
                 del calc_pars, farm_data, results, futures
         finally:
@@ -378,54 +398,66 @@ class PoolEngine(Engine):
         chunk_store.update(new_chunk_store)
         algo.reset_chunk_store(chunk_store)
 
+        if results_mgr.results is None:
+            raise RuntimeError(
+                f"{type(self).__name__} did not produce calculation results"
+            )
         return results_mgr.results
 
-    def init_shared_memory(self, shared_memory, mdata, shared_mdata, verbosity=0):
+    def init_shared_memory(
+        self,
+        shared_memory: list[Any],
+        mdata: MData,
+        shared_mdata: Any,
+        verbosity: int = 0,
+    ) -> Any:
         """
         Sets the shared memory for the chunk calculation
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        mdata: foxes.core.MData
+        mdata
             The mdata to be used in the chunk calculation
-        shared_mdata: foxes.core.MData
+        shared_mdata
             The shared mdata to be used in the chunk calculation
-        verbosity: int
+        verbosity
             The verbosity level, 0=silent
 
         Returns
         -------
-        handle: object
+        handle
             The handle for accessing the shared data
 
         """
         mdata.recombine_with_shared(shared_mdata)
         return None
 
-    def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
+    def prepare_chunk_mdata_for_shared(self, mdata: MData, shared_handle: Any) -> None:
         """Hook for engine-specific mdata adjustments before worker submission.
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The chunk model data that will be sent to workers.
-        shared_handle: object
+        shared_handle
             The handle that describes shared data for worker recombination.
 
         """
         pass
 
-    def release_shared_memory(self, shared_memory, shared_handle):
+    def release_shared_memory(
+        self, shared_memory: list[Any], shared_handle: Any
+    ) -> None:
         """
         Releases the shared memory after the chunk calculation
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        shared_handle: object
+        shared_handle
             The handle for accessing the shared data
 
         """

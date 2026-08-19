@@ -1,5 +1,15 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from foxes.core import PointDataModel
 import foxes.variables as FV
+from typing import TYPE_CHECKING
+
+import numpy as np
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WakeDeltas(PointDataModel):
@@ -9,24 +19,23 @@ class WakeDeltas(PointDataModel):
 
     Attributes
     ----------
-    vars: list of str
+    vars
         The variables
-    normalize: bool
+    normalize
         Divide resulting deltas by ambient values
 
-    :group: models.point_models
 
     """
 
-    def __init__(self, vars, normalize=False):
+    def __init__(self, vars: list[str], normalize: bool = False) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        vars: list of str
+        vars
             The variables
-        normalize: bool
+        normalize
             Divide resulting deltas by ambient values
 
         """
@@ -34,24 +43,30 @@ class WakeDeltas(PointDataModel):
         self.vars = vars
         self.normalize = normalize
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return [f"DELTA_{v}" for v in self.vars]
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        pdata: TData,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -60,20 +75,20 @@ class WakeDeltas(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values
 
         """
 

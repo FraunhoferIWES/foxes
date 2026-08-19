@@ -1,13 +1,21 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from xarray import Dataset
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.algorithms import Iterative
 from foxes.config import config
-from foxes.core import get_engine
+from foxes.core import Algorithm, get_engine
 import foxes.variables as FV
 import foxes.constants as FC
 
 from . import models as mdls
+
+if TYPE_CHECKING:
+    from foxes.core import States, WindFarm
+    from .models.plugin import SequentialPlugin
 
 
 class Sequential(Iterative):
@@ -20,36 +28,35 @@ class Sequential(Iterative):
 
     Attributes
     ----------
-    ambient: bool
+    ambient
         Flag for ambient calculation
-    calc_pars: dict
+    calc_pars
         Parameters for model calculation.
         Key: model name str, value: parameter dict
-    states0: foxes.core.States
+    states0
         The original states
-    points: numpy.ndarray
+    points
         The points of interest, shape: (n_states, n_points, 3)
-    plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
+    plugins
         The plugins, updated with every iteration
-    outputs: list of str
+    outputs
         The output variables
-    :group: algorithms.sequential
 
     """
 
     @classmethod
-    def get_model(cls, name):
+    def get_model(cls, name: str) -> Any:
         """
         Get the algorithm specific model
 
         Parameters
         ----------
-        name: str
+        name
             The model name
 
         Returns
         -------
-        model: foxes.core.model
+        model
             The model
 
         """
@@ -60,46 +67,46 @@ class Sequential(Iterative):
 
     def __init__(
         self,
-        farm,
-        states,
-        *args,
-        points=None,
-        ambient=False,
-        calc_pars={},
-        plugins=[],
-        outputs=None,
-        **kwargs,
-    ):
+        farm: WindFarm,
+        states: States,
+        *args: Any,
+        points: np.ndarray | None = None,
+        ambient: bool = False,
+        calc_pars: dict[str, Any] = {},
+        plugins: list[SequentialPlugin] = [],
+        outputs: list[str] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        farm: foxes.WindFarm
+        farm
             The wind farm
-        states: foxes.core.States
+        states
             The ambient states
-        args: tuple, optional
+        args
             Additional arguments for Downwind
-        points: numpy.ndarray, optional
+        points
             The points of interest, shape: (n_states, n_points, 3)
-        ambient: bool
+        ambient
             Flag for ambient calculation
-        calc_pars: dict
+        calc_pars
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
+        plugins
             The plugins, updated with every iteration
-        outputs: list of str, optional
+        outputs
             The output variables
-        kwargs: dict, optional
+        kwargs
             Additional arguments for Downwind
 
         """
         super().__init__(farm, mdls.SeqState(states), *args, **kwargs)
         self.ambient = ambient
         self.calc_pars = calc_pars
-        self.states0 = self.states.states
+        self.states0 = self._seq_state().states
         self.points = points
         self.plugins = plugins
         self.outputs = outputs if outputs is not None else self.DEFAULT_FARM_OUTPUTS
@@ -107,35 +114,49 @@ class Sequential(Iterative):
         self._verbo0 = self.verbosity + 1
         self.verbosity -= 1
 
-        self._i = None
+        self._i: int | None = None
+        self._counter: int | None = None
+        self._inds: Any = None
+        self._farm_results: Dataset | None = None
+        self._farm_results_dwnd: Dataset | None = None
+        self._point_results: Dataset | None = None
+        self._model_data: Dataset | None = None
+
+    def _seq_state(self) -> mdls.SeqState:
+        sstate = self.states
+        assert isinstance(sstate, mdls.SeqState)
+        return sstate
 
     @property
-    def iterating(self):
+    def iterating(self) -> bool:
         """
         Flag for running iteration
 
         Returns
         -------
-        itr: bool
+        iterating
             True if currently iterating
 
         """
         return self._i is not None
 
-    def get_model_data(self, pop=False):
+    def get_model_data(self, pop: bool = False) -> tuple[Dataset, dict[str, Any]]:
         if self._model_data is None:
             return super().get_model_data(pop=pop)
+        assert self.counter is not None
         return self._model_data.isel({FC.STATE: [self.counter]}), self.loaded_data[
             "extra_data"
         ]
 
-    def __iter__(self):
+    def __iter__(self) -> Sequential:
         """Initialize the iterator"""
 
         if not self.iterating:
             # Adjust verbosity if engine is set
             try:
-                get_engine().verbosity -= 2
+                eng = get_engine()
+                if eng is not None:
+                    eng.verbosity -= 2
             except ValueError:
                 pass
 
@@ -147,12 +168,12 @@ class Sequential(Iterative):
             self._i = 0
             self._counter = 0
 
-            self._it = 0
+            self._it = cast(Any, 0)
             mlist, __ = self._collect_farm_models(
                 None, self.calc_pars, ambient=self.ambient
             )
             self._calc_farm_vars(mlist)
-            self._it = None
+            self._it = cast(Any, None)
 
             self._model_data, _ = super().get_model_data(pop=False)
 
@@ -189,30 +210,40 @@ class Sequential(Iterative):
 
         return self
 
-    def __next__(self):
+    def __next__(self) -> Dataset | tuple[Dataset, Dataset]:
         """Run calculation for current step, then iterate to next"""
 
+        assert self._i is not None
+        assert self._inds is not None
         if self._i < len(self._inds):
+            sstate = self._seq_state()
             self._counter = self._i
-            self.states._counter = self._i
-            self.states._size = 1
-            self.states._indx = self._inds[self._i]
+            sstate._counter = self._i
+            sstate._size = 1
+            sstate._indx = self._inds[self._i]
+            assert sstate._indx is not None
 
             if self._verbo0 > 0:
                 print(f"{self.name}: Running state {self.states.index()[0]}")
 
             self.reset_chunk_store()
-            fres, fres_dnwnd = super().calc_farm(
-                outputs=self.farm_vars,
-                finalize=False,
-                ret_dwnd_order=True,
-                **self.calc_pars,
+            fres, fres_dnwnd = cast(
+                tuple[Dataset, Dataset],
+                super().calc_farm(
+                    outputs=self.farm_vars,
+                    finalize=False,
+                    ret_dwnd_order=True,
+                    **self.calc_pars,
+                ),
             )
+            assert fres_dnwnd is not None
 
+            assert self._farm_results is not None
+            assert self._farm_results_dwnd is not None
             for v in self._farm_results.data_vars.keys():
                 if FC.STATE in self._farm_results[v].dims:
-                    self._farm_results[v].loc[{FC.STATE: [self.states._indx]}] = fres[v]
-                    self._farm_results_dwnd[v].loc[{FC.STATE: [self.states._indx]}] = (
+                    self._farm_results[v].loc[{FC.STATE: [sstate._indx]}] = fres[v]
+                    self._farm_results_dwnd[v].loc[{FC.STATE: [sstate._indx]}] = (
                         fres_dnwnd[v]
                     )
 
@@ -220,13 +251,18 @@ class Sequential(Iterative):
                 for p in self.plugins:
                     p.update(self, fres)
 
+                assert self._i is not None
                 self._i += 1
                 return fres
 
             else:
-                pres = super().calc_points(fres, points=self.points, finalize=False)
+                pres = cast(
+                    Dataset,
+                    super().calc_points(fres, points=self.points, finalize=False),
+                )
 
                 if self._point_results is None:
+                    assert self._model_data is not None
                     n_states = self._model_data.sizes[FC.STATE]
                     self._point_results = Dataset(
                         coords={
@@ -248,165 +284,176 @@ class Sequential(Iterative):
 
                 for v in self._point_results.data_vars.keys():
                     if FC.STATE in self._point_results[v].dims:
+                        assert self.counter is not None
                         self._point_results[v].loc[{FC.STATE: [self.counter]}] = pres[v]
 
                 for p in self.plugins:
                     p.update(self, fres, pres)
 
+                assert self._i is not None
                 self._i += 1
                 return fres, pres
 
         else:
             del self._model_data
+            sstate = self._seq_state()
 
             self._i = None
-            self.states._counter = None
-            self.states._size = len(self._inds)
-            self.states._indx = self._inds
+            sstate._counter = None
+            sstate._size = len(self._inds)
+            sstate._indx = self._inds
 
             for p in self.plugins:
                 p.finalize(self)
 
             # Reset verbosity if engine is set
             try:
-                get_engine().verbosity += 2
+                eng = get_engine()
+                if eng is not None:
+                    eng.verbosity += 2
             except ValueError:
                 pass
 
             raise StopIteration
 
     @property
-    def size(self):
+    def size(self) -> int:
         """
         The total number of iteration steps
 
         Returns
         -------
-        s: int
+        size
             The total number of iteration steps
 
         """
         return self.states.size()
 
     @property
-    def counter(self):
+    def counter(self) -> int | None:
         """
         The current index counter
 
         Returns
         -------
-        i: int
+        counter
             The current index counter
 
         """
         return self._counter if self.iterating else None
 
     @property
-    def index(self):
+    def index(self) -> Any:
         """
         The current index
 
         Returns
         -------
-        indx: int
+        index
             The current index
 
         """
-        return self.states._indx if self.iterating else None
+        return self._seq_state()._indx if self.iterating else None
 
-    def states_i0(self, counter, algo=None):
+    def states_i0(self, counter: bool, algo: Algorithm | None = None) -> Any:
         """
         Returns counter or index
 
         Parameters
         ----------
-        counter: bool
+        counter
             Flag for counter
-        algo: object, optional
+        algo
             Dummy argument, due to consistency with
             foxes.core.Data.states_i0
 
         Returns
         -------
-        i0: int
+        i0
             The counter or index
 
         """
         return self.counter if counter else self.index
 
     @property
-    def farm_results(self):
+    def farm_results(self) -> Dataset:
         """
         The overall farm results
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The overall farm results
 
         """
+        assert self._farm_results is not None
         return self._farm_results
 
     @property
-    def farm_results_downwind(self):
+    def farm_results_downwind(self) -> Dataset:
         """
         The overall farm results, with turbine
         dimension in downwind order
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The overall farm results
 
         """
+        assert self._farm_results_dwnd is not None
         return self._farm_results_dwnd
 
     @property
-    def cur_farm_results(self):
+    def cur_farm_results(self) -> Dataset:
         """
         The current farm results
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The current farm results
 
         """
+        assert self._farm_results is not None
+        assert self.counter is not None
         return self._farm_results.isel({FC.STATE: [self.counter]})
 
     @property
-    def point_results(self):
+    def point_results(self) -> Dataset | None:
         """
         The overall point results
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The overall point results
 
         """
         return self._point_results
 
     @property
-    def cur_point_results(self):
+    def cur_point_results(self) -> Dataset:
         """
         The current point results
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The current point results
 
         """
+        assert self._point_results is not None
+        assert self.counter is not None
         return self._point_results.isel({FC.STATE: [self.counter]})
 
-    def calc_farm(self):
+    def calc_farm(self) -> Dataset:
         """
         Calculate farm data.
 
         Returns
         -------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results. The calculated variables have
             dimensions (state, turbine)
 
@@ -417,28 +464,28 @@ class Sequential(Iterative):
 
     def calc_points(
         self,
-        farm_results,
-        points,
-        **kwargs,
-    ):
+        farm_results: Dataset,
+        points: np.ndarray,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Calculate data at a given set of points.
 
         Parameters
         ----------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results. The calculated variables have
             dimensions (state, turbine)
-        points: numpy.ndarray
+        points
             The points of interest, shape: (n_states, n_points, 3)
-        states_sel: list, optional
+        states_sel
             Reduce to selected states
-        states_isel: list, optional
+        states_isel
             Reduce to the selected states indices
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 

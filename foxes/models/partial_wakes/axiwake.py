@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, cast
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 from foxes.utils.two_circles import calc_area
@@ -7,6 +10,11 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 from .centre import PartialCentre
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.wake_model import WakeModel
 
 
 class PartialAxiwake(PartialCentre):
@@ -22,43 +30,42 @@ class PartialAxiwake(PartialCentre):
 
     Attributes
     ----------
-    n: int
+    n
         The number of radial evaluation points
 
-    :group: models.partial_wakes
 
     """
 
-    def __init__(self, n=6):
+    def __init__(self, n: int = 6) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        n: int
+        n
             The number of radial evaluation points
 
         """
         super().__init__()
         self.n = n
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(n={self.n})"
 
-    def check_wmodel(self, wmodel, error=True):
+    def check_wmodel(self, wmodel: WakeModel, error: bool = True) -> bool:
         """
         Checks the wake model type
 
         Parameters
         ----------
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model to be tested
-        error: bool
+        error
             Flag for raising TypeError
 
         Returns
         -------
-        chk: bool
+        chk
             True if wake model is compatible
 
         """
@@ -72,43 +79,45 @@ class PartialAxiwake(PartialCentre):
 
     def contribute(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            value
             (n_states, n_targets, n_tpoints, ...)
 
         """
         # check:
         self.check_wmodel(wmodel, error=True)
+        wmodel = cast(AxisymmetricWakeModel, wmodel)
 
         # prepare:
         n_states = mdata.n_states
         n_targets = tdata.n_targets
+        assert n_states is not None and n_targets is not None
 
         # get D:
         D = self.get_data(
@@ -129,11 +138,15 @@ class PartialAxiwake(PartialCentre):
         x = wcoos[..., 0, 0]
         n = wcoos[..., 0, 1:3]
         R = np.linalg.norm(n, axis=-1)
-        r = np.zeros((n_states, n_targets, self.n), dtype=config.dtype_double)
+        r: np.ndarray = np.zeros(
+            (n_states, n_targets, self.n), dtype=config.dtype_double
+        )
         del wcoos
 
         # prepare circle section area calculation:
-        A = np.zeros((n_states, n_targets, self.n), dtype=config.dtype_double)
+        A: np.ndarray = np.zeros(
+            (n_states, n_targets, self.n), dtype=config.dtype_double
+        )
         weights = np.zeros_like(A)
 
         # get normalized 2D vector between rotor and wake centres:
@@ -202,13 +215,15 @@ class PartialAxiwake(PartialCentre):
             assert wmodel.has_vector_wind_superp, (
                 f"{self.name}: Expecting vector wind superposition in wake model '{wmodel.name}', got '{wmodel.wind_superposition}'"
             )
+            vec_superp = wmodel.vec_superp
+            assert vec_superp is not None
             if FV.WS in wdeltas or FV.UV in wdeltas:
                 if FV.UV not in wdeltas:
-                    wmodel.vec_superp.wdeltas_ws2uv(
+                    vec_superp.wdeltas_ws2uv(
                         algo, fdata, tdata, downwind_index, wdeltas, st_sel
                     )
                 duv = np.einsum("snd,sn->sd", wdeltas.pop(FV.UV), weights[st_sel])
-                wake_deltas[FV.UV] = wmodel.vec_superp.add_wake_vector(
+                wake_deltas[FV.UV] = vec_superp.add_wake_vector(
                     algo,
                     mdata,
                     fdata,

@@ -1,81 +1,80 @@
 import numpy as np
 
 
-def wd2wdvec(wd, ws=1.0, axis=-1):
+def wd2wdvec(
+    wd: np.ndarray, ws: float | np.ndarray = 1.0, axis: int = -1
+) -> np.ndarray:
     """
     Calculate wind direction vectors from wind directions
     in degrees.
 
     Parameters
     ----------
-    wd: numpy.ndarray
+    wd
         Wind direction array (any shape)
-    ws: float or numpy.ndarray
+    ws
         The wind speed. Has to broadcast against wd.
-    axis: int
+    axis
         Location where to insert the (x, y) dimension
         into the shape of wd
 
     Returns
     -------
-    wdvec: numpy.ndarray
+    wdvec
         The wind direction vectors
 
-    :group: utils
 
     """
     wdr = wd * np.pi / 180.0
     n = np.stack([np.sin(wdr), np.cos(wdr)], axis=axis)
 
     if np.isscalar(ws):
-        return ws * n
+        return np.asarray(ws * n)
 
     return np.expand_dims(ws, axis) * n
 
 
-def wd2uv(wd, ws=1.0, axis=-1):
+def wd2uv(wd: np.ndarray, ws: float | np.ndarray = 1.0, axis: int = -1) -> np.ndarray:
     """
     Calculate wind vectors from wind directions
     in degrees.
 
     Parameters
     ----------
-    wd: numpy.ndarray
+    wd
         Wind direction array (any shape)
-    ws: float or numpy.ndarray
+    ws
         The wind speed. Has to broadcast against wd.
-    axis: int
+    axis
         Axis location where to insert the (u, v) components
         into the shape of wd
 
     Returns
     -------
-    uv: numpy.ndarray
+    uv
         The wind vectors
 
-    :group: utils
 
     """
     return -wd2wdvec(wd, ws, axis)
 
 
-def uv2wd(uv, axis=-1):
+def uv2wd(uv: np.ndarray, axis: int = -1) -> np.ndarray:
     """
     Calculate wind direction from wind vectors.
 
     Parameters
     ----------
-    uv: numpy.ndarray
+    uv
         The wind vectors, any shape
-    axis: int
+    axis
         The axis which corresponds to (u, v) components
 
     Returns
     -------
-    wd: numpy.ndarray
+    wd
         The wind direction array
 
-    :group: utils
 
     """
     if axis == -1:
@@ -90,48 +89,46 @@ def uv2wd(uv, axis=-1):
     return np.mod(180 + np.rad2deg(np.arctan2(u, v)), 360)
 
 
-def wdvec2wd(wdvec, axis=-1):
+def wdvec2wd(wdvec: np.ndarray, axis: int = -1) -> np.ndarray:
     """
     Calculate wind direction from wind direction vectors.
 
     Parameters
     ----------
-    wdvec: numpy.ndarray
+    wdvec
         The wind direction vectors, any shape
-    axis: int
+    axis
         The axis which corresponds to (x, y) components
 
     Returns
     -------
-    wd: numpy.ndarray
+    wd
         The wind direction array
 
-    :group: utils
 
     """
     return uv2wd(-wdvec, axis)
 
 
-def delta_wd(wd_a, wd_b):
+def delta_wd(wd_a: np.ndarray, wd_b: np.ndarray) -> np.ndarray:
     """
     Calculates wd_b - wd_a.
 
     Parameters
     ----------
-    wd_a: numpy.ndarray
+    wd_a
         Array of wind directions.
-        Shape: any shape
-    wd_b: numpy.ndarray
+        Shape
+    wd_b
         Array of wind directions.
         Shape: same as wd_a
 
     Returns
     -------
-    numpy.ndarray :
+    Array
         Array of wind direction deltas.
         Shape: same as wd_a, wd_b
 
-    :group: utils
 
     """
     out = wd_b - wd_a

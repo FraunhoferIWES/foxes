@@ -5,38 +5,37 @@ import foxes.variables as FV
 
 
 def random_timseries_data(
-    n_times,
-    data_ranges=None,
-    start_time="2000-01-01 00:00:00",
-    freq="h",
-    seed=None,
-    iname="Time",
-):
+    n_times: int,
+    data_ranges: dict[str, tuple[float, float]] | None = None,
+    start_time: str = "2000-01-01 00:00:00",
+    freq: str = "h",
+    seed: int | None = None,
+    iname: str = "Time",
+) -> pd.DataFrame:
     """
     Creates random uniform timeseries data
 
     Parameters
     ----------
-    n_times: int
+    n_times
         The number of time steps
-    data_ranges: dict, optional
-        The data ranges. Key: variable name,
-        value: tuple, [min, max) values
-    start_time: str
+    data_ranges
+        The data ranges keyed by variable name. Values define
+        the half-open interval [min, max) for each variable.
+    start_time
         The first time stamp in the series
-    freq: str
+    freq
         The time period range frequency
-    seed: int, optional
+    seed
         The random seed
-    iname: str
+    iname
         The index name
 
     Returns
     -------
-    sdata: pandas.DataFrame
+    sdata
         The timeseries data
 
-    :group: input.states.create
 
     """
     if seed:

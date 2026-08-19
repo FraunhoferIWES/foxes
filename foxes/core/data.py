@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from xarray import Dataset
+from typing import Any, Callable
 
 from foxes.utils import Dict
 from foxes.utils.memory_utils import (
@@ -19,71 +22,72 @@ class Data(Dict[str, np.ndarray]):
 
     Attributes
     ----------
-    dims: dict
+    dims
         The dimensions tuples, same or subset
         of data keys
-    loop_dims: array_like of str
-        List of the loop dimensions during xarray's
-        `apply_ufunc` calculations
-    sizes: dict
+    loop_dims
+        Loop dimensions used during xarray's `apply_ufunc` calculations
+    sizes
         The dimension sizes
-    chunki_states: int, optional
+    chunki_states
         The index of the states chunk
-    chunki_points: int, optional
+    chunki_points
         The index of the points chunk
-    extra_data: dict, optional
+    extra_data
         Additional data that is not dimensioned
 
-    :group: core
 
     """
 
     def __init__(
         self,
-        data={},
-        dims={},
-        loop_dims=[FC.STATE],
-        states_i0=None,
-        chunki_states=None,
-        chunki_points=None,
-        n_chunks_states=None,
-        n_chunks_points=None,
-        extra_data={},
-        raw=False,
-        name="data",
-    ):
+        data: dict[str, np.ndarray] | None = None,
+        dims: dict[str, tuple[str, ...]] | None = None,
+        loop_dims: list[str] | None = None,
+        states_i0: int | None = None,
+        chunki_states: int | None = None,
+        chunki_points: int | None = None,
+        n_chunks_states: int | None = None,
+        n_chunks_points: int | None = None,
+        extra_data: dict[str, Any] | None = None,
+        raw: bool = False,
+        name: str = "data",
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data: dict
-            The initial data to be stored
-        dims: dict
-            The dimensions tuples, same or subset
-            of data keys
-        loop_dims: array_like of str
-            List of the loop dimensions during xarray's
-            `apply_ufunc` calculations
-        states_i0: int, optional
-            The index of the first state
-        chunki_states: int, optional
-            The index of the states chunk
-        chunki_points: int, optional
-            The index of the points chunk
-        n_chunks_states: int, optional
-            The number of states chunks
-        n_chunks_points: int, optional
-            The number of points chunks
-        extra_data: dict, optional
-            Additional data that is not dimensioned
-        raw: bool
-            If True, skip the data checks and auto update
-        name: str
-            The data container name
+        data
+            The initial data to be stored.
+        dims
+            The dimension tuples, same as or a subset of the data keys.
+        loop_dims
+            The loop dimensions during xarray ``apply_ufunc`` calculations.
+        states_i0
+            The index of the first state.
+        chunki_states
+            The index of the states chunk.
+        chunki_points
+            The index of the points chunk.
+        n_chunks_states
+            The number of states chunks.
+        n_chunks_points
+            The number of points chunks.
+        extra_data
+            Additional data that is not dimensioned.
+        raw
+            If ``True``, skip the data checks and auto-update logic.
+        name
+            The data container name.
 
         """
         super().__init__(_name=name)
+
+        data = {} if data is None else data
+        dims = {} if dims is None else dims
+        loop_dims = [FC.STATE] if loop_dims is None else loop_dims
+        extra_data = {} if extra_data is None else extra_data
 
         self.update(data)
         self.dims = dims
@@ -96,19 +100,19 @@ class Data(Dict[str, np.ndarray]):
         self.__n_chunks_states = n_chunks_states
         self.__n_chunks_points = n_chunks_points
 
-        self.sizes = {}
+        self.sizes: dict[str, int] = {}
         if not raw:
             for v, d in data.items():
                 self._run_entry_checks(v, d, dims[v])
             self._auto_update()
 
-    def to_dataset(self):
+    def to_dataset(self) -> Dataset:
         """
         Convert to xarray.Dataset
 
         Returns
         -------
-        ds: xarray.Dataset
+        ds
             The dataset
 
         """
@@ -120,8 +124,8 @@ class Data(Dict[str, np.ndarray]):
             attrs=self.extra_data,
         )
 
-    def __str__(self):
-        def _fmt_size(nbytes):
+    def __str__(self) -> str:
+        def _fmt_size(nbytes: int) -> str:
             units = ("B", "KB", "MB", "GB", "TB", "PB")
             size = float(nbytes)
             ui = 0
@@ -132,7 +136,7 @@ class Data(Dict[str, np.ndarray]):
                 return f"{int(size)}{units[ui]}"
             return f"{size:.2f}{units[ui]}"
 
-        def _summary(value, level=0):
+        def _summary(value: Any, level: int = 0) -> str:
             if isinstance(value, np.ndarray):
                 return f"array {value.dtype} {tuple(value.shape)}"
             if isinstance(value, dict):
@@ -154,12 +158,12 @@ class Data(Dict[str, np.ndarray]):
                 return f"{type(value).__name__}({value.item()})"
             return type(value).__name__
 
-        def _dims_text(dims):
+        def _dims_text(dims: tuple[str, ...] | None) -> str:
             if dims is None:
                 return ""
             return f"({', '.join(dims)})"
 
-        def _edge_preview(value):
+        def _edge_preview(value: Any) -> str:
             if isinstance(value, np.ndarray):
                 if value.size == 0:
                     return "[]"
@@ -179,7 +183,7 @@ class Data(Dict[str, np.ndarray]):
 
             return ""
 
-        def _iter_extra_entries(data, level=0):
+        def _iter_extra_entries(data: dict[str, Any], level: int = 0) -> Any:
             for k in sorted(data.keys(), key=lambda x: str(x)):
                 key = str(k)
                 value = data[k]
@@ -239,7 +243,7 @@ class Data(Dict[str, np.ndarray]):
         return "\n".join(lines)
 
     @property
-    def n_states(self):
+    def n_states(self) -> int | None:
         """
         The number of states
 
@@ -252,7 +256,7 @@ class Data(Dict[str, np.ndarray]):
         return self.sizes[FC.STATE] if FC.STATE in self.sizes else None
 
     @property
-    def n_turbines(self):
+    def n_turbines(self) -> int | None:
         """
         The number of turbines
 
@@ -265,7 +269,7 @@ class Data(Dict[str, np.ndarray]):
         return self.sizes[FC.TURBINE] if FC.TURBINE in self.sizes else None
 
     @property
-    def chunki_states(self):
+    def chunki_states(self) -> int | None:
         """
         The index of the states chunk
 
@@ -278,7 +282,7 @@ class Data(Dict[str, np.ndarray]):
         return self.__chunki_states
 
     @property
-    def chunki_points(self):
+    def chunki_points(self) -> int | None:
         """
         The index of the points chunk
 
@@ -291,7 +295,7 @@ class Data(Dict[str, np.ndarray]):
         return self.__chunki_points
 
     @property
-    def n_chunks_states(self):
+    def n_chunks_states(self) -> int | None:
         """
         The number of states chunks
 
@@ -304,7 +308,7 @@ class Data(Dict[str, np.ndarray]):
         return self.__n_chunks_states
 
     @property
-    def n_chunks_points(self):
+    def n_chunks_points(self) -> int | None:
         """
         The number of points chunks
 
@@ -316,13 +320,13 @@ class Data(Dict[str, np.ndarray]):
         """
         return self.__n_chunks_points
 
-    def states_i0(self, counter=False):
+    def states_i0(self, counter: bool = False) -> int | None:
         """
         Get the state counter for first state in chunk
 
         Parameters
         ----------
-        counter: bool
+        counter
             Return the state counter instead of the index
 
         Returns
@@ -341,7 +345,7 @@ class Data(Dict[str, np.ndarray]):
         else:
             return self[FC.STATE][0]
 
-    def _auto_update(self):
+    def _auto_update(self) -> None:
         """Checks and operations after data changes"""
         data = self
         dims = self.dims
@@ -362,7 +366,7 @@ class Data(Dict[str, np.ndarray]):
 
             self.dims[FV.TXYH] = tuple(list(dims[FV.X]) + [FC.XYH])
 
-        allc = set()
+        allc: set[str] = set()
         for dms in self.dims.values():
             if dms is not None:
                 allc.update(dms)
@@ -371,7 +375,12 @@ class Data(Dict[str, np.ndarray]):
             data[c] = np.arange(self.sizes[c])
             dims[c] = (c,)
 
-    def _run_entry_checks(self, name, data, dims):
+    def _run_entry_checks(
+        self,
+        name: str,
+        data: np.ndarray,
+        dims: tuple[str, ...] | None,
+    ) -> None:
         """Run entry checks on new data"""
         # remove axes of size 1, added by dask for extra loop dimensions:
         if dims is not None:
@@ -391,17 +400,17 @@ class Data(Dict[str, np.ndarray]):
                         f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
                     )
 
-    def add(self, name, data, dims):
+    def add(self, name: str, data: np.ndarray, dims: tuple[str, ...]) -> None:
         """
         Add data entry
 
         Parameters
         ----------
-        name: str
+        name
             The data name
-        data: np.ndarray
+        data
             The data
-        dims: tuple of str
+        dims
             The dimensions
 
         """
@@ -410,30 +419,39 @@ class Data(Dict[str, np.ndarray]):
         self._run_entry_checks(name, data, dims)
         self._auto_update()
 
-    def get_slice(self, variables, s, dim_map={}, name=None, force=False):
+    def get_slice(
+        self,
+        variables: Any,
+        s: Any,
+        dim_map: dict[str, str] | None = None,
+        name: str | None = None,
+        force: bool = False,
+    ) -> Data:
         """
         Get a slice of data.
 
         Parameters
         ----------
-        variables: list of str
-            The variable list that corresponds to s
-        s: slice
-            The slice
-        dim_map: dict
-            Mapping from original to new dimensions.
-            If not found, same dimensions are assumed.
-        name: str, optional
-            The name of the data object
-        force: bool, optional
-            Force the slice operation even if checks fail
+        variables
+            The variable list that corresponds to the selected slice.
+        s
+            The slice specification.
+        dim_map
+            Mapping from original to new dimensions. If not found, the same
+            dimensions are assumed.
+        name
+            The name of the data object.
+        force
+            Force the slice operation even if checks fail.
 
         Returns
         -------
-        data: Data
-            The new data object, containing slices
+        data
+            The new data object containing the slices.
 
         """
+        if dim_map is None:
+            dim_map = {}
         if not isinstance(variables, (list, tuple, np.ndarray)):
             variables = [variables]
             s = [s]
@@ -456,6 +474,8 @@ class Data(Dict[str, np.ndarray]):
             name = self.name
         if FC.STATE in variables and self.__states_i0 is not None:
             i0 = self.states_i0(counter=True)
+            assert i0 is not None
+            assert self.n_states is not None
             a = s[variables.index(FC.STATE)]
             sts = np.arange(i0, i0 + self.n_states)[a]
             if len(sts) == 1:
@@ -497,13 +517,13 @@ class Data(Dict[str, np.ndarray]):
                 n_chunks_points=self.n_chunks_points,
             )
 
-    def pop_shared(self, min_shared_array_bytes=65536):
+    def pop_shared(self, min_shared_array_bytes: int = 65536) -> Data:
         """
         Pop the shared data, i.e. the data that is independent of the loop variables.
 
         Parameters
         ----------
-        min_shared_array_bytes: int
+        min_shared_array_bytes
             Minimum array size in bytes for moving loop-independent arrays into
             the shared data container. Smaller arrays stay in the current data
             object. The threshold is also applied recursively to ``extra_data``
@@ -511,7 +531,7 @@ class Data(Dict[str, np.ndarray]):
 
         Returns
         -------
-        shared: Data
+        shared
             The shared data
 
         """
@@ -545,13 +565,13 @@ class Data(Dict[str, np.ndarray]):
 
         return shared
 
-    def recombine_with_shared(self, shared):
+    def recombine_with_shared(self, shared: Data) -> None:
         """
         Recombine with shared data, i.e. add the shared data entries to the current data.
 
         Parameters
         ----------
-        shared: Data
+        shared
             The shared data
 
         """
@@ -569,80 +589,82 @@ class Data(Dict[str, np.ndarray]):
     @classmethod
     def from_dataset(
         cls,
-        ds,
-        *args,
-        callback=None,
-        s_states=None,
-        copy=True,
-        n_states=None,
-        n_turbines=None,
-        **kwargs,
-    ):
+        ds: Dataset,
+        *args: Any,
+        callback: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
+        s_states: Any = None,
+        copy: bool = True,
+        n_states: int | None = None,
+        n_turbines: int | None = None,
+        **kwargs: Any,
+    ) -> Data:
         """
         Create Data object from a dataset
 
         Parameters
         ----------
-        ds: xarray.Dataset
+        ds
             The dataset
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
-        s_states: slice, optional
-            Slice object for states
-        copy: bool
+        s_states
+            Optional slice object for states
+        copy
             Flag for copying data
-        n_states: int, optional
+        n_states
             The number of states, if not found in the dataset
-        n_turbines: int, optional
+        n_turbines
             The number of turbines, if not found in the dataset
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """
-        data = {}
-        dims = {}
+        data: dict[str, Any] = {}
+        dims: dict[str, tuple[str, ...]] = {}
         if n_states == 0:
             raise ValueError("Cannot create Data object with n_states=0")
 
         for c, d in ds.coords.items():
-            if c == FC.STATE:
+            c_name = str(c)
+            if c_name == FC.STATE:
                 s = np.s_[:] if s_states is None else s_states
-                data[c] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
+                data[c_name] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
             else:
-                data[c] = d.to_numpy().copy() if copy else d.to_numpy()
-            dims[c] = d.dims
+                data[c_name] = d.to_numpy().copy() if copy else d.to_numpy()
+            dims[c_name] = tuple(str(dd) for dd in d.dims)
 
         for v, d in ds.data_vars.items():
+            v_name = str(v)
             if FC.STATE in d.dims:
                 if d.dims[0] != FC.STATE:
                     raise ValueError(
-                        f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v}', got {d.dims}"
+                        f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v_name}', got {d.dims}"
                     )
                 s = np.s_[:] if s_states is None else s_states
-                data[v] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
-                dims[v] = d.dims
+                data[v_name] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
+                dims[v_name] = tuple(str(dd) for dd in d.dims)
                 if n_states is None or n_states == 1:
-                    n_states = data[v].shape[0]
-                elif data[v].shape[0] == 1:
+                    n_states = data[v_name].shape[0]
+                elif data[v_name].shape[0] == 1:
                     pass
                 else:
-                    assert n_states == data[v].shape[0], (
-                        f"Expecting {n_states} states, got {data[v].shape[0]} in data variable '{v}'"
+                    assert n_states == data[v_name].shape[0], (
+                        f"Expecting {n_states} states, got {data[v_name].shape[0]} in data variable '{v_name}'"
                     )
-                if v == FV.WEIGHT and d.dims == (FC.STATE,):
-                    data[v] = data[v][:, None]
-                    dims[v] = (FC.STATE, FC.TURBINE)
+                if v_name == FV.WEIGHT and d.dims == (FC.STATE,):
+                    data[v_name] = data[v_name][:, None]
+                    dims[v_name] = (FC.STATE, FC.TURBINE)
             else:
-                data[v] = d.to_numpy().copy() if copy else d.to_numpy()
-                dims[v] = d.dims
+                data[v_name] = d.to_numpy().copy() if copy else d.to_numpy()
+                dims[v_name] = tuple(str(dd) for dd in d.dims)
 
         if FC.TURBINE not in data and n_turbines is not None:
             data[FC.TURBINE] = np.arange(n_turbines)
@@ -655,43 +677,75 @@ class Data(Dict[str, np.ndarray]):
             data[FC.STATE] = np.arange(n_states)
             dims[FC.STATE] = (FC.STATE,)
 
-        return cls(*args, data=data, dims=dims, **kwargs)
+        return cls(*args, data=data, dims=dims, **kwargs)  # type: ignore[misc]
 
     @classmethod
-    def from_data(cls, base_data, *args, callback=None, **kwargs):
+    def from_data(
+        cls,
+        base_data: Data,
+        *args: Any,
+        callback: Callable[[Data, dict[str, Any]], None] | None = None,
+        states_i0: int | None = None,
+        chunki_states: int | None = None,
+        chunki_points: int | None = None,
+        n_chunks_states: int | None = None,
+        n_chunks_points: int | None = None,
+        **kwargs: Any,
+    ) -> Data:
         """
         Create Data object from another data object.
 
         Parameters
         ----------
-        base_data: Data
+        base_data
             The source data
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
-        kwargs: dict, optional
+        states_i0
+            The index of the first state. If omitted, copied from base_data
+        chunki_states
+            The index of the states chunk. If omitted, copied from base_data
+        chunki_points
+            The index of the points chunk. If omitted, copied from base_data
+        n_chunks_states
+            The total number of states chunks. If omitted, copied from base_data
+        n_chunks_points
+            The total number of points chunks. If omitted, copied from base_data
+        kwargs
             Additional parameters for the constructor
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """
-        ctor_kwargs = dict(kwargs)
-        if "states_i0" not in ctor_kwargs:
+        if states_i0 is None:
             try:
-                ctor_kwargs["states_i0"] = base_data.states_i0(counter=True)
+                states_i0 = base_data.states_i0(counter=True)
             except KeyError:
-                ctor_kwargs["states_i0"] = None
-        ctor_kwargs.setdefault("chunki_states", base_data.chunki_states)
-        ctor_kwargs.setdefault("chunki_points", base_data.chunki_points)
-        ctor_kwargs.setdefault("n_chunks_states", base_data.n_chunks_states)
-        ctor_kwargs.setdefault("n_chunks_points", base_data.n_chunks_points)
+                states_i0 = None
+        if chunki_states is None:
+            chunki_states = base_data.chunki_states
+        if chunki_points is None:
+            chunki_points = base_data.chunki_points
+        if n_chunks_states is None:
+            n_chunks_states = base_data.n_chunks_states
+        if n_chunks_points is None:
+            n_chunks_points = base_data.n_chunks_points
 
-        out = cls(*args, **ctor_kwargs)
+        out = cls(
+            *args,
+            states_i0=states_i0,
+            chunki_states=chunki_states,
+            chunki_points=chunki_points,
+            n_chunks_states=n_chunks_states,
+            n_chunks_points=n_chunks_points,
+            **kwargs,
+        )  # type: ignore[misc]
 
         for v in base_data.loop_dims:
             out[v] = base_data[v]
@@ -708,25 +762,24 @@ class MData(Data):
     """
     Container for foxes model data.
 
-    :group: core
 
     """
 
-    def __init__(self, *args, name="mdata", **kwargs):
+    def __init__(self, *args: Any, name: str = "mdata", **kwargs: Any) -> None:
         """
         Constructor
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for the base class
-        name: str
+        name
             The data name
-        kwargs: dict, optional
+        kwargs
             Arguments for the base class
 
         """
-        super().__init__(*args, name=name, **kwargs)
+        super().__init__(*args, name=name, **kwargs)  # type: ignore[misc]
 
 
 class FData(Data):
@@ -736,27 +789,31 @@ class FData(Data):
     Each farm data entry has (n_states, n_turbines) shape,
     except the dimensions.
 
-    :group: core
 
     """
 
-    def __init__(self, *args, name="fdata", **kwargs):
+    def __init__(self, *args: Any, name: str = "fdata", **kwargs: Any) -> None:
         """
         Constructor
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for the base class
-        name: str
+        name
             The data name
-        kwargs: dict, optional
+        kwargs
             Arguments for the base class
 
         """
-        super().__init__(*args, loop_dims=[FC.STATE], name=name, **kwargs)
+        super().__init__(*args, loop_dims=[FC.STATE], name=name, **kwargs)  # type: ignore[misc]
 
-    def _run_entry_checks(self, name, data, dims):
+    def _run_entry_checks(
+        self,
+        name: str,
+        data: np.ndarray,
+        dims: tuple[str, ...] | None,
+    ) -> None:
         """Run entry checks on new data"""
         super()._run_entry_checks(name, data, dims)
         data = self[name]
@@ -773,7 +830,7 @@ class FData(Data):
                     f"FData '{self.name}': Invalid dims for '{name}', expecting {dms}, got {dims}"
                 )
 
-    def _auto_update(self):
+    def _auto_update(self) -> None:
         """Checks and operations after data changes"""
         super()._auto_update()
         if len(self):
@@ -784,27 +841,34 @@ class FData(Data):
                     )
 
     @classmethod
-    def from_sizes(cls, n_states, n_turbines, *args, callback=None, **kwargs):
+    def from_sizes(
+        cls,
+        n_states: int,
+        n_turbines: int,
+        *args: Any,
+        callback: Callable[[Data, dict[str, Any]], None] | None = None,
+        **kwargs: Any,
+    ) -> Data:
         """
         Create Data object from model data
 
         Parameters
         ----------
-        n_states: int
+        n_states
             The number of states
-        n_turbines: int
+        n_turbines
             The number of turbines
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """
@@ -820,38 +884,38 @@ class FData(Data):
     @classmethod
     def from_dataset(
         cls,
-        ds,
-        *args,
-        mdata=None,
-        callback=None,
-        n_states=None,
-        n_turbines=None,
-        **kwargs,
-    ):
+        ds: Dataset,
+        *args: Any,
+        mdata: MData | None = None,
+        callback: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
+        n_states: int | None = None,
+        n_turbines: int | None = None,
+        **kwargs: Any,
+    ) -> Data:
         """
         Create Data object from a dataset
 
         Parameters
         ----------
-        ds: xarray.Dataset
+        ds
             The dataset
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        mdata: MData, optional
+        mdata
             The mdata object
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
-        n_states: int, optional
+        n_states
             The number of states, if not found in the dataset
-        n_turbines: int, optional
+        n_turbines
             The number of turbines, if not found in the dataset
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """
@@ -859,7 +923,7 @@ class FData(Data):
             return super().from_dataset(ds, *args, callback=callback, **kwargs)
         else:
 
-            def cb(data, dims):
+            def cb(data: dict[str, Any], dims: dict[str, Any]) -> None:
                 if FC.STATE not in data:
                     if FC.STATE in mdata:
                         data[FC.STATE] = mdata[FC.STATE]
@@ -869,6 +933,7 @@ class FData(Data):
                             "n_states must be provided if not found in mdata"
                         )
                         i0 = mdata.states_i0(counter=True)
+                        assert i0 is not None
                         data[FC.STATE] = np.arange(i0, i0 + n_states)
                         dims[FC.STATE] = (FC.STATE,)
                 if FC.TURBINE not in data:
@@ -903,35 +968,41 @@ class TData(Data):
     Each target consists of a fixed number of
     target points.
 
-    :group: core
 
     """
 
-    def __init__(self, *args, name="tdata", **kwargs):
+    def __init__(self, *args: Any, name: str = "tdata", **kwargs: Any) -> None:
         """
         Constructor
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for the base class
-        name: str
+        name
             The data name
-        kwargs: dict, optional
+        kwargs
             Arguments for the base class
 
         """
-        super().__init__(*args, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs)
+        super().__init__(*args, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs)  # type: ignore[misc]
 
-    def _run_entry_checks(self, name, data, dims):
+    def _run_entry_checks(
+        self,
+        name: str,
+        data: np.ndarray,
+        dims: tuple[str, ...] | None,
+    ) -> None:
         """Run entry checks on new data"""
         super()._run_entry_checks(name, data, dims)
         data = self[name]
         dims = self.dims[name]
+        n_states = self.n_states
+        assert n_states is not None
 
         if name == FC.TARGETS:
-            dms = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
-            shp = (self.n_states, self.n_targets, self.n_tpoints, 3)
+            dms: tuple[str, ...] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
+            shp: tuple[int, ...] = (n_states, self.n_targets, self.n_tpoints, 3)
             if dims != dms:
                 raise ValueError(
                     f"TData '{self.name}': Invalid dims of {FC.TARGETS}, expecting {dms}, got {dims}"
@@ -965,7 +1036,7 @@ class TData(Data):
 
         elif name not in self.sizes:
             dms = (FC.STATE, FC.TARGET, FC.TPOINT)
-            shp = (self.n_states, self.n_targets, self.n_tpoints)
+            shp = (n_states, self.n_targets, self.n_tpoints)
             if len(data.shape) < 3:
                 raise ValueError(
                     f"TData '{self.name}': Invalid shape for '{name}', expecting {shp}, got {data.shape}"
@@ -975,7 +1046,7 @@ class TData(Data):
                     f"TData '{self.name}': Invalid dims for '{name}', expecting {dms}, got {dims}"
                 )
 
-    def _auto_update(self):
+    def _auto_update(self) -> None:
         """Checks and operations after data changes"""
         super()._auto_update()
         if len(self):
@@ -995,56 +1066,56 @@ class TData(Data):
                     )
 
     @property
-    def n_targets(self):
+    def n_targets(self) -> int:
         """
         The number of targets
 
         Returns
         -------
-        int:
+        n_targets
             The number of targets
 
         """
         return self.sizes[FC.TARGET]
 
     @property
-    def n_tpoints(self):
+    def n_tpoints(self) -> int:
         """
         The number of points per target
 
         Returns
         -------
-        int:
+        n_tpoints
             The number of points per target
 
         """
         return self.sizes[FC.TPOINT]
 
-    def tpoint_mean(self, variable):
+    def tpoint_mean(self, variable: str) -> np.ndarray:
         """
         Take the mean over target points
 
         Parameters
         ----------
-        variable: str
+        variable
             The variable name
 
         Returns
         -------
-        data: numpy.ndarray
+        data
             The reduced array, shape:
             (n_states, n_targets, ...)
 
         """
         return np.einsum("stp...,p->st...", self[variable], self[FC.TWEIGHTS])
 
-    def targets_i0(self):
+    def targets_i0(self) -> int | None:
         """
         Get the target counter for first target in chunk
 
         Returns
         -------
-        int:
+        targets_i0
             The target index for first target in chunk
 
         """
@@ -1053,18 +1124,18 @@ class TData(Data):
         else:
             return self[FC.TARGET][0]
 
-    def get_targets_subset(self, sel_targets):
+    def get_targets_subset(self, sel_targets: Any) -> TData:
         """
         Get a subset of targets
 
         Parameters
         ----------
-        sel_targets: array_like of int
+        sel_targets
             The target indices to select
 
         Returns
         -------
-        tdata: TData
+        tdata
             The new TData object with the selected targets
 
         """
@@ -1110,39 +1181,39 @@ class TData(Data):
     @classmethod
     def from_points(
         cls,
-        points,
-        data=None,
-        dims=None,
-        variables=None,
-        mdata=None,
-        name="tdata",
-        **kwargs,
-    ):
+        points: np.ndarray,
+        data: dict[str, Any] | None = None,
+        dims: dict[str, tuple[str, ...]] | None = None,
+        variables: list[str] | None = None,
+        mdata: MData | None = None,
+        name: str = "tdata",
+        **kwargs: Any,
+    ) -> TData:
         """
         Create from points
 
         Parameters
         ----------
-        points: np.ndarray
+        points
             The points, shape: (n_states, n_points, 3)
-        data: dict, optional
+        data
             The initial data to be stored
-        dims: dict, optional
+        dims
             The dimensions tuples, same or subset
             of data keys
-        variables: list of str
+        variables
             Add default empty variables with NaN values
             and shape (n_states, n_targets, n_tpoints)
-        mdata: MData, optional
+        mdata
             The model data
-        name: str
+        name
             The data container name
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         Returns
         -------
-        pdata: Data
+        pdata
             The data object
 
         """
@@ -1172,44 +1243,44 @@ class TData(Data):
     @classmethod
     def from_tpoints(
         cls,
-        tpoints,
-        tweights,
-        data=None,
-        dims=None,
-        variables=None,
-        mdata=None,
-        name="tdata",
-        **kwargs,
-    ):
+        tpoints: np.ndarray,
+        tweights: np.ndarray,
+        data: dict[str, Any] | None = None,
+        dims: dict[str, tuple[str, ...]] | None = None,
+        variables: list[str] | None = None,
+        mdata: MData | None = None,
+        name: str = "tdata",
+        **kwargs: Any,
+    ) -> TData:
         """
         Create from points at targets
 
         Parameters
         ----------
-        tpoints: np.ndarray
+        tpoints
             The points at targets, shape:
             (n_states, n_targets, n_tpoints, 3)
-        tweights: np.ndarray, optional
+        tweights
             The target point weights, shape:
             (n_tpoints,)
-        data: dict, optional
+        data
             The initial data to be stored
-        dims: dict, optional
+        dims
             The dimensions tuples, same or subset
             of data keys
-        variables: list of str
+        variables
             Add default empty variables with NaN values
             and shape (n_states, n_targets, n_tpoints)
-        mdata: MData, optional
+        mdata
             The model data
-        name: str
+        name
             The data container name
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         Returns
         -------
-        pdata: Data
+        pdata
             The data object
 
         """
@@ -1239,35 +1310,35 @@ class TData(Data):
     @classmethod
     def from_dataset(
         cls,
-        ds,
-        *args,
-        s_targets=None,
-        mdata=None,
-        callback=None,
-        **kwargs,
-    ):
+        ds: Dataset,
+        *args: Any,
+        s_targets: Any = None,
+        mdata: MData | None = None,
+        callback: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
+        **kwargs: Any,
+    ) -> Data:
         """
         Create Data object from a dataset
 
         Parameters
         ----------
-        ds: xarray.Dataset
+        ds
             The dataset
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        s_targets: slice, optional
-            Slice object for targets
-        mdata: MData, optional
+        s_targets
+            Optional slice object for targets
+        mdata
             The mdata object
-        callback: Function, optional
+        callback
             Function f(data, dims) that manipulates
             the data and dims dicts before construction
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         Returns
         -------
-        data: Data
+        data
             The data object
 
         """
@@ -1275,7 +1346,7 @@ class TData(Data):
             cb0 = callback
         else:
 
-            def cb_mdata(data, dims):
+            def cb_mdata(data: dict[str, Any], dims: dict[str, Any]) -> None:
                 if FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
                     dims[FC.STATE] = mdata.dims[FC.STATE]
@@ -1292,7 +1363,7 @@ class TData(Data):
             cb1 = cb0
         else:
 
-            def cb_targets(data, dims):
+            def cb_targets(data: dict[str, Any], dims: dict[str, Any]) -> None:
                 if FC.TARGET not in data:
                     data[FC.TARGET] = np.arange(ds.sizes[FC.TARGET])
                     dims[FC.TARGET] = (FC.TARGET,)

@@ -1,7 +1,15 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import FarmDataModel
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class ReorderFarmOutput(FarmDataModel):
@@ -10,44 +18,48 @@ class ReorderFarmOutput(FarmDataModel):
 
     Attributes
     ----------
-    outputs: list of str, optional
+    outputs
         The output variables, or None for defaults
 
-    :group: algorithms.downwind.models
 
     """
 
-    def __init__(self, outputs):
+    def __init__(self, outputs: list[str] | None) -> None:
         """
         Constructor
 
         Parameters
         ----------
-        outputs: list of str, optional
+        outputs
             The output variables, or None for defaults
 
         """
         super().__init__()
         self.outputs = outputs
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return self.outputs if self.outputs is not None else algo.farm_vars
 
-    def calculate(self, algo, mdata, fdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -56,18 +68,18 @@ class ReorderFarmOutput(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
         ssel = fdata[FV.ORDER_SSEL]

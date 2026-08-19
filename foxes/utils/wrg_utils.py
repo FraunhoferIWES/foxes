@@ -8,45 +8,42 @@ class ReaderWRG:
 
     Attributes
     ----------
-    fpath: pathlib.Path
+    fpath
         Path to the wrg file
 
     """
 
-    def __init__(self, fpath):
+    def __init__(self, fpath: str | Path) -> None:
         """
         Constructor
 
         Parameters
         ----------
-        fpath: str
+        fpath
             Path to the wrg file
         """
         self.fpath = Path(fpath)
         self._prepare()
 
-    def _prepare(self):
+    def _prepare(self) -> None:
         # read the first two lines
         with open(self.fpath, "r") as fstream:
-            self._nx, self._ny, self._utmx0, self._utmy0, self._res = (
-                fstream.readline().split()
-            )
+            first_line = fstream.readline().split()
+            nx_s, ny_s, utmx0_s, utmy0_s, res_s = first_line
             second_line = fstream.readline().split()
             n_cols = len(second_line)
             self._n_sectors = int(second_line[8])
-            self._nx, self._ny, self._utmx0, self._utmy0, self._res = (
-                int(self._nx),
-                int(self._ny),
-                float(self._utmx0),
-                float(self._utmy0),
-                int(self._res),
-            )
+            self._nx = int(nx_s)
+            self._ny = int(ny_s)
+            self._utmx0 = float(utmx0_s)
+            self._utmy0 = float(utmy0_s)
+            self._res = int(res_s)
 
-        def cols_sel(name, secs):
+        def cols_sel(name: str, secs: int) -> list[str]:
             """little helper to create column names"""
             return [f"{name}_{i}" for i in range(secs)]
 
-        cols = [0] * (8 + 3 * self._n_sectors)
+        cols: list[str] = [""] * (8 + 3 * self._n_sectors)
         cols[0] = "utmx"
         cols[1] = "utmy"
         cols[2] = "z"
@@ -73,91 +70,91 @@ class ReaderWRG:
             )
 
     @property
-    def data(self):
+    def data(self) -> pd.DataFrame:
         """
         The WRG data
 
         Returns
         -------
-        df: pandas.DataFrame
+        df
             The WRG data
 
         """
         return self._data
 
     @property
-    def nx(self):
+    def nx(self) -> int:
         """
         The number of points in x direction
 
         Returns
         -------
-        n: int
+        n
             The number of points in x direction
 
         """
         return self._nx
 
     @property
-    def ny(self):
+    def ny(self) -> int:
         """
         The number of points in y direction
 
         Returns
         -------
-        n: int
+        n
             The number of points in y direction
 
         """
         return self._ny
 
     @property
-    def x0(self):
+    def x0(self) -> float:
         """
         The lower left x coordinate
 
         Returns
         -------
-        x: float
+        x
             The lower left x coordinate
 
         """
         return self._utmx0
 
     @property
-    def y0(self):
+    def y0(self) -> float:
         """
         The lower left y coordinate
 
         Returns
         -------
-        y: float
+        y
             The lower left y coordinate
 
         """
         return self._utmy0
 
     @property
-    def n_sectors(self):
+    def n_sectors(self) -> int:
         """
         The number of wind direction sectors
 
         Returns
         -------
-        n: int
+        n
             The number of wind direction sectors
 
         """
         return self._n_sectors
 
     @property
-    def resolution(self):
+    def resolution(self) -> int:
         """
         The horizontal resolution
 
         Returns
         -------
-        res: float
+        res
             The horizontal resolution
 
         """

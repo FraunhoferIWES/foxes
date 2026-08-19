@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 import foxes.variables as FV
 from foxes.config import config
 
 from .rotor_points import RotorPoints
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class PartialCentre(RotorPoints):
@@ -11,30 +18,31 @@ class PartialCentre(RotorPoints):
     Partial wakes calculated only at the
     rotor centre point.
 
-    :group: models.partial_wakes
 
     """
 
-    def get_wake_points(self, algo, mdata, fdata):
+    def get_wake_points(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Get the wake calculation points, and their
         weights.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        rpoints: numpy.ndarray
+        rpoints
             The wake calculation points, shape:
             (n_states, n_turbines, n_tpoints, 3)
-        rweights: numpy.ndarray
+        rweights
             The target point weights, shape: (n_tpoints,)
 
         """
@@ -42,43 +50,43 @@ class PartialCentre(RotorPoints):
 
     def map_rotor_results(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        rotor_res,
-        rotor_weights,
-        downwind_index=None,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        rotor_res: np.ndarray,
+        rotor_weights: np.ndarray,
+        downwind_index: int | None = None,
+    ) -> np.ndarray:
         """
         Map ambient rotor point results onto target points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name to map
-        rotor_res: numpy.ndarray
+        rotor_res
             The results at rotor points, shape:
             (n_states, n_turbines, n_rotor_points) if downwind_index is None,
             otherwise shape: (n_states, n_rotor_points)
-        rotor_weights: numpy.ndarray
+        rotor_weights
             The rotor point weights, shape: (n_rotor_points,)
-        downwind_index: int, optional
+        downwind_index
             The downwind index of the updated turbine,
             if None, maps for all turbines
 
         Returns
         -------
-        res: numpy.ndarray
+        res
             The mapped results at target points, shape:
             (n_states, n_targets, n_tpoints) if downwind_index is None,
             otherwise shape: (n_states, n_tpoints)

@@ -1,54 +1,60 @@
+from __future__ import annotations
+
 import numpy as np
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class GaussianWakeModel(AxisymmetricWakeModel):
     """
     Abstract base class for Gaussian wake models.
 
-    :group: models.wake_models
 
     """
 
     @abstractmethod
     def calc_amplitude_sigma(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> tuple[dict[str, tuple[np.ndarray, np.ndarray]], np.ndarray]:
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
 
         Returns
         -------
-        amsi: tuple
-            The amplitude and sigma, both numpy.ndarray
+        amsi
+            The amplitude and sigma arrays
             with shape (n_st_sel,)
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
@@ -57,41 +63,41 @@ class GaussianWakeModel(AxisymmetricWakeModel):
 
     def calc_wakes_x_r(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        r,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        r: np.ndarray,
+    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
         """
         Calculate wake deltas.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        r: numpy.ndarray
+        r
             The radial values for each x value, shape:
             (n_states, n_targets, n_yz_per_target)
 
         Returns
         -------
-        wdeltas: dict
+        wdeltas
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_st_sel, n_r_per_x)
-        st_sel: numpy.ndarray of bool
+            value
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 

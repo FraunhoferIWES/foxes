@@ -1,30 +1,30 @@
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
-from foxes.utils.geom2d import AreaUnion, ClosedPolygon
+from foxes.utils.geom2d import AreaGeometry, AreaUnion, ClosedPolygon
 from foxes.utils.utm_utils import from_lonlat
 
 
-def area_contains_point(area, point):
+def area_contains_point(area: Any, point: np.ndarray) -> bool:
     """
     Checks if a point lies in an area geometry.
 
     Parameters
     ----------
-    area: object
+    area
         Area-like object exposing contains_point(point) or
         points_inside(points)
-    point: array_like
+    point
         The point coordinates, shape: (2,)
 
     Returns
     -------
-    inside: bool
+    inside
         True if the point is inside area
 
-    :group: utils
 
     """
     if hasattr(area, "contains_point"):
@@ -37,33 +37,32 @@ def area_contains_point(area, point):
     )
 
 
-def geojson_geometry_to_area(geometry):
+def geojson_geometry_to_area(geometry: dict[str, Any]) -> Any | None:
     """
     Converts one GeoJSON geometry object into an AreaGeometry.
 
     Parameters
     ----------
-    geometry: dict
+    geometry
         A GeoJSON geometry dictionary
 
     Returns
     -------
-    area: foxes.utils.geom2d.AreaGeometry or None
+    area
         The area geometry or None for empty polygon coordinate arrays
 
-    :group: utils
 
     """
     gtype = geometry.get("type", None)
 
-    def _polygon_with_holes(rings):
+    def _polygon_with_holes(rings: list[Any]) -> Any | None:
         if not rings:
             return None
 
         ext = np.asarray(rings[0], dtype=np.float64)
         if ext.ndim != 2 or ext.shape[1] < 2:
             raise ValueError("Invalid polygon ring in GeoJSON")
-        geom = ClosedPolygon(from_lonlat(ext[:, :2]))
+        geom: AreaGeometry = ClosedPolygon(from_lonlat(ext[:, :2]))
 
         for ring in rings[1:]:
             hole = np.asarray(ring, dtype=np.float64)
@@ -77,10 +76,10 @@ def geojson_geometry_to_area(geometry):
         return _polygon_with_holes(geometry.get("coordinates", []))
 
     if gtype == "MultiPolygon":
-        geoms = [
+        geoms_all = [
             _polygon_with_holes(rings) for rings in geometry.get("coordinates", [])
         ]
-        geoms = [g for g in geoms if g is not None]
+        geoms: list[AreaGeometry] = [g for g in geoms_all if g is not None]
         if not geoms:
             return None
         if len(geoms) == 1:
@@ -93,27 +92,28 @@ def geojson_geometry_to_area(geometry):
     )
 
 
-def load_areas_from_geojson(geojson_path, name_key="name"):
+def load_areas_from_geojson(
+    geojson_path: str | Path, name_key: str | list[str] = "name"
+) -> dict[str, Any]:
     """
     Loads area geometries from a GeoJSON file path.
 
     Parameters
     ----------
-    geojson_path: str or pathlib.Path
+    geojson_path
         Path to a GeoJSON file
 
-    name_key: str or list of str
+    name_key
         Preferred feature property key(s) for area names
 
     Returns
     -------
-    area_map: dict
+    area_map
         Mapping from unique resolved area names (str) to
         `foxes.utils.geom2d.AreaGeometry` objects.
         Missing, empty, or duplicate names are replaced with
         default names of the form ``area_XXX``.
 
-    :group: utils
 
     """
     geojson_path = Path(geojson_path)
@@ -128,38 +128,37 @@ def load_areas_from_geojson(geojson_path, name_key="name"):
 
 
 def load_areas_from_geojson_data(
-    data,
-    source_name="GeoJSON data",
-    name_key="name",
-):
+    data: dict[str, Any],
+    source_name: str | Path = "GeoJSON data",
+    name_key: str | list[str] = "name",
+) -> dict[str, Any]:
     """
     Loads area geometries from a GeoJSON dictionary.
 
     Parameters
     ----------
-    data: dict
+    data
         GeoJSON dictionary
-    source_name: str
+    source_name
         Data source label used in error messages
 
-    name_key: str or list of str
+    name_key
         Preferred feature property key(s) for area names
 
     Returns
     -------
-    area_map: dict
+    area_map
         Mapping from unique resolved area names (str) to
         `foxes.utils.geom2d.AreaGeometry` objects.
         Missing, empty, or duplicate names are replaced with
         default names of the form ``area_XXX``.
 
-    :group: utils
 
     """
     if not isinstance(data, dict):
         raise TypeError(f"Expected GeoJSON data as dict, got '{type(data).__name__}'")
 
-    def _feature_name(feature):
+    def _feature_name(feature: dict[str, Any]) -> str | None:
         props = feature.get("properties", {}) or {}
         keys = []
         if isinstance(name_key, str) and len(name_key):
@@ -210,35 +209,37 @@ def load_areas_from_geojson_data(
     return {name: area for name, area in zip(norm_names, areas)}
 
 
-def normalize_areas_input(areas, geojson_name_key="name"):
+def normalize_areas_input(
+    areas: list[Any] | str | Path | dict[str, Any],
+    geojson_name_key: str | list[str] = "name",
+) -> dict[str, Any]:
     """
     Normalizes area input and resolves unique area names.
 
     Parameters
     ----------
-    areas: list or str or pathlib.Path or dict
+    areas
         Accepted area input forms:
-        - list of AreaGeometry objects
-        - list of (name, AreaGeometry) tuples
+        - a sequence of AreaGeometry objects
+        - a sequence of name and AreaGeometry pairs
         - dict mapping names to AreaGeometry objects
         - path to GeoJSON file
         - GeoJSON dictionary
-    geojson_name_key: str or list of str
+    geojson_name_key
         Preferred GeoJSON feature property key(s) used
         to read area names from GeoJSON inputs.
 
     Returns
     -------
-    area_map: dict
+    area_map
         Mapping from unique resolved area names (str) to
         `foxes.utils.geom2d.AreaGeometry` objects.
         Missing, empty, or duplicate names are replaced with default
         names of the form ``area_XXX``.
 
-    :group: utils
 
     """
-    area_names = None
+    area_names: list[str | None] | None = None
 
     if isinstance(areas, (str, Path)):
         return load_areas_from_geojson(

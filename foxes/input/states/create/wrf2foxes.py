@@ -11,6 +11,7 @@ from scipy.interpolate import (
     NearestNDInterpolator,
     CloughTocher2DInterpolator,
 )
+from typing import Any, Callable, cast
 
 from foxes.config import config
 from foxes.core import Engine, get_engine
@@ -20,17 +21,17 @@ import foxes.constants as FC
 
 
 def _process_first_file(
-    fpath,
-    cmap,
-    var2ncvar,
-    resolution=None,
-    lon_bounds=None,
-    lat_bounds=None,
-    height_bounds=None,
-    preprocess=None,
-    points_png=None,
-    verbosity=1,
-):
+    fpath: Any,
+    cmap: Any,
+    var2ncvar: Any,
+    resolution: Any = None,
+    lon_bounds: Any = None,
+    lat_bounds: Any = None,
+    height_bounds: Any = None,
+    preprocess: Any = None,
+    points_png: Any = None,
+    verbosity: int = 1,
+) -> Any:
     """Process the first file to find variables and dimensions"""
 
     # read file:
@@ -152,7 +153,7 @@ def _process_first_file(
         y = np.arange(p_min[1], p_max[1] + resolution, resolution)
         nx = len(x)
         ny = len(y)
-        points = np.zeros((nx, ny, 2), dtype=config.dtype_double)
+        points: np.ndarray = np.zeros((nx, ny, 2), dtype=config.dtype_double)
         points[:, :, 0] = x[:, None]
         points[:, :, 1] = y[None, :]
         ok = True
@@ -227,22 +228,22 @@ def _process_first_file(
 
 
 def _process_file(
-    fpath,
-    cmap,
-    var2ncvar,
-    out_dir,
-    drop_vars,
-    utm_zone,
-    points_isel,
-    interp_data,
-    chunk_size_states=None,
-    chunk_size_points=None,
-    preprocess=None,
-    check_nan=True,
-    interp_pars=None,
-    write_pars=None,
-    verbosity=0,
-):
+    fpath: Any,
+    cmap: Any,
+    var2ncvar: Any,
+    out_dir: Any,
+    drop_vars: Any,
+    utm_zone: Any,
+    points_isel: Any,
+    interp_data: Any,
+    chunk_size_states: Any = None,
+    chunk_size_points: Any = None,
+    preprocess: Any = None,
+    check_nan: bool = True,
+    interp_pars: Any = None,
+    write_pars: Any = None,
+    verbosity: int = 0,
+) -> Any:
     """Process a single file"""
     # prepare:
     cs = cmap[FC.STATE]
@@ -271,13 +272,13 @@ def _process_file(
         y = DataArray(wrf_data[cy].values[points_isel[FV.Y]], dims="points")
         n_points = x.sizes["points"]
         wrf_data = wrf_data.sel({cx: x, cy: y}, method="nearest")
-        data = [wrf_data[var2ncvar[v]].values for v in var2ncvar.keys()]
+        raw_data = [wrf_data[var2ncvar[v]].values for v in var2ncvar.keys()]
         dims = [wrf_data[var2ncvar[v]].dims for v in var2ncvar.keys()]
         del x, y
     else:
         nx, ny = wrf_data.sizes[cx], wrf_data.sizes[cy]
         n_points = nx * ny
-        data = []
+        raw_data = []
         dims = []
         for w in var2ncvar.values():
             if cx in wrf_data[w].dims or cy in wrf_data[w].dims:
@@ -285,14 +286,14 @@ def _process_file(
                     f"Expected variable {w} to have dimensions ending with ({cy}, {cx}), found {wrf_data[w].dims}"
                 )
                 shp = wrf_data[w].shape
-                data.append(wrf_data[w].values.reshape(shp[:-2] + (n_points,)))
+                raw_data.append(wrf_data[w].values.reshape(shp[:-2] + (n_points,)))
                 dims.append(wrf_data[w].dims[:-2] + ("points",))
             else:
-                data.append(wrf_data[w].values)
+                raw_data.append(wrf_data[w].values)
                 dims.append(wrf_data[w].dims)
     if check_nan:
         for i, w in enumerate(var2ncvar.values()):
-            n_nan = np.sum(np.isnan(data[i]))
+            n_nan = np.sum(np.isnan(raw_data[i]))
             if n_nan > 0:
                 raise ValueError(
                     f"{fpath.name}: Found {n_nan} NaN values in variable {w}"
@@ -306,8 +307,8 @@ def _process_file(
         dms: [v for v, dm in zip(var2ncvar.keys(), dims) if dm == dms]
         for dms in set(dims)
     }
-    data = {
-        dms: np.stack([d for d, dm in zip(data, dims) if dm == dms], axis=-1)
+    data_by_dims: dict[Any, Any] = {
+        dms: np.stack([d for d, dm in zip(raw_data, dims) if dm == dms], axis=-1)
         for dms in set(dims)
     }
 
@@ -321,9 +322,9 @@ def _process_file(
             )
             iws = iu = hvrs.index(FV.WS)
             iwd = iv = hvrs.index(FV.WD)
-            uv = wd2uv(data[dms][..., iwd], data[dms][..., iws])
-            data[dms][..., iu] = uv[..., 0]
-            data[dms][..., iv] = uv[..., 1]
+            uv = wd2uv(data_by_dims[dms][..., iwd], data_by_dims[dms][..., iws])
+            data_by_dims[dms][..., iu] = uv[..., 0]
+            data_by_dims[dms][..., iv] = uv[..., 1]
             hvrs[iu] = FV.U
             hvrs[iv] = FV.V
             found_ws_wd = True
@@ -357,22 +358,22 @@ def _process_file(
             )
             odms = [c for c in ("points", cs, ch) if c in dms]
             odms += [c for c in dms if c not in odms]
-            data[dms] = np.moveaxis(
-                data[dms], [dms.index(c) for c in odms], range(len(odms))
+            data_by_dims[dms] = np.moveaxis(
+                data_by_dims[dms], [dms.index(c) for c in odms], range(len(odms))
             )
             vrs_list.append(tuple(odms))
 
         else:
             vrs_list.append(dms)
     vrs = {vrs_list[i]: d for i, d in enumerate(vrs.values())}
-    data = {vrs_list[i]: d for i, d in enumerate(data.values())}
+    data_by_dims = {vrs_list[i]: d for i, d in enumerate(data_by_dims.values())}
 
     # prepare interpolation:
     ipars = dict(method="linear", rescale=True)
     if interp_pars is not None:
         ipars.update(interp_pars)
 
-    def _interpolate(pts, arr, qts):
+    def _interpolate(pts: np.ndarray, arr: np.ndarray, qts: np.ndarray) -> np.ndarray:
         if not check_nan:
             s = np.any(np.isnan(arr), axis=tuple(range(1, len(arr.shape))))
             s = np.s_[~s, ...]
@@ -381,7 +382,7 @@ def _process_file(
             del s
 
         if chunk_size_points is None:
-            return griddata(pts, arr, qts, **ipars)
+            return cast(np.ndarray, griddata(pts, arr, qts, **ipars))
         else:
             hpars = {k: d for k, d in ipars.items() if k != "method"}
             if ipars["method"] == "nearest":
@@ -411,15 +412,15 @@ def _process_file(
                 res.append(interp(qts[p_chunk]))
                 done_points += p_chunk.stop - p_chunk.start
             res = np.concatenate(res, axis=0)
-            return res.reshape(nx, ny, *res.shape[1:])
+            return cast(np.ndarray, res.reshape(nx, ny, *res.shape[1:]))
 
     # interpolate to grid:
     wrf_points, grid_points = interp_data
     nx, ny = grid_points.shape[:2]
     done_times = 0
-    temp_data = data
-    crds = {}
-    data = {}
+    temp_data = data_by_dims
+    crds: dict[str, Any] = {}
+    data: dict[Any, Any] = {}
     while done_times < n_times:
         t_chunk = (
             slice(done_times, min(done_times + chunk_size_states, n_times))
@@ -430,10 +431,10 @@ def _process_file(
         nc = len(ctimes)
 
         for dms, arr in temp_data.items():
-            hvrs = tuple(vrs[dms])
+            current_vars = tuple(vrs[dms])
             if verbosity > 2:
                 print(
-                    f"{fpath.name}: INTERPOLATING {dms}, {hvrs}, done_times {done_times}/{n_times}, t_chunk {t_chunk}"
+                    f"{fpath.name}: INTERPOLATING {dms}, {current_vars}, done_times {done_times}/{n_times}, t_chunk {t_chunk}"
                 )
 
             if cs in dms and icmap[cs] not in crds:
@@ -449,20 +450,20 @@ def _process_file(
             if "points" in dms:
                 if cs in dms or done_times == 0:
                     res = _interpolate(wrf_points, arr, grid_points)
-                    dms = (FV.X, FV.Y) + tuple([icmap[c] for c in dms[1:]])
+                    output_dims = (FV.X, FV.Y) + tuple(icmap[c] for c in dms[1:])
                 else:
                     continue
             elif cs in dms or done_times == 0:
                 res = arr
-                dms = tuple([icmap[c] for c in dms])
+                output_dims = tuple(icmap[c] for c in dms)
             else:
                 continue
 
-            if hvrs not in data.keys():
-                data[hvrs] = [dms, [res]]
+            if current_vars not in data.keys():
+                data[current_vars] = [output_dims, [res]]
             else:
-                data[hvrs][1].append(res)
-            del res, dms
+                data[current_vars][1].append(res)
+            del res, output_dims
 
         done_times += nc
     del temp_data
@@ -492,7 +493,7 @@ def _process_file(
         data.update({v: (tuple(odms), arr[..., i]) for i, v in enumerate(hvrs)})
 
     # create Dataset:
-    data = Dataset(
+    output_data = Dataset(
         coords=crds,
         data_vars=data,
         attrs={
@@ -503,73 +504,74 @@ def _process_file(
     )
 
     # write file:
-    wpars = dict(pack=True)
+    wpars: dict[str, Any] = dict(pack=True)
     if write_pars is not None:
         wpars.update(write_pars)
     out_path = out_dir / f"{fpath.stem}_UTM{utm_zone[0]}{utm_zone[1]}.nc"
-    write_nc(data, out_path, verbosity=verbosity, **wpars)
+    write_nc(output_data, out_path, verbosity=verbosity, **wpars)
 
 
 def wrf2foxes(
-    source_files,
-    out_dir,
-    cmap=None,
-    var2ncvar=None,
-    resolution=None,
-    lon_bounds=None,
-    lat_bounds=None,
-    height_bounds=(0.0, 400.0),
-    chunk_size_states=None,
-    chunk_size_points=None,
-    preprocess=None,
-    write_points_png=False,
-    check_nan=False,
-    interp_pars=None,
-    write_pars=None,
-    verbosity=1,
-):
+    source_files: str | Path,
+    out_dir: str | Path,
+    cmap: dict[str, str] | None = None,
+    var2ncvar: dict[str, str] | None = None,
+    resolution: float | None = None,
+    lon_bounds: tuple[float, float] | None = None,
+    lat_bounds: tuple[float, float] | None = None,
+    height_bounds: tuple[float, float] | None = (0.0, 400.0),
+    chunk_size_states: int | None = None,
+    chunk_size_points: int | None = None,
+    preprocess: Callable[[Dataset], Dataset] | None = None,
+    write_points_png: bool = False,
+    check_nan: bool = False,
+    interp_pars: dict[str, Any] | None = None,
+    write_pars: dict[str, Any] | None = None,
+    verbosity: int = 1,
+) -> None:
     """
     Convert WRF NetCDF files to the foxes format expected by
     the FieldData states class.
 
     Parameters
     ----------
-    source_files : str
+    source_files
         Source files to process, either a single file or a glob pattern.
-    out_dir : str
+    out_dir
         Output directory for resulting NetCDF files.
-    cmap: dict, optional
+    cmap
         Mapping from foxes dimension name to WRF dimension name
-    var2ncvar: dict, optional
+    var2ncvar
         Mapping from foxes variable to WRF variable name
-    resolution: float, optional
+    resolution
         The grid resolution in m, if not provided, it will be determined
-    lon_bounds: tuple, optional
+    lon_bounds
         The longitude bounds (min, max) to subset the data, in degrees
-    lat_bounds: tuple, optional
+    lat_bounds
         The latitude bounds (min, max) to subset the data, in degrees
-    height_bounds: tuple, optional
+    height_bounds
         The height bounds (min, max) to subset the data, in meters
-    chunk_size_states: int, optional
+    chunk_size_states
         The chunk size for time dimension during interpolation
-    chunk_size_points: int, optional
+    chunk_size_points
         The chunk size for target points during interpolation
-    preprocess: function, optional
+    preprocess
         A function that takes the opened WRF dataset and returns a modified dataset,
-    write_points_png: bool, optional
+    write_points_png
         Whether to save a plot of the grid points
-    interp_pars: dict, optional
+    interp_pars
         Parameters for the interpolation via griddata,
         e.g. method, rescale, fill_value
-    write_pars: dict, optional
+    write_pars
         Parameters for writing the NetCDF file, e.g. pack
-    verbosity : int, optional
+    verbosity
         The verbosity level, 0 = silent, by default 1
 
     """
 
     # prepare:
     engine = get_engine()
+    assert engine is not None
     source_files = Path(source_files)
     out_dir = Path(out_dir).expanduser()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -654,7 +656,7 @@ def wrf2foxes(
         [engine.await_result(f) for f in futures]
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "source_files",

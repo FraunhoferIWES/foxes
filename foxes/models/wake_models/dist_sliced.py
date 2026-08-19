@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import SingleTurbineWakeModel
 from foxes.config import config
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class DistSlicedWakeModel(SingleTurbineWakeModel):
@@ -15,41 +22,46 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
     The multi-yz ability is used by the `PartialDistSlicedWake`
     partial wakes model.
 
-    :group: models.wake_models
 
     """
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
+        n_states = tdata.n_states
+        n_targets = tdata.n_targets
+        n_tpoints = tdata.n_tpoints
+        assert n_states is not None and n_targets is not None and n_tpoints is not None
         if self.has_uv:
-            duv = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
+            duv: np.ndarray = np.zeros(
+                (n_states, n_targets, n_tpoints, 2),
                 dtype=config.dtype_double,
             )
             return {FV.UV: duv}
         else:
-            dws = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+            dws: np.ndarray = np.zeros(
+                (n_states, n_targets, n_tpoints),
                 dtype=config.dtype_double,
             )
             return {FV.WS: dws}
@@ -57,41 +69,41 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
     @abstractmethod
     def calc_wakes_x_yz(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        yz,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        yz: np.ndarray,
+    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
         """
         Calculate wake deltas.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        yz: numpy.ndarray
+        yz
             The yz values for each x value, shape:
             (n_states, n_targets, n_yz_per_target, 2)
 
         Returns
         -------
-        wdeltas: dict
+        wdeltas
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_st_sel, n_yz_per_target)
-        st_sel: numpy.ndarray of bool
+            value
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
@@ -100,37 +112,37 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
 
     def contribute(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_coos,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_coos: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            value
             (n_states, n_targets, n_tpoints, ...)
 
         """
@@ -145,12 +157,14 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
             assert self.has_vector_wind_superp, (
                 f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
             )
+            vec_superp = self.vec_superp
+            assert vec_superp is not None
             if FV.UV in wdeltas or FV.WS in wdeltas:
                 if FV.UV not in wdeltas:
-                    self.vec_superp.wdeltas_ws2uv(
+                    vec_superp.wdeltas_ws2uv(
                         algo, fdata, tdata, downwind_index, wdeltas, st_sel
                     )
-                wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
+                wake_deltas[FV.UV] = vec_superp.add_wake_vector(
                     algo,
                     mdata,
                     fdata,

@@ -1,41 +1,42 @@
+from typing import cast
+
 import numpy as np
 from scipy.spatial.distance import cdist
 
 
 def random_xy_square(
-    n,
-    min_dist=500,
-    xmax_ini=None,
-    growth=1.02,
-    seed=None,
-    verbosity=1,
-):
+    n: int,
+    min_dist: float = 500,
+    xmax_ini: float | None = None,
+    growth: float = 1.02,
+    seed: int | None = None,
+    verbosity: int = 1,
+) -> np.ndarray:
     """
     Creates random xy positions within a square,
     with mean (0, 0)
 
     Parameters
     ----------
-    n: int
+    n
         The number of positions
-    min_dist: float
+    min_dist
         The minimal distance between any two positions
-    xmax_ini: float, optional
+    xmax_ini
         The initial maximal distance of any coordinates
-    growth: float
+    growth
         The growth factor of the initial radius, must be
         greater 1
-    seed: int, optional
+    seed
         The random seed
-    verbosity: int
+    verbosity
         The verbosity level. 0 = silent
 
     Returns
     -------
-    xy: numpy.ndarray
+    xy
         The positions, shape: (n, 2)
 
-    :group: utils
 
     """
     if seed:
@@ -53,4 +54,4 @@ def random_xy_square(
             print(f"Re-generating coordinates: {len(sel)}, xmax = {xmax:.1f}")
         xmax *= growth
         xy[sel] = np.random.uniform(0, xmax, (len(sel), 2))
-    return xy - np.mean(xy, axis=0)[None, :]
+    return cast(np.ndarray, xy - np.mean(xy, axis=0)[None, :])

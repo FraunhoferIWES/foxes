@@ -1,31 +1,38 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from copy import deepcopy
+from typing import TYPE_CHECKING, Any
 
-from foxes.core import FarmDataModel
+from foxes.core import FarmDataModel, TData
 import foxes.constants as FC
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class FarmWakesCalculation(FarmDataModel):
     """
     This model calculates wakes effects on farm data.
 
-    :group: algorithms.downwind.models
 
     """
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -34,7 +41,9 @@ class FarmWakesCalculation(FarmDataModel):
         ) + algo.farm_controller.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
 
-    def calculate(self, algo, mdata, fdata):
+    def calculate(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -43,26 +52,28 @@ class FarmWakesCalculation(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
         controller = algo.farm_controller
+        rpts = algo.get_from_chunk_store(FC.ROTOR_POINTS, mdata=mdata)
         rwghts = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
         amb_res = algo.get_from_chunk_store(FC.AMB_ROTOR_RES, mdata=mdata)
         weights = algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata)
+        assert isinstance(weights, np.ndarray)
 
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)
@@ -81,7 +92,14 @@ class FarmWakesCalculation(FarmDataModel):
                 )
                 pwake2wmodels[pwake.name] = wmodels
 
-        def _contribute(gmodel, pwake, tdatap, wdeltas, variables, s):
+        def _contribute(
+            gmodel: Any,
+            pwake: Any,
+            tdatap: Any,
+            wdeltas: dict[str, np.ndarray],
+            variables: list[str],
+            s: Any,
+        ) -> None:
             """Helper function for contribution of wake deltas to wake results"""
 
             # grab target slice:
@@ -113,15 +131,24 @@ class FarmWakesCalculation(FarmDataModel):
                 for v in wdelta0.keys():
                     wdelta0[v][:, tsel, ...] = wdelta[v]
 
-        def _evaluate(gmodel, tdata, rwghts, wake_res, wdeltas, oi, wmodel, pwake):
+        def _evaluate(
+            gmodel: Any,
+            tdata: TData,
+            rwghts: np.ndarray,
+            wake_res: dict[str, np.ndarray],
+            wdeltas: dict[str, np.ndarray],
+            oi: int,
+            wmodel: Any,
+            pwake: Any,
+        ) -> None:
             """Helper function for data evaluation at turbines"""
+            nonlocal weights
 
             wres = gmodel.finalize_farm_wakes(
                 algo, mdata, fdata, tdata, rwghts, wdeltas, wmodel, oi, pwake
             )
 
             if controller.has_pre_rotor_models:
-                nonlocal weights
                 res = controller.calculate(
                     algo, mdata, fdata, pre_rotor=True, downwind_index=oi
                 )
@@ -143,10 +170,20 @@ class FarmWakesCalculation(FarmDataModel):
                 for v, d in wres.items():
                     if v in wake_res:
                         hres[v] += d[:, None]
-                hres[FV.WEIGHT] = weights
+                hdims: dict[str, tuple[str, ...]] = {
+                    v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hres.keys()
+                }
+                htdata = TData.from_tpoints(
+                    rpts[:, oi, None, :, :],
+                    tweights=rwghts,
+                    data=hres,
+                    dims=hdims,
+                )
+                htdata[FV.WEIGHT] = weights
+                del hres, hdims
 
                 rotor.eval_rpoint_results(
-                    algo, mdata, fdata, hres, rwghts, downwind_index=oi
+                    algo, mdata, fdata, htdata, rwghts, downwind_index=oi
                 )
 
             if controller.has_post_rotor_models:
@@ -157,6 +194,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         wake_res = deepcopy(amb_res)
         n_turbines = mdata.n_turbines
+        assert n_turbines is not None
         run_up = None
         run_down = None
         for wname, wmodel in algo.wake_models.items():

@@ -1,18 +1,32 @@
+from __future__ import annotations
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any, cast
+
+import numpy as np
 
 from .model import Model
 from foxes.utils import new_instance
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class VerticalProfile(Model):
     """
     Abstract base class for vertical profiles.
 
-    :group: core
 
     """
 
-    def load_chunk_data(self, algo, mdata, fdata, tdata):
+    def load_chunk_data(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> None:
         """
         Load chunk-local data required for calculations.
 
@@ -21,47 +35,47 @@ class VerticalProfile(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         """
         return None
 
     @abstractmethod
-    def input_vars(self):
+    def input_vars(self) -> list[str]:
         """
         The input variables needed for the profile
         calculation.
 
         Returns
         -------
-        vars: list of str
+        vars
             The variable names
 
         """
         return []
 
     @abstractmethod
-    def calculate(self, tdata, heights):
+    def calculate(self, tdata: TData, heights: np.ndarray) -> np.ndarray:
         """
         Run the profile calculation.
 
         Parameters
         ----------
-        tdata: dict
+        tdata
             The target point data
-        heights: numpy.ndarray
+        heights
             The evaluation heights
 
         Returns
         -------
-        results: numpy.ndarray
+        results
             The profile results, same
             shape as heights
 
@@ -69,18 +83,23 @@ class VerticalProfile(Model):
         pass
 
     @classmethod
-    def new(cls, profile_type, *args, **kwargs):
+    def new(
+        cls,
+        profile_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> "VerticalProfile":
         """
         Run-time vertical profile factory.
 
         Parameters
         ----------
-        profile_type: str
+        profile_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         """
-        return new_instance(cls, profile_type, *args, **kwargs)
+        return cast(VerticalProfile, new_instance(cls, profile_type, *args, **kwargs))

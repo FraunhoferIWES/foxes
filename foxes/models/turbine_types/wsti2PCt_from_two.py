@@ -1,12 +1,21 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interpn
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_two_files
 from foxes.config import config, get_input_path
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class WsTI2PCtFromTwo(TurbineType):
@@ -24,68 +33,67 @@ class WsTI2PCtFromTwo(TurbineType):
 
     Attributes
     ----------
-    source_P: str or pandas.DataFrame
+    source_P
         The file path for the power curve, static name, or data
-    source_ct: str or pandas.DataFrame
+    source_ct
         The file path for the ct curve, static name, or data
-    WSCT: str
+    WSCT
         The wind speed variable for ct lookup
-    WSP: str
+    WSP
         The wind speed variable for power lookup
-    rpars_P: dict, optional
+    rpars_P
         Parameters for pandas power file reading
-    rpars_ct: dict, optional
+    rpars_ct
         Parameters for pandas ct file reading
-    ipars_P: dict, optional
+    ipars_P
         Parameters for scipy.interpolate.interpn
-    ipars_ct: dict, optional
+    ipars_ct
         Parameters for scipy.interpolate.interpn
-    rho: float
+    rho
         The air density for which the data is valid
         or None for no correction
 
-    :group: models.turbine_types
 
     """
 
     def __init__(
         self,
-        data_source_P,
-        data_source_ct,
-        rho=None,
-        var_ws_ct=FV.REWS2,
-        var_ws_P=FV.REWS3,
-        pd_file_read_pars_P={},
-        pd_file_read_pars_ct={},
-        interpn_pars_P=None,
-        interpn_pars_ct=None,
-        **parameters,
-    ):
+        data_source_P: str | pd.DataFrame,
+        data_source_ct: str | pd.DataFrame,
+        rho: float | None = None,
+        var_ws_ct: str = FV.REWS2,
+        var_ws_P: str = FV.REWS3,
+        pd_file_read_pars_P: dict[str, Any] | None = None,
+        pd_file_read_pars_ct: dict[str, Any] | None = None,
+        interpn_pars_P: dict[str, Any] | None = None,
+        interpn_pars_ct: dict[str, Any] | None = None,
+        **parameters: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source_P: str or pandas.DataFrame
+        data_source_P
             The file path for the power curve, static name, or data
-        data_source_ct: str or pandas.DataFrame
+        data_source_ct
             The file path for the ct curve, static name, or data
-        rho: float, optional
+        rho
             The air density for which the data is valid
             or None for no correction
-        var_ws_ct: str
+        var_ws_ct
             The wind speed variable for ct lookup
-        var_ws_P: str
+        var_ws_P
             The wind speed variable for power lookup
-        pd_file_read_pars_P:  dict
+        pd_file_read_pars_P
             Parameters for pandas power file reading
-        pd_file_read_pars_ct:  dict
+        pd_file_read_pars_ct
             Parameters for pandas ct file reading
-        interpn_pars_P: dict, optional
+        interpn_pars_P
             Parameters for scipy.interpolate.interpn
-        interpn_pars_ct: dict, optional
+        interpn_pars_ct
             Parameters for scipy.interpolate.interpn
-        parameters: dict, optional
+        parameters
             Additional parameters for TurbineType class
 
         """
@@ -102,8 +110,8 @@ class WsTI2PCtFromTwo(TurbineType):
         self.rho = rho
         self.WSCT = var_ws_ct
         self.WSP = var_ws_P
-        self.rpars_P = pd_file_read_pars_P
-        self.rpars_ct = pd_file_read_pars_ct
+        self.rpars_P = {} if pd_file_read_pars_P is None else pd_file_read_pars_P
+        self.rpars_ct = {} if pd_file_read_pars_ct is None else pd_file_read_pars_ct
         self.ipars_P = interpn_pars_P
         self.ipars_ct = interpn_pars_ct
 
@@ -115,52 +123,58 @@ class WsTI2PCtFromTwo(TurbineType):
         self._P = None
         self._ct = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
         return f"{type(self).__name__}({a})"
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS2 is required
 
         """
         return self.WSCT == FV.REWS2 or self.WSP == FV.REWS2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS3 is required
 
         """
         return self.WSCT == FV.REWS3 or self.WSP == FV.REWS3
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return [FV.P, FV.CT]
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -170,16 +184,16 @@ class WsTI2PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -189,9 +203,14 @@ class WsTI2PCtFromTwo(TurbineType):
         else:
             fpath = get_input_path(self.source_P)
             if not fpath.is_file():
-                fpath = algo.dbook.get_file_path(
+                fpath2 = algo.dbook.get_file_path(
                     PCTCURVE, self.source_P, check_raw=False
                 )
+                if fpath2 is None:
+                    raise FileNotFoundError(
+                        f"Power curve file '{self.source_P}' not found in context '{PCTCURVE}'"
+                    )
+                fpath = fpath2
             pars = {"index_col": 0}
             pars.update(self.rpars_P)
             data = PandasFileHelper.read_file(fpath, **pars)
@@ -208,9 +227,14 @@ class WsTI2PCtFromTwo(TurbineType):
         else:
             fpath = get_input_path(self.source_ct)
             if not fpath.is_file():
-                fpath = algo.dbook.get_file_path(
+                fpath2 = algo.dbook.get_file_path(
                     PCTCURVE, self.source_ct, check_raw=False
                 )
+                if fpath2 is None:
+                    raise FileNotFoundError(
+                        f"Ct curve file '{self.source_ct}' not found in context '{PCTCURVE}'"
+                    )
+                fpath = fpath2
             pars = {"index_col": 0}
             pars.update(self.rpars_ct)
             data = PandasFileHelper.read_file(fpath, **pars)
@@ -223,7 +247,7 @@ class WsTI2PCtFromTwo(TurbineType):
 
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
 
-    def _bounds_info(self, target, qts):
+    def _bounds_info(self, target: str, qts: np.ndarray) -> None:
         """Helper function for printing bounds info"""
 
         print(f"\nBOUNDS INFO FOR TARGET {target}")
@@ -240,7 +264,13 @@ class WsTI2PCtFromTwo(TurbineType):
         print(f"  {FV.TI}: min = {np.min(ti):.4f}, max = {np.max(ti):.4f}")
         print()
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -249,21 +279,21 @@ class WsTI2PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         # prepare:
@@ -288,7 +318,7 @@ class WsTI2PCtFromTwo(TurbineType):
             qts = np.zeros((n_sel, 2), dtype=config.dtype_double)  # ws, ti
             qts[:, 0] = fdata[self.WSP][st_sel_P]
             qts[:, 1] = fdata[FV.TI][st_sel_P]
-            factor_P = 1.0
+            factor_P: float | np.ndarray = 1.0
 
             # apply air density and yaw misalignment corrections:
             corrects_rho = (
@@ -306,9 +336,10 @@ class WsTI2PCtFromTwo(TurbineType):
                 qts[:, 0] = rews_P
 
             # run interpolation:
+            ipars_P = self.ipars_P if self.ipars_P is not None else {}
             try:
                 fdata[FV.P][st_sel_P] = factor_P * interpn(
-                    (self._ws_P, self._ti_P), self._P, qts, **self.ipars_P
+                    (self._ws_P, self._ti_P), self._P, qts, **ipars_P
                 )
             except ValueError as e:
                 self._bounds_info(FV.P, qts)
@@ -330,7 +361,7 @@ class WsTI2PCtFromTwo(TurbineType):
             qts = np.zeros((n_sel, 2), dtype=config.dtype_double)  # ws, ti
             qts[:, 0] = fdata[self.WSP][st_sel_ct]
             qts[:, 1] = fdata[FV.TI][st_sel_ct]
-            factor_ct = 1.0
+            factor_ct: float | np.ndarray = 1.0
 
             # apply air density and yaw misalignment corrections:
             corrects_rho = (
@@ -350,9 +381,10 @@ class WsTI2PCtFromTwo(TurbineType):
                 qts[:, 0] = rews_ct
 
             # run interpolation:
+            ipars_ct = self.ipars_ct if self.ipars_ct is not None else {}
             try:
                 fdata[FV.CT][st_sel_ct] = factor_ct * interpn(
-                    (self._ws_ct, self._ti_ct), self._ct, qts, **self.ipars_ct
+                    (self._ws_ct, self._ti_ct), self._ct, qts, **ipars_ct
                 )
             except ValueError as e:
                 self._bounds_info(FV.CT, qts)
@@ -360,15 +392,15 @@ class WsTI2PCtFromTwo(TurbineType):
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        verbosity: int
+        verbosity
             The verbosity level
 
         """

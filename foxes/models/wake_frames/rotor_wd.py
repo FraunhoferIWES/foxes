@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
@@ -6,6 +9,10 @@ from foxes.config import config
 
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class RotorWD(WakeFrame):
@@ -15,29 +22,28 @@ class RotorWD(WakeFrame):
 
     Attributes
     ----------
-    var_wd: str
+    var_wd
         The wind direction variable
 
-    :group: models.wake_frames
 
     """
 
-    def __init__(self, var_wd=FV.WD, **kwargs):
+    def __init__(self, var_wd: str = FV.WD, **kwargs: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        var_wd: str
+        var_wd
             The wind direction variable
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
         super().__init__(**kwargs)
         self.var_wd = var_wd
 
-    def calc_order(self, algo, mdata, fdata):
+    def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -46,16 +52,16 @@ class RotorWD(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        order: numpy.ndarray
+        order
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -67,37 +73,38 @@ class RotorWD(WakeFrame):
 
     def get_wake_coos(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+    ) -> np.ndarray:
         """
         Calculate wake coordinates of rotor points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
 
         Returns
         -------
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         """
         n_states = tdata.n_states
+        assert n_states is not None
         targets = tdata[FC.TARGETS]
 
         xyz = fdata[FV.TXYH][:, downwind_index]
@@ -106,7 +113,7 @@ class RotorWD(WakeFrame):
 
         wd = fdata[self.var_wd][:, downwind_index]
 
-        nax = np.zeros((n_states, 3, 3), dtype=config.dtype_double)
+        nax: np.ndarray = np.zeros((n_states, 3, 3), dtype=config.dtype_double)
         n = nax[:, 0, :2]
         n[:] = wd2uv(wd, axis=-1)
         m = nax[:, 1, :2]
@@ -116,31 +123,38 @@ class RotorWD(WakeFrame):
 
         coos = np.einsum("stpd,sad->stpa", delta, nax)
 
-        return algo.wake_deflection.calc_deflection(
-            algo, mdata, fdata, tdata, downwind_index, coos
-        )
+        wdfl = algo.wake_deflection
+        assert wdfl is not None, "Wake deflection model not initialized"
+        return wdfl.calc_deflection(algo, mdata, fdata, tdata, downwind_index, coos)
 
-    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
+    def get_centreline_points(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Gets the points along the centreline for given
         values of x.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points: numpy.ndarray
+        points
             The centreline points, shape: (n_states, n_points, 3)
 
         """

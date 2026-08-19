@@ -1,11 +1,18 @@
+# mypy: disable-error-code=arg-type
+# mypy: disable-error-code=operator
+# mypy: disable-error-code=union-attr
+
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from xarray import Dataset
 from matplotlib.projections.polar import PolarAxes
 from matplotlib.lines import Line2D
+from typing import Any
 
 from foxes.algorithms import Downwind
-from foxes.core import WindFarm, Turbine
+from foxes.core import States, Turbine, WindFarm
 from foxes.models import ModelBook
 import foxes.variables as FV
 import foxes.constants as FC
@@ -15,37 +22,36 @@ from .output import Output
 
 class RosePlotOutput(Output):
     """
-     Class for rose plot creation
+    Class for rose plot creation
 
-     Attributes
-     ----------
-     results: pandas.DataFrame
-         The calculation results (farm or points)
+    Attributes
+    ----------
+    results
+        The calculation results (farm or points)
 
-    :group: output
 
     """
 
     def __init__(
         self,
-        farm_results=None,
-        point_results=None,
-        use_points=False,
-        **kwargs,
-    ):
+        farm_results: Dataset | None = None,
+        point_results: Dataset | None = None,
+        use_points: bool = False,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        farm_results: xarray.Dataset, optional
+        farm_results
             The farm results
-        point_results: xarray.Dataset, optional
+        point_results
             The point results
-        use_points: bool
+        use_points
             Flag for using points in cases where both
             farm and point results are given
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -60,20 +66,20 @@ class RosePlotOutput(Output):
             raise KeyError("Require either farm_results or point_results")
 
     @classmethod
-    def get_data_info(cls, dname):
+    def get_data_info(cls, dname: str) -> tuple[str, str]:
         """
         Returns default description for a variable.
 
         Parameters
         ----------
-        dname: str
+        dname
             The variable name
 
         Returns
         -------
-        title: str
+        title
             The long name of the variable
-        legend: str
+        legend
             The legend/axis text
 
         """
@@ -114,42 +120,43 @@ class RosePlotOutput(Output):
 
     def get_data(
         self,
-        wd_sectors,
-        ws_var,
-        ws_bins,
-        wd_var=FV.AMB_WD,
-        turbine=0,
-        point=0,
-        add_inf=False,
-    ):
+        wd_sectors: int,
+        ws_var: str,
+        ws_bins: Any,
+        wd_var: str = FV.AMB_WD,
+        turbine: int = 0,
+        point: int = 0,
+        add_inf: bool = False,
+    ) -> Dataset:
         """
         Generates the plot data
 
         Parameters
         ----------
-        wd_sectors: int
+        wd_sectors
             The number of wind rose sectors
-        ws_var: str
+        ws_var
             The wind speed variable
-        ws_bins: list of float
+        ws_bins
             The wind speed bins
-        wd_var: str
+        wd_var
             The wind direction variable
-        turbine: int
+        turbine
             The turbine index, for weights and for
             data if farm_results are given
-        point: int
+        point
             The point index, for data if point_results
             are given
-        add_inf: bool
+        add_inf
             Add an upper bin up to infinity
 
         Returns
         -------
-        data: xarray.Dataset
+        data
             The plot data
 
         """
+        assert self.results is not None
         if self.results[FV.WEIGHT].dims == (FC.STATE,):
             w = self.results[FV.WEIGHT].to_numpy()
         elif self.results[FV.WEIGHT].dims == (FC.STATE, FC.TURBINE):
@@ -195,58 +202,58 @@ class RosePlotOutput(Output):
 
     def get_figure(
         self,
-        wd_sectors,
-        ws_var,
-        ws_bins,
-        wd_var=FV.AMB_WD,
-        fig=None,
-        ax=None,
-        figsize=None,
-        freq_delta=3,
-        cmap="summer",
-        title=None,
-        legend_pars=None,
-        ret_data=False,
-        **kwargs,
-    ):
+        wd_sectors: int,
+        ws_var: str,
+        ws_bins: Any,
+        wd_var: str = FV.AMB_WD,
+        fig: Figure | None = None,
+        ax: Axes | None = None,
+        figsize: Any = None,
+        freq_delta: float = 3,
+        cmap: str = "summer",
+        title: str | None = None,
+        legend_pars: dict[str, Any] | None = None,
+        ret_data: bool = False,
+        **kwargs: Any,
+    ) -> Any:
         """
         Creates the figure
 
         Parameters
         ----------
-        wd_sectors: int
+        wd_sectors
             The number of wind rose sectors
-        ws_var: str
+        ws_var
             The wind speed variable
-        ws_bins: list of float
+        ws_bins
             The wind speed bins
-        wd_var: str
+        wd_var
             The wind direction variable
-        fig: pyplot.Figure, optional
+        fig
             The figure object
-        ax: pyplot.Axes, optional
+        ax
             The axes object
-        figsize: tuple, optional
+        figsize
             The figsize argument for plt.subplots
-        freq_delta: int
+        freq_delta
             The frequency delta for the label
             in percent
-        cmap: str
+        cmap
             The color map
-        title: str, optional
+        title
             The title
-        legend_pars: dict, optional
+        legend_pars
             Parameters for the legend
-        ret_data: bool
+        ret_data
             Flag for returning wind rose data
-        kwargs: dict, optional
+        kwargs
             Additional parameters for get_data
 
         Returns
         -------
-        ax: pyplot.Axes
+        ax
             The axes object
-        data: xarray.Dataset, optional
+        data
             The plot data
 
         """
@@ -319,31 +326,33 @@ class RosePlotOutput(Output):
         else:
             return ax
 
-    def write_figure(self, file_name, *args, ret_data=False, **kwargs):
+    def write_figure(
+        self, file_name: str, ret_data: bool = False, **kwargs: Any
+    ) -> Any:
         """
         Write rose plot to file
 
         Parameters
         ----------
-        file_name: str
+        file_name
             Name of the output file
-        args: tuple, optional
+        args
             Additional parameters for get_figure
-        ret_data: bool
+        ret_data
             Flag for returning wind rose data
-        kwargs: dict, optional
+        kwargs
             Additional parameters for get_figure
 
         Returns
         -------
-        data: pd.DataFrame, optional
+        data
             The wind rose data
 
         """
         if self.nofig:
             return None
 
-        r = self.get_figure(*args, ret_data=ret_data, **kwargs)
+        r = self.get_figure(ret_data=ret_data, **kwargs)
         fpath = self.get_fpath(file_name)
         if ret_data:
             r[0].get_figure().savefig(fpath, bbox_inches="tight")
@@ -355,31 +364,30 @@ class RosePlotOutput(Output):
 class StatesRosePlotOutput(RosePlotOutput):
     """
     Class for rose plot creation directly from states
-    :group: output
     """
 
     def __init__(
         self,
-        states,
-        point,
-        mbook=None,
-        ws_var=FV.AMB_REWS,
-        **kwargs,
-    ):
+        states: States,
+        point: np.ndarray,
+        mbook: ModelBook | None = None,
+        ws_var: str = FV.AMB_REWS,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        states: foxes.core.States
+        states
             The states from which to compute the wind rose
-        point: numpy.ndarray
+        point
             The evaluation point, shape: (3,)
-        mbook: foxes.models.ModelBook, optional
+        mbook
             The model book
-        ws_var: str
+        ws_var
             The wind speed variable name
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -407,22 +415,21 @@ class WindRoseBinPlot(Output):
 
     Attributes
     ----------
-    farm_results: xarray.Dataset
+    farm_results
         The wind farm results
 
-    :group: output
 
     """
 
-    def __init__(self, farm_results, **kwargs):
+    def __init__(self, farm_results: Dataset, **kwargs: Any) -> None:
         """
         Constructor
 
         Parameters
         ----------
-        farm_results: xarray.Dataset
+        farm_results
             The wind farm results
-        kwargs: dict, optional
+        kwargs
             Parameters for the base class
 
         """
@@ -431,36 +438,36 @@ class WindRoseBinPlot(Output):
 
     def get_data(
         self,
-        variable,
-        ws_bins,
-        wd_sectors=12,
-        wd_var=FV.AMB_WD,
-        ws_var=FV.AMB_REWS,
-        turbine=0,
-        contraction="weights",
-    ):
+        variable: str,
+        ws_bins: Any,
+        wd_sectors: int = 12,
+        wd_var: str = FV.AMB_WD,
+        ws_var: str = FV.AMB_REWS,
+        turbine: int = 0,
+        contraction: str = "weights",
+    ) -> Dataset:
         """
         Generates the plot data
 
         Parameters
         ----------
-        variable: str
+        variable
             The variable name
-        ws_bins: list of float
+        ws_bins
             The wind speed bins
-        wd_var: str
+        wd_var
             The wind direction variable
-        ws_var: str
+        ws_var
             The wind speed variable
-        turbine: int
+        turbine
             The turbine index
-        contraction: str
+        contraction
             The contraction method for states:
             weights, mean_no_weights, sum_no_weights
 
         Returns
         -------
-        data: xarray.Dataset
+        data
             The plot data
 
         """
@@ -514,54 +521,54 @@ class WindRoseBinPlot(Output):
 
     def get_figure(
         self,
-        variable,
-        ws_bins,
-        wd_sectors=12,
-        wd_var=FV.AMB_WD,
-        ws_var=FV.AMB_REWS,
-        turbine=0,
-        contraction="weights",
-        fig=None,
-        ax=None,
-        title=None,
-        figsize=None,
-        ret_data=False,
-        **kwargs,
-    ):
+        variable: str,
+        ws_bins: Any,
+        wd_sectors: int = 12,
+        wd_var: str = FV.AMB_WD,
+        ws_var: str = FV.AMB_REWS,
+        turbine: int = 0,
+        contraction: str = "weights",
+        fig: Figure | None = None,
+        ax: Axes | None = None,
+        title: str | None = None,
+        figsize: Any = None,
+        ret_data: bool = False,
+        **kwargs: Any,
+    ) -> Any:
         """
         Creates the figure
 
         Parameters
         ----------
-        variable: str
+        variable
             The variable name
-        ws_bins: list of float
+        ws_bins
             The wind speed bins
-        wd_var: str
+        wd_var
             The wind direction variable
-        ws_var: str
+        ws_var
             The wind speed variable
-        turbine: int
+        turbine
             The turbine index
-        contraction: str
+        contraction
             The contraction method for states:
             weights, mean_no_weights, sum_no_weights
-        fig: pyplot.Figure, optional
+        fig
             The figure object
-        ax: pyplot.Axes, optional
+        ax
             The axes object
-        title: str, optional
+        title
             The title
-        figsize: tuple, optional
+        figsize
             The figsize argument for plt.subplots
-        ret_data: bool
+        ret_data
             Flag for returning wind rose data
-        kwargs: dict, optional
+        kwargs
             Additional parameters for plt.pcolormesh
 
         Returns
         -------
-        ax: pyplot.Axes
+        ax
             The axes object
 
         """
@@ -612,31 +619,33 @@ class WindRoseBinPlot(Output):
         else:
             return ax
 
-    def write_figure(self, file_name, *args, ret_data=False, **kwargs):
+    def write_figure(
+        self, file_name: str, ret_data: bool = False, **kwargs: Any
+    ) -> Any:
         """
         Write rose plot to file
 
         Parameters
         ----------
-        file_name: str
+        file_name
             Name of the output file
-        args: tuple, optional
+        args
             Additional parameters for get_figure
-        ret_data: bool
+        ret_data
             Flag for returning wind rose data
-        kwargs: dict, optional
+        kwargs
             Additional parameters for get_figure
 
         Returns
         -------
-        data: pd.DataFrame, optional
+        data
             The wind rose data
 
         """
         if self.nofig:
             return None
 
-        r = self.get_figure(*args, ret_data=ret_data, **kwargs)
+        r = self.get_figure(ret_data=ret_data, **kwargs)
         fpath = self.get_fpath(file_name)
         if ret_data:
             r[0].get_figure().savefig(fpath, bbox_inches="tight")

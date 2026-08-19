@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 import numpy as np
 from pandas import DataFrame
 from xarray import Dataset, open_dataset
+from pathlib import Path
+from typing import Any, cast
 
-from foxes.core import States
+from foxes.core import Algorithm, FData, LoadedData, MData, States, TData
 from foxes.config import config, get_input_path
 from foxes.data import STATES
 import foxes.variables as FV
@@ -17,97 +21,96 @@ class SingleStateField(States):
 
     Attributes
     ----------
-    data_source: xarray.Dataset or str
+    data_source
         The NetCDF dataset to read from, or a path to it.
-    output_vars: list of str
-        List of variable names to read.
-    var2ncvar: dict
+    output_vars
+        Names of variables to read.
+    var2ncvar
         Mapping from variable names to netCDF variable names.
-    fixed_vars: dict
+    fixed_vars
         Mapping from variable names to fixed values.
-    x_coord: str
+    x_coord
         Name of the x coordinate.
-    y_coord: str
+    y_coord
         Name of the y coordinate.
-    h_coord: str
+    h_coord
         Name of the height coordinate.
-    sel: dict
-        Subset selection via xr.Dataset.sel()
-    isel: dict
-        Subset selection via xr.Dataset.isel()
-    interp_pars: dict
-        Interpolation parameters, passed to the interpolation function.
-    bounds_extra_space: float or str
-        The extra space, either float in m,
-        or str for units of D, e.g. '2.5D'
-    height_bounds: tuple
-        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+    sel
+        Subset selection via xr.Dataset.sel().
+    isel
+        Subset selection via xr.Dataset.isel().
+    interp_pars
+        Interpolation parameters passed to the interpolation function.
+    bounds_extra_space
+        The extra space, either a float in m or a string for units of D,
+        for example "2.5D".
+    height_bounds
+        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D.
 
-    :group: input.states
 
     """
 
     def __init__(
         self,
-        data_source,
-        output_vars,
-        var2ncvar={},
-        fixed_vars={},
-        x_coord="x",
-        y_coord="y",
-        h_coord="height",
-        sel=None,
-        isel=None,
-        interp_pars={},
-        bounds_extra_space=1000,
-        height_bounds=None,
-        **kwargs,
-    ):
+        data_source: str | Path | Dataset,
+        output_vars: list[str],
+        var2ncvar: dict[str, str] | None = None,
+        fixed_vars: dict[str, float] | None = None,
+        x_coord: str = "x",
+        y_coord: str = "y",
+        h_coord: str | None = "height",
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        interp_pars: dict[str, bool | float | str | None] | None = None,
+        bounds_extra_space: float | str | None = 1000,
+        height_bounds: tuple[float, float] | None = None,
+        **kwargs: object,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: xarray.Dataset or str
+        data_source
             The NetCDF dataset to read from, or a path to it.
-        output_vars: list of str
-            List of variable names to read.
-        var2ncvar: dict
+        output_vars
+            Names of variables to read.
+        var2ncvar
             Mapping from variable names to netCDF variable names.
-        fixed_vars: dict
+        fixed_vars
             Mapping from variable names to fixed values.
-        x_coord: str
+        x_coord
             Name of the x coordinate.
-        y_coord: str
+        y_coord
             Name of the y coordinate.
-        h_coord: str
+        h_coord
             Name of the height coordinate.
-        sel: dict, optional
-            Subset selection via xr.Dataset.sel()
-        isel: dict, optional
-            Subset selection via xr.Dataset.isel()
-        interp_pars: dict
-            Interpolation parameters, passed to the interpolation function.
-        bounds_extra_space: float or str, optional
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        kwargs: dict
+        sel
+            Subset selection via xr.Dataset.sel().
+        isel
+            Subset selection via xr.Dataset.isel().
+        interp_pars
+            Interpolation parameters passed to the interpolation function.
+        bounds_extra_space
+            The extra space, either a float in m or a string for units of D,
+            for example "2.5D".
+        height_bounds
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D.
+        kwargs
             Keyword arguments passed to the base class.
 
         """
-        super().__init__(**kwargs)
+        super().__init__(**kwargs)  # type: ignore[arg-type]
         self.data_source = data_source
         self.output_vars = output_vars
-        self.var2ncvar = var2ncvar
-        self.fixed_vars = fixed_vars
+        self.var2ncvar = {} if var2ncvar is None else var2ncvar
+        self.fixed_vars = {} if fixed_vars is None else fixed_vars
         self.x_coord = x_coord
         self.y_coord = y_coord
         self.h_coord = h_coord
         self.sel = sel
         self.isel = isel
-        self.interp_pars = interp_pars
+        self.interp_pars = {} if interp_pars is None else interp_pars
         self.bounds_extra_space = bounds_extra_space
         self.height_bounds = height_bounds
 
@@ -118,39 +121,45 @@ class SingleStateField(States):
         if self.h_coord is not None:
             self._cmap[FV.H] = self.h_coord
 
-        self._data = None
+        self._data: Dataset | None = None
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return self.output_vars
 
     @property
-    def data(self):
+    def data(self) -> Dataset | None:
         """
         The field data
 
         Returns
         -------
-        d: xrarray.Dataset
+        d
             The field data
 
         """
         return self._data
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=1):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 1,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -160,16 +169,16 @@ class SingleStateField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -188,9 +197,11 @@ class SingleStateField(States):
                             print(
                                 f"States '{self.name}': Reading static data '{fpath.name}' from context '{STATES}'"
                             )
-                        fpath = algo.dbook.get_file_path(
+                        fpath0 = algo.dbook.get_file_path(
                             STATES, fpath.name, check_raw=False
                         )
+                        assert fpath0 is not None
+                        fpath = fpath0
                     else:
                         raise FileNotFoundError(
                             f"States '{self.name}': File {fpath} not found."
@@ -231,7 +242,7 @@ class SingleStateField(States):
             # reduce dimensions:
             if algo is not None:
                 DatasetStates.preproc_first(
-                    self,
+                    cast(DatasetStates, self),
                     algo,
                     data=data,
                     bounds_extra_space=self.bounds_extra_space,
@@ -240,10 +251,14 @@ class SingleStateField(States):
                     verbosity=verbosity,
                 )
             if self.isel is not None and len(self.isel):
-                isel = {c: s for c, s in self.isel.items() if c in data.sizes}
+                isel: dict[str, Any] = {
+                    c: s for c, s in self.isel.items() if c in data.sizes
+                }
                 data = data.isel(**isel)
             if self.sel is not None and len(self.sel):
-                sel = {c: s for c, s in self.sel.items() if c in data.sizes}
+                sel: dict[str, Any] = {
+                    c: s for c, s in self.sel.items() if c in data.sizes
+                }
                 data = data.sel(**sel)
 
             # rename:
@@ -259,7 +274,7 @@ class SingleStateField(States):
                 print(data)
                 print()
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -271,19 +286,21 @@ class SingleStateField(States):
         """
         return 1
 
-    def index(self):
+    def index(self) -> list[int]:
         """
         The index list
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
         return [0]
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(  # type: ignore[override]
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -292,20 +309,20 @@ class SingleStateField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """
@@ -327,7 +344,7 @@ class SingleStateField(States):
         for c in self._cmap:
             valid &= np.isfinite(pts[c])
 
-        out = {
+        out: dict[str, np.ndarray] = {
             v: np.full(n_targets * n_tpoints, np.nan, dtype=config.dtype_double)
             for v in vrs
         }

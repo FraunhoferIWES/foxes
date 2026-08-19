@@ -1,11 +1,17 @@
 import numpy as np
 import sys
 from collections.abc import Collection, Mapping, Sequence, Set as AbstractSet
+from typing import Any
 
 from .load import import_module
 
 
-def get_object_nbytes(value, recursive=True, seen=None, allow_shallow_fallback=True):
+def get_object_nbytes(
+    value: Any,
+    recursive: bool = True,
+    seen: set[int] | None = None,
+    allow_shallow_fallback: bool = True,
+) -> int:
     """Estimate payload bytes of nested extra_data values.
 
     The estimate is recursive for generic container types and focuses on
@@ -14,18 +20,17 @@ def get_object_nbytes(value, recursive=True, seen=None, allow_shallow_fallback=T
 
     Parameters
     ----------
-    value: any
+    value
         The value to estimate the payload bytes for.
-    recursive: bool
+    recursive
         Whether to recursively estimate the payload bytes for nested containers.
-    seen: set, optional
+    seen
         A set of object IDs that have already been seen to avoid double counting.
-    allow_shallow_fallback: bool
+    allow_shallow_fallback
         If True, use ``sys.getsizeof`` as a shallow last-resort estimate for
         unknown object types. If False, return 0 for unknown object types to
         preserve payload-only semantics.
 
-    :group: utils
 
     """
     if seen is None:
@@ -134,22 +139,26 @@ def get_object_nbytes(value, recursive=True, seen=None, allow_shallow_fallback=T
         return 0
 
 
-def print_mem(obj, min_csize=0, max_csize=None, pre_str="OBJECT SIZE"):
+def print_mem(
+    obj: Any,
+    min_csize: int = 0,
+    max_csize: int | None = None,
+    pre_str: str = "OBJECT SIZE",
+) -> None:
     """
     Prints the memory consumption of a model and its components
 
     Parmeters
     ---------
-    obj: object
+    obj
         The object to be analyzed
-    min_csize: int
+    min_csize
         The minimal size of a component for being shown
-    max_csize: int, optional
+    max_csize
         The maximal allowed size of a component
-    pre_str: str
+    pre_str
         String to be printed before
 
-    :group: utils
 
     """
     objsize = import_module("objsize")
@@ -175,28 +184,27 @@ def print_mem(obj, min_csize=0, max_csize=None, pre_str="OBJECT SIZE"):
                     raise ValueError(f"Component {k} exceeds maximal size {max_csize}")
 
 
-def deep_split(condition, data, fill_None=True):
+def deep_split(condition: Any, data: Any, fill_None: bool = True) -> tuple[Any, Any]:
     """
     Recursively split data into two parts based on a condition.
 
     Parameters
     ----------
-    condition: callable or nested structure of callables
+    condition
         A function or a nested structure of functions that takes an element of data and returns True or False.
-    data: any
+    data
         The data to be split, which can be a nested structure (e.g., dict, list, tuple) or a single element.
-    fill_None: bool
+    fill_None
         If True, fill the parts with None where the condition is not met.
         If False, the parts will be empty where the condition is not met.
 
     Returns
     -------
-    data_0: any
+    data_0
         data filled only with elements that evaluate the condition to False
-    data_1:
+    data_1
         data filled only with elements that evaluate the condition to True
 
-    :group: utils
 
     """
 
@@ -206,32 +214,33 @@ def deep_split(condition, data, fill_None=True):
                 return (None, data) if condition(data) else (data, None)
             except TypeError:
                 return (data, data)
-        data_0 = {}
-        data_1 = {}
+        map_0: dict[Any, Any] = {}
+        map_1: dict[Any, Any] = {}
         for k, v in data.items():
             c = condition[k] if isinstance(condition, Mapping) else condition
             d0, d1 = deep_split(c, v, fill_None=fill_None)
             if d0 is not None or fill_None:
-                data_0[k] = d0
+                map_0[k] = d0
             if d1 is not None or fill_None:
-                data_1[k] = d1
-        return data_0, data_1
+                map_1[k] = d1
+        return map_0, map_1
 
     elif isinstance(data, Sequence) and not isinstance(data, (str, bytes)):
-        data_0 = []
-        data_1 = []
+        seq_0: list[Any] = []
+        seq_1: list[Any] = []
         for i, v in enumerate(data):
             c = condition[i] if isinstance(condition, Sequence) else condition
             d0, d1 = deep_split(c, v, fill_None=fill_None)
             if d0 is not None or fill_None:
-                data_0.append(d0)
+                seq_0.append(d0)
             if d1 is not None or fill_None:
-                data_1.append(d1)
-        if not isinstance(data_0, type(data)):
-            data_0 = type(data)(data_0)
-        if not isinstance(data_1, type(data)):
-            data_1 = type(data)(data_1)
-        return data_0, data_1
+                seq_1.append(d1)
+        out_0: Any = seq_0
+        out_1: Any = seq_1
+        if isinstance(data, tuple):
+            out_0 = tuple(seq_0)
+            out_1 = tuple(seq_1)
+        return out_0, out_1
 
     else:
         try:
@@ -241,37 +250,36 @@ def deep_split(condition, data, fill_None=True):
 
 
 def deep_split_by_nbytes(
-    data,
-    max_nbytes,
-    fill_None=True,
-    allow_shallow_fallback=True,
-):
+    data: Any,
+    max_nbytes: int,
+    fill_None: bool = True,
+    allow_shallow_fallback: bool = True,
+) -> tuple[Any, Any]:
     """
     Recursively split data by payload size condition.
 
     Parameters
     ----------
-    data: any
+    data
         The data to split.
-    max_nbytes: int
+    max_nbytes
         Maximal payload size in bytes. Elements with estimated payload smaller
         than this threshold are placed in the first output.
-    fill_None: bool
+    fill_None
         If True, keep structure and fill missing branches with None.
         If False, remove missing branches.
-    allow_shallow_fallback: bool
+    allow_shallow_fallback
         Forwarded to ``get_object_nbytes`` for unknown object types.
 
     Returns
     -------
-    data_small: any
+    data_small
         Data filled only with elements that satisfy
         ``get_object_nbytes(element) < max_nbytes``.
-    data_large: any
+    data_large
         Data filled only with elements that satisfy
         ``get_object_nbytes(element) >= max_nbytes``.
 
-    :group: utils
 
     """
     if not isinstance(max_nbytes, int) or max_nbytes < 0:
@@ -279,7 +287,7 @@ def deep_split_by_nbytes(
             f"Expected non-negative integer max_nbytes, got {max_nbytes!r}"
         )
 
-    def condition(value):
+    def condition(value: Any) -> bool:
         return (
             get_object_nbytes(
                 value,
@@ -293,23 +301,22 @@ def deep_split_by_nbytes(
     return data_small, data_large
 
 
-def deep_update(data_0, data_1):
+def deep_update(data_0: Any, data_1: Any) -> Any:
     """
     Recursively update data_0 with values from data_1.
 
     Parameters
     ----------
-    data_0: any
+    data_0
         The original data to be updated, which can be a nested structure (e.g., dict, list, tuple) or a single element.
-    data_1: any
+    data_1
         The new data to update with, which can be a nested structure (e.g., dict, list, tuple) or a single element.
 
     Returns
     -------
-    updated_data: any
+    updated_data
         The updated data after merging data_0 and data_1.
 
-    :group: utils
 
     """
 
@@ -323,26 +330,26 @@ def deep_update(data_0, data_1):
         )
 
     if isinstance(data_0, Mapping):
-        updated_data = {}
+        updated_map: dict[Any, Any] = {}
         for k in set(data_0.keys()).union(data_1.keys()):
             v0 = data_0.get(k, None)
             v1 = data_1.get(k, None)
-            updated_data[k] = deep_update(v0, v1)
-        return updated_data
+            updated_map[k] = deep_update(v0, v1)
+        return updated_map
 
     elif isinstance(data_0, Sequence) and not isinstance(data_0, (str, bytes)):
         if len(data_0) != len(data_1):
             raise ValueError(
                 f"data_0 and data_1 must have the same length, got {len(data_0)} and {len(data_1)}"
             )
-        updated_data = []
+        updated_seq: list[Any] = []
         for i in range(len(data_0)):
             v0 = data_0[i]
             v1 = data_1[i]
-            updated_data.append(deep_update(v0, v1))
-        if type(data_0) is not type(updated_data):
-            updated_data = type(data_0)(updated_data)
-        return updated_data
+            updated_seq.append(deep_update(v0, v1))
+        if isinstance(data_0, tuple):
+            return tuple(updated_seq)
+        return updated_seq
 
     elif isinstance(data_0, np.ndarray):
         if np.array_equal(data_0, data_1):

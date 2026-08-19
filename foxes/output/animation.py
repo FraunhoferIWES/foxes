@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import matplotlib.animation as animation
+from matplotlib.figure import Figure
+from typing import Any
 
 
 class Animator:
@@ -8,65 +12,64 @@ class Animator:
 
     Attributes
     ----------
-    fig: pyplot.Figure
+    fig
         The figure object
 
-    :group: output
 
     """
 
-    def __init__(self, fig=None):
+    def __init__(self, fig: Figure | None = None) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        fig: pyplot.Figure, optional
+        fig
             The figure object
 
         """
         self.fig = fig
-        self._gens = []
+        self._gens: list[Any] = []
 
-    def add_generator(self, gen):
+    def add_generator(self, gen: Any) -> None:
         """
         Add a generator.
 
         Parameters
         ----------
-        gen: Generator
-            A generator that yields (fig, list of Artist)
+        gen
+            A generator that yields a figure and artist collection
 
         """
         self._gens.append(gen)
 
     @property
-    def generators(self):
+    def generators(self) -> list[Any]:
         """
         The artist generators
 
         Returns
         -------
-        gens: list of generators
-            Generators that yield (fig, list of Artist)
+        gens
+            Generators that yield a figure and artist collection
 
         """
         return self._gens
 
-    def animate(self, verbosity=1, **kwargs):
+    def animate(self, verbosity: int = 1, **kwargs: Any) -> Any:
         """
         Create the animation
 
         Parameters
         ----------
-        verbostiy: int
+        verbostiy
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Arguments for pyplot.animation.ArtistAnimation
 
         Returns
         -------
-        ani: pyplot.animation.ArtistAnimation
+        ani
             The animation
 
         """

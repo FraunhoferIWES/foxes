@@ -1,6 +1,10 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from xarray import Dataset
 from copy import deepcopy
+from typing import Any
 
 from foxes.algorithms.downwind.downwind import Downwind
 from foxes.core import FarmDataModelList
@@ -16,30 +20,29 @@ class Iterative(Downwind):
 
     Attributes
     ----------
-    max_it: int
+    max_it
         The maximal number of iterations
-    conv_crit: foxes.algorithms.iterative.ConvCrit
+    conv_crit
         The convergence criteria
-    prev_farm_results: xarray.Dataset
+    prev_farm_results
         Results from the previous iteration
 
-    :group: algorithms.iterative
 
     """
 
     @classmethod
-    def get_model(cls, name):
+    def get_model(cls, name: str) -> Any:
         """
         Get the algorithm specific model
 
         Parameters
         ----------
-        name: str
+        name
             The model name
 
         Returns
         -------
-        model: foxes.core.model
+        model
             The model
 
         """
@@ -50,26 +53,26 @@ class Iterative(Downwind):
 
     def __init__(
         self,
-        *args,
-        max_it=None,
-        conv_crit="default",
-        mod_cutin={},
-        **kwargs,
-    ):
+        *args: Any,
+        max_it: int | None = None,
+        conv_crit: Any = "default",
+        mod_cutin: dict[str, Any] = {},
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for Downwind
-        max_it: int, optional
+        max_it
             The maximal number of iterations
-        conv_crit: foxes.algorithms.iterative.ConvCrit, optional
+        conv_crit
             The convergence criteria
-        mod_cutin: dict, optional
+        mod_cutin
             Parameters for cutin modification
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for Downwind
 
         """
@@ -79,11 +82,11 @@ class Iterative(Downwind):
         self.conv_crit = (
             self.get_model("DefaultConv")() if conv_crit == "default" else conv_crit
         )
-        self.__prev_farm_results = None
-        self._it = None
-        self._mlist = None
+        self.__prev_farm_results: Dataset | None = None
+        self._it: int | None = None
+        self._mlist: FarmDataModelList | None = None
         self._reamb = False
-        self._urelax = None
+        self._urelax: Dict | None = None
 
         self._mod_cutin = dict(modify_ct=True, modify_P=False)
         self._mod_cutin.update(mod_cutin)
@@ -91,29 +94,33 @@ class Iterative(Downwind):
         self.verbosity = self.verbosity - 1
 
     @property
-    def farm_results_downwind(self):
+    def farm_results_downwind(self) -> Dataset | None:
         """
         Gets the all-chunks farm results in downwind order
         from the previous iteration
 
         Returns
         -------
-        fres: xarray.Datatset
+        fres
             The all-chunks farm results during calculations
 
         """
         return self.__prev_farm_results
 
-    def set_urelax(self, entry_point, **urel):
+    @property
+    def prev_farm_results(self) -> Dataset | None:
+        return self.__prev_farm_results
+
+    def set_urelax(self, entry_point: str, **urel: Any) -> None:
         """
         Sets under-relaxation parameters.
 
         Parameters
         ----------
-        entry_point: str
+        entry_point
             The entry point: first, pre_rotor, post_rotor,
             pre_wake, last
-        urel: dict
+        urel
             The variables and their under-relaxation values
 
         """
@@ -129,48 +136,49 @@ class Iterative(Downwind):
             )
         self._urelax[entry_point].update(urel)
 
-    def initialize(self):
+    def initialize(self) -> None:
         """
         Initializes the algorithm.
         """
         super().initialize()
         if len(self._mod_cutin):
+            assert self.farm_controller.turbine_types is not None
             for t in self.farm_controller.turbine_types:
                 t.modify_cutin(**self._mod_cutin)
 
     @property
-    def urelax(self):
+    def urelax(self) -> Dict | None:
         """
         Returns the under-relaxation parameters
 
         Returns
         -------
-        urlx: foxes.utils.Dict
+        urelax
             The under-relaxation parameters
 
         """
         return self._urelax
 
     @property
-    def iterations(self):
+    def iterations(self) -> int | None:
         """
         The current iteration number
 
         Returns
         -------
-        it: int
+        iterations
             The current iteration number
 
         """
         return self._it
 
-    def init_states(self, force=False):
+    def init_states(self, force: bool = False) -> None:
         """
         Initialize states, if needed.
 
         Parameters
         ----------
-        force: bool
+        force
             Force initialization even if already initialized
 
         """
@@ -180,10 +188,10 @@ class Iterative(Downwind):
 
     def _collect_farm_models(
         self,
-        outputs,
-        calc_parameters,
-        ambient,
-    ):
+        outputs: list[str] | bool | None,
+        calc_parameters: dict[str, dict[str, Any]],
+        ambient: bool,
+    ) -> tuple[FarmDataModelList, list[dict[str, Any]]]:
         """
         Helper function that creates model list
         """
@@ -217,9 +225,9 @@ class Iterative(Downwind):
                     n += 1
 
                 if len(self._urelax["pre_wake"]):
-                    self._mlist0.models[5 + n].urelax = mdls.URelax(
-                        **self._urelax["pre_wake"]
-                    )
+                    fwcalc = self._mlist0.models[5 + n]
+                    assert isinstance(fwcalc, mdls.FarmWakesCalculation)
+                    fwcalc.urelax = mdls.URelax(**self._urelax["pre_wake"])
 
                 if len(self._urelax["last"]):
                     self._mlist0.append(mdls.URelax(**self._urelax["last"]))
@@ -260,12 +268,17 @@ class Iterative(Downwind):
 
             return mlist, calc_pars
 
-    def _calc_farm_vars(self, mlist):
+    def _calc_farm_vars(self, mlist: FarmDataModelList) -> None:
         """Helper function that gathers the farm variables"""
         if self._it == 0:
             super()._calc_farm_vars(mlist)
 
-    def _launch_parallel_farm_calc(self, mlist, *data, **kwargs):
+    def _launch_parallel_farm_calc(
+        self,
+        mlist: FarmDataModelList,
+        *data: Any,
+        **kwargs: Any,
+    ) -> Dataset:
         """Helper function for running the main farm calculation"""
         if self.conv_crit.conv_states is not None:
             isel = {FC.STATE: ~self.conv_crit.conv_states}
@@ -281,39 +294,44 @@ class Iterative(Downwind):
         )
 
     @property
-    def final_iteration(self):
+    def final_iteration(self) -> bool:
         """
         Flag for the final iteration
 
         Returns
         -------
-        flag: bool
+        final_iteration
             Flag for the final iteration
 
         """
         return self._final_run
 
-    def calc_farm(self, finalize=True, ret_dwnd_order=False, **kwargs):
+    def calc_farm(
+        self,
+        outputs: list[str] | str | None = None,
+        finalize: bool = True,
+        ret_dwnd_order: bool = False,
+        **kwargs: Any,
+    ) -> Dataset | tuple[Dataset, Dataset | None]:
         """
         Calculate farm data.
 
         Parameters
         ----------
-        finalize: bool
+        finalize
             Flag for finalization after calculation
-        ret_dwnd_order: bool
+        ret_dwnd_order
             Also return the results in downwind order
-        kwargs: dict, optional
+        kwargs
             Arguments for calc_farm in the base class.
 
         Returns
         -------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results. The calculated variables have
             dimensions (state, turbine)
 
         """
-        outputs = kwargs.pop("outputs", None)
         if outputs == "default":
             outputs = self.DEFAULT_FARM_OUTPUTS
 
@@ -321,6 +339,7 @@ class Iterative(Downwind):
         self._it = -1
         self._final_run = False
         fres_dwnd = None
+        assert self._it is not None
         while self._it < self.max_it:
             self._it += 1
 

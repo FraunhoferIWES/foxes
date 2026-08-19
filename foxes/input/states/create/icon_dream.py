@@ -5,6 +5,8 @@ from pandas import DataFrame
 from pathlib import Path
 from tqdm.autonotebook import tqdm
 from shutil import rmtree
+from collections.abc import Iterator
+from typing import Any
 
 from foxes.core import get_engine, Engine
 from foxes.config import config
@@ -13,7 +15,7 @@ from foxes.data import StaticData, STATES
 import foxes.variables as FV
 
 
-def _rm_tmp_dir(cdo_tmp_dir, verbosity=1):
+def _rm_tmp_dir(cdo_tmp_dir: Any, verbosity: int = 1) -> None:
     """Remove the temporary directory for CDO intermediate files."""
     if cdo_tmp_dir.exists():
         if verbosity > 0:
@@ -21,7 +23,7 @@ def _rm_tmp_dir(cdo_tmp_dir, verbosity=1):
         rmtree(cdo_tmp_dir)
 
 
-def _get_file_var_str(var, for_fname=False):
+def _get_file_var_str(var: Any, for_fname: bool = False) -> str:
     """Get the variable string for the filename based on the variable code."""
     var_str = {
         FV.U: "U",
@@ -36,7 +38,13 @@ def _get_file_var_str(var, for_fname=False):
     return var_str
 
 
-def _get_fname(year, month, var=None, region=None, suffix="nc"):
+def _get_fname(
+    year: int,
+    month: int,
+    var: Any = None,
+    region: str | None = None,
+    suffix: str = "nc",
+) -> str:
     """Construct the filename for a given year, month, and variable."""
     ym_str = f"{year}{month:02d}"
     var_str = _get_file_var_str(var, for_fname=True)
@@ -44,7 +52,12 @@ def _get_fname(year, month, var=None, region=None, suffix="nc"):
     return f"ICON-DREAM-EU_{ym_str}{region_str}{var_str}_hourly.{suffix}"
 
 
-def _download_icon_dream(ymv, base_url, out_dir, verbosity=1):
+def _download_icon_dream(
+    ymv: tuple[int, int, Any],
+    base_url: str,
+    out_dir: Any,
+    verbosity: int = 1,
+) -> int:
     """Download a file from ICON-DREAM-EU for a given year, month, and variable."""
     year, month, var = ymv
     fname = _get_fname(year, month, var, region=None, suffix="grb")
@@ -57,13 +70,13 @@ def _download_icon_dream(ymv, base_url, out_dir, verbosity=1):
 
 
 def _prepare_grid(
-    path_grid_select,
-    path_icon_grid,
-    path_weights_out,
-    url_icon_grid,
-    cdo_tmp_dir,
-    verbosity=1,
-):
+    path_grid_select: Any,
+    path_icon_grid: Any,
+    path_weights_out: Any,
+    url_icon_grid: str,
+    cdo_tmp_dir: Any,
+    verbosity: int = 1,
+) -> int:
     """Download and prepare grid files for remapping."""
     if path_weights_out.is_file():
         return 0  # Already present
@@ -95,13 +108,13 @@ def _prepare_grid(
 
 
 def _check_grb(
-    year,
-    month,
-    grb_dir,
-    var2ncvar,
-    cdo_tmp_dir,
-    verbosity=1,
-):
+    year: int,
+    month: int,
+    grb_dir: Any,
+    var2ncvar: dict[str, str],
+    cdo_tmp_dir: Any,
+    verbosity: int = 1,
+) -> tuple[list[bool], list[str], list[str], list[str]]:
     """Check dimensions of the grb files for a given year and month."""
     Cdo = import_module(
         "cdo",
@@ -218,20 +231,20 @@ def _check_grb(
 
 
 def _process(
-    region,
-    year,
-    month,
-    grb_dir,
-    nc_dir,
-    var2ncvar,
-    levels,
-    path_grid_select,
-    path_grid_weights,
-    check_nans=True,
-    pack=True,
-    cdo_tmp_dir="cdo_tmp",
-    verbosity=1,
-):
+    region: str,
+    year: int,
+    month: int,
+    grb_dir: Any,
+    nc_dir: Any,
+    var2ncvar: dict[str, str],
+    levels: Any,
+    path_grid_select: Any,
+    path_grid_weights: Any,
+    check_nans: bool = True,
+    pack: bool = True,
+    cdo_tmp_dir: Any = "cdo_tmp",
+    verbosity: int = 1,
+) -> Any:
     """Process grb files and convert to NetCDF."""
     nc_fname = _get_fname(year, month, var=None, region=region, suffix="nc")
     nc_path = nc_dir / nc_fname
@@ -319,9 +332,10 @@ def _process(
        print("PROCESSED DATA", grb_fname, d.to_numpy().shape, "NaNs:", np.sum(np.isnan(d.to_numpy())))
     data = Dataset(coords=crds, data_vars=dvrs)
     """
-    data = Dataset(data)
+    dataset = Dataset(data)
+    assert config.nc_engine is not None
     write_nc(
-        data,
+        dataset,
         nc_path,
         nc_engine=config.nc_engine,
         pack=pack,
@@ -332,63 +346,63 @@ def _process(
 
 
 def iconDream2foxes(
-    out_dir,
-    region,
-    min_year,
-    min_month,
-    max_year,
-    max_month,
-    base_url="https://opendata.dwd.de/climate_environment/REA/ICON-DREAM-EU/hourly",
-    url_icon_grid="http://icon-downloads.mpimet.mpg.de/grids/public/edzw/icon_grid_0027_R03B08_N02.nc",
-    levels=None,
-    skip_download=False,
-    check_grb=False,
-    check_nans=True,
-    pack=True,
-    cdo_tmp_dir="cdo_tmp",
-    verbosity=1,
-):
+    out_dir: str | Path,
+    region: str,
+    min_year: int,
+    min_month: int,
+    max_year: int,
+    max_month: int,
+    base_url: str = "https://opendata.dwd.de/climate_environment/REA/ICON-DREAM-EU/hourly",
+    url_icon_grid: str = "http://icon-downloads.mpimet.mpg.de/grids/public/edzw/icon_grid_0027_R03B08_N02.nc",
+    levels: list[int] | None = None,
+    skip_download: bool = False,
+    check_grb: bool = False,
+    check_nans: bool = True,
+    pack: bool = True,
+    cdo_tmp_dir: str | Path = "cdo_tmp",
+    verbosity: int = 1,
+) -> None:
     """
     Download ICON-DREAM-EU hourly files for specified variables and time range,
     and convert them into foxes compatible NetCDF files.
 
     Parameters
     ----------
-    out_dir: str or Path
+    out_dir
         Directory to save downloaded files.
-    region: str
+    region
         Region for which to download data ("northsea" or "baltic").
-    min_year: int
+    min_year
         Minimal year (inclusive).
-    min_month: int
+    min_month
         Minimal month (inclusive).
-    max_year: int
+    max_year
         Maximal year (inclusive).
-    max_month: int
+    max_month
         Maximal month (inclusive).
-    base_url: str
+    base_url
         Base URL of the FTP server.
-    url_icon_grid: str
+    url_icon_grid
         URL to download the ICON grid file if not present.
-    levels: list of int, optional
+    levels
         The ICON height levels, e.g. [69,70,71,72,73,74].
-    skip_download: bool
+    skip_download
         If True, skip the download step and assume all files are present.
-    check_grb: bool
+    check_grb
         If True, check the grb files for expected dimensions before processing
-    check_nans: bool
+    check_nans
         If True, check for NaNs in the data
-    pack: bool
+    pack
         Whether to pack data using scale_factor and add_offset
-    cdo_tmp_dir: str
+    cdo_tmp_dir
         Temporary directory for CDO intermediate files.
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent, 1 = progress bars and summary.
 
-    :group: input.states.create
 
     """
     engine = get_engine()
+    assert engine is not None
     out_dir = Path(out_dir).expanduser()
     grb_dir = out_dir / "grb"
     nc0_dir = out_dir / "nc"
@@ -430,7 +444,7 @@ def iconDream2foxes(
     path_grid_weights = nc0_dir / f"icon_weights_{region}.nc"
     path_icon_grid = nc0_dir / "icon_grid_0027_R03B08_N02.nc"
 
-    def _ymv(vrs=None):
+    def _ymv(vrs: Any = None) -> Iterator[tuple[Any, ...]]:
         """Helper to iterate over year/month/var"""
         y, m = min_year, min_month
         while (y < max_year) or (y == max_year and m <= max_month):
@@ -501,6 +515,10 @@ def iconDream2foxes(
 
     # check grb files in parallel:
     if check_grb:
+        valid: Any
+        fname: Any
+        reason: Any
+        details: Any
         futures = [
             engine.submit(
                 _check_grb,
@@ -596,7 +614,7 @@ def iconDream2foxes(
     _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "out_dir",

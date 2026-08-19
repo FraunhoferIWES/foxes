@@ -72,8 +72,11 @@ dask = [
 doc = [
     "setuptools>=61.0",
     "sphinx>=5.0",
+    "sphinx-autoapi>=3.0",
+    "numpydoc>=1.0",
     "sphinx-immaterial>=0.10",
     "myst-nb>=1.0",
+    "tomli>=2.0; python_version < '3.11'",
     "ipykernel>=6.0.2",
     "ipywidgets>=8.0",
     "m2r2>=0.2.3",
@@ -84,6 +87,7 @@ doc = [
 test = [
     "pytest>=7.0",
     "nbmake>=1.0",
+    "mypy>=1.11.0",
     "multiprocess>=0.70.17"
 ]
 dev = [
@@ -108,6 +112,26 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["foxes*"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["foxes"]
+exclude = [
+    "examples/",
+    "docs/",
+    "notebooks/",
+    "tests/",
+]
+ignore_missing_imports = true
+follow_imports = "silent"
+show_error_codes = true
+warn_unused_ignores = true
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_untyped_decorators = true
+warn_return_any = false
 
 [project.scripts]
 foxes_yaml = "foxes.input.yaml.yaml:main"

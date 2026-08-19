@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
+from foxes.core import Model
 from foxes.core.wake_deflection import WakeDeflection
 from foxes.core.wake_model import WakeK
 from foxes.models.wake_models.wind.bastankhah16 import (
@@ -9,6 +13,11 @@ from foxes.models.wake_models.wind.bastankhah16 import (
 )
 import foxes.constants as FC
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData
 
 
 class Bastankhah2016Deflection(WakeDeflection):
@@ -25,97 +34,107 @@ class Bastankhah2016Deflection(WakeDeflection):
 
     Attributes
     ----------
-    model: Bastankhah2016Model
+    model
         The model for computing common data
-    alpha: float
+    alpha
         model parameter used to determine onset of far wake region,
         if not found in wake model
-    beta: float
+    beta
         model parameter used to determine onset of far wake region,
         if not found in wake model
-    wake_k: dict
+    wake_k
         Parameters for the WakeK class, if not found in wake model
-    induction: foxes.core.AxialInductionModel
+    induction
         The induction model, if not found in wake model
 
-    :group: models.wake_deflections
 
     """
 
     def __init__(
         self,
-        alpha=0.58,
-        beta=0.07,
-        induction="Madsen",
-        **wake_k,
-    ):
+        alpha: float = 0.58,
+        beta: float = 0.07,
+        induction: str = "Madsen",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        alpha: float
+        alpha
             model parameter used to determine onset of far wake region,
             if not found in wake model
-        beta: float
+        beta
             model parameter used to determine onset of far wake region,
             if not found in wake model
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model, if not found in wake model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class, if not found in wake model
 
         """
         super().__init__()
 
-        self.model = None
+        self.model: Bastankhah2016Model | None = None
         self.alpha = alpha
         self.beta = beta
         self.induction = induction
-        self.wake_k = None
+        self.wake_k: WakeK | None = None
         self._wake_k_pars = wake_k
 
         setattr(self, FV.YAWM, 0.0)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = f"{type(self).__name__}("
         s += self.wake_k.repr() if self.wake_k is not None else ""
         s += ")"
         return s
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
-        return [self.wake_k, self.model]
+        smdls: list[Model] = []
+        if self.wake_k is not None:
+            smdls.append(self.wake_k)
+        if self.model is not None:
+            smdls.append(self.model)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -153,12 +172,25 @@ class Bastankhah2016Deflection(WakeDeflection):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def _update_y(self, algo, mdata, fdata, tdata, downwind_index, x, y):
+    def _update_y(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        y: np.ndarray,
+    ) -> None:
         """
         Helper function for y deflection
         """
 
         # get gamma:
+        wake_k = self.wake_k
+        model = self.model
+        assert wake_k is not None and model is not None
+
         gamma = self.get_data(
             FV.YAWM,
             FC.STATE_TARGET,
@@ -173,7 +205,7 @@ class Bastankhah2016Deflection(WakeDeflection):
         gamma = gamma * np.pi / 180
 
         # get k:
-        k = self.wake_k(
+        k = wake_k(
             FC.STATE_TARGET,
             lookup_ti="f",
             lookup_k="sf",
@@ -186,23 +218,23 @@ class Bastankhah2016Deflection(WakeDeflection):
         )
 
         # run model calculation:
-        self.model.calc_data(algo, mdata, fdata, tdata, downwind_index, x, gamma, k)
+        model.calc_data(algo, mdata, fdata, tdata, downwind_index, x, gamma, k)
 
         # select targets:
-        st_sel = self.model.get_data(Bastankhah2016Model.ST_SEL, mdata)
+        st_sel = model.get_cached_data(Bastankhah2016Model.ST_SEL, mdata)
         if np.any(st_sel):
             # prepare:
             n_st_sel = np.sum(st_sel)
             ydef = np.zeros((n_st_sel,), dtype=config.dtype_double)
 
             # collect data:
-            near = self.model.get_data(Bastankhah2016Model.NEAR, mdata)
+            near = model.get_cached_data(Bastankhah2016Model.NEAR, mdata)
             far = ~near
 
             # near wake:
             if np.any(near):
                 # collect data:
-                delta = self.model.get_data(Bastankhah2016Model.DELTA_NEAR, mdata)
+                delta = model.get_cached_data(Bastankhah2016Model.DELTA_NEAR, mdata)
 
                 # set deflection:
                 ydef[near] = delta
@@ -210,7 +242,7 @@ class Bastankhah2016Deflection(WakeDeflection):
             # far wake:
             if np.any(far):
                 # collect data:
-                delta = self.model.get_data(Bastankhah2016Model.DELTA_FAR, mdata)
+                delta = model.get_cached_data(Bastankhah2016Model.DELTA_FAR, mdata)
 
                 # set deflection:
                 ydef[far] = delta
@@ -220,13 +252,13 @@ class Bastankhah2016Deflection(WakeDeflection):
 
     def calc_deflection(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        coos,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        coos: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculates the wake deflection.
 
@@ -235,24 +267,24 @@ class Bastankhah2016Deflection(WakeDeflection):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         Returns
         -------
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 

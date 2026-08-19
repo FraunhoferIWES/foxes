@@ -1,8 +1,15 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WSLinear(WakeSuperposition):
@@ -11,30 +18,34 @@ class WSLinear(WakeSuperposition):
 
     Attributes
     ----------
-    scale_amb: bool
+    scale_amb
         Flag for scaling wind deficit with ambient wind speed
         instead of waked wind speed
-    lim_low: float
+    lim_low
         Lower limit of the final waked wind speed
-    lim_high: float
+    lim_high
         Upper limit of the final waked wind speed
 
-    :group: models.wake_superpositions
 
     """
 
-    def __init__(self, scale_amb=False, lim_low=None, lim_high=None):
+    def __init__(
+        self,
+        scale_amb: bool = False,
+        lim_low: float | None = None,
+        lim_high: float | None = None,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        scale_amb: bool
+        scale_amb
             Flag for scaling wind deficit with ambient wind speed
             instead of waked wind speed
-        lim_low: float
+        lim_low
             Lower limit of the final waked wind speed
-        lim_high: float
+        lim_high
             Upper limit of the final waked wind speed
 
         """
@@ -44,23 +55,23 @@ class WSLinear(WakeSuperposition):
         self.lim_low = lim_low
         self.lim_high = lim_high
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"scale_amb={self.scale_amb}, lim_low={self.lim_low}, lim_high={self.lim_high}"
         return f"{type(self).__name__}({a})"
 
-    def input_farm_vars(self, algo):
+    def input_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are needed for running
         the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
@@ -68,47 +79,47 @@ class WSLinear(WakeSuperposition):
 
     def add_wake(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        variable,
-        wake_delta,
-        wake_model_result,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        variable: str,
+        wake_delta: np.ndarray,
+        wake_model_result: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta to previous wake deltas,
         at rotor points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The selection of targets, shape: (n_states, n_targets)
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The original wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
-        wake_model_result: numpy.ndarray
+        wake_model_result
             The new wake deltas of the selected rotors,
             shape: (n_st_sel, n_tpoints, ...)
 
         Returns
         -------
-        wdelta: numpy.ndarray
+        wdelta
             The updated wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
@@ -137,36 +148,36 @@ class WSLinear(WakeSuperposition):
 
     def calc_final_wake_delta(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        wake_delta,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        wake_delta: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the final wake delta after adding all
         contributions.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
 
         Returns
         -------
-        final_wake_delta: numpy.ndarray
+        final_wake_delta
             The final wake delta, which will be added to the ambient
             results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
@@ -186,24 +197,25 @@ class WSLinearLocal(WakeSuperposition):
 
     Attributes
     ----------
-    lim_low: float
+    lim_low
         Lower limit of the final waked wind speed
-    lim_high: float
+    lim_high
         Upper limit of the final waked wind speed
 
-    :group: models.wake_superpositions
 
     """
 
-    def __init__(self, lim_low=None, lim_high=None):
+    def __init__(
+        self, lim_low: float | None = None, lim_high: float | None = None
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        lim_low: float
+        lim_low
             Lower limit of the final waked wind speed
-        lim_high: float
+        lim_high
             Upper limit of the final waked wind speed
 
         """
@@ -211,23 +223,23 @@ class WSLinearLocal(WakeSuperposition):
         self.lim_low = lim_low
         self.lim_high = lim_high
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"lim_low={self.lim_low}, lim_high={self.lim_high}"
         return f"{type(self).__name__}({a})"
 
-    def input_farm_vars(self, algo):
+    def input_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are needed for running
         the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
@@ -235,47 +247,47 @@ class WSLinearLocal(WakeSuperposition):
 
     def add_wake(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        variable,
-        wake_delta,
-        wake_model_result,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        variable: str,
+        wake_delta: np.ndarray,
+        wake_model_result: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta to previous wake deltas,
         at rotor points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The selection of targets, shape: (n_states, n_targets)
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The original wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
-        wake_model_result: numpy.ndarray
+        wake_model_result
             The new wake deltas of the selected rotors,
             shape: (n_st_sel, n_tpoints, ...)
 
         Returns
         -------
-        wdelta: numpy.ndarray
+        wdelta
             The updated wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
@@ -292,36 +304,36 @@ class WSLinearLocal(WakeSuperposition):
 
     def calc_final_wake_delta(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        wake_delta,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        wake_delta: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the final wake delta after adding all
         contributions.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
 
         Returns
         -------
-        final_wake_delta: numpy.ndarray
+        final_wake_delta
             The final wake delta, which will be added to the ambient
             results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)

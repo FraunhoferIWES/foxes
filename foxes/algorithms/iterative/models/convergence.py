@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.utils import delta_wd
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from xarray import Dataset
+    from foxes.core.algorithm import Algorithm
 
 
 class ConvCrit(metaclass=ABCMeta):
@@ -12,30 +19,29 @@ class ConvCrit(metaclass=ABCMeta):
 
     Attributes
     ----------
-    name: str, optional
+    name
         The convergence criteria name
 
-    :group: algorithms.iterative.models
 
     """
 
-    def __init__(self, name=None):
+    def __init__(self, name: str | None = None) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        name: str, optional
+        name
             The convergence criteria name
 
         """
         self.name = name if name is not None else type(self).__name__
 
-        self._deltas = None
-        self._conv_states = None
+        self._deltas: dict[str, float] | None = None
+        self._conv_states: np.ndarray | None = None
         self.__no_subs = False
 
-    def disable_subsets(self, no_subs=True):
+    def disable_subsets(self, no_subs: bool = True) -> None:
         """
         Disable subset state selection in iterative algorithm.
 
@@ -44,72 +50,78 @@ class ConvCrit(metaclass=ABCMeta):
 
         Parameters
         ----------
-        no_subs: bool
+        no_subs
             Disable subsets flag
 
         """
         self.__no_subs = no_subs
 
     @property
-    def no_subs(self):
+    def no_subs(self) -> bool:
         """
         Get the disable subsets flag.
 
         Returns
         -------
-        no_subs: bool
+        no_subs
             Disable subsets flag
 
         """
         return self.__no_subs
 
     @abstractmethod
-    def check_converged(self, algo, prev_results, results, verbosity=0):
+    def check_converged(
+        self,
+        algo: Algorithm,
+        prev_results: Dataset | None,
+        results: Dataset,
+        verbosity: int = 0,
+    ) -> bool:
         """
         Check convergence criteria.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        prev_results: xarray.Dataset
+        prev_results
             The farm results of previous
             iteration, or None if first
-        results: xarray.Dataset
+        results
             The farm results of current
             iteration
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        convergence: bool
+        convergence
             Convergence flag, true if converged
 
         """
         pass
 
     @property
-    def deltas(self):
+    def deltas(self) -> dict[str, float] | None:
         """
         Get the most recent evaluation deltas.
 
         Returns
         -------
-        deltas: dict
+        deltas
             The most recent evaluation deltas
 
         """
         return self._deltas
 
     @property
-    def conv_states(self):
+    def conv_states(self) -> np.ndarray | None:
         """
         Get the convergence state per state.
 
         Returns
         -------
-        conv_states: numpy.ndarray, bool
+        conv_states
             The convergence state per state
 
         """
@@ -118,64 +130,74 @@ class ConvCrit(metaclass=ABCMeta):
 
 class ConvCritList(ConvCrit):
     """
-    A list of convergence criteria
+    Combines multiple convergence criteria.
 
     Attributes
     ----------
-    crits: list of ConvCrit
+    crits
         The criteria
 
-    :group: algorithms.iterative.models
 
     """
 
-    def __init__(self, crits=[], name=None):
+    def __init__(self, crits: list[ConvCrit] = [], name: str | None = None) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        crits: list of ConvCrit
+        crits
             The criteria
-        name: str, optional
+        name
             The convergence criteria name
 
         """
         super().__init__(name)
         self.crits = crits
+        self._failed: ConvCrit | None = None
 
-    def add_crit(self, crit):
+    @property
+    def failed(self) -> ConvCrit | None:
+        return self._failed
+
+    def add_crit(self, crit: ConvCrit) -> None:
         """
         Add a convergence criterion
 
         Parameters
         ----------
-        crit: ConvCrit
+        crit
             The criterion
 
         """
         self.crits.append(crit)
 
-    def check_converged(self, algo, prev_results, results, verbosity=0):
+    def check_converged(
+        self,
+        algo: Algorithm,
+        prev_results: Dataset | None,
+        results: Dataset,
+        verbosity: int = 0,
+    ) -> bool:
         """
         Check convergence criteria.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        prev_results: xarray.Dataset
+        prev_results
             The farm results of previous
             iteration, or None if first
-        results: xarray.Dataset
+        results
             The farm results of current
             iteration
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        convergence: bool
+        convergence
             Convergence flag, true if converged
 
         """
@@ -188,6 +210,10 @@ class ConvCritList(ConvCrit):
                 self._conv_states = c.conv_states
                 self._deltas = c.deltas
             else:
+                assert self._conv_states is not None
+                assert c.conv_states is not None
+                assert self._deltas is not None
+                assert c.deltas is not None
                 self._conv_states = self._conv_states & c.conv_states
                 self._deltas = {v: max(self._deltas[v], d) for v, d in c.deltas.items()}
 
@@ -203,28 +229,32 @@ class ConvVarDelta(ConvCrit):
 
     Attributes
     ----------
-    limits: dict
+    limits
         The convergence limits. Keys: variables str,
-        values: float values
-    wd_vars: list of str
+        values are convergence thresholds
+    wd_vars
         The wind direction type variables (unit deg)
 
-    :group: algorithms.iterative.models
 
     """
 
-    def __init__(self, limits, wd_vars=None, name=None):
+    def __init__(
+        self,
+        limits: dict[str, float],
+        wd_vars: list[str] | None = None,
+        name: str | None = None,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        limits: dict
+        limits
             The convergence limits. Keys: variables str,
-            values: float values
-        wd_vars: list of str, optional
+            values are convergence thresholds
+        wd_vars
             The wind direction type variables (unit deg)
-        name: str, optional
+        name
             The convergence criteria name
 
         """
@@ -235,26 +265,32 @@ class ConvVarDelta(ConvCrit):
         else:
             self.wd_vars = wd_vars
 
-    def check_converged(self, algo, prev_results, results, verbosity=0):
+    def check_converged(
+        self,
+        algo: Algorithm,
+        prev_results: Dataset | None,
+        results: Dataset,
+        verbosity: int = 0,
+    ) -> bool:
         """
         Check convergence criteria.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        prev_results: xarray.Dataset
+        prev_results
             The farm results of previous
             iteration, or None if first
-        results: xarray.Dataset
+        results
             The farm results of current
             iteration
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        convergence: bool
+        convergence
             Convergence flag, true if converged
 
         """
@@ -298,11 +334,10 @@ class DefaultConv(ConvVarDelta):
     """
     Default convergence criteria.
 
-    :group: algorithms.iterative.models
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """

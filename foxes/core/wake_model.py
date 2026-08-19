@@ -1,4 +1,10 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any, cast
+
+import numpy as np
 
 from foxes.utils import new_instance
 import foxes.variables as FV
@@ -6,16 +12,20 @@ import foxes.variables as FV
 from .model import Model
 from .wake_superposition import WindVectorWakeSuperposition
 
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData
+
 
 class WakeModel(Model):
     """
     Abstract base class for wake models.
 
-    :group: core
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """
@@ -23,73 +33,80 @@ class WakeModel(Model):
         self._has_uv = False
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
         Returns
         -------
-        dws: bool
+        affects_ws
             If True, this model affects wind speed
 
         """
         return False
 
     @property
-    def affects_downwind(self):
+    def affects_downwind(self) -> bool:
         """
         Flag for downwind or upwind effects
         on other turbines
 
         Returns
         -------
-        dwnd: bool
+        affects_downwind
             Flag for downwind effects by this model
 
         """
         return True
 
     @property
-    def has_uv(self):
+    def has_uv(self) -> bool:
         """
         This model uses wind vector data
 
         Returns
         -------
-        hasuv: bool
+        has_uv
             Flag for wind vector data
 
         """
         return self._has_uv
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
 
         """
-        if self.affects_ws and algo.wake_deflection.has_uv:
+        wake_deflection = algo.wake_deflection
+        if wake_deflection is not None and self.affects_ws and wake_deflection.has_uv:
             self._has_uv = True
         return super().initialize(
             algo=algo,
@@ -99,26 +116,32 @@ class WakeModel(Model):
         )
 
     @abstractmethod
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, np.ndarray]:
         """
-        Creates new empty wake delta arrays.
+        Create new empty wake delta arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target point data.
 
         Returns
         -------
-        wake_deltas: dict
-            Key: variable name, value: The zero filled
-            wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
+        wake_deltas
+            A dictionary keyed by variable name. Values are zero-filled wake
+            deltas with shape ``(n_states, n_targets, n_tpoints, ...)``.
 
         """
         pass
@@ -126,50 +149,48 @@ class WakeModel(Model):
     @abstractmethod
     def contribute(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_coos,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_coos: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
-        Modifies wake deltas at target points by
-        contributions from the specified wake source turbines.
+        Modify wake deltas at target points using contributions from wake source
+        turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
-        downwind_index: int
-            The index of the wake causing turbine
-            in the downwind order
-        wake_coos: numpy.ndarray
-            The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_targets, n_tpoints, 3)
-        wake_deltas: dict
-            The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints, ...)
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target point data.
+        downwind_index
+            The index of the wake-causing turbine in the downwind order.
+        wake_coos
+            Wake-frame coordinates of the evaluation points with shape
+            ``(n_states, n_targets, n_tpoints, 3)``.
+        wake_deltas
+            The wake deltas. Keys are variable names and values are arrays with
+            shape ``(n_states, n_targets, n_tpoints, ...)``.
 
         """
         pass
 
     def finalize_wake_deltas(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
         Finalize the wake calculation.
 
@@ -177,38 +198,38 @@ class WakeModel(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        wake_deltas: dict
+        wake_deltas
             The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
+            turbines. Keys are variable names and values are arrays
             with shape (n_states, n_targets, n_tpoints)
 
         """
         pass
 
     @classmethod
-    def new(cls, wmodel_type, *args, **kwargs):
+    def new(cls, wmodel_type: str, *args: Any, **kwargs: Any) -> WakeModel:
         """
         Run-time wake model factory.
 
         Parameters
         ----------
-        wmodel_type: str
+        wmodel_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """
-        return new_instance(cls, wmodel_type, *args, **kwargs)
+        return cast(WakeModel, new_instance(cls, wmodel_type, *args, **kwargs))
 
 
 class SingleTurbineWakeModel(WakeModel):
@@ -220,33 +241,36 @@ class SingleTurbineWakeModel(WakeModel):
 
     Attributes
     ----------
-    wind_superposition: str
+    wind_superposition
         The wind superposition model name (vector or compenent model),
         will be looked up in model book
-    other_superpositions: dict
+    other_superpositions
         The superpositions for other than (ws, wd) variables.
         Key: variable name str, value: The wake superposition
         model name, will be looked up in model book
-    vec_superp: foxes.core.WindVectorWakeSuperposition or None
+    vec_superp
         The wind vector wake superposition model
-    superp: dict
+    superp
         The superposition dict, key: variable name str,
-        value: `foxes.core.WakeSuperposition`
+        value: the corresponding wake superposition model
 
-    :group: models.wake_models
 
     """
 
-    def __init__(self, wind_superposition=None, other_superpositions={}):
+    def __init__(
+        self,
+        wind_superposition: str | None = None,
+        other_superpositions: dict[str, str] | None = None,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        wind_superposition: str, optional
+        wind_superposition
             The wind superposition model name (vector or compenent model),
             will be looked up in model book
-        other_superpositions: dict
+        other_superpositions
             The superpositions for other than (ws, wd) variables.
             Key: variable name str, value: The wake superposition
             model name, will be looked up in model book
@@ -254,64 +278,74 @@ class SingleTurbineWakeModel(WakeModel):
         """
         super().__init__()
         self.wind_superposition = wind_superposition
-        self.other_superpositions = other_superpositions
-        self.vec_superp = None
-        self.superp = {}
+        self.other_superpositions = (
+            {} if other_superpositions is None else dict(other_superpositions)
+        )
+        self.vec_superp: Any | None = None
+        self.superp: dict[str, Any] = {}
 
         for v in [FV.WS, FV.WD]:
-            assert v not in other_superpositions, (
+            assert v not in self.other_superpositions, (
                 f"Wake model '{self.name}': Found variable '{v}' among 'other_superposition' keyword, use 'wind_superposition' instead"
             )
 
         self.__has_vector_superp = False
 
     @property
-    def has_vector_wind_superp(self):
+    def has_vector_wind_superp(self) -> bool:
         """
         This model uses a wind vector superposition
 
         Returns
         -------
-        hasv: bool
+        has_vector_wind_superp
             Flag for wind vector superposition
 
         """
         return self.__has_vector_superp
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
-        w = [self.vec_superp] if self.vec_superp is not None else []
+        w: list[Model] = (
+            [cast(Model, self.vec_superp)] if self.vec_superp is not None else []
+        )
         return w + list(self.superp.values())
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -343,12 +377,12 @@ class SingleTurbineWakeModel(WakeModel):
 
     def finalize_wake_deltas(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
         Finalize the wake calculation.
 
@@ -356,17 +390,17 @@ class SingleTurbineWakeModel(WakeModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        wake_deltas: dict
+        wake_deltas
             The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
+            turbines. Keys are variable names and values are arrays
             with shape (n_states, n_targets, n_tpoints)
 
         """
@@ -385,7 +419,9 @@ class SingleTurbineWakeModel(WakeModel):
             assert self.has_vector_wind_superp, (
                 f"{self.name}: Expecting wind vector superposition, got '{self.wind_superposition}'"
             )
-            dws, dwd = self.vec_superp.calc_final_wake_delta_uv(
+            vec_superp = self.vec_superp
+            assert vec_superp is not None
+            dws, dwd = vec_superp.calc_final_wake_delta_uv(
                 algo, mdata, fdata, tdata, wake_deltas.pop(FV.UV)
             )
 
@@ -397,40 +433,46 @@ class TurbineInductionModel(SingleTurbineWakeModel):
     """
     Abstract base class for turbine induction models.
 
-    :group: core
 
     """
 
     @property
-    def affects_downwind(self):
+    def affects_downwind(self) -> bool:
         """
         Flag for downwind or upwind effects
         on other turbines
 
         Returns
         -------
-        dwnd: bool
+        affects_downwind
             Flag for downwind effects by this model
 
         """
         return False
 
     @classmethod
-    def new(cls, induction_type, *args, **kwargs):
+    def new(
+        cls,
+        induction_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> TurbineInductionModel:
         """
         Run-time turbine induction model factory.
 
         Parameters
         ----------
-        induction_type: str
+        induction_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """
-        return new_instance(cls, induction_type, *args, **kwargs)
+        return cast(
+            TurbineInductionModel, new_instance(cls, induction_type, *args, **kwargs)
+        )
 
 
 class WakeK(Model):
@@ -439,37 +481,36 @@ class WakeK(Model):
 
     Attributes
     ----------
-    k_var: str
+    k_var
         The name of the k variable
-    ti_var: str
+    ti_var
         The name of the TI variable
 
-    :group: core
 
     """
 
     def __init__(
         self,
-        k=None,
-        ka=None,
-        kb=None,
-        k_var=FV.K,
-        ti_var=FV.TI,
-    ):
+        k: float | None = None,
+        ka: float | None = None,
+        kb: float | None = None,
+        k_var: str = FV.K,
+        ti_var: str = FV.TI,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        k: float, optional
+        k
             The k value
-        ka: float, optional
+        ka
             The ka value in k = ka * TI + kb
-        kb: float, optional
+        kb
             The kb value in k = ka * TI + kb
-        k_var: str
+        k_var
             The name of the k variable
-        ti_var: str
+        ti_var
             The name of the TI variable
 
         """
@@ -487,13 +528,13 @@ class WakeK(Model):
 
         setattr(self, self.k_var, None)
 
-    def repr(self):
+    def repr(self) -> str:
         """
         Provides the representative string
 
         Returns
         -------
-        s: str
+        s
             The representative string
 
         """
@@ -508,67 +549,87 @@ class WakeK(Model):
         return s
 
     @property
-    def is_kTI(self):
+    def is_kTI(self) -> bool:
         """Flag for ka != 0"""
         return self._ka is not None and self._ka != 0
 
     @property
-    def all_none(self):
+    def all_none(self) -> bool:
         """Flag for k=ka=kb=None"""
         return self._k is None and self._ka is None and self._kb is None
 
     @property
-    def use_amb_ti(self):
+    def use_amb_ti(self) -> bool:
         """Flag for using ambient ti"""
         return self.ti_var in FV.amb2var
 
     def __call__(
         self,
-        *args,
-        lookup_ti="w",
-        lookup_k="sw",
-        ti=None,
-        amb_ti=None,
-        **kwargs,
-    ):
+        *args: Any,
+        lookup_ti: str = "w",
+        lookup_k: str = "sw",
+        ti: np.ndarray | None = None,
+        amb_ti: np.ndarray | None = None,
+        selection: np.ndarray | tuple[slice] | None = None,
+        **kwargs: Any,
+    ) -> np.ndarray:
         """
         Gets the k value
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for get_data
-        lookup_ti: str
+        lookup_ti
             The ti lookup order for get_data
-        lookup_k: str
+        lookup_k
             The k lookup order for get_data
-        ti: numpy.ndarray, optional
+        ti
             ti data in the requested target shape,
             if known
-        amb_ti: numpy.ndarray, optional
+        amb_ti
             Ambient ti data in the requested target shape,
             if known
-        kwargs: dict, optional
+        selection
+            Optional data selection for get_data
+        kwargs
             Arguments for get_data
 
         Returns
         -------
-        k: numpy.ndarray
+        k
             The k array as returned by get_data
 
         """
-        sel = kwargs.pop("selection", None)
         setattr(self, self.k_var, self._k)
+        assert len(args) > 0, f"{self.name}: Missing target argument for K call"
+        target = cast(str, args[0])
+        data_args = args[1:]
         if self._ka is not None or self._kb is not None:
             if self.ti_var == FV.TI and ti is not None:
                 pass
             elif self.ti_var == FV.AMB_TI and amb_ti is not None:
                 ti = amb_ti
             else:
-                ti = self.get_data(self.ti_var, *args, lookup=lookup_ti, **kwargs)
+                ti = cast(
+                    np.ndarray,
+                    self.get_data(  # type: ignore[call-overload]
+                        self.ti_var, target, *data_args, lookup=lookup_ti, **kwargs
+                    ),
+                )
             kb = 0 if self._kb is None else self._kb
             setattr(self, self.k_var, self._ka * ti + kb)
 
-        k = self.get_data(self.k_var, *args, lookup=lookup_k, selection=sel, **kwargs)
+        k = cast(
+            np.ndarray,
+            self.get_data(  # type: ignore[call-overload]
+                self.k_var,
+                target,
+                *data_args,
+                lookup=lookup_k,
+                selection=selection,
+                **kwargs,
+            ),
+        )
         setattr(self, self.k_var, None)
         return k

@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import WindVectorWakeSuperposition
 from foxes.utils import wd2uv, uv2wd, delta_wd
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WindVectorLinear(WindVectorWakeSuperposition):
@@ -12,21 +19,20 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
     Attributes
     ----------
-    scale_amb: bool
+    scale_amb
         Flag for scaling wind deficit with ambient wind speed
         instead of waked wind speed
 
-    :group: models.wake_superpositions
 
     """
 
-    def __init__(self, scale_amb=False):
+    def __init__(self, scale_amb: bool = False) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        scale_amb: bool
+        scale_amb
             Flag for scaling wind deficit with ambient wind speed
             instead of waked wind speed
 
@@ -34,55 +40,63 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         super().__init__()
         self.scale_amb = scale_amb
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"scale_amb={self.scale_amb}"
         return f"{type(self).__name__}({a})"
 
-    def input_farm_vars(self, algo):
+    def input_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are needed for running
         the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
         return [FV.AMB_REWS] if self.scale_amb else [FV.REWS]
 
-    def wdeltas_ws2uv(self, algo, fdata, tdata, downwind_index, wdeltas, st_sel):
+    def wdeltas_ws2uv(
+        self,
+        algo: Algorithm,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wdeltas: dict[str, np.ndarray],
+        st_sel: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Transform results from wind speed to wind vector data
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wdeltas: dict
+        wdeltas
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_st_sel, n_tpoints)
-        st_sel: numpy.ndarray of bool
+            value
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
         Returns
         -------
-        wdeltas: dict
+        wdeltas
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, now respecting has_uv flag
+            value
 
         """
         if FV.AMB_UV not in tdata:
@@ -110,33 +124,41 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
         return wdeltas
 
-    def wdeltas_uv2ws(self, algo, fdata, tdata, downwind_index, wdeltas, st_sel):
+    def wdeltas_uv2ws(
+        self,
+        algo: Algorithm,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wdeltas: dict[str, np.ndarray],
+        st_sel: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Transform results from wind vector to wind speed data
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wdeltas: dict
+        wdeltas
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_st_sel, n_tpoints)
-        st_sel: numpy.ndarray of bool
+            value
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
         Returns
         -------
-        wdeltas: dict
+        wdeltas
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, now respecting has_uv flag
+            value
 
         """
         if FV.UV in wdeltas:
@@ -161,44 +183,44 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
     def add_wake_vector(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        wake_delta_uv,
-        wake_model_result_uv,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        wake_delta_uv: np.ndarray,
+        wake_model_result_uv: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta vector to previous wake deltas,
         at rotor points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The selection of targets, shape: (n_states, n_targets)
-        wake_delta_uv: numpy.ndarray
+        wake_delta_uv
             The original wind vector wake deltas, shape:
             (n_states, n_targets, n_tpoints, 2)
-        wake_model_result_uv: numpy.ndarray
+        wake_model_result_uv
             The new wind vector wake deltas of the selected rotors,
             shape: (n_st_sel, n_tpoints, 2, ...)
 
         Returns
         -------
-        wdelta_uv: numpy.ndarray
+        wdelta_uv
             The updated wind vector wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
@@ -211,37 +233,37 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
     def calc_final_wake_delta_uv(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        wake_delta_uv,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        wake_delta_uv: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Calculate the final wind vector wake delta after adding all
         contributions.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        wake_delta_uv: numpy.ndarray
+        wake_delta_uv
             The original wind vector wake deltas, shape:
             (n_states, n_targets, n_tpoints, 2)
 
         Returns
         -------
-        final_wake_delta_ws: numpy.ndarray
+        final_wake_delta_ws
             The final wind speed wake delta, which will be added to
             the ambient results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
-        final_wake_delta_wd: numpy.ndarray
+        final_wake_delta_wd
             The final wind direction wake delta, which will be added to
             the ambient results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)

@@ -1,25 +1,33 @@
+from __future__ import annotations
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any, cast
+
+import numpy as np
 
 from foxes.utils import new_instance
 from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class WakeDeflection(Model):
     """
     Abstract base class for wake deflection models.
 
-    :group: core
 
     """
 
     @property
-    def has_uv(self):
+    def has_uv(self) -> bool:
         """
         This model uses wind vector data
 
         Returns
         -------
-        hasuv: bool
+        has_uv
             Flag for wind vector data
 
         """
@@ -28,13 +36,13 @@ class WakeDeflection(Model):
     @abstractmethod
     def calc_deflection(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        coos,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        coos: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculates the wake deflection.
 
@@ -43,24 +51,24 @@ class WakeDeflection(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         Returns
         -------
-        coos: numpy.ndarray
+        coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
@@ -69,13 +77,13 @@ class WakeDeflection(Model):
 
     def get_yaw_alpha_seq(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Computes sequential wind vector rotation angles.
 
@@ -85,25 +93,25 @@ class WakeDeflection(Model):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        x: numpy.ndarray
+        x
             The distance from the wake causing rotor
             for the first n_times subsequent time steps,
             shape: (n_times,)
 
         Returns
         -------
-        alpha: numpy.ndarray
+        alpha
             The delta WD result at the x locations,
             shape: (n_times,)
 
@@ -113,18 +121,23 @@ class WakeDeflection(Model):
         )
 
     @classmethod
-    def new(cls, wdefl_type, *args, **kwargs):
+    def new(
+        cls,
+        wdefl_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> "WakeDeflection":
         """
         Run-time wake deflection model factory.
 
         Parameters
         ----------
-        wdefl_type: str
+        wdefl_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """
-        return new_instance(cls, wdefl_type, *args, **kwargs)
+        return cast(WakeDeflection, new_instance(cls, wdefl_type, *args, **kwargs))

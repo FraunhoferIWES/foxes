@@ -154,6 +154,21 @@ def test_farm_results_eval_write_nc_smoke_and_cleanup(tmp_path):
     assert not fpath.exists()
 
 
+def test_farm_results_eval_calc_yield_smoke():
+    algo, farm_results = _calc_farm_results()
+    out = FarmResultsEval(farm_results=farm_results, algo=algo)
+
+    ambient_yield = out.calc_yield(annual=True, ambient=True)
+    waked_yield = out.calc_yield(annual=True)
+
+    assert list(ambient_yield.columns) == [FV.AMB_YLD]
+    assert list(waked_yield.columns) == [FV.YLD]
+    assert ambient_yield.shape[0] == farm_results.sizes[FC.TURBINE]
+    assert waked_yield.shape[0] == farm_results.sizes[FC.TURBINE]
+    assert np.all(np.isfinite(ambient_yield[FV.AMB_YLD].to_numpy()))
+    assert np.all(np.isfinite(waked_yield[FV.YLD].to_numpy()))
+
+
 def test_point_calculator_write_nc_smoke_and_cleanup(tmp_path):
     algo, farm_results = _calc_farm_results()
     out = PointCalculator(algo=algo, farm_results=farm_results, out_dir=tmp_path)

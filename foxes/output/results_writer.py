@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import pandas as pd
 from xarray import Dataset
+from typing import Any
 
 from foxes.config import config
 from foxes.utils import write_nc as write_nc_file
@@ -14,24 +17,28 @@ class ResultsWriter(Output):
 
     Attributes
     ----------
-    data: pandas.DataFrame
+    data
         The farm results
 
-    :group: output
 
     """
 
-    def __init__(self, farm_results=None, data=None, **kwargs):
+    def __init__(
+        self,
+        farm_results: Dataset | None = None,
+        data: pd.DataFrame | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        farm_results: xarray.Dataset, optional
+        farm_results
             The farm results, if data is None
-        data: pandas.DataFrame, optional
+        data
             The data, if farm_results is None
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -50,7 +57,9 @@ class ResultsWriter(Output):
                 "ResultsWriter: Either give 'farm_results' or 'data' arguments"
             )
 
-    def _get_data_vars(self, variables):
+    def _get_data_vars(
+        self, variables: list[str] | dict[str, str] | None
+    ) -> tuple[pd.DataFrame, list[str]]:
         """Helper function for variable gathering"""
         data = self.data
         if variables is None:
@@ -71,33 +80,33 @@ class ResultsWriter(Output):
 
     def write_csv(
         self,
-        file_name,
-        variables=None,
-        turbine_names=False,
-        state_turbine_table=False,
-        verbosity=1,
-        **kwargs,
-    ):
+        file_name: str,
+        variables: list[str] | dict[str, str] | None = None,
+        turbine_names: bool = False,
+        state_turbine_table: bool = False,
+        verbosity: int = 1,
+        **kwargs: Any,
+    ) -> None:
         """
         Writes a csv file
 
         Parameters
         ----------
-        file_name: str
+        file_name
             Name of the csv file
-        variables: dict or list of str, optional
+        variables
             The variables to be written. If a dict, then
             the keys are the foxes variables and the values
             the column names. If None, then all data will be
             written.
-        turbine_names: bool
+        turbine_names
             Use turbine names instead of turbine indices
-        state_turbine_table: bool
+        state_turbine_table
             Flag for writing a single variable into turbine columns
             for state rows
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Additional parameters for Output.write()
 
         """
@@ -138,29 +147,29 @@ class ResultsWriter(Output):
 
     def write_nc(
         self,
-        file_name,
-        variables=None,
-        turbine_names=False,
-        verbosity=1,
-        **kwargs,
-    ):
+        file_name: str,
+        variables: list[str] | dict[str, str] | None = None,
+        turbine_names: bool = False,
+        verbosity: int = 1,
+        **kwargs: Any,
+    ) -> None:
         """
         Writes a netCDF file
 
         Parameters
         ----------
-        file_name: str
+        file_name
             The nc file name
-        variables: dict or list of str, optional
+        variables
             The variables to be written. If a dict, then
             the keys are the foxes variables and the values
             the column names. If None, then all data will be
             written.
-        turbine_names: bool
+        turbine_names
             Use turbine names instead of turbine indices
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Additional parameters for write_nc()
 
         """
@@ -186,6 +195,6 @@ class ResultsWriter(Output):
         )
 
         fpath = self.get_fpath(file_name)
-        write_nc_file(
-            ds, fpath, nc_engine=config.nc_engine, verbosity=verbosity, **kwargs
-        )
+        nc_engine = config.nc_engine
+        assert nc_engine is not None
+        write_nc_file(ds, fpath, nc_engine=nc_engine, verbosity=verbosity, **kwargs)

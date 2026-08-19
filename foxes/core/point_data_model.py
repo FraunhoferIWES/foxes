@@ -1,11 +1,20 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.config import config
 from foxes.utils import new_instance
 import foxes.constants as FC
 
 from .data_calc_model import DataCalcModel
+from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class PointDataModel(DataCalcModel):
@@ -13,44 +22,43 @@ class PointDataModel(DataCalcModel):
     Abstract base class for models that modify
     point based data.
 
-    :group: core
 
     """
 
     @abstractmethod
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
-        The variables which are being modified by the model.
+        Return the variables modified by the model.
 
         Returns
         -------
-        output_vars: list of str
-            The output variable names
+        output_vars
+            The output variable names.
 
         """
         return []
 
-    def output_coords(self):
+    def output_coords(self) -> tuple[str, ...]:
         """
         Gets the coordinates of all output arrays
 
         Returns
         -------
-        dims: tuple of str
+        dims
             The coordinates of all output arrays
 
         """
         return (FC.STATE, FC.TARGET, FC.TPOINT)
 
-    def ensure_output_vars(self, algo, tdata):
+    def ensure_output_vars(self, algo: Algorithm, tdata: TData) -> None:
         """
         Ensures that the output variables are present in the target data.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         """
@@ -71,7 +79,13 @@ class PointDataModel(DataCalcModel):
                 )
 
     @abstractmethod
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -80,27 +94,33 @@ class PointDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values are arrays with shape
             (n_states, n_targets, n_tpoints)
 
         """
         self.ensure_output_vars(algo, tdata)
-        super().calculate(algo, mdata, fdata, tdata)
+        return super().calculate(algo, mdata, fdata, tdata)
 
-    def run_calculation(self, algo, *data, out_vars, **calc_pars):
+    def run_calculation(
+        self,
+        algo: Algorithm,
+        *data: tuple[Any, ...],
+        out_vars: list[str],
+        **calc_pars: Any,
+    ) -> Any:
         """
         Starts the model calculation in parallel.
 
@@ -108,22 +128,22 @@ class PointDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        *data: tuple of xarray.Dataset
+        *data
             The input data
-        out_vars: list of str
+        out_vars
             The calculation output variables
-        **calc_pars: dict, optional
+        **calc_pars
             Additional arguments for the `calculate` function
 
         Returns
         -------
-        results: xarray.Dataset
+        results
             The calculation results
 
         """
-        results = super().run_calculation(
+        results = super().run_calculation(  # type: ignore[misc]
             algo,
             *data,
             out_vars=out_vars,
@@ -137,7 +157,7 @@ class PointDataModel(DataCalcModel):
             )
         return results.sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
 
-    def __add__(self, m):
+    def __add__(self, m: Any) -> PointDataModelList:
         if isinstance(m, list):
             return PointDataModelList([self] + m)
         elif isinstance(m, PointDataModelList):
@@ -156,65 +176,64 @@ class PointDataModelList(PointDataModel):
 
     Attributes
     ----------
-    models: list of foxes.core.PointDataModel
+    models
         The model list
 
-    :group: core
 
     """
 
-    def __init__(self, models=[]):
+    def __init__(self, models: list[PointDataModel] | None = None) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        models: list of foxes.core.PointDataModel
+        models
             The model list
 
         """
         super().__init__()
-        self.models = models
+        self.models = [] if models is None else models
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({[m.name for m in self.models]})"
 
-    def append(self, model):
+    def append(self, model: PointDataModel) -> None:
         """
         Add a model to the list
 
         Parameters
         ----------
-        model: foxes.core.PointDataModel
+        model
             The model to add
 
         """
         self.models.append(model)
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
-        return self.models
+        return cast(list[Model], self.models)
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -223,7 +242,14 @@ class PointDataModelList(PointDataModel):
             ovars += m.output_point_vars(algo)
         return list(dict.fromkeys(ovars))
 
-    def calculate(self, algo, mdata, fdata, tdata, parameters=None):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        parameters: list[dict[str, Any]] | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -232,22 +258,22 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        parameters: list of dict, optional
-            A list of parameter dicts, one for each model
+        parameters
+            Parameters for each model
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values are arrays with shape
             (n_states, n_targets, n_tpoints)
 
         """
@@ -271,18 +297,23 @@ class PointDataModelList(PointDataModel):
         return {v: tdata[v] for v in self.output_point_vars(algo)}
 
     @classmethod
-    def new(cls, model_type, *args, **kwargs):
+    def new(
+        cls,
+        model_type: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> PointDataModel:
         """
         Run-time point model factory.
 
         Parameters
         ----------
-        model_type: str
+        model_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         """
-        return new_instance(cls, model_type, *args, **kwargs)
+        return cast(PointDataModel, new_instance(cls, model_type, *args, **kwargs))

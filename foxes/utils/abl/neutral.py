@@ -1,79 +1,86 @@
 import numpy as np
 
 
-def logz(height, z0):
+def logz(height: float | np.ndarray, z0: float | np.ndarray) -> float | np.ndarray:
     """
     Calculates the log factor for
     wind speed profiles.
 
     Parameters
     ----------
-    height: float
+    height
         The evaluation height
-    z0: float
+    z0
         The roughness length
 
     Returns
     -------
-    lz: float
+    lz
         The log factor
 
-    :group: utils.abl.neutral
 
     """
     h = np.maximum(height, z0)
     return np.log(h / z0)
 
 
-def ustar(ws_ref, h_ref, z0, kappa=0.41):
+def ustar(
+    ws_ref: float | np.ndarray,
+    h_ref: float | np.ndarray,
+    z0: float | np.ndarray,
+    kappa: float = 0.41,
+) -> float | np.ndarray:
     """
     Calculates the friction velocity,
     based on reference data.
 
     Parameters
     ----------
-    ws_ref: float
+    ws_ref
         The reference wind speed
-    h_ref: float
+    h_ref
         The reference height
-    z0: float
+    z0
         The roughness length
-    kappa: float
+    kappa
         The von Karman constant
 
     Returns
     -------
-    ustar: float
+    ustar
         The friction velocity
 
-    :group: utils.abl.neutral
 
     """
     lz = logz(h_ref, z0)
     return ws_ref * kappa / lz
 
 
-def calc_ws(height, z0, ustar, kappa=0.41):
+def calc_ws(
+    height: float | np.ndarray,
+    z0: float | np.ndarray,
+    ustar: float | np.ndarray,
+    kappa: float = 0.41,
+) -> float | np.ndarray:
     """
     Calculate wind speeds at given height
 
     Parameters
     ----------
-    height: float
+    height
         The evaluation height
-    z0: float
+    z0
         The roughness length
-    ustar: float
+    ustar
         The friction velocity
-    kappa: float
+    kappa
         The von Karman constant
 
     Returns
     -------
-    ws: float
+    ws
         The wind speed
 
-    :group: utils.abl.neutral
 
     """
     return ustar / kappa * logz(height, z0)

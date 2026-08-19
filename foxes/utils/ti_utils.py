@@ -1,55 +1,57 @@
+from typing import cast
+
 import numpy as np
 
 import foxes.constants as FC
 
 
-def tke2ti(tke, ws, max_ti=None):
+def tke2ti(tke: np.ndarray, ws: np.ndarray, max_ti: float | None = None) -> np.ndarray:
     """
     Convert turbulent kinetic energy (TKE) to turbulence intensity (TI).
 
     Parameters
     ----------
-    tke : numpy.ndarray
+    tke
         Turbulent kinetic energy.
-    ws : numpy.ndarray
+    ws
         Wind speed.
-    max_ti : float, optional
+    max_ti
         Upper limit of the computed TI values.
 
     Returns
     -------
-    ti :numpy.ndarray
+    ti
         Turbulence intensity.
 
-    :group: utils
 
     """
     ti = np.sqrt(1.5 * tke) / ws
     if max_ti is not None:
         ti = np.minimum(ti, max_ti)
 
-    return ti
+    return cast(np.ndarray, ti)
 
 
-def ustar2ti(ustar, ws, max_ti=None):
+def ustar2ti(
+    ustar: np.ndarray, ws: np.ndarray, max_ti: float | None = None
+) -> np.ndarray:
     """
     Convert friction velocity (u*) to turbulence intensity (TI).
 
     Parameters
     ----------
-    ustar : numpy.ndarray
+    ustar
         Friction velocity.
-    ws : numpy.ndarray
+    ws
         Wind speed.
-    max_ti : float, optional
+    max_ti
         Upper limit of the computed TI values.
 
     Returns
     -------
-    ti : numpy.ndarray
+    ti
         Turbulence intensity.
 
-    :group: utils
 
     """
 
@@ -57,4 +59,4 @@ def ustar2ti(ustar, ws, max_ti=None):
     if max_ti is not None:
         ti = np.minimum(ti, max_ti)
 
-    return ti
+    return cast(np.ndarray, ti)

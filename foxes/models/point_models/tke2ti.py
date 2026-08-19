@@ -1,34 +1,48 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
+import numpy as np
 from foxes.core import PointDataModel
 from foxes.utils import tke2ti
 import foxes.variables as FV
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class TKE2TI(PointDataModel):
     """
     Calculates TI from TKE, using TI = sqrt( 3/2 * TKE) / WS
 
-    :group: models.point_models
 
     """
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return [FV.TI]
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -37,20 +51,20 @@ class TKE2TI(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values
 
         """
         tke = tdata[FV.TKE]

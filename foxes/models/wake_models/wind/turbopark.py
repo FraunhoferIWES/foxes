@@ -1,10 +1,19 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeK
 from foxes.models.wake_models.gaussian import GaussianWakeModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData, Model
+    from foxes.core.wake_model import WakeModel
 
 
 class TurbOParkWake(GaussianWakeModel):
@@ -20,46 +29,45 @@ class TurbOParkWake(GaussianWakeModel):
 
     Attributes
     ----------
-    sbeta_factor: float
+    sbeta_factor
         Factor multiplying sbeta
-    c1: float
+    c1
         Factor from Frandsen turbulence model
-    c2: float
+    c2
         Factor from Frandsen turbulence model
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
 
-    :group: models.wake_models.wind
 
     """
 
     def __init__(
         self,
-        superposition,
-        sbeta_factor=0.25,
-        c1=1.5,
-        c2=0.8,
-        induction="Madsen",
-        **wake_k,
-    ):
+        superposition: str,
+        sbeta_factor: float = 0.25,
+        c1: float = 1.5,
+        c2: float = 0.8,
+        induction: str = "Madsen",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind deficit superposition
-        sbeta_factor: float
+        sbeta_factor
             Factor multiplying sbeta
-        c1: float
+        c1
             Factor from Frandsen turbulence model
-        c2: float
+        c2
             Factor from Frandsen turbulence model
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
@@ -71,7 +79,7 @@ class TurbOParkWake(GaussianWakeModel):
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -81,51 +89,60 @@ class TurbOParkWake(GaussianWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
-        return [self.wake_k, self.induction]
+        smdls: list[Model] = [self.wake_k]
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -140,42 +157,44 @@ class TurbOParkWake(GaussianWakeModel):
 
     def calc_amplitude_sigma(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> tuple[dict[str, tuple[np.ndarray, np.ndarray]], np.ndarray]:
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
 
         Returns
         -------
-        amsi: tuple
-            The amplitude and sigma, both numpy.ndarray
+        amsi
+            The amplitude and sigma arrays
             with shape (n_st_sel,)
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
         """
+        assert not isinstance(self.induction, str)
+
         # get ct:
         ct = self.get_data(
             FV.CT,
@@ -288,51 +307,50 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
     Attributes
     ----------
-    dx: float
+    dx
         The step size of the integral
-    sbeta_factor: float
+    sbeta_factor
         Factor multiplying sbeta
-    self_wake: bool
+    self_wake
         Flag for considering only own wake in ti integral
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
-    ipars: dict
+    ipars
         Additional parameters for centreline integration
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
 
-    :group: models.wake_models.wind
 
     """
 
     def __init__(
         self,
-        superposition,
-        dx,
-        sbeta_factor=0.25,
-        self_wake=True,
-        induction="Madsen",
-        ipars={},
-        **wake_k,
-    ):
+        superposition: str,
+        dx: float,
+        sbeta_factor: float = 0.25,
+        self_wake: bool = True,
+        induction: str = "Madsen",
+        ipars: dict[str, Any] | None = None,
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind deficit superposition
-        dx: float
+        dx
             The step size of the integral
-        sbeta_factor: float
+        sbeta_factor
             Factor multiplying sbeta
-        self_wake: bool
+        self_wake
             Flag for considering only own wake in ti integral
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        ipars: dict
+        ipars
             Additional parameters for centreline integration
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
@@ -340,15 +358,15 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         self.dx = dx
         self.sbeta_factor = sbeta_factor
-        self.ipars = ipars
-        self._tiwakes = None
+        self.ipars = {} if ipars is None else ipars
+        self._tiwakes: list[WakeModel] | None = None
         self.self_wake = self_wake
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
 
         assert not self.wake_k.is_kTI, f"{self.name}: Cannot apply ka or ambka setup"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -358,51 +376,60 @@ class TurbOParkWakeIX(GaussianWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
-        return [self.wake_k, self.induction]
+        smdls: list[Model] = [self.wake_k]
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -415,24 +442,26 @@ class TurbOParkWakeIX(GaussianWakeModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
@@ -453,42 +482,44 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
     def calc_amplitude_sigma(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> tuple[dict[str, tuple[np.ndarray, np.ndarray]], np.ndarray]:
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
 
         Returns
         -------
-        amsi: tuple
-            The amplitude and sigma, both numpy.ndarray
+        amsi
+            The amplitude and sigma arrays
             with shape (n_st_sel,)
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
         """
+        assert not isinstance(self.induction, str)
+
         # get ct:
         ct = self.get_data(
             FV.CT,
@@ -570,15 +601,15 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         return {FV.WS: (ampld, sigma)}, st_sel
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from typing import Any
 
 from foxes.config import get_input_path
 
@@ -34,26 +35,25 @@ class TBLFile(PCtFile):
     6.5 0.830 5061.7
     7.0 0.810 6379.0
 
-    :group: models.turbine_types
 
     """
 
     def __init__(
         self,
-        tbl_file,
-        rho=1.225,
-        **parameters,
-    ):
+        tbl_file: str,
+        rho: float = 1.225,
+        **parameters: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        tbl_file: str
+        tbl_file
             Path to the tbl file
-        rho: float
+        rho
             The air density for the curves
-        paramerers: dict, optional
+        paramerers
             Additional parameters for PCtFile class
 
         """

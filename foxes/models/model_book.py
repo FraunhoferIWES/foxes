@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 from math import sqrt
+from typing import TYPE_CHECKING, Any
+
 import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import FDict
@@ -19,6 +23,9 @@ from foxes.core import (
     GroundModel,
     WakeDeflection,
 )
+
+if TYPE_CHECKING:
+    from foxes.core import Algorithm
 
 
 class ModelBook:
@@ -71,11 +78,10 @@ class ModelBook:
     base_classes: foxes.utils.FDict
         The base classes for all model types
 
-    :group: models
 
     """
 
-    def __init__(self, Pct_file=None):
+    def __init__(self, Pct_file: str | None = None) -> None:
         """
         Constructor.
 
@@ -93,7 +99,7 @@ class ModelBook:
         self.rotor_models["centre"] = fm.rotor_models.CentreRotor()
         self.rotor_models["direct_mdata"] = fm.rotor_models.DirectMDataInfusion()
 
-        def _n2n(n2):
+        def _n2n(n2: str | float | int) -> int:
             n2 = float(n2)
             n = int(sqrt(n2))
             if n**2 != n2:
@@ -204,11 +210,11 @@ class ModelBook:
         )
 
         self.farm_models = FDict(
-            _name="farm_models",
-            **{
+            {
                 f"farm_{mname}": fm.farm_models.Turbine2FarmModel(m)
                 for mname, m in self.turbine_models.items()
             },
+            _name="farm_models",
         )
 
         self.farm_controllers = FDict(
@@ -330,7 +336,7 @@ class ModelBook:
         self.wake_frames["dyn_wakes"] = fm.wake_frames.DynamicWakes()
         self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
 
-        def _todt(x):
+        def _todt(x: str) -> float:
             if x[-1] == "s":
                 return float(x[:-1]) / 60
             elif x[-3:] == "min":
@@ -338,7 +344,7 @@ class ModelBook:
             else:
                 raise NotImplementedError(f"Cannot translate '{x}' into minutes")
 
-        def _tokm(x):
+        def _tokm(x: str) -> float:
             if x[-2:] == "km":
                 return float(x[:-2])
             elif x[-1] == "m":
@@ -423,9 +429,9 @@ class ModelBook:
             fm.wake_models.wind.Bastankhah2014,
             "IEA37Gaussian_<superposition>_[wake_k]",
             kwargs=dict(sbeta=1 / sqrt(8)),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -435,9 +441,9 @@ class ModelBook:
             fm.wake_models.wind.JensenWake,
             "Jensen_<superposition>_[wake_k]",
             kwargs=dict(induction="Betz"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -452,9 +458,9 @@ class ModelBook:
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah2014_<superposition>_[wake_k]",
             kwargs=dict(sbeta_factor=0.2, induction="Madsen"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -463,9 +469,9 @@ class ModelBook:
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah2014B_<superposition>_[wake_k]",
             kwargs=dict(sbeta_factor=0.2, induction="Betz"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -474,9 +480,9 @@ class ModelBook:
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah025_<superposition>_[wake_k]",
             kwargs=dict(sbeta_factor=0.25, induction="Madsen"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -485,9 +491,9 @@ class ModelBook:
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah025B_<superposition>_[wake_k]",
             kwargs=dict(sbeta_factor=0.25, induction="Betz"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -497,9 +503,9 @@ class ModelBook:
             fm.wake_models.wind.Bastankhah2016,
             "Bastankhah2016_<superposition>_[wake_k]",
             kwargs=dict(induction="Madsen"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -508,9 +514,9 @@ class ModelBook:
             fm.wake_models.wind.Bastankhah2016,
             "Bastankhah2016B_<superposition>_[wake_k]",
             kwargs=dict(induction="Betz"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -526,9 +532,9 @@ class ModelBook:
             fm.wake_models.wind.TurbOParkWake,
             "TurbOPark_<superposition>_[wake_k]",
             kwargs=dict(induction="Madsen"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -537,9 +543,9 @@ class ModelBook:
             fm.wake_models.wind.TurbOParkWake,
             "TurbOParkB_<superposition>_[wake_k]",
             kwargs=dict(induction="Betz"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -548,9 +554,9 @@ class ModelBook:
         self.wake_models.add_k_factory(
             fm.wake_models.wind.TurbOParkWakeIX,
             "TurbOParkIX_<superposition>_[wake_k]_dx<dx>",
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             dx=lambda x: float(x),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)",
@@ -602,9 +608,9 @@ class ModelBook:
         self.wake_models.add_factory(
             fm.wake_models.induction.VortexSheet,
             "VortexSheet_<superposition>",
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -614,9 +620,9 @@ class ModelBook:
         self.wake_models.add_factory(
             fm.wake_models.induction.Rathmann,
             "Rathmann_<superposition>",
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -627,9 +633,9 @@ class ModelBook:
         self.wake_models.add_factory(
             fm.wake_models.induction.SelfSimilar,
             "SelfSimilar_<superposition>",
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -637,9 +643,9 @@ class ModelBook:
         self.wake_models.add_factory(
             fm.wake_models.induction.SelfSimilar2020,
             "SelfSimilar2020_<superposition>",
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -694,10 +700,12 @@ class ModelBook:
             for k, m in s.items():
                 m.name = k
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return self.sources.get_item(key)
 
-    def print_toc(self, subset=None, search=None):
+    def print_toc(
+        self, subset: list[str] | None = None, search: str | None = None
+    ) -> None:
         """
         Print the contents.
 
@@ -731,7 +739,14 @@ class ModelBook:
                     print("(none)")
                 print()
 
-    def get(self, model_type, name, class_name=None, *args, **kwargs):
+    def get(
+        self,
+        model_type: str,
+        name: str,
+        class_name: str | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         """
         Gets a model object.
 
@@ -739,20 +754,20 @@ class ModelBook:
 
         Parameters
         ----------
-        model_type: str
+        model_type
             The model type
-        name: str
+        name
             The model name
-        class_name: str, optinal
+        class_name
             Name of the model class
-        args: tuple, optional
+        args
             Arguments for the model class
-        kwargs: dict, optional
+        kwargs
             Arguments for the model class
 
         Returns
         -------
-        model: mclass
+        model
             The model object
 
         """
@@ -765,19 +780,19 @@ class ModelBook:
             self.sources[model_type][name] = bclass.new(class_name, *args, **kwargs)
         return self.sources[model_type][name]
 
-    def default_partial_wakes(self, wake_model):
+    def default_partial_wakes(self, wake_model: WakeModel) -> str:
         """
         Gets a default partial wakes model name
         for a given wake model
 
         Parameters
         ----------
-        wake_model: foxes.core.WakeModel
+        wake_model
             The wake model
 
         Returns
         -------
-        pwake: str
+        pwake
             The partial wake model name
 
         """
@@ -794,15 +809,15 @@ class ModelBook:
                 f"No default partial wakes model defined for wake model type '{type(wake_model).__name__}'"
             )
 
-    def finalize(self, algo, verbosity=0):
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """

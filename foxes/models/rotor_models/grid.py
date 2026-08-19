@@ -1,8 +1,15 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import RotorModel
 from foxes.config import config
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.model import LoadedData
 
 
 class GridRotor(RotorModel):
@@ -12,38 +19,39 @@ class GridRotor(RotorModel):
 
     Attributes
     ----------
-    n: int
+    n
         The number of points along one direction,
         maximal number of points is N = n * n
-    reduce: bool
+    reduce
         Flag for reduction to points actually representing
         an area with overlap with the circle, recalculating
         the self.__weights accordingly
-    nint: int
+    nint
         Integration steps per element
 
-    :group: models.rotor_models
 
     """
 
-    def __init__(self, n, reduce=True, nint=200, **kwargs):
+    def __init__(
+        self, n: int, reduce: bool = True, nint: int = 200, **kwargs: Any
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        n: int
+        n
             The number of points along one direction,
             maximal number of points is N = n * n
-        reduce: bool
+        reduce
             Flag for reduction to points actually representing
             an area with overlap with the circle, recalculating
             the self.__weights accordingly
-        nint: int
+        nint
             Integration steps per element
-        name: str, optional
+        name
             The model name
-        kwargs: dict, optional
+        kwargs
             Addition parameters for the base model
 
         """
@@ -53,31 +61,37 @@ class GridRotor(RotorModel):
         self.reduce = reduce
         self.nint = nint
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         r = "" if self.reduce else ", reduce=False"
         return f"{type(self).__name__}(n={self.n}){r}"
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -90,15 +104,19 @@ class GridRotor(RotorModel):
 
         N = self.n * self.n
         delta = 2.0 / self.n
-        x = [-1.0 + (i + 0.5) * delta for i in range(self.n)]
-        x, y = np.meshgrid(x, x, indexing="ij")
+        xvals = [-1.0 + (i + 0.5) * delta for i in range(self.n)]
+        x: np.ndarray
+        y: np.ndarray
+        x, y = np.meshgrid(xvals, xvals, indexing="ij")
 
-        self.__dpoints = np.zeros([N, 3], dtype=config.dtype_double)
+        self.__dpoints: np.ndarray = np.zeros([N, 3], dtype=config.dtype_double)
         self.__dpoints[:, 1] = x.reshape(N)
         self.__dpoints[:, 2] = y.reshape(N)
 
         if self.reduce:
-            self.__weights = np.zeros((self.n, self.n), dtype=config.dtype_double)
+            self.__weights: np.ndarray = np.zeros(
+                (self.n, self.n), dtype=config.dtype_double
+            )
             for i in range(0, self.n):
                 for j in range(0, self.n):
                     d = delta / self.nint
@@ -108,7 +126,9 @@ class GridRotor(RotorModel):
                     hy = [
                         y[i, j] - delta / 2.0 + (k + 0.5) * d for k in range(self.nint)
                     ]
-                    pts = np.zeros((self.nint, self.nint, 2), dtype=config.dtype_double)
+                    pts: np.ndarray = np.zeros(
+                        (self.nint, self.nint, 2), dtype=config.dtype_double
+                    )
                     pts[:, :, 0], pts[:, :, 1] = np.meshgrid(hx, hy, indexing="ij")
 
                     d = np.linalg.norm(pts, axis=2)
@@ -125,33 +145,35 @@ class GridRotor(RotorModel):
             self.__dpoints[:, 2] = y.reshape(N)
             self.__weights = np.ones(N, dtype=config.dtype_double) / N
 
+        self.__weights = np.asarray(self.__weights, dtype=config.dtype_double)
+
         return loaded_data
 
-    def input_variables(self):
+    def input_variables(self) -> list[str]:
         """
         The input variables which are required by the model.
 
         Returns
         -------
-        input_vars: list of str
+        input_vars
             The input variable names
 
         """
         return [FV.D, FV.TXYH, FV.YAW]
 
-    def n_rotor_points(self):
+    def n_rotor_points(self) -> int:
         """
         The number of rotor points
 
         Returns
         -------
-        n_rpoints: int
+        n_rpoints
             The number of rotor points
 
         """
         return len(self.__weights)
 
-    def design_points(self):
+    def design_points(self) -> np.ndarray:
         """
         The rotor model design points.
 
@@ -164,19 +186,19 @@ class GridRotor(RotorModel):
 
         Returns
         -------
-        dpoints: numpy.ndarray
+        dpoints
             The design points, shape: (n_points, 3)
 
         """
         return self.__dpoints
 
-    def rotor_point_weights(self):
+    def rotor_point_weights(self) -> np.ndarray:
         """
         The weights of the rotor points
 
         Returns
         -------
-        weights: numpy.ndarray
+        weights
             The weights of the rotor points,
             add to one, shape: (n_rpoints,)
 

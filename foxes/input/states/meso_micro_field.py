@@ -1,11 +1,25 @@
 import numpy as np
+from typing import Any, cast
 
 from foxes.config import config
-from foxes.core import States, MData, FData, TData, run_with_engine, WindFarm, Turbine
+from foxes.core import (
+    Algorithm,
+    LoadedData,
+    States,
+    MData,
+    FData,
+    TData,
+    Model,
+    run_with_engine,
+    WindFarm,
+    Turbine,
+)
 from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv, uv2wd
 from foxes.algorithms import Downwind
 import foxes.constants as FC
 import foxes.variables as FV
+
+from .dataset_states import DatasetStates
 
 
 class MesoMicroField(States):
@@ -15,83 +29,79 @@ class MesoMicroField(States):
 
     Attributes
     ----------
-    micro_states: foxes.input.states.DatasetStates
-        Micro scale field data states. Its states must represent
-        different wind direction sectors, and the states must be in "preload" mode.
-    meso_states: foxes.core.States
-        Meso scale states, evaluated at reference points. These define the final
-        states and states weights. Will be evaluated at the reference points, and the
-        results will be used to scale the micro states.
-    ref_points: array_like, optional
-        The [x, y, h] reference point coordinates, shape: (n_ref_points, 3),
-        or micro states grid points with ref_height as height, if None
-    ref_points_are_lonlat: bool, optional
-        Whether the reference point coordinates are in longitude/latitude
-    ref_height: float, optional
-        The height of the reference points, if ref_points is None. Default
-        is highest reference point
-    output_vars: list of str
-        The output variables, if None, all micro_states variables are used
-    fixed_vars: dict
-        Fixed variables, e.g. {"var_name": var_value}
-    apply_blending: bool
-        Whether to blend between wind direction sectors
-    check_nans: bool
-        Whether to check for NaN values
+    micro_states
+        Micro-scale field data states. Their states must represent
+        different wind direction sectors and must be in "preload" mode.
+    meso_states
+        Meso-scale states evaluated at reference points. These define the final
+        states and state weights and are used to scale the micro states.
+    ref_points
+        The [x, y, h] reference point coordinates, shape (n_ref_points, 3),
+        or micro-state grid points with ref_height as height if None.
+    ref_points_are_lonlat
+        Whether the reference point coordinates are in longitude/latitude.
+    ref_height
+        The height of the reference points when ref_points is None.
+        Defaults to the highest reference point.
+    output_vars
+        The output variables. If None, all micro_states variables are used.
+    fixed_vars
+        Fixed variables, e.g. {"var_name": var_value}.
+    apply_blending
+        Whether to blend between wind direction sectors.
+    check_nans
+        Whether to check for NaN values.
 
-    :group: input.states
 
     """
 
     def __init__(
         self,
-        micro_states,
-        meso_states,
-        ref_points=None,
-        ref_points_are_lonlat=False,
-        ref_height=None,
-        utm_zone=None,
-        output_vars=None,
-        fixed_vars={},
-        check_nans=True,
-        apply_blending=True,
-        **kwargs,
-    ):
+        micro_states: DatasetStates,
+        meso_states: DatasetStates,
+        ref_points: np.ndarray | list[list[float]] | None = None,
+        ref_points_are_lonlat: bool = False,
+        ref_height: float | None = None,
+        utm_zone: str | tuple[float, float] | None = None,
+        output_vars: list[str] | None = None,
+        fixed_vars: dict[str, float] = {},
+        check_nans: bool = True,
+        apply_blending: bool = True,
+        **kwargs: object,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        micro_states: foxes.input.states.DatasetStates
-            Micro scale field data states. Its states must represent
-            different wind direction sectors, and the states must be in "preload" mode.
-        meso_states: foxes.core.States
-            Meso scale states, evaluated at reference points. These define the final
-            states and states weights. Will be evaluated at the reference points, and the
-            results will be used to scale the micro states.
-        ref_points: array_like, optional
-            The [x, y, h] reference point coordinates, shape: (n_ref_points, 3),
-            or micro states grid points with ref_height as height, if None
-        ref_points_are_lonlat: bool, optional
-            Whether the reference point coordinates are in longitude/latitude
-        ref_height: float, optional
-            The height of the reference points, if ref_points is None. Default
-            is highest reference point
-        utm_zone: str, optional
+        micro_states
+            Micro-scale field data states. Their states must represent
+            different wind direction sectors and must be in "preload" mode.
+        meso_states
+            Meso-scale states evaluated at reference points. These define the final
+            states and state weights and are used to scale the micro states.
+        ref_points
+            The [x, y, h] reference point coordinates, shape (n_ref_points, 3),
+            or micro-state grid points with ref_height as height if None.
+        ref_points_are_lonlat
+            Whether the reference point coordinates are in longitude/latitude.
+        ref_height
+            The height of the reference points when ref_points is None.
+            Defaults to the highest reference point.
+        utm_zone
             The UTM zone for the reference point coordinates, if applicable.
-            Either a string like "32N" or None for definition by field or ref point states
-            or automatic detection based on the reference point coordinates.
-        output_vars: list of str, optional
-            The output variables, if None, all micro_states variables are used
-        fixed_vars: dict, optional
-            Fixed variables, e.g. {"var_name": var_value}
-        apply_blending: bool, optional
-            Whether to blend between wind direction sectors
-        check_nans: bool, optional
-            Whether to check for NaN values
+            Either a string like "32N" or None to infer it automatically.
+        output_vars
+            The output variables. If None, all micro_states variables are used.
+        fixed_vars
+            Fixed variables, e.g. {"var_name": var_value}.
+        apply_blending
+            Whether to blend between wind direction sectors.
+        check_nans
+            Whether to check for NaN values.
 
         """
-        super().__init__(**kwargs)
+        super().__init__(**kwargs)  # type: ignore[arg-type]
         self.micro_states = micro_states
         self.meso_states = meso_states
         self.output_vars = output_vars
@@ -111,38 +121,40 @@ class MesoMicroField(States):
         self.__ref_points_are_lonlat = ref_points_are_lonlat
         self.__utm_zone = utm_zone
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
+        assert self.output_vars is not None
         return self.output_vars
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
         return [self.meso_states]  # keep micro_states out of the loop
 
-    def _lonlat_to_utm(self, verbosity=0):
+    def _lonlat_to_utm(self, verbosity: int = 0) -> None:
         """Helper function to convert lonlat reference point to UTM coordinates"""
         if self.__ref_points_are_lonlat:
+            assert self.ref_points is not None
             if not config.utm_zone_set and self.__utm_zone is None:
                 zone = get_utm_zone(self.ref_points[None, :2])
             elif self.__utm_zone is None:
@@ -175,7 +187,13 @@ class MesoMicroField(States):
                 f"States '{self.name}': ref_points_are_lonlat is False, but utm_zone is given: {self.__utm_zone}. This is not allowed."
             )
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -185,16 +203,16 @@ class MesoMicroField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -267,26 +285,28 @@ class MesoMicroField(States):
             halgo.init_states(force=True)
             ld = halgo.loaded_data
             self.STATE0 = self.var(FC.STATE + "0")
+            loaded_coords = cast(dict[str, Any], loaded_data["coords"])
+            loaded_data_vars = cast(dict[str, Any], loaded_data["data_vars"])
             loaded_data["extra_data"][self.COORDS0] = list(ld["coords"].keys())
             loaded_data["extra_data"][self.VARS0] = list(ld["data_vars"].keys())
             loaded_data["extra_data"][self.EXTRA0] = ld["extra_data"]
             for k, v in ld["coords"].items():
                 if k == FC.STATE:
-                    loaded_data["coords"][self.STATE0] = v
+                    loaded_coords[self.STATE0] = v
                 else:
-                    loaded_data["coords"][k] = v
+                    loaded_coords[k] = v
             for k, v in ld["data_vars"].items():
                 if FC.STATE in v[0]:
-                    loaded_data["data_vars"][k] = (
+                    loaded_data_vars[k] = (
                         tuple(self.STATE0 if d == FC.STATE else d for d in v[0]),
                         v[1],
                     )
                 else:
-                    loaded_data["data_vars"][k] = v
+                    loaded_data_vars[k] = v
 
             # create mdata from ld data:
-            mdict = {}
-            mdims = {}
+            mdict: dict[str, np.ndarray] = {}
+            mdims: dict[str, tuple[str, ...]] = {}
             for k, v in ld["coords"].items():
                 if isinstance(v, tuple):
                     mdims[k] = v[0]
@@ -308,6 +328,7 @@ class MesoMicroField(States):
 
             # create fdata and tdata:
             n_states = mdata.n_states
+            assert n_states is not None
             fdata = FData.from_sizes(n_states=n_states, n_turbines=halgo.n_turbines)
             points = np.zeros((n_states, n_points, 3), dtype=self.ref_points.dtype)
             points[:] = self.ref_points[None, :, :]
@@ -345,7 +366,7 @@ class MesoMicroField(States):
                         )
 
             # find wind direction bins at reference point:
-            wd_bin_data = np.zeros(
+            wd_bin_data: np.ndarray = np.zeros(
                 (n_states, n_points, 3), dtype=config.dtype_double
             )  #  centre, minus, plus
             for pi in range(n_points):
@@ -373,20 +394,20 @@ class MesoMicroField(States):
                 del wdp, wdm, wd_sorted, wd_map, wd_imap
             del results[FV.WD]
 
-            loaded_data["coords"][self.WD_BIN_DATA_VARS] = [
+            loaded_coords[self.WD_BIN_DATA_VARS] = [
                 "wd_centre",
                 "wd_minus",
                 "wd_plus",
             ]
-            loaded_data["data_vars"][self.WD_BIN_DATA] = (
+            loaded_data_vars[self.WD_BIN_DATA] = (
                 (self.STATE0, self.REF_POINT, self.WD_BIN_DATA_VARS),
                 wd_bin_data,
             )
             del wd_bin_data
 
             # store ref point results in loaded_data:
-            loaded_data["coords"][self.REF_VARS] = list(results.keys())
-            loaded_data["data_vars"][self.REF_DATA] = (
+            loaded_coords[self.REF_VARS] = list(results.keys())
+            loaded_data_vars[self.REF_DATA] = (
                 (self.STATE0, self.REF_POINT, self.REF_VARS),
                 np.stack([d[:, :, 0] for d in results.values()], axis=-1),
             )
@@ -396,7 +417,7 @@ class MesoMicroField(States):
                     f"States '{self.name}': Finished computing states '{self.micro_states.name}' at reference point, results: {list(results.keys())}"
                 )
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -408,26 +429,26 @@ class MesoMicroField(States):
         """
         return self.meso_states.size()
 
-    def index(self):
+    def index(self) -> list[int]:
         """
         The index list
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
-        return self.meso_states.index()
+        return list(self.meso_states.index())
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -437,16 +458,16 @@ class MesoMicroField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash
             Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -460,28 +481,28 @@ class MesoMicroField(States):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash
             Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -489,9 +510,16 @@ class MesoMicroField(States):
 
         if data_stash is not None:
             data = data_stash[self.name]
-            self.ref_points = data.pop("ref_points")
+            self.ref_points = cast(np.ndarray, data.pop("ref_points"))
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self, algo: Algorithm, *data: Any, **parameters: Any
+    ) -> dict[str, np.ndarray]:
+        if len(data) != 3:
+            raise TypeError(
+                f"States '{self.name}': Expecting 3 data arguments (mdata, fdata, tdata), got {len(data)}"
+            )
+        mdata, fdata, tdata = data
         """
         The main model calculation.
 
@@ -500,20 +528,20 @@ class MesoMicroField(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """
@@ -521,11 +549,12 @@ class MesoMicroField(States):
         # prepare
         super().calculate(algo, mdata, fdata, tdata)
         n_states = mdata.n_states
-        micro_coords0 = mdata.extra_data[self.COORDS0]
-        micro_vars0 = mdata.extra_data[self.VARS0]
-        micro_extra0 = mdata.extra_data[self.EXTRA0]
-        micro_ref_vars = mdata[self.REF_VARS].tolist()
-        micro_ref_results = mdata[self.REF_DATA]
+        assert n_states is not None
+        micro_coords0 = cast(list[str], mdata.extra_data[self.COORDS0])
+        micro_vars0 = cast(list[str], mdata.extra_data[self.VARS0])
+        micro_extra0 = cast(dict[str, Any], mdata.extra_data[self.EXTRA0])
+        micro_ref_vars = cast(list[str], mdata[self.REF_VARS].tolist())
+        micro_ref_results = cast(np.ndarray, mdata[self.REF_DATA])
         wd_bin_centre = mdata[self.WD_BIN_DATA][:, :, 0]
         wd_bin_minus = mdata[self.WD_BIN_DATA][:, :, 1]
         wd_bin_plus = mdata[self.WD_BIN_DATA][:, :, 2]
@@ -545,17 +574,22 @@ class MesoMicroField(States):
         points = np.zeros((n_states, n_points, 3), dtype=ref_points.dtype)
         points[:] = ref_points[None, :, :]
         htdata = TData.from_points(points=points, mdata=mdata)
-        ref_results = self.meso_states.calculate(algo, mdata, fdata, htdata)
-        ref_results = {k: d[:, :, 0] for k, d in ref_results.items()}
+        raw_ref_results: dict[str, np.ndarray] = cast(
+            dict[str, np.ndarray],
+            self.meso_states.calculate(algo, mdata, fdata, htdata),
+        )
+        ref_results: dict[str, np.ndarray] = {
+            str(k): d[:, :, 0] for k, d in raw_ref_results.items()
+        }
         tdata[FV.WEIGHT] = htdata[FV.WEIGHT]
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
         del points, htdata
 
         if self.check_nans:
-            for k, v in ref_results.items():
-                if np.any(np.isnan(v)):
+            for result_name, result_data in ref_results.items():
+                if np.any(np.isnan(result_data)):
                     raise ValueError(
-                        f"States '{self.name}': Reference point states '{self.meso_states.name}' output variable '{k}' contains {np.sum(np.isnan(v))} NaN values"
+                        f"States '{self.name}': Reference point states '{self.meso_states.name}' output variable '{result_name}' contains {np.sum(np.isnan(result_data))} NaN values"
                     )
 
         assert FV.WD in ref_results.keys(), (
@@ -565,7 +599,7 @@ class MesoMicroField(States):
             f"States '{self.name}': Reference point states '{self.meso_states.name}' must provide '{FV.WS}', got {list(ref_results.keys())}"
         )
 
-        def _print_wd_error_info(statesw):
+        def _print_wd_error_info(statesw: tuple[np.ndarray, ...]) -> None:
             us = np.unique(statesw[0])
             up = np.unique(statesw[1])
             print(f"\nWD MISMATCH STATES: {len(us)}, [{us[0]} - {us[-1]}]")
@@ -597,9 +631,9 @@ class MesoMicroField(States):
                 b0 + np.where(dwd_sel >= 0.0, 1, -1).astype(config.dtype_int)
             ) % n_bins
             dbins = np.abs(delta_wd(wd_bin_centre[b0, bp], wd_bin_centre[b1, bp]))
-            blend = np.zeros_like(dwd_sel, dtype=config.dtype_double)
+            blend: np.ndarray = np.zeros_like(dwd_sel, dtype=config.dtype_double)
             np.divide(np.abs(dwd_sel), dbins, out=blend, where=dbins > 0.0)
-            bf0 = np.zeros((n_states, n_points), dtype=config.dtype_double)
+            bf0: np.ndarray = np.zeros((n_states, n_points), dtype=config.dtype_double)
             bf0[bs, bp] = 1.0 - blend
             del dwd_sel, dbins, blend, dwd, b0
 
@@ -620,7 +654,7 @@ class MesoMicroField(States):
             fstates = np.where(np.any(sel, axis=(0, 2)))[0]
             fs2s = [np.where(sel[:, fstates, pi])[1] for pi in range(n_points)]
             sector_maps = [fs2s]
-            bf0 = 1.0
+            bf0 = np.ones((n_states, n_points), dtype=config.dtype_double)
             del dwd, sel, fs2s
 
         # map meso to micro states:
@@ -628,33 +662,33 @@ class MesoMicroField(States):
         n_bins = len(fstates)
 
         # create mdata:
-        mdict = {c: mdata[c] for c in micro_coords0}
-        mdims = {c: (c,) for c in micro_coords0}
-        mdict.update({v: mdata[v] for v in micro_vars0})
-        mdims.update({v: mdata.dims[v] for v in micro_vars0})
-        if FC.STATE in mdict:
-            mdict[FC.STATE] = mdict[FC.STATE][fstates]
+        mdata_dict: dict[str, np.ndarray] = {c: mdata[c] for c in micro_coords0}
+        mdata_dims: dict[str, tuple[str, ...]] = {c: (c,) for c in micro_coords0}
+        mdata_dict.update({v: mdata[v] for v in micro_vars0})
+        mdata_dims.update({v: mdata.dims[v] for v in micro_vars0})
+        if FC.STATE in mdata_dict:
+            mdata_dict[FC.STATE] = mdata_dict[FC.STATE][fstates]
         else:
-            mdict[FC.STATE] = fstates
-        mdims[FC.STATE] = (FC.STATE,)
-        for k in mdims.keys():
-            if len(mdims[k]) > 0 and mdims[k][0] == self.STATE0:
-                mdims[k] = (FC.STATE,) + mdims[k][1:]
-                mdict[k] = mdict[k][fstates, ...]
+            mdata_dict[FC.STATE] = fstates
+        mdata_dims[FC.STATE] = (FC.STATE,)
+        for k in mdata_dims.keys():
+            if len(mdata_dims[k]) > 0 and mdata_dims[k][0] == self.STATE0:
+                mdata_dims[k] = (FC.STATE,) + mdata_dims[k][1:]
+                mdata_dict[k] = mdata_dict[k][fstates, ...]
         hmdata = MData(
-            data=mdict,
-            dims=mdims,
+            data=mdata_dict,
+            dims=mdata_dims,
             states_i0=0,
             extra_data=micro_extra0,
             name="mdata_field",
         )
-        del mdict, mdims
+        del mdata_dict, mdata_dims
 
         # create fdata:
         hfdata = FData.from_sizes(n_states=n_bins, n_turbines=algo.n_turbines)
 
         # create tdata:
-        tpoints = np.zeros(
+        tpoints: np.ndarray = np.zeros(
             (n_bins, tdata.n_targets, tdata.n_tpoints, 3), dtype=config.dtype_double
         )
         tpoints[:] = tdata[FC.TARGETS][0, None, ...]
@@ -664,13 +698,18 @@ class MesoMicroField(States):
         del tpoints
 
         # run field states calculation:
-        micro_results = self.micro_states.calculate(algo, hmdata, hfdata, htdata)
-        micro_results_vrs = list(micro_results.keys())
-        micro_results = np.stack(
-            list(micro_results.values()), axis=-1
+        micro_data = self.micro_states.calculate(
+            algo,
+            hmdata,
+            cast(FData, hfdata),
+            cast(TData, htdata),
+        )
+        micro_results_vrs: list[str] = list(micro_data.keys())
+        micro_results: np.ndarray = np.stack(
+            list(micro_data.values()), axis=-1
         )  # dims (n_bins, n_tpts, n_points, n_vrs)
         n_vrs = len(micro_results_vrs)
-        del hmdata, hfdata, htdata
+        del hmdata, hfdata, htdata, micro_data
 
         # replace WS, WD by U, V:
         if FV.U in micro_results_vrs or FV.V in micro_results_vrs:
@@ -698,13 +737,15 @@ class MesoMicroField(States):
             del uv
 
         # evaluate sectors:
-        mires = np.zeros((n_states, n_tpts, n_points, n_vrs), dtype=config.dtype_double)
+        mires: np.ndarray = np.zeros(
+            (n_states, n_tpts, n_points, n_vrs), dtype=config.dtype_double
+        )
         for bi, fs2s in enumerate(sector_maps):
             # sector weight:
             weight = bf0 if bi == 0 else (1.0 - bf0)
 
             # compute speedups:
-            speedups = {}
+            speedups: dict[str, list[np.ndarray]] = {}
             for v in ref_results.keys():
                 if v in micro_ref_vars:
                     i = micro_ref_vars.index(v)
@@ -739,11 +780,12 @@ class MesoMicroField(States):
         del mires
 
         # prepare ref point selection:
-        refw = np.zeros((n_points, n_points), dtype=config.dtype_double)
+        refw: np.ndarray = np.zeros((n_points, n_points), dtype=config.dtype_double)
         np.fill_diagonal(refw, 1.0)
         refv = [f"ref_point_{pi}" for pi in range(n_points)]
 
         # prepare target points for interpolation:
+        assert n_states is not None
         points = tdata[FC.TARGETS][..., :2].reshape((n_states, n_tpts, 2))
         pmin = np.min(points, axis=0)
         pmax = np.max(points, axis=0)
@@ -775,7 +817,7 @@ class MesoMicroField(States):
         # apply mixing weights:
         micro_results = np.einsum("sprv,spr->spv", micro_results, refw)
 
-        def _get_data(v, out):
+        def _get_data(v: str, out: dict[str, np.ndarray]) -> np.ndarray:
             """Helper function for output data extraction"""
             if v in out.keys():
                 return out[v]
@@ -797,11 +839,11 @@ class MesoMicroField(States):
                 return d.reshape(n_states, tdata.n_targets, tdata.n_tpoints)
             else:
                 raise KeyError(
-                    f"States '{self.name}': Output variable '{v}' not found in field states variables {list(micro_results.keys())} or reference point states variables {list(ref_results.keys())}"
+                    f"States '{self.name}': Output variable '{v}' not found in field states variables {micro_results_vrs} or reference point states variables {list(ref_results.keys())}"
                 )
 
         # collect output:
-        out = {}
+        out: dict[str, np.ndarray] = {}
         for v in ovars:
             if v in out:
                 pass

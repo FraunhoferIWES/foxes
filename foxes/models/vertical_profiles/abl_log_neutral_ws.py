@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+import numpy as np
+from typing import Any
+
 from foxes.core import VerticalProfile
 from foxes.utils.abl import neutral
 import foxes.variables as FV
@@ -10,38 +15,37 @@ class ABLLogNeutralWsProfile(VerticalProfile):
 
     Attributes
     ----------
-    ustar_input: bool
+    ustar_input
         Flag for using ustar as an input
 
-    :group: models.vertical_profiles
 
     """
 
-    def __init__(self, *args, ustar_input=False, **kwargs):
+    def __init__(self, *args: Any, ustar_input: bool = False, **kwargs: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Additional arguments for VerticalProfile
-        ustar_input: bool
+        ustar_input
             Flag for using ustar as an input
-        kwargs: dict, optional
+        kwargs
             Additional arguments for VerticalProfile
 
         """
         super().__init__(*args, **kwargs)
         self.ustar_input = ustar_input
 
-    def input_vars(self):
+    def input_vars(self) -> list[str]:
         """
         The input variables needed for the profile
         calculation.
 
         Returns
         -------
-        vars: list of str
+        vars
             The variable names
 
         """
@@ -50,20 +54,20 @@ class ABLLogNeutralWsProfile(VerticalProfile):
         else:
             return [FV.WS, FV.H, FV.Z0]
 
-    def calculate(self, data, heights):
+    def calculate(self, data: dict[str, Any], heights: np.ndarray) -> np.ndarray:
         """
         Run the profile calculation.
 
         Parameters
         ----------
-        data: dict
+        data
             The input data
-        heights: numpy.ndarray
+        heights
             The evaluation heights
 
         Returns
         -------
-        results: numpy.ndarray
+        results
             The profile results, same
             shape as heights
 
@@ -76,4 +80,4 @@ class ABLLogNeutralWsProfile(VerticalProfile):
             ws = data[FV.WS]
             ustar = neutral.ustar(ws, h0, z0, kappa=FC.KAPPA)
 
-        return neutral.calc_ws(heights, z0, ustar, kappa=FC.KAPPA)
+        return np.asarray(neutral.calc_ws(heights, z0, ustar, kappa=FC.KAPPA))

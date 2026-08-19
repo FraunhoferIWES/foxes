@@ -1,33 +1,41 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from foxes.core import TurbineType
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import numpy as np
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class NullType(TurbineType):
     """
     A turbine type that does not compute any data.
 
-    :group: models.turbine_types
 
     """
 
     def __init__(
         self,
-        *args,
-        needs_rews2=False,
-        needs_rews3=False,
-        **kwargs,
-    ):
+        *args: Any,
+        needs_rews2: bool = False,
+        needs_rews3: bool = False,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Additional parameters for TurbineType class
-        needs_rews2: bool
+        needs_rews2
             Flag for runs that require the REWS2 variable
-        needs_rews3: bool
+        needs_rews3
             Flag for runs that require the REWS3 variable
-        kwargs: dict, optional
+        kwargs
             Additional parameters for TurbineType class
 
         """
@@ -35,48 +43,54 @@ class NullType(TurbineType):
         self._rews2 = needs_rews2
         self._rews3 = needs_rews3
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS2 is required
 
         """
         return self._rews2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS3 is required
 
         """
         return self._rews3
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return []
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -85,21 +99,21 @@ class NullType(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)

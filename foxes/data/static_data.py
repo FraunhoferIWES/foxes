@@ -7,22 +7,18 @@ from . import model_data
 
 FARM = "farm"
 """ Static wind farm data identifier
-:group: data
 """
 
 STATES = "states"
 """ Static states data identifier
-:group: data
 """
 
 PCTCURVE = "power_ct_curve"
 """ Static power-ct curve data identifier
-:group: data
 """
 
 MODEL_DATA = "model_data"
 """ Static model data identifier
-:group: data
 """
 
 
@@ -31,11 +27,10 @@ class StaticData(DataBook):
     A DataBook filled with static data from
     this directory.
 
-    :group: data
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.add_data_package(FARM, farms, ".csv")

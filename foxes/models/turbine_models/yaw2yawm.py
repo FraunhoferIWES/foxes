@@ -1,6 +1,15 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from foxes.core import TurbineModel
 import foxes.variables as FV
 from foxes.utils import delta_wd
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class YAW2YAWM(TurbineModel):
@@ -8,28 +17,33 @@ class YAW2YAWM(TurbineModel):
     Calculates delta yaw (i.e. YAWM) from absolute
     yaw (i.e. YAW)
 
-    :group: models.turbine_models
 
     """
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return [FV.YAWM]
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -38,21 +52,21 @@ class YAW2YAWM(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel: slice or array of bool
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)

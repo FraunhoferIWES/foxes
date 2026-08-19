@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.interpolate import interpn
 
+from foxes.core import Algorithm, FData, LoadedData, MData, TData
 from foxes.core.states import States
 from foxes.config import config, get_input_path
 from foxes.utils import ReaderWRG, weibull_weights
@@ -15,60 +19,65 @@ class WRGStates(States):
 
     Attributes
     ----------
-    wrg_fname: str
+    wrg_fname
         Name of the WRG file
-    ws_bins: numpy.ndarray
+    ws_bins
         The wind speed bins, including
         lower and upper bounds, shape: (n_ws_bins+1,)
-    fixed_vars: dict
+    fixed_vars
         Fixed uniform variable values, instead of
         reading from data
-    bounds_extra_space: float or str
+    bounds_extra_space
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-    interp_pars: dict
+    interp_pars
         Additional parameters for scipy.interpolate.interpn
 
-    :group: input.states
 
     """
 
     def __init__(
         self,
-        wrg_fname,
-        ws_bins,
-        fixed_vars={},
-        bounds_extra_space="1D",
-        **interp_pars,
-    ):
+        wrg_fname: str,
+        ws_bins: ArrayLike,
+        fixed_vars: dict[str, float] | None = None,
+        bounds_extra_space: float | str = "1D",
+        **interp_pars: object,
+    ) -> None:
         """
         Constructor
 
         Parameters
         ----------
-        wrg_fname: str
+        wrg_fname
             Name of the WRG file
-        ws_bins: list of float
+        ws_bins
             The wind speed bins, including
             lower and upper bounds
-        fixed_vars: dict
+        fixed_vars
             Fixed uniform variable values, instead of
             reading from data
-        bounds_extra_space: float or str, optional
+        bounds_extra_space
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        interp_pars: dict, optional
+        interp_pars
             Additional parameters for scipy.interpolate.interpn
 
         """
         super().__init__()
         self.wrg_fname = wrg_fname
         self.ws_bins = np.asarray(ws_bins)
-        self.fixed_vars = fixed_vars
+        self.fixed_vars = {} if fixed_vars is None else fixed_vars
         self.bounds_extra_space = bounds_extra_space
         self.interp_pars = interp_pars
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -78,16 +87,16 @@ class WRGStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -98,13 +107,15 @@ class WRGStates(States):
                 print(
                     f"States '{self.name}': Reading static data '{self.wrg_fname}' from context '{STATES}'"
                 )
-            fpath = algo.dbook.get_file_path(STATES, self.wrg_fname, check_raw=False)
+            fpath0 = algo.dbook.get_file_path(STATES, self.wrg_fname, check_raw=False)
+            assert fpath0 is not None
+            fpath = fpath0
             if verbosity > 0:
                 print(f"Path: {fpath}")
         elif verbosity:
             print(f"States '{self.name}': Reading file {fpath}")
         wrg = ReaderWRG(fpath)
-        p0 = np.array([wrg.x0, wrg.y0], dtype=config.dtype_double)
+        p0: np.ndarray = np.array([wrg.x0, wrg.y0], dtype=config.dtype_double)
         nx = wrg.nx
         ny = wrg.ny
         ns = wrg.n_sectors
@@ -120,8 +131,10 @@ class WRGStates(States):
             )
             if verbosity > 0:
                 print(f"States '{self.name}': Farm bounds {xy_min} - {xy_max}")
-            ij_min = np.asarray((xy_min - p0) / res, dtype=config.dtype_int)
-            ij_max = np.asarray((xy_max - p0) / res, dtype=config.dtype_int) + 1
+            ij_min: np.ndarray = np.asarray((xy_min - p0) / res, dtype=config.dtype_int)
+            ij_max: np.ndarray = (
+                np.asarray((xy_max - p0) / res, dtype=config.dtype_int) + 1
+            )
             sx = slice(ij_min[0], ij_max[0])
             sy = slice(ij_min[1], ij_max[1])
         else:
@@ -141,18 +154,18 @@ class WRGStates(States):
             print(f"States '{self.name}':  New bounds {p0} - {p1}")
 
         # store data:
-        A = []
-        k = []
-        f = []
+        A: list[np.ndarray] = []
+        k: list[np.ndarray] = []
+        f: list[np.ndarray] = []
         for s in range(ns):
             A.append(wrg.data[f"As_{s}"].to_numpy().reshape(ny, nx)[sy, sx])
             k.append(wrg.data[f"Ks_{s}"].to_numpy().reshape(ny, nx)[sy, sx])
             f.append(wrg.data[f"fs_{s}"].to_numpy().reshape(ny, nx)[sy, sx])
         del wrg
-        A = np.stack(A, axis=0).T
-        k = np.stack(k, axis=0).T
-        f = np.stack(f, axis=0).T
-        self._data = np.stack([A, k, f], axis=-1)  # (x, y, wd, AKfs)
+        A_data = np.stack(A, axis=0).T
+        k_data = np.stack(k, axis=0).T
+        f_data = np.stack(f, axis=0).T
+        self._data = np.stack([A_data, k_data, f_data], axis=-1)  # (x, y, wd, AKfs)
 
         # store ws and wd:
         self.VARS = self.var("VARS")
@@ -161,16 +174,16 @@ class WRGStates(States):
         self._wsd = self.ws_bins[1:] - self.ws_bins[:-1]
         self._wss = 0.5 * (self.ws_bins[:-1] + self.ws_bins[1:])
         self._N = len(self._wss) * ns
-        data = np.zeros((len(self._wss), ns, 3), dtype=config.dtype_double)
+        data: np.ndarray = np.zeros((len(self._wss), ns, 3), dtype=config.dtype_double)
         data[..., 0] = self._wss[:, None]
         data[..., 1] = self._wds[None, :]
         data[..., 2] = self._wsd[:, None]
         data = data.reshape(self._N, 3)
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
-        loaded_data["coords"][self.VARS] = ["ws", "wd", "dws"]
+        loaded_data["coords"][self.VARS] = np.asarray(["ws", "wd", "dws"])
         loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -182,18 +195,18 @@ class WRGStates(States):
         """
         return self._N
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -201,7 +214,9 @@ class WRGStates(States):
         ovars.update(self.fixed_vars.keys())
         return list(ovars)
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(  # type: ignore[override]
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -210,26 +225,27 @@ class WRGStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """
         # prepare:
         self.ensure_output_vars(algo, tdata)
         n_states = tdata.n_states
+        assert n_states is not None
         n_targets = tdata.n_targets
         n_tpoints = tdata.n_tpoints
         n_pts = n_states * n_targets * n_tpoints
@@ -257,7 +273,7 @@ class WRGStates(States):
         gvars = (self._x, self._y, self._wds)
         try:
             ipars = dict(bounds_error=True, fill_value=None)
-            ipars.update(self.interp_pars)
+            ipars.update(self.interp_pars)  # type: ignore[arg-type]
             data = interpn(gvars, self._data, pts, **ipars).reshape(
                 n_states, n_targets, n_tpoints, 3
             )

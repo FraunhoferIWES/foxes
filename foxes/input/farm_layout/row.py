@@ -1,41 +1,44 @@
-import numpy as np
+from collections.abc import Sequence
+from typing import Any
 
-from foxes.core import Turbine
+import numpy as np
+from numpy.typing import ArrayLike
+
+from foxes.core import Turbine, WindFarm
 
 
 def add_row(
-    farm,
-    xy_base,
-    xy_step,
-    n_turbines,
-    indices=None,
-    names=None,
-    verbosity=1,
-    **turbine_parameters,
-):
+    farm: WindFarm,
+    xy_base: ArrayLike,
+    xy_step: ArrayLike,
+    n_turbines: int,
+    indices: Sequence[int] | np.ndarray | None = None,
+    names: Sequence[str] | np.ndarray | None = None,
+    verbosity: int = 1,
+    **turbine_parameters: Any,
+) -> None:
     """
     Add a single row of turbines.
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    xy_base: numpy.ndarray
+    xy_base
         The base point, shape: (2,)
-    xy_step: numpy.ndarray
+    xy_step
         The step vector, shape: (2,)
-    n_turbines: int
+    n_turbines
         The number of turbines
-    indices: list of int, optional
+    indices
         The turbine indices
-    names: list of str, optional
+    names
         The turbine names
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: dict, optional
+    turbine_parameters
         Parameters forwarded to `foxes.core.Turbine`
 
-    :group: input.farm_layout
 
     """
     p0 = np.array(xy_base)

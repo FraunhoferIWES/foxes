@@ -3,28 +3,29 @@ from pathlib import Path
 from .load import import_module
 
 
-def download_file(url, out_path, verbosity=1):
+def download_file(url: str, out_path: str | Path, verbosity: int = 1) -> int:
     """
     Download a file from a URL with resume capability.
 
     Parameters
     ----------
-    url: str
+    url
         The URL to download from
-    out_path: str
+    out_path
         Path to the output file
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
 
     Returns
     -------
-    scs: int
+    scs
         Success indicator. 0 = File already there,
         1 = Success, -1 = Failure
 
-    :group: utils
 
     """
+    out_path = Path(out_path)
+
     requests = import_module(
         "requests",
         pip_hint="pip install requests",

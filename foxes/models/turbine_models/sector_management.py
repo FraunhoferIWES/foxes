@@ -1,11 +1,20 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
 from foxes.config import get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class SectorManagement(TurbineModel):
@@ -14,47 +23,46 @@ class SectorManagement(TurbineModel):
 
     Attributes
     ----------
-    source: str or pandas.DataFrame
+    source
         The file path or data
 
-    :group: models.turbine_models
 
     """
 
     def __init__(
         self,
-        data_source,
-        range_vars,
-        target_vars,
-        col_tinds=None,
-        col_tnames=None,
-        colmap={},
-        var_periods={FV.WD: 360.0, FV.AMB_WD: 360.0},
-        pd_file_read_pars={},
-    ):
+        data_source: str | pd.DataFrame,
+        range_vars: list[str],
+        target_vars: list[str],
+        col_tinds: str | None = None,
+        col_tnames: str | None = None,
+        colmap: dict[str, str] = {},
+        var_periods: dict[str, float] = {FV.WD: 360.0, FV.AMB_WD: 360.0},
+        pd_file_read_pars: dict[str, Any] = {},
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str or pandas.DataFrame
+        data_source
             The file path or data
-        range_vars: list of str
+        range_vars
             The variables for which (min, max) ranges
             are specified in the data
-        target_vars: list of str
+        target_vars
             The variables that change if range variables
             are within specified ranges
-        col_tinds: str, optional
+        col_tinds
             The turbine index column name in the data
-        col_tnames: str, optional
+        col_tnames
             The turbine name column name in the data
-        colmap: dict
+        colmap
             Mapping from expected to existing
             column names
-        var_periods: dict
+        var_periods
             Periods for periodic variables
-        pd_file_read_pars: dict
+        pd_file_read_pars
             Parameters for pandas file reading
 
         """
@@ -74,27 +82,33 @@ class SectorManagement(TurbineModel):
         self._tdata = None
         self._trbs = None
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -125,7 +139,9 @@ class SectorManagement(TurbineModel):
                 raise KeyError(
                     f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"
                 )
+            assert self._col_i is not None
             self._trbs = data[self._col_i].to_numpy()
+        assert self._trbs is not None
         n_trbs = len(self._trbs)
 
         self._rcols = []
@@ -165,24 +181,30 @@ class SectorManagement(TurbineModel):
 
         return loaded_data
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return self._tvars
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -191,32 +213,34 @@ class SectorManagement(TurbineModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: slice or numpy.ndarray of bool
+        st_sel: slice or array of bool
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         # prepare:
         self.ensure_output_vars(algo, fdata)
-        n_trbs = len(self._trbs)
-        if n_trbs == fdata.n_turbines and np.all(
-            self._trbs == np.arange(fdata.n_turbines)
-        ):
+        trbs = self._trbs
+        rdata = self._rdata
+        tdata = self._tdata
+        assert trbs is not None and rdata is not None and tdata is not None
+        n_trbs = len(trbs)
+        if n_trbs == fdata.n_turbines and np.all(trbs == np.arange(fdata.n_turbines)):
             tsel = np.s_[:]
         else:
-            tsel = self._trbs
+            tsel = trbs
 
         # find state-turbine data that matches ranges:
         rsel = np.ones((fdata.n_states, n_trbs), dtype=bool)
@@ -224,8 +248,8 @@ class SectorManagement(TurbineModel):
             d = fdata[v][:, tsel]
             if v in self._perds:
                 d = np.mod(d, self._perds[v])
-                mi = self._rdata[:, vi, 0]
-                ma = self._rdata[:, vi, 1]
+                mi = rdata[:, vi, 0]
+                ma = rdata[:, vi, 1]
                 sel = ma < mi
                 if np.any(sel):
                     rsel[:, sel] = rsel[:, sel] & (
@@ -238,17 +262,13 @@ class SectorManagement(TurbineModel):
                         & (d[:, ~sel] < ma[~sel])
                     )
             else:
-                rsel = (
-                    rsel
-                    & (d >= self._rdata[None, :, vi, 0])
-                    & (d < self._rdata[None, :, vi, 1])
-                )
+                rsel = rsel & (d >= rdata[None, :, vi, 0]) & (d < rdata[None, :, vi, 1])
 
         # set target data:
         if np.any(rsel):
             sel = np.where(rsel)
-            selt = self._trbs[sel[1]]
+            selt = trbs[sel[1]]
             for vi, v in enumerate(self._tvars):
-                fdata[v][sel[0], selt] = self._tdata[None, sel[1], vi]
+                fdata[v][sel[0], selt] = tdata[None, sel[1], vi]
 
         return {v: fdata[v] for v in self._tvars}

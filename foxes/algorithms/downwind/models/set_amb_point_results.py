@@ -1,5 +1,16 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
+from typing import TYPE_CHECKING
+import numpy as np
+
 import foxes.variables as FV
 from foxes.core import PointDataModel
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData
 
 
 class SetAmbPointResults(PointDataModel):
@@ -8,72 +19,81 @@ class SetAmbPointResults(PointDataModel):
 
     Attributes
     ----------
-    pvars: list of str
+    pvars
         The point variables to be treated
-    vars: list of str
+    vars
         The variables to be copied to output
 
-    :group: algorithms.downwind.models
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """
         super().__init__()
-        self.pvars = None
-        self.vars = None
+        self.pvars: list[str] = []
+        self.vars: list[str] = []
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            It contains coordinate data, model variables, and additional data.
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
+            It contains coordinate data, model variables, and additional data.
 
         """
         self.pvars = algo.states.output_point_vars(algo)
         self.vars = [v for v in self.pvars if v in FV.var2amb]
         return super().initialize(algo, loaded_data, force, verbosity)
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return [FV.var2amb[v] for v in self.vars] + [FV.WEIGHT]
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -82,20 +102,20 @@ class SetAmbPointResults(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The point data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values with shape (n_states, n_points)
 
         """
         ovars = self.output_point_vars(algo)

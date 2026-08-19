@@ -21,7 +21,7 @@ def _build_algo(counter=0):
     times = np.array(
         ["2020-01-01T00:00:00", "2020-01-01T00:01:00"], dtype="datetime64[s]"
     )
-    states = SimpleNamespace(index=lambda: times)
+    states = SimpleNamespace(index=lambda: times, counter=counter)
     farm_results = {
         FV.YAW: DummySeries(np.zeros((2, 2), dtype=float)),
         FV.AMB_WD: DummySeries(np.zeros((2, 2), dtype=float)),
@@ -30,7 +30,6 @@ def _build_algo(counter=0):
     return SimpleNamespace(
         n_turbines=2,
         states=states,
-        counter=counter,
         farm_results_downwind=farm_results,
         store_model_data=lambda *args, **kwargs: None,
     )

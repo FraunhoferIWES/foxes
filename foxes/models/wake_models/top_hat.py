@@ -1,10 +1,19 @@
+from __future__ import annotations
+
 import numpy as np
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData, Model
+    from foxes.core.axial_induction_model import AxialInductionModel
 
 
 class TopHatWakeModel(AxisymmetricWakeModel):
@@ -13,63 +22,73 @@ class TopHatWakeModel(AxisymmetricWakeModel):
 
     Parameters
     ----------
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
 
-    :group: models.wake_models
 
     """
 
-    def __init__(self, *args, induction="Betz", **kwargs):
+    def __init__(
+        self, *args: Any, induction: AxialInductionModel | str = "Betz", **kwargs: Any
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Additional parameters for the base class
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
         super().__init__(*args, **kwargs)
         self.induction = induction
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
-        return super().sub_models() + [self.induction]
+        smdls = super().sub_models()
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -82,37 +101,43 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
+        n_states = tdata.n_states
+        n_targets = tdata.n_targets
+        n_tpoints = tdata.n_tpoints
+        assert n_states is not None and n_targets is not None and n_tpoints is not None
         if self.has_uv:
-            duv = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
+            duv: np.ndarray = np.zeros(
+                (n_states, n_targets, n_tpoints, 2),
                 dtype=config.dtype_double,
             )
             return {FV.UV: duv}
         else:
-            dws = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+            dws: np.ndarray = np.zeros(
+                (n_states, n_targets, n_tpoints),
                 dtype=config.dtype_double,
             )
             return {FV.WS: dws}
@@ -120,38 +145,38 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     @abstractmethod
     def calc_wake_radius(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        ct: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the wake radius, depending on x only (not r).
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        ct: numpy.ndarray
+        ct
             The ct values of the wake-causing turbines,
             shape: (n_states, n_targets)
 
         Returns
         -------
-        wake_r: numpy.ndarray
+        wake_r
             The wake radii, shape: (n_states, n_targets)
 
         """
@@ -160,88 +185,88 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     @abstractmethod
     def calc_centreline(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        x,
-        wake_r,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        x: np.ndarray,
+        wake_r: np.ndarray,
+        ct: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Calculate centre line results of wake deltas.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
-        x: numpy.ndarray
+        x
             The x values, shape: (n_st_sel,)
-        wake_r: numpy.ndarray
+        wake_r
             The wake radii, shape: (n_st_sel,)
-        ct: numpy.ndarray
+        ct
             The ct values of the wake-causing turbines,
             shape: (n_st_sel,)
 
         Returns
         -------
-        cl_del: dict
+        cl_del
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_st_sel,)
+            varlue
 
         """
         pass
 
     def calc_wakes_x_r(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        r,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        r: np.ndarray,
+    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
         """
         Calculate wake deltas.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        r: numpy.ndarray
+        r
             The radial values for each x value, shape:
             (n_states, n_targets, n_yz_per_target)
 
         Returns
         -------
-        wdeltas: dict
+        wdeltas
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_st_sel, n_r_per_x)
-        st_sel: numpy.ndarray of bool
+            value
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 

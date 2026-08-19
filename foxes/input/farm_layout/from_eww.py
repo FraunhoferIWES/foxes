@@ -3,51 +3,53 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from os import remove
+from typing import Any
 from zipfile import ZipFile
 
-from foxes.core import Turbine, get_engine, Engine
+from foxes.core import Turbine, Engine, WindFarm, get_engine
 from foxes.config import get_input_path
+from foxes.models import ModelBook
 from foxes.models.turbine_types import PCtFile
 from foxes.utils import download_file
 
 
 def add_from_eww(
-    farm,
-    data_source,
-    filter={},
-    mbook=None,
-    csv_dir=None,
-    rho=1.225,
-    verbosity=1,
-    pct_pars={},
-    **turbine_parameters,
-):
+    farm: WindFarm,
+    data_source: str | pd.DataFrame,
+    filter: list[tuple[str, Any]] | None = None,
+    mbook: ModelBook | None = None,
+    csv_dir: str | None = None,
+    rho: float = 1.225,
+    verbosity: int = 1,
+    pct_pars: dict[str, Any] | None = None,
+    **turbine_parameters: Any,
+) -> None:
     """
     Add turbines to wind farm via EuroWindWakes database csv input file.
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    data_source: str or pandas.DataFrame
+    data_source
         The input csv file or data source
-    filter: list of tuple, optional
-        A list of filters to apply to the dataframe,
+    filter
+        Multiple filters can be applied to the dataframe,
         e.g. ("wind_farm": ["Farm1", "Farm2"]),
         or ("latitude", ">=54.1"). For range filtering, use strings
         that start with ">=", "<=", ">", "<". For exact matches, use single values.
         For multiple matches, use lists, tuples or sets.
-    mbook: foxes.ModelBook, optional
+    mbook
         The model book, only needed if csv_dir is specified
-    csv_dir: str, optional
+    csv_dir
         The csv file directory, containing turbine type data files
-    rho: float
+    rho
         The air density for the turbine types, if csv_dir is given
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    pct_pars: dict
+    pct_pars
         Additional parameters for the PCtFile constructor
-    turbine_parameters: dict, optional
+    turbine_parameters
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
     Examples
@@ -60,7 +62,6 @@ def add_from_eww(
     >>>    2,Aberdeen Offshore Wind Farm,Vestas,57.2169301,-2.0055697,United Kingdom,8.4,164.0,108.5,V164-8.4 MW,2018-09
     >>>    ...
 
-    :group: input.farm_layout
 
     """
     assert farm.data_is_lonlat, "Require `input_is_lonlat=True` in WindFarm constructor"
@@ -83,8 +84,9 @@ def add_from_eww(
     if csv_dir is not None:
         if mbook is None:
             raise ValueError("Model book must be given if csv_dir is specified")
-        csv_dir = get_input_path(csv_dir)
-        csv_files = sorted(list(csv_dir.glob("*.csv")))
+        model_book = mbook
+        csv_directory = get_input_path(csv_dir)
+        csv_files = sorted(list(csv_directory.glob("*.csv")))
         csv_names = [f.stem for f in csv_files]
         if verbosity > 0:
             print(f"Reading {len(csv_files)} CSV files from {csv_dir}")
@@ -99,7 +101,7 @@ def add_from_eww(
             csv_map.append(csv_files[csv_names.index(t)])
         ttypes = ntt
         for t in ttypes:
-            mbook.turbine_types[t] = None
+            model_book.turbine_types[t] = None
 
     else:
         if verbosity > 0:
@@ -157,13 +159,14 @@ def add_from_eww(
         ttype = data.loc[i, "turbine_type"]
         if ttype not in ttypes:
             ttype = ttype.replace(" ", "_").replace("/", "_")
-        if csv_dir is not None and mbook.turbine_types[ttype] is None:
+        if csv_dir is not None and model_book.turbine_types[ttype] is None:
             u = ttypes.index(ttype)
             if verbosity > 0:
                 print(f"Creating turbine type: {ttype} from file {csv_map[u].name}")
-            pars = dict(col_P="power")
-            pars.update(pct_pars)
-            mbook.turbine_types[ttype] = PCtFile(csv_map[u], rho=rho, **pars)
+            pars: dict[str, Any] = dict(col_P="power")
+            if pct_pars is not None:
+                pars.update(pct_pars)
+            model_book.turbine_types[ttype] = PCtFile(str(csv_map[u]), rho=rho, **pars)
 
         lonlat = data.loc[i, ["longitude", "latitude"]].to_numpy(np.float64)
         farm.add_turbine(
@@ -186,34 +189,36 @@ def add_from_eww(
 
 
 def download_eww(
-    out_folder,
-    url_database,
-    url_power_curves,
-    verbosity=1,
-):
+    out_folder: str,
+    url_database: str | None,
+    url_power_curves: str | None,
+    verbosity: int = 1,
+) -> tuple[Path | None, Path | None]:
     """
     Download EuroWindWakes data files in parallel
 
     Parameters
     ----------
-    out_folder: str
+    out_folder
         The output folder for the downloaded files
-    url_database: str
+    url_database
         The URL of the EuroWindWakes database csv file
-    url_power_curves: str
+    url_power_curves
         The URL of the EuroWindWakes power curve zip file
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
 
     Returns
     -------
-    fpath_db: Path
+    fpath_db
         The path to the downloaded database csv file
-    fpath_pc: Path
+    fpath_pc
         The path to the unpacked power curves folder
 
     """
     engine = get_engine()
+    if engine is None:
+        raise RuntimeError("download_eww must run inside an active engine")
 
     if url_database is None:
         url_database = (
@@ -275,7 +280,7 @@ def download_eww(
     return fpath_db, fpath_pc
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "out_dir",
@@ -317,7 +322,7 @@ def main():
     args = parser.parse_args()
 
     with Engine.new(args.engine, n_procs=args.n_cpus):
-        return download_eww(
+        download_eww(
             out_folder=args.out_dir,
             url_database=args.url_db,
             url_power_curves=args.url_pc,

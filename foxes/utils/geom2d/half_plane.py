@@ -1,5 +1,13 @@
+# mypy: disable-error-code=arg-type
+
+from __future__ import annotations
+
+from typing import Any, cast
+
 import numpy as np
 import matplotlib.pyplot as plt
+from collections.abc import Sequence
+from matplotlib.axes import Axes
 
 from .area_geometry import AreaGeometry
 
@@ -10,26 +18,27 @@ class HalfPlane(AreaGeometry):
 
     Attributes
     ----------
-    centre: numpy.ndarray
+    centre
         The centre point, shape: (2,)
-    n: numpy.ndarray
+    n
         The direction vector to the inside, shape: (2,)
-    n: numpy.ndarray
+    n
         The direction vector orthogonal to n, shape: (2,)
 
-    :group: utils.geom2d
 
     """
 
-    def __init__(self, centre, n):
+    def __init__(
+        self, centre: np.ndarray | Sequence[float], n: np.ndarray | Sequence[float]
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        centre: numpy.ndarray
+        centre
             The centre point, shape: (2,)
-        n: numpy.ndarray
+        n
             The direction vector to the inside, shape: (2,)
 
         """
@@ -38,65 +47,75 @@ class HalfPlane(AreaGeometry):
         self.n /= np.linalg.norm(self.n)
         self.m = np.array([-self.n[1], self.n[0]], dtype=np.float64)
 
-    def p_min(self):
+    def p_min(self) -> np.ndarray:
         """
         Returns minimal (x,y) point.
 
         Returns
         -------
-        p_min: numpy.ndarray
+        p_min
             The minimal (x,y) point, shape = (2,)
 
         """
         if np.linalg.norm(self.n - np.array([1, 0])) < 1e-13:
-            return np.array([self.centre[0], -np.inf], dtype=np.float64)
+            return cast(
+                np.ndarray, np.array([self.centre[0], -np.inf], dtype=np.float64)
+            )
         if np.linalg.norm(self.n - np.array([-1, 0])) < 1e-13:
-            return np.array([-np.inf, -np.inf], dtype=np.float64)
+            return cast(np.ndarray, np.array([-np.inf, -np.inf], dtype=np.float64))
         if np.linalg.norm(self.n - np.array([0, 1])) < 1e-13:
-            return np.array([-np.inf, self.centre[1]], dtype=np.float64)
+            return cast(
+                np.ndarray, np.array([-np.inf, self.centre[1]], dtype=np.float64)
+            )
         if np.linalg.norm(self.n - np.array([0, -1])) < 1e-13:
-            return np.array([-np.inf, -np.inf], dtype=np.float64)
+            return cast(np.ndarray, np.array([-np.inf, -np.inf], dtype=np.float64))
 
-        return np.array([-np.inf, -np.inf], dtype=np.float64)
+        return cast(np.ndarray, np.array([-np.inf, -np.inf], dtype=np.float64))
 
-    def p_max(self):
+    def p_max(self) -> np.ndarray:
         """
         Returns maximal (x,y) point.
 
         Returns
         -------
-        p_min: numpy.ndarray
+        p_min
             The maximal (x,y) point, shape = (2,)
 
         """
         if np.linalg.norm(self.n - np.array([1, 0])) < 1e-13:
-            return np.array([np.inf, np.inf], dtype=np.float64)
+            return cast(np.ndarray, np.array([np.inf, np.inf], dtype=np.float64))
         if np.linalg.norm(self.n - np.array([-1, 0])) < 1e-13:
-            return np.array([self.centre[0], np.inf], dtype=np.float64)
+            return cast(
+                np.ndarray, np.array([self.centre[0], np.inf], dtype=np.float64)
+            )
         if np.linalg.norm(self.n - np.array([0, 1])) < 1e-13:
-            return np.array([np.inf, np.inf], dtype=np.float64)
+            return cast(np.ndarray, np.array([np.inf, np.inf], dtype=np.float64))
         if np.linalg.norm(self.n - np.array([0, -1])) < 1e-13:
-            return np.array([np.inf, self.centre[1]], dtype=np.float64)
+            return cast(
+                np.ndarray, np.array([np.inf, self.centre[1]], dtype=np.float64)
+            )
 
-        return np.array([np.inf, np.inf], dtype=np.float64)
+        return cast(np.ndarray, np.array([np.inf, np.inf], dtype=np.float64))
 
-    def points_distance(self, points, return_nearest=False):
+    def points_distance(
+        self, points: np.ndarray, return_nearest: bool = False
+    ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
         """
         Calculates point distances wrt boundary.
 
         Parameters
         ----------
-        points: numpy.ndarray
+        points
             The probe points, shape (n_points, 2)
-        return_nearest: bool
+        return_nearest
             Flag for return of the nearest point on bundary
 
         Returns
         -------
-        dist: numpy.ndarray
+        dist
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest: numpy.ndarray, optional
+        p_nearest
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
 
@@ -108,32 +127,37 @@ class HalfPlane(AreaGeometry):
         if return_nearest:
             y = np.einsum("pd,d->p", deltas, self.m)
             nerst = self.centre[None, :] + y[:, None] * self.m[None, :]
-            return np.abs(x), nerst
+            return cast(tuple[np.ndarray, np.ndarray], (np.abs(x), nerst))
         else:
-            return np.abs(x)
+            return cast(np.ndarray, np.abs(x))
 
-    def points_inside(self, points):
+    def points_inside(self, points: np.ndarray) -> np.ndarray:
         """
         Tests if points are inside the geometry.
 
         Parameters
         ----------
-        points: numpy.ndarray
+        points
             The probe points, shape (n_points, 2)
 
         Returns
         -------
-        inside: numpy.ndarray
+        inside
             True if point is inside, shape: (n_points,)
 
         """
         deltas = points - self.centre[None, :]
         x = np.einsum("pd,d->p", deltas, self.n)
-        return x >= 0.0
+        return cast(np.ndarray, x >= 0.0)
 
     def add_to_figure(
-        self, ax, show_boundary=True, fill_mode=None, pars_boundary={}, pars_distance={}
-    ):
+        self,
+        ax: Axes,
+        show_boundary: bool = True,
+        fill_mode: str | None = None,
+        pars_boundary: dict[str, Any] | None = None,
+        pars_distance: dict[str, Any] | None = None,
+    ) -> None:
         """
         Add image to (x,y) figure.
 
@@ -141,18 +165,21 @@ class HalfPlane(AreaGeometry):
         ----------
         ax: matplotlib.pyplot.Axis
             The axis object
-        show_boundary: bool
+        show_boundary
             Add the boundary line to the image
-        fill_mode: str, optional
+        fill_mode
             Fill the area. Options:
             dist, dist_inside, dist_outside, inside_<color>,
             outside_<color>
-        pars_boundary: dict
+        pars_boundary
             Parameters for boundary plotting command
-        pars_distance: dict
+        pars_distance
             Parameters for distance plotting command
 
         """
+        pars_boundary = {} if pars_boundary is None else pars_boundary
+        pars_distance = {} if pars_distance is None else pars_distance
+
         if show_boundary:
             pars = dict(color="darkblue", linewidth=1)
             pars.update(pars_boundary)
@@ -163,13 +190,13 @@ class HalfPlane(AreaGeometry):
             ax, show_boundary, fill_mode, pars_boundary, pars_distance
         )
 
-    def inverse(self):
+    def inverse(self) -> HalfPlane:
         """
         Get the inverted geometry
 
         Returns
         -------
-        inverted: foxes.utils.geom2d.InvertedAreaGeometry
+        inverted
             The inverted geometry
 
         """
@@ -185,6 +212,7 @@ if __name__ == "__main__":
     centre = np.array([3.0, 4.0])
     radius = 2.5
     N = 500
+    g: AreaGeometry
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius) + HalfPlane(p0, n)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from foxes.core import AxialInductionModel
@@ -10,38 +12,37 @@ class BetzAxialInduction(AxialInductionModel):
 
     Attributes
     ----------
-    ct_max: float
+    ct_max
         The maximal ct value
 
-    :group: models.axial_induction
 
     """
 
-    def __init__(self, ct_max=0.99999):
+    def __init__(self, ct_max: float = 0.99999) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        ct_max: float
+        ct_max
             The maximal ct value
 
         """
         super().__init__()
         self.ct_max = ct_max
 
-    def ct2a(self, ct):
+    def ct2a(self, ct: np.ndarray | float) -> np.ndarray | float:
         """
         Computes induction from ct
 
         Parameters
         ----------
-        ct: numpy.ndarray or float
+        ct
             The ct values
 
         Returns
         -------
-        ct: numpy.ndarray or float
+        ct
             The induction values
 
         """

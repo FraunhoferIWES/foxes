@@ -1,5 +1,14 @@
+# mypy: disable-error-code=arg-type
+# mypy: disable-error-code=misc
+# mypy: disable-error-code=union-attr
+
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
+from xarray import Dataset
+from typing import Any
 
 import foxes.constants as FC
 
@@ -13,22 +22,21 @@ class StateTurbineMap(Output):
 
     Attributes
     ----------
-    results: xarray.Dataset
+    results
         The farm results
 
-    :group: output
 
     """
 
-    def __init__(self, farm_results, **kwargs):
+    def __init__(self, farm_results: Dataset, **kwargs: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        farm_results: xarray.Dataset
+        farm_results
             The farm results
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -37,36 +45,36 @@ class StateTurbineMap(Output):
 
     def plot_map(
         self,
-        variable,
-        title=None,
-        cbar_label=None,
-        ax=None,
-        figsize=None,
-        rotate_xlabels=None,
-        **kwargs,
-    ):
+        variable: str,
+        title: str | None = None,
+        cbar_label: str | None = None,
+        ax: Axes | None = None,
+        figsize: tuple[int, int] | None = None,
+        rotate_xlabels: float | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """
         Plot the heat map for the selected variable.
 
         Parameters
         ----------
-        variable: str
+        variable
             The variable to plot
-        title: str, optional
+        title
             The plot title
-        ax: pyplot.Axis, optional
+        ax
             The axis
-        figsize: tuple
+        figsize
             The figsize argument for plt.subplots()
             in case ax is not provided
-        rotate_xlabels: float, optional
+        rotate_xlabels
             Rotate the x-labels by this number of degrees
-        kwargs: dict, optional
+        kwargs
             Additional parameters for plt.pcolormesh()
 
         Returns
         -------
-        ax: pyplot.Axis
+        ax
             The plot axis
 
         """
@@ -106,7 +114,7 @@ class StateTurbineMap(Output):
         )
         if len(turbines) > 10:
             yt = ax.get_yticks()
-            ytl = [None for t in yt]
+            ytl: list[Any] = [None for t in yt]
             ytl[::5] = ax.get_yticklabels()[::5]
             ax.set_yticks(yt, ytl)
         fig.colorbar(c, ax=ax, label=cbar_label)

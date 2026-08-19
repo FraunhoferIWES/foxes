@@ -1,43 +1,46 @@
-import numpy as np
+from collections.abc import Sequence
+from typing import Any
 
-from foxes.core import Turbine
+import numpy as np
+from numpy.typing import ArrayLike
+
+from foxes.core import Turbine, WindFarm
 from foxes.config import config
 
 
 def add_grid(
-    farm,
-    xy_base,
-    step_vectors,
-    steps,
-    indices=None,
-    names=None,
-    verbosity=1,
-    **turbine_parameters,
-):
+    farm: WindFarm,
+    xy_base: ArrayLike,
+    step_vectors: ArrayLike,
+    steps: tuple[int, int],
+    indices: Sequence[int] | np.ndarray | None = None,
+    names: Sequence[str] | np.ndarray | None = None,
+    verbosity: int = 1,
+    **turbine_parameters: Any,
+) -> None:
     """
     Add a regular grid of turbines.
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    xy_base: numpy.ndarray
+    xy_base
         The base point, shape: (2,)
-    step_vectors: numpy.ndarray
+    step_vectors
         The two step vectors in x and y,
         respectively, shape: (2, 2)
-    steps: array_like of int
+    steps
         The steps in x, y. Length 2
-    indices: list of int, optional
+    indices
         The turbine indices
-    names: list of str, optional
+    names
         The turbine names
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: dict, optional
+    turbine_parameters
         Parameters forwarded to `foxes.core.Turbine`
 
-    :group: input.farm_layout
 
     """
 

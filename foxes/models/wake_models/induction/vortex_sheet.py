@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.config import config
 from foxes.core import TurbineInductionModel
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData, Model
 
 
 class VortexSheet(TurbineInductionModel):
@@ -18,31 +26,30 @@ class VortexSheet(TurbineInductionModel):
 
     Attributes
     ----------
-    pre_rotor_only: bool
+    pre_rotor_only
         Calculate only the pre-rotor region
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
 
-    :group: models.wake_models.induction
 
     """
 
     def __init__(
         self,
-        superposition="ws_linear",
-        induction="Madsen",
-        pre_rotor_only=False,
-    ):
+        superposition: str = "ws_linear",
+        induction: str = "Madsen",
+        pre_rotor_only: bool = False,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind speed superposition
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        pre_rotor_only: bool
+        pre_rotor_only
             Calculate only the pre-rotor region
 
         """
@@ -50,58 +57,67 @@ class VortexSheet(TurbineInductionModel):
         self.induction = induction
         self.pre_rotor_only = pre_rotor_only
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         return f"{type(self).__name__}({self.wind_superposition}, induction={iname})"
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
-        return super().sub_models() + [self.induction]
+        smdls = super().sub_models()
+        if not isinstance(self.induction, str):
+            smdls.append(self.induction)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -114,74 +130,80 @@ class VortexSheet(TurbineInductionModel):
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
+        n_states = tdata.n_states
+        n_targets = tdata.n_targets
+        n_tpoints = tdata.n_tpoints
+        assert n_states is not None and n_targets is not None and n_tpoints is not None
         if self.has_uv:
-            duv = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
+            duv: np.ndarray = np.zeros(
+                (n_states, n_targets, n_tpoints, 2),
                 dtype=config.dtype_double,
             )
             return {FV.UV: duv}
         else:
-            dws = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+            dws: np.ndarray = np.zeros(
+                (n_states, n_targets, n_tpoints),
                 dtype=config.dtype_double,
             )
             return {FV.WS: dws}
 
     def contribute(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_coos,
-        wake_deltas,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_coos: np.ndarray,
+        wake_deltas: dict[str, np.ndarray],
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
-        tdata: foxes.core.Data
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            value
             (n_states, n_targets, n_tpoints, ...)
 
         """
@@ -223,14 +245,20 @@ class VortexSheet(TurbineInductionModel):
         R_sel = D[sp_sel] / 2
         xi = r_sph_sel / R_sel
 
-        def add_wake(sp_sel, wake_deltas, blockage):
+        def add_wake(
+            sp_sel: np.ndarray,
+            wake_deltas: dict[str, np.ndarray],
+            blockage: np.ndarray,
+        ) -> None:
             """adds to wake deltas"""
             if self.has_vector_wind_superp:
+                vec_superp = self.vec_superp
+                assert vec_superp is not None
                 wdeltas = {FV.WS: blockage}
-                self.vec_superp.wdeltas_ws2uv(
+                vec_superp.wdeltas_ws2uv(
                     algo, fdata, tdata, downwind_index, wdeltas, sp_sel
                 )
-                wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
+                wake_deltas[FV.UV] = vec_superp.add_wake_vector(
                     algo,
                     mdata,
                     fdata,
@@ -254,7 +282,9 @@ class VortexSheet(TurbineInductionModel):
                 )
 
         if np.any(sp_sel):
-            blockage = self.induction.ct2a(ct_sel) * (1 + -xi / np.sqrt(1 + xi**2))
+            induction = self.induction
+            assert not isinstance(induction, str)
+            blockage = induction.ct2a(ct_sel) * (1 + -xi / np.sqrt(1 + xi**2))
             add_wake(sp_sel, wake_deltas, -blockage)
 
         if not self.pre_rotor_only:
@@ -266,7 +296,8 @@ class VortexSheet(TurbineInductionModel):
             R_sel = D[sp_sel] / 2
             xi = r_sph_sel / R_sel
             if np.any(sp_sel):
-                blockage = self.induction.ct2a(ct_sel) * (1 + -xi / np.sqrt(1 + xi**2))
+                induction = self.induction
+                assert not isinstance(induction, str)
+                blockage = induction.ct2a(ct_sel) * (1 + -xi / np.sqrt(1 + xi**2))
                 add_wake(sp_sel, wake_deltas, blockage)
-
-        return wake_deltas
+        return None

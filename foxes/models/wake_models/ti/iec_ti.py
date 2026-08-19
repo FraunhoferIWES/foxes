@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import Model
 
 
 class IECTIWake(TopHatWakeModel):
@@ -22,51 +30,50 @@ class IECTIWake(TopHatWakeModel):
 
     Attributes
     ----------
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
-    c0: float
+    c0
         The c0 parameter for the wake decay
-    c1: float
+    c1
         The c1 parameter for the wake decay
-    c2: float
+    c2
         The c2 parameter for the wake decay
 
-    :group: models.wake_models.ti
 
     """
 
     def __init__(
         self,
-        superposition,
-        opening_angle=21.6,
-        iec_type="2019",
-        induction="Betz",
-        c0=None,
-        c1=None,
-        c2=None,
-        **wake_k,
-    ):
+        superposition: str,
+        opening_angle: float | None = 21.6,
+        iec_type: str = "2019",
+        induction: str = "Betz",
+        c0: float | None = None,
+        c1: float | None = None,
+        c2: float | None = None,
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The TI wake superposition.
-        opening_angle: float, optional
+        opening_angle
             The wake opening angle. The wake growth parameter k is calculated
             based on the wake opening angle.
-        iec_type: str
+        iec_type
             Either '2005' or '2019'/'Frandsen'
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
-        induction: str or foxes.core.InductionModel, optional
+        induction
             The induction model to use. Default: 'Betz'
-        c0: float, optional
+        c0
             The c0 parameter for the wake decay
-        c1: float, optional
+        c1
             The c1 parameter for the wake decay
-        c2: float, optional
+        c2
             The c2 parameter for the wake decay
 
         """
@@ -88,7 +95,7 @@ class IECTIWake(TopHatWakeModel):
                 )
             self._k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -99,36 +106,38 @@ class IECTIWake(TopHatWakeModel):
         s += ")"
         return s
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
         return super().sub_models() + ([self.wake_k] if self.wake_k is not None else [])
 
-    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+    def new_wake_deltas(
+        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    ) -> dict[str, np.ndarray]:
         """
         Creates new empty wake delta arrays.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
 
         Returns
         -------
-        wake_deltas: dict
+        wake_deltas
             Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
@@ -137,38 +146,38 @@ class IECTIWake(TopHatWakeModel):
 
     def calc_wake_radius(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        ct: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the wake radius, depending on x only (not r).
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        ct: numpy.ndarray
+        ct
             The ct values of the wake-causing turbines,
             shape: (n_states, n_targets)
 
         Returns
         -------
-        wake_r: numpy.ndarray
+        wake_r
             The wake radii, shape: (n_states, n_targets)
 
         """
@@ -198,47 +207,47 @@ class IECTIWake(TopHatWakeModel):
 
     def calc_centreline(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        x,
-        wake_r,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        x: np.ndarray,
+        wake_r: np.ndarray,
+        ct: np.ndarray,
+    ) -> dict[str, np.ndarray]:
         """
         Calculate centre line results of wake deltas.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
-        x: numpy.ndarray
+        x
             The x values, shape: (n_st_sel,)
-        wake_r: numpy.ndarray
+        wake_r
             The wake radii, shape: (n_st_sel,)
-        ct: numpy.ndarray
+        ct
             The ct values of the wake-causing turbines,
             shape: (n_st_sel,)
 
         Returns
         -------
-        cl_del: dict
+        cl_del
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_st_sel,)
+            varlue
 
         """
         # read D from extra data:

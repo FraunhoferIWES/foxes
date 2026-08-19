@@ -1,5 +1,9 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import pandas as pd
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
@@ -7,6 +11,11 @@ from foxes.data import PCTCURVE, parse_Pct_file_name
 from foxes.config import get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class PCtFile(TurbineType):
@@ -16,62 +25,61 @@ class PCtFile(TurbineType):
 
     Attributes
     ----------
-    source: str or pandas.DataFrame
+    source
         The file path, static name, or data
-    col_ws: str
+    col_ws
         The wind speed column
-    col_P: str
+    col_P
         The power column
-    col_ct: str
+    col_ct
         The ct column
-    rho: float
+    rho
         The air density for which the data is valid
         or None for no correction
-    WSCT: str
+    WSCT
         The wind speed variable for ct lookup
-    WSP: str
+    WSP
         The wind speed variable for power lookup
-    rpars: dict, optional
+    rpars
         Parameters for pandas file reading
 
-    :group: models.turbine_types
 
     """
 
     def __init__(
         self,
-        data_source,
-        col_ws="ws",
-        col_P="P",
-        col_ct="ct",
-        rho=None,
-        var_ws_ct=FV.REWS2,
-        var_ws_P=FV.REWS3,
-        pd_file_read_pars={},
-        **parameters,
-    ):
+        data_source: str | pd.DataFrame,
+        col_ws: str = "ws",
+        col_P: str = "P",
+        col_ct: str = "ct",
+        rho: float | None = None,
+        var_ws_ct: str = FV.REWS2,
+        var_ws_P: str = FV.REWS3,
+        pd_file_read_pars: dict[str, Any] = {},
+        **parameters: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str or pandas.DataFrame
+        data_source
             The file path, static name, or data
-        col_ws: str
+        col_ws
             The wind speed column
-        col_P: str
+        col_P
             The power column
-        col_ct: str
+        col_ct
             The ct column
-        rho: float, optional
+        rho
             The air density for which the data is valid
             or None for no correction
-        var_ws_ct: str
+        var_ws_ct
             The wind speed variable for ct lookup
-        var_ws_P: str
+        var_ws_P
             The wind speed variable for power lookup
-        pd_file_read_pars: dict
-        parameters: dict, optional
+        pd_file_read_pars
+        parameters
             Additional parameters for TurbineType class
 
         """
@@ -92,53 +100,59 @@ class PCtFile(TurbineType):
         self.WSP = var_ws_P
         self.rpars = pd_file_read_pars
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
         a += f", var_ws_ct={self.WSCT}, var_ws_P={self.WSP}"
         return f"{type(self).__name__}({a})"
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS2 is required
 
         """
         return self.WSCT == FV.REWS2 or self.WSP == FV.REWS2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS3 is required
 
         """
         return self.WSCT == FV.REWS3 or self.WSP == FV.REWS3
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return [FV.P, FV.CT]
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -148,16 +162,16 @@ class PCtFile(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Flag to force reloading of data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -174,9 +188,14 @@ class PCtFile(TurbineType):
                         print(
                             f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
                         )
-                    fpath = algo.dbook.get_file_path(
+                    fpath2 = algo.dbook.get_file_path(
                         PCTCURVE, self.source, check_raw=False
                     )
+                    if fpath2 is None:
+                        raise FileNotFoundError(
+                            f"Curve file '{self.source}' not found in context '{PCTCURVE}'"
+                        )
+                    fpath = fpath2
                 if verbosity > 0:
                     print(f"Turbine type '{self.name}': Reading file", fpath)
                 data = PandasFileHelper.read_file(fpath, **self.rpars)
@@ -191,7 +210,7 @@ class PCtFile(TurbineType):
             self.WS = self.var(FV.WS)
             self.VARS = self.var("vars")
             loaded_data["coords"][self.WS] = self.data_ws
-            loaded_data["coords"][self.VARS] = [FV.P, FV.CT]
+            loaded_data["coords"][self.VARS] = np.asarray([FV.P, FV.CT], dtype=str)
             loaded_data["data_vars"][self.DATA] = (
                 (self.WS, self.VARS),
                 np.stack([self.data_P, self.data_ct], axis=1),
@@ -206,33 +225,33 @@ class PCtFile(TurbineType):
 
     def modify_cutin(
         self,
-        modify_ct,
-        modify_P,
-        steps=20,
-        iterations=100,
-        a=0.55,
-        b=0.55,
-    ):
+        modify_ct: bool,
+        modify_P: bool,
+        steps: int = 20,
+        iterations: int = 100,
+        a: float = 0.55,
+        b: float = 0.55,
+    ) -> None:
         """
         Modify the data such that a discontinuity
         at cutin wind speed is avoided
 
         Parameters
         ----------
-        variable: str
+        variable
             The target variable
-        modify_ct: bool
+        modify_ct
             Flag for modification of the ct curve
-        modify_P: bool
+        modify_P
             Flag for modification of the power curve
-        steps: int
+        steps
             The number of wind speed steps between 0 and
             the cutin wind speed
-        iterations: int
+        iterations
             The number of iterations
-        a: float
+        a
             Coefficient for iterative mixing
-        b: float
+        b
             Coefficient for iterative mixing
 
         """
@@ -280,7 +299,13 @@ class PCtFile(TurbineType):
         else:
             super().modify_cutin(modify_ct, modify_P)
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -289,21 +314,21 @@ class PCtFile(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)

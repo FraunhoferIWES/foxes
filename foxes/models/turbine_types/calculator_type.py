@@ -1,32 +1,40 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 from foxes.core import TurbineType
+from typing import TYPE_CHECKING, Any, Callable
+
+if TYPE_CHECKING:
+    import numpy as np
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class CalculatorType(TurbineType):
     """
     Direct data infusion by a user function.
 
-    :group: models.turbine_types
 
     """
 
     def __init__(
         self,
-        func,
-        out_vars,
-        *args,
-        needs_rews2=False,
-        needs_rews3=False,
-        **kwargs,
-    ):
+        func: Callable[..., dict[str, np.ndarray]],
+        out_vars: list[str],
+        *args: Any,
+        needs_rews2: bool = False,
+        needs_rews3: bool = False,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        func: callable
+        func
             The function to calculate farm variables, should have the signature:
             f(algo, mdata, fdata, st_sel) -> dict, where the keys are
-            output variable names and the values are numpy.ndarrays
+            output variable names and the values are arrays
             with shape (n_states, n_turbines).
 
             Beware that the turbine ordering in fdata is in downwind order,
@@ -34,15 +42,15 @@ class CalculatorType(TurbineType):
             needs to be reordered by X[ssel, order] with
             ssel = fdata[FV.ORDER_SSEL], order = fdata[FV.ORDER]
             before using it in combination with fdata variables.
-        out_vars: list of str
+        out_vars
             The output variables of the function
-        args: tuple, optional
+        args
             Additional parameters for TurbineType class
-        needs_rews2: bool
+        needs_rews2
             Flag for runs that require the REWS2 variable
-        needs_rews3: bool
+        needs_rews3
             Flag for runs that require the REWS3 variable
-        kwargs: dict, optional
+        kwargs
             Additional parameters for TurbineType class
 
         """
@@ -52,48 +60,54 @@ class CalculatorType(TurbineType):
         self._rews2 = needs_rews2
         self._rews3 = needs_rews3
 
-    def needs_rews2(self):
+    def needs_rews2(self) -> bool:
         """
         Returns flag for requiring REWS2 variable
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS2 is required
 
         """
         return self._rews2
 
-    def needs_rews3(self):
+    def needs_rews3(self) -> bool:
         """
         Returns flag for requiring REWS3 variable
 
         Returns
         -------
-        flag: bool
+        flag
             True if REWS3 is required
 
         """
         return self._rews3
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return self._ovars
 
-    def calculate(self, algo, mdata, fdata, st_sel):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        st_sel: slice | np.ndarray = slice(None),
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -102,21 +116,21 @@ class CalculatorType(TurbineType):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values
 
         """
         self.ensure_output_vars(algo, fdata)

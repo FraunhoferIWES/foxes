@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING
 
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
 
 
 class TILinear(WakeSuperposition):
@@ -10,21 +17,20 @@ class TILinear(WakeSuperposition):
 
     Attributes
     ----------
-    superp_to_amb: str
+    superp_to_amb
         The method for combining ambient with wake deltas:
         linear or quadratic
 
-    :group: models.wake_superpositions
 
     """
 
-    def __init__(self, superp_to_amb="quadratic"):
+    def __init__(self, superp_to_amb: str = "quadratic") -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        superp_to_amb: str
+        superp_to_amb
             The method for combining ambient with wake deltas:
             linear or quadratic
 
@@ -32,52 +38,52 @@ class TILinear(WakeSuperposition):
         super().__init__()
         self.superp_to_amb = superp_to_amb
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(superp_to_amb={self.superp_to_amb})"
 
     def add_wake(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        st_sel,
-        variable,
-        wake_delta,
-        wake_model_result,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        st_sel: np.ndarray,
+        variable: str,
+        wake_delta: np.ndarray,
+        wake_model_result: np.ndarray,
+    ) -> np.ndarray:
         """
         Add a wake delta to previous wake deltas,
         at rotor points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        st_sel: numpy.ndarray of bool
+        st_sel
             The selection of targets, shape: (n_states, n_targets)
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The original wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
-        wake_model_result: numpy.ndarray
+        wake_model_result
             The new wake deltas of the selected rotors,
             shape: (n_st_sel, n_tpoints, ...)
 
         Returns
         -------
-        wdelta: numpy.ndarray
+        wdelta
             The updated wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
@@ -92,36 +98,36 @@ class TILinear(WakeSuperposition):
 
     def calc_final_wake_delta(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        variable,
-        wake_delta,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        variable: str,
+        wake_delta: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the final wake delta after adding all
         contributions.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        variable: str
+        variable
             The variable name for which the wake deltas applies
-        wake_delta: numpy.ndarray
+        wake_delta
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
 
         Returns
         -------
-        final_wake_delta: numpy.ndarray
+        final_wake_delta
             The final wake delta, which will be added to the ambient
             results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)

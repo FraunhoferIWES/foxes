@@ -1,28 +1,37 @@
+from typing import cast
+
 import numpy as np
 
 
-def weibull_weights(ws, ws_deltas, A, k):
+def weibull_weights(
+    ws: np.ndarray,
+    ws_deltas: np.ndarray,
+    A: np.ndarray,
+    k: np.ndarray,
+) -> np.ndarray:
     """
     Computes the weibull weights for given wind speeds
 
     Parameters
     ----------
-    ws: numpy.ndarray
+    ws
         The wind speed bin centre values
-    ws_deltas: numpy.ndarray
+    ws_deltas
         The wind speed bin widths, same shape as ws
-    A: numpy.ndarray
+    A
         The Weibull scale parameters, same shape as ws
-    k: numpy.ndarray
+    k
         The Weibull shape parameters, same shape as ws
 
     Returns
     -------
-    weights: numpy.ndarray
+    weights
         The weights, same shape as ws
 
-    :group: utils
 
     """
     wsA = ws / A
-    return ws_deltas * (k / A * wsA ** (k - 1) * np.exp(-(wsA**k)))
+    return cast(
+        np.ndarray,
+        ws_deltas * (k / A * wsA ** (k - 1) * np.exp(-(wsA**k))),
+    )

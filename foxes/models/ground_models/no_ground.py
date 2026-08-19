@@ -5,7 +5,6 @@ class NoGround(GroundModel):
     """
     No ground effects
 
-    :group: models.ground_models
 
     """
 

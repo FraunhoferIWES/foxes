@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
 from foxes.core import Model, WakeK
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData, Model
 
 
 class Bastankhah2016Model(Model):
@@ -21,14 +29,13 @@ class Bastankhah2016Model(Model):
 
     Attributes
     ----------
-    alpha: float
+    alpha
         model parameter used to determine onset of far wake region
-    beta: float
+    beta
         model parameter used to determine onset of far wake region
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
 
-    :group: models.wake_models.wind
 
     """
 
@@ -49,17 +56,17 @@ class Bastankhah2016Model(Model):
     SIGMA_Z_FAR = "sigma_z_far"
     DELTA_FAR = "delta_far"
 
-    def __init__(self, alpha, beta, induction):
+    def __init__(self, alpha: float, beta: float, induction: str) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        alpha: float
+        alpha
             model parameter used to determine onset of far wake region
-        beta: float
+        beta
             model parameter used to determine onset of far wake region
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
 
         """
@@ -68,39 +75,45 @@ class Bastankhah2016Model(Model):
         setattr(self, FV.PA_ALPHA, alpha)
         setattr(self, FV.PA_BETA, beta)
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
-        return [self.induction]
+        return [] if isinstance(self.induction, str) else [self.induction]
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -114,7 +127,7 @@ class Bastankhah2016Model(Model):
         )
 
     @property
-    def pars(self):
+    def pars(self) -> dict[str, float | str]:
         """
         Dictionary of the model parameters
 
@@ -126,44 +139,48 @@ class Bastankhah2016Model(Model):
         """
         alpha = getattr(self, FV.PA_ALPHA)
         beta = getattr(self, FV.PA_BETA)
-        return dict(alpha=alpha, beta=beta, induction=self.induction.name)
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
+        return dict(alpha=alpha, beta=beta, induction=iname)
 
     def calc_data(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        gamma,
-        k,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        gamma: np.ndarray,
+        k: np.ndarray,
+    ) -> None:
         """
         Calculate common model data, store it in mdata.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        gamma: numpy.ndarray
+        gamma
             The YAWM angles in radiants, shape: (n_states, n_targets)
-        k: numpy.ndarray
+        k
             The k parameter values, shape: (n_states, n_targets)
 
         """
         # store parameters:
-        out = {self.PARS: self.pars}
+        assert not isinstance(self.induction, str)
+        out: dict[str, Any] = {self.PARS: self.pars}
         out[self.CHECK] = (
             mdata.states_i0(counter=True),
             mdata.n_states,
@@ -347,23 +364,23 @@ class Bastankhah2016Model(Model):
         out[self.ST_SEL] = st_sel
         mdata.add(self.MDATA_KEY, out, None)
 
-    def has_data(self, mdata, downwind_index, x):
+    def has_data(self, mdata: MData, downwind_index: int, x: np.ndarray) -> bool:
         """
         Check if data exists
 
         Parameters
         ----------
-        mdata: foxes.core.Data
+        mdata
             The model data
-        downwind_index: numpy.ndarray
+        downwind_index
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_points)
 
         Returns
         -------
-        check: bool
+        check
             True if data exists
 
         """
@@ -375,26 +392,26 @@ class Bastankhah2016Model(Model):
         )
         return self.MDATA_KEY in mdata and mdata[self.MDATA_KEY][self.CHECK] == check
 
-    def get_data(self, key, mdata):
+    def get_cached_data(self, key: str, mdata: MData) -> Any:
         """
         Return data entry
 
         Parameters
         ----------
-        key: str
+        key
             The data key
-        mdata: foxes.core.Data
+        mdata
             The model data
 
         Returns
         -------
-        data: numpy.ndarray
+        data
             The data
 
         """
         return mdata[self.MDATA_KEY][key]
 
-    def clean(self, mdata):
+    def clean(self, mdata: MData) -> None:
         """
         Clean all data
         """
@@ -414,57 +431,56 @@ class Bastankhah2016(DistSlicedWakeModel):
 
     Attributes
     ----------
-    model: Bastankhah2016Model
+    model
         The model for computing common data
-    model_pars: dict
+    model_pars
         Model parameters
-    YAWM: float
+    YAWM
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
-    alpha: float
+    alpha
         model parameter used to determine onset of far wake region
-    beta: float
+    beta
         model parameter used to determine onset of far wake region
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
-    wake_k: dict, optional
+    wake_k
         Parameters for the WakeK class
 
-    :group: models.wake_models.wind
 
     """
 
     def __init__(
         self,
-        superposition,
-        alpha=0.58,
-        beta=0.077,
-        induction="Madsen",
-        **wake_k,
-    ):
+        superposition: str,
+        alpha: float = 0.58,
+        beta: float = 0.077,
+        induction: str = "Madsen",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind deficit superposition
-        ct_max: float
+        ct_max
             The maximal value for ct, values beyond will be limited
             to this number, by default 0.9999
-        alpha: float
+        alpha
             model parameter used to determine onset of far wake region
-        beta: float
+        beta
             model parameter used to determine onset of far wake region
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
         super().__init__(wind_superposition=superposition)
 
-        self.model = None
+        self.model: Bastankhah2016Model | None = None
         self.alpha = alpha
         self.beta = beta
         self.induction = induction
@@ -472,7 +488,7 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         setattr(self, FV.YAWM, 0.0)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = self.induction
         s = f"{type(self).__name__}"
         s += f"({self.wind_superposition}, induction={iname}, "
@@ -480,51 +496,60 @@ class Bastankhah2016(DistSlicedWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
         return True
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
-        return super().sub_models() + [self.wake_k, self.model]
+        smdls = super().sub_models() + [self.wake_k]
+        if self.model is not None:
+            smdls.append(self.model)
+        return smdls
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -541,46 +566,47 @@ class Bastankhah2016(DistSlicedWakeModel):
 
     def calc_wakes_x_yz(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        yz,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        yz: np.ndarray,
+    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
         """
         Calculate wake deltas.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        yz: numpy.ndarray
+        yz
             The yz values for each x value, shape:
             (n_states, n_targets, n_yz_per_target, 2)
 
         Returns
         -------
-        wdeltas: dict
+        wdeltas
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_st_sel, n_yz_per_target)
-        st_sel: numpy.ndarray of bool
+            value
+        st_sel
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
         """
         # prepare:
+        assert self.model is not None
         n_y_per_z = yz.shape[2]
 
         # calculate model data:
@@ -612,7 +638,7 @@ class Bastankhah2016(DistSlicedWakeModel):
             self.model.calc_data(algo, mdata, fdata, tdata, downwind_index, x, gamma, k)
 
         # select targets:
-        st_sel = self.model.get_data(Bastankhah2016Model.ST_SEL, mdata)
+        st_sel = self.model.get_cached_data(Bastankhah2016Model.ST_SEL, mdata)
         n_sp_sel = np.sum(st_sel)
         wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=config.dtype_double)}
         if np.any(st_sel):
@@ -620,15 +646,15 @@ class Bastankhah2016(DistSlicedWakeModel):
             yz = yz[st_sel]
 
             # collect data:
-            near = self.model.get_data(Bastankhah2016Model.NEAR, mdata)
+            near = self.model.get_cached_data(Bastankhah2016Model.NEAR, mdata)
             far = ~near
 
             # near wake:
             if np.any(near):
                 # collect data:
-                ampl = self.model.get_data(Bastankhah2016Model.AMPL_NEAR, mdata)
-                r_pc = self.model.get_data(Bastankhah2016Model.R_PC, mdata)
-                s = self.model.get_data(Bastankhah2016Model.R_PC_S, mdata)
+                ampl = self.model.get_cached_data(Bastankhah2016Model.AMPL_NEAR, mdata)
+                r_pc = self.model.get_cached_data(Bastankhah2016Model.R_PC, mdata)
+                s = self.model.get_cached_data(Bastankhah2016Model.R_PC_S, mdata)
 
                 # radial dependency:
                 r = np.linalg.norm(yz[near], axis=-1)
@@ -648,13 +674,15 @@ class Bastankhah2016(DistSlicedWakeModel):
                 yz = yz[far]
 
                 # collect data:
-                ampl = self.model.get_data(Bastankhah2016Model.AMPL_FAR, mdata)[:, None]
-                sigma_y = self.model.get_data(Bastankhah2016Model.SIGMA_Y_FAR, mdata)[
+                ampl = self.model.get_cached_data(Bastankhah2016Model.AMPL_FAR, mdata)[
                     :, None
                 ]
-                sigma_z = self.model.get_data(Bastankhah2016Model.SIGMA_Z_FAR, mdata)[
-                    :, None
-                ]
+                sigma_y = self.model.get_cached_data(
+                    Bastankhah2016Model.SIGMA_Y_FAR, mdata
+                )[:, None]
+                sigma_z = self.model.get_cached_data(
+                    Bastankhah2016Model.SIGMA_Z_FAR, mdata
+                )[:, None]
 
                 # set deficit, Eq. (7.1):
                 y = yz[..., 0]

@@ -1,105 +1,117 @@
+from typing import cast
+
 import numpy as np
 from .neutral import logz as lgz
 
 
-def logz(height, z0):
+def logz(height: float | np.ndarray, z0: float | np.ndarray) -> float | np.ndarray:
     """
     Calculates the log factor for
     wind speed profiles.
 
     Parameters
     ----------
-    height: float
+    height
         The evaluation height
-    z0: float
+    z0
         The roughness length
 
     Returns
     -------
-    lz: float
+    lz
         The log factor
 
-    :group: utils.abl.stable
 
     """
-    return lgz(height, z0)
+    return cast(float | np.ndarray, lgz(height, z0))
 
 
-def psi(height, mol):
+def psi(height: float | np.ndarray, mol: float | np.ndarray) -> float | np.ndarray:
     """
     The Psi function
 
     Parameters
     ----------
-    height: float
+    height
         The height value
-    mol: float
+    mol
         The Monin-Obukhov height
 
     Returns
     -------
-    psi: float
+    psi
         The Psi function value
 
-    :group: utils.abl.stable
 
     """
     h = np.minimum(height, np.abs(mol))
-    return -5.0 * h / mol
+    return cast(float | np.ndarray, -5.0 * h / mol)
 
 
-def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):
+def ustar(
+    ws_ref: float | np.ndarray,
+    h_ref: float | np.ndarray,
+    z0: float | np.ndarray,
+    mol: float | np.ndarray,
+    kappa: float = 0.41,
+) -> float | np.ndarray:
     """
     Calculates the friction velocity,
     based on reference data.
 
     Parameters
     ----------
-    ws_ref: float
+    ws_ref
         The reference wind speed
-    h_ref: float
+    h_ref
         The reference height
-    z0: float
+    z0
         The roughness length
-    mol: float
+    mol
         The Monin-Obukhov height
-    kappa: float
+    kappa
         The von Karman constant
 
     Returns
     -------
-    ustar: float
+    ustar
         The friction velocity
 
-    :group: utils.abl.stable
 
     """
-    return ws_ref * kappa / (logz(h_ref, z0) - psi(h_ref, mol))
+    return cast(
+        float | np.ndarray, ws_ref * kappa / (logz(h_ref, z0) - psi(h_ref, mol))
+    )
 
 
-def calc_ws(height, z0, ustar, psi, kappa=0.41):
+def calc_ws(
+    height: float | np.ndarray,
+    z0: float | np.ndarray,
+    ustar: float | np.ndarray,
+    psi: float | np.ndarray,
+    kappa: float = 0.41,
+) -> float | np.ndarray:
     """
     Calculate wind speeds at given height
 
     Parameters
     ----------
-    height: float
+    height
         The evaluation height
-    z0: float
+    z0
         The roughness length
-    ustar: float
+    ustar
         The friction velocity
-    psi: float
+    psi
         The Psi function values
-    kappa: float
+    kappa
         The von Karman constant
 
     Returns
     -------
-    ws: float
+    ws
         The wind speed
 
-    :group: utils.abl.stable
 
     """
-    return ustar / kappa * (logz(height, z0) - psi)
+    return cast(float | np.ndarray, ustar / kappa * (logz(height, z0) - psi))

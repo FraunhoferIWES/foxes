@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Any
 import pandas as pd
 from xarray import Dataset
 from numbers import Number
@@ -19,10 +20,15 @@ default_values = {
 }
 
 
-def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
-    """Read ABL profiles information
-    :group: input.yaml.windio
-    """
+def _get_profiles(
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    verbosity: int,
+) -> dict[str, str]:
+    """Read ABL profiles information"""
     profiles = {}
     if FV.Z0 in fields:
         if FV.H not in fields:
@@ -52,11 +58,16 @@ def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
 
 
 def _get_SingleStateStates(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
-    """Try to generate single state parameters
-    :group: input.yaml.windio
-    """
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
+    """Try to generate single state parameters"""
     for c in coords:
         if not isinstance(c, Number):
             return False
@@ -91,11 +102,16 @@ def _get_SingleStateStates(
 
 
 def _get_Timeseries(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
-    """Try to generate time series parameters
-    :group: input.yaml.windio
-    """
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
+    """Try to generate time series parameters"""
     if len(coords) == 1 and FC.TIME in coords:
         if verbosity > 2:
             print("        selecting class 'Timeseries'")
@@ -126,11 +142,16 @@ def _get_Timeseries(
 
 
 def _get_MultiHeightNCTimeseries(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
-    """Try to generate time series parameters
-    :group: input.yaml.windio
-    """
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
+    """Try to generate time series parameters"""
     if len(coords) == 2 and FC.TIME in coords and FV.H in coords:
         if verbosity > 2:
             print("        selecting class 'MultiHeightNCTimeseries'")
@@ -169,11 +190,16 @@ def _get_MultiHeightNCTimeseries(
 
 
 def _get_TurbinePointCloud(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
-    """Try to generate a point cloud with support at turbine locations
-    :group: input.yaml.windio
-    """
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
+    """Try to generate a point cloud with support at turbine locations"""
     if FC.TIME in coords and FC.TURBINE in coords:
         if verbosity > 2:
             print("        selecting class 'TurbinePointCloud'")
@@ -207,11 +233,16 @@ def _get_TurbinePointCloud(
 
 
 def _get_WeibullSectors(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
-    """Try to generate Weibull sector parameters
-    :group: input.yaml.windio
-    """
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
+    """Try to generate Weibull sector parameters"""
     if (
         FV.WEIBULL_A in fields
         and FV.WEIBULL_k in fields
@@ -253,11 +284,16 @@ def _get_WeibullSectors(
 
 
 def _get_WeibullPointCloud(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
-    """Try to generate Weibull sector parameters
-    :group: input.yaml.windio
-    """
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
+    """Try to generate Weibull sector parameters"""
     if (
         FV.WD in coords
         and FV.WEIBULL_A in fields
@@ -308,11 +344,16 @@ def _get_WeibullPointCloud(
 
 
 def _get_WeibullField(
-    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-):
-    """Try to generate Weibull sector parameters
-    :group: input.yaml.windio
-    """
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    states_dict: dict[str, Any],
+    ovars: list[str],
+    fixval: dict[str, Any],
+    profiles: dict[str, str],
+    verbosity: int,
+) -> bool:
+    """Try to generate Weibull sector parameters"""
     if (
         FV.WD in coords
         and FV.X in coords
@@ -357,37 +398,41 @@ def _get_WeibullField(
     return False
 
 
-def get_states(coords, fields, dims, verbosity=1):
+def get_states(
+    coords: dict[str, Any],
+    fields: dict[str, Any],
+    dims: dict[str, Any],
+    verbosity: int = 1,
+) -> States:
     """
     Reads states parameters from windio input
 
     Parameters
     ----------
-    coords: dict
+    coords
         The coordinates data
-    fields: dict
+    fields
         The fields data
-    dims: dict
+    dims
         The dimensions data
-    verbosity: int
+    verbosity
         The verbosity level
 
     Returns
     -------
-    states: foxes.core.States
+    states
         The states object
 
-    :group: input.yaml.windio
 
     """
     if verbosity > 2:
         print("      Creating states")
 
     ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
-    fixval = {}
+    fixval: dict[str, Any] = {}
     profiles = _get_profiles(coords, fields, dims, ovars, fixval, verbosity)
 
-    states_dict = {}
+    states_dict: dict[str, Any] = {}
     if (
         _get_SingleStateStates(
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
@@ -418,27 +463,26 @@ def get_states(coords, fields, dims, verbosity=1):
         )
 
 
-def read_site(wio_dict, verbosity=1):
+def read_site(wio_dict: Dict[Any, Any], verbosity: int = 1) -> States:
     """
     Reads the site information
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     Returns
     -------
-    states: foxes.core.States
+    states
         The states object
 
-    :group: input.yaml.windio
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity >= level:
             print(*args, **kwargs)
 
@@ -461,9 +505,9 @@ def read_site(wio_dict, verbosity=1):
     _print("      Contents:", [k for k in wind_resource.keys()], level=3)
 
     # read fields
-    coords = Dict(_name="coords")
-    fields = Dict(_name="fields")
-    dims = Dict(_name="dims")
+    coords: Dict = Dict(_name="coords")
+    fields: Dict = Dict(_name="fields")
+    dims: Dict = Dict(_name="dims")
     for n, d in wind_resource.items():
         read_wind_resource_field(n, d, coords, fields, dims, verbosity)
 

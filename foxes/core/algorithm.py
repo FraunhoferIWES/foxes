@@ -1,13 +1,31 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 import xarray as xr
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.data import StaticData
-from foxes.utils import Dict, new_instance
+from foxes.utils import DataBook, Dict, new_instance
 from foxes.config import config
 import foxes.constants as FC
 
 from .engine import launch_parallel_calc
 from .model import Model
+
+if TYPE_CHECKING:
+    from foxes.core.data import MData, TData
+    from foxes.core.model import LoadedData
+    from foxes.core.rotor_model import RotorModel
+    from foxes.core.states import States
+    from foxes.core.wind_farm import WindFarm
+    from foxes.core.wake_frame import WakeFrame
+    from foxes.core.wake_deflection import WakeDeflection
+    from foxes.core.wake_model import WakeModel
+    from foxes.core.partial_wakes_model import PartialWakesModel
+    from foxes.core.ground_model import GroundModel
+    from foxes.core.farm_controller import FarmController
+    from foxes.models import ModelBook
 
 
 class Algorithm(Model):
@@ -20,69 +38,71 @@ class Algorithm(Model):
 
     Attributes
     ----------
-    verbosity: int
+    verbosity
         The verbosity level, 0 means silent
 
-    :group: core
 
     """
 
     def __init__(
         self,
-        mbook,
-        farm,
-        verbosity=1,
-        dbook=None,
-    ):
+        mbook: ModelBook,
+        farm: WindFarm,
+        verbosity: int = 1,
+        dbook: DataBook | None = None,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        mbook: foxes.models.ModelBook
-            The model book
-        farm: foxes.WindFarm
-            The wind farm
-        verbosity: int
-            The verbosity level, 0 means silent
-        dbook: foxes.DataBook, optional
-            The data book, or None for default
+        mbook
+            The model book.
+        farm
+            The wind farm.
+        verbosity
+            The verbosity level; ``0`` means silent.
+        dbook
+            The data book, or ``None`` for the default data book.
 
         """
         super().__init__()
 
         self.name = type(self).__name__
         self.verbosity = verbosity
-        self.n_states = None
+        self.n_states: int | None = None
         self.n_turbines = farm.n_turbines
 
         self.__farm = farm
         self.__mbook = mbook
         self.__dbook = StaticData() if dbook is None else dbook
-        self.__chunk_store = Dict(_name="chunk_store")
-        self.__loaded_data = None
+        self.__chunk_store: Dict[tuple[int, int], dict[str, Any]] = Dict(
+            _name="chunk_store"
+        )
+        self.__loaded_data: LoadedData | None = None
+        self.__farm_vars: list[str] = []
 
     @property
-    def farm(self):
+    def farm(self) -> WindFarm:
         """
         The wind farm
 
         Returns
         -------
-        mb: foxes.core.WindFarm
+        farm
             The wind farm
 
         """
         return self.__farm
 
     @property
-    def mbook(self):
+    def mbook(self) -> ModelBook:
         """
         The model book
 
         Returns
         -------
-        mb: foxes.models.ModelBook()
+        mbook
             The model book
 
         """
@@ -93,13 +113,13 @@ class Algorithm(Model):
         return self.__mbook
 
     @property
-    def dbook(self):
+    def dbook(self) -> DataBook:
         """
         The data book
 
         Returns
         -------
-        mb: foxes.data.StaticData()
+        dbook
             The data book
 
         """
@@ -110,96 +130,197 @@ class Algorithm(Model):
         return self.__dbook
 
     @property
-    def chunk_store(self):
+    def chunk_store(self) -> Dict[tuple[int, int], dict[str, Any]]:
         """
         The current chunk store
 
         Returns
         -------
-        dict :
-            Keys: model name, value: idata dict
+        chunk_store
+            Keys: chunk-state/point tuple, value: idata dict
 
         """
         return self.__chunk_store
 
     @property
-    def loaded_data(self):
+    def states(self) -> States:
+        """Ambient states model, provided by concrete algorithms."""
+        raise ValueError(f"Algorithm '{self.name}': states model not available")
+
+    @property
+    def rotor_model(self) -> RotorModel:
+        """Rotor model, provided by concrete algorithms."""
+        raise ValueError(f"Algorithm '{self.name}': rotor_model not available")
+
+    @property
+    def wake_frame(self) -> WakeFrame:
+        """Wake frame model, provided by concrete algorithms."""
+        raise ValueError(f"Algorithm '{self.name}': wake_frame not available")
+
+    @property
+    def wake_deflection(self) -> WakeDeflection | None:
+        """Wake deflection model, optional for algorithms without wake calculations."""
+        return None
+
+    @property
+    def wake_models(self) -> dict[str, WakeModel]:
+        """Wake model mapping by name."""
+        return {}
+
+    @property
+    def partial_wakes(self) -> dict[str, PartialWakesModel]:
+        """Partial wakes model mapping by wake-model name."""
+        return {}
+
+    @property
+    def ground_models(self) -> dict[str, GroundModel]:
+        """Ground model mapping by wake-model name."""
+        return {}
+
+    @property
+    def farm_controller(self) -> FarmController:
+        """Farm controller, provided by concrete algorithms."""
+        raise ValueError(f"Algorithm '{self.name}': farm_controller not available")
+
+    @property
+    def max_wake_length_km(self) -> float:
+        """Maximum wake length in km."""
+        raise KeyError(f"Algorithm '{self.name}': No maximum wake length set")
+
+    @property
+    def has_max_wake_length(self) -> bool:
+        """Whether a maximum wake length is configured."""
+        return False
+
+    @property
+    def farm_vars(self) -> list[str]:
+        """Farm output variable names produced by the algorithm."""
+        return self.__farm_vars
+
+    @farm_vars.setter
+    def farm_vars(self, values: list[str]) -> None:
+        self.__farm_vars = list(values)
+
+    def chunked(self, data: xr.Dataset) -> xr.Dataset:
+        """Optional hook for returning chunked results datasets."""
+        return data
+
+    @classmethod
+    def get_model(cls, name: str) -> Any:
+        """Return algorithm-specific helper model class by name."""
+        raise NotImplementedError(
+            f"Algorithm '{cls.__name__}': get_model is not implemented"
+        )
+
+    def _collect_point_models(
+        self,
+        calc_parameters: dict[str, dict[str, Any]] | None = None,
+        point_models: Any = None,
+        ambient: bool = False,
+    ) -> tuple[Any, list[dict[str, Any]]]:
+        """Collect the point-data model list for downstream point calculations."""
+        raise NotImplementedError(
+            f"Algorithm '{self.name}': _collect_point_models is not implemented"
+        )
+
+    @property
+    def farm_results_downwind(self) -> xr.Dataset | None:
+        """Previous-iteration farm results in downwind turbine order, if available."""
+        return None
+
+    @property
+    def prev_farm_results(self) -> xr.Dataset | None:
+        """Farm results from the previous iteration, if available."""
+        return None
+
+    @property
+    def final_iteration(self) -> bool:
+        """Whether the algorithm currently performs a final iteration pass."""
+        return False
+
+    @property
+    def loaded_data(self) -> LoadedData:
         """
-        The data loaded during initialization
+        The data loaded during initialization.
 
         Returns
         -------
-        loaded_data: dict
-            The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
+        loaded_data
+            The loaded data, containing the keys "coords", "data_vars", and
+            "extra_data".
 
         """
         if self.__loaded_data is None:
-            self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+            self.__loaded_data = self._empty_loaded_data()
         return self.__loaded_data
 
-    def clear_loaded_data(self):
+    def _empty_loaded_data(self) -> LoadedData:
+        return {"coords": {}, "data_vars": {}, "extra_data": {}}
+
+    def clear_loaded_data(self) -> None:
         """
-        Clear the loaded data
+        Clear the loaded data.
 
         Returns
         -------
         None
 
         """
-        self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+        self.__loaded_data = self._empty_loaded_data()
 
-    def get_model_data(self, pop=False):
+    def get_model_data(self, pop: bool = False) -> tuple[xr.Dataset, dict[str, Any]]:
         """
         Get the model data.
 
         Parameters
         ----------
-        pop: bool
+        pop
             Pop the model data from loaded_data
 
         Returns
         -------
-        model_data: xarray.Dataset
+        model_data
             The model data, containing all coords and data_vars from loaded_data
-        extra_data: dict
+        extra_data
             The extra data from loaded_data
 
         """
         ld = self.loaded_data
         ed = ld["extra_data"]
         if pop:
-            self.__loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+            self.__loaded_data = self._empty_loaded_data()
         return xr.Dataset(coords=ld["coords"], data_vars=ld["data_vars"]), ed
 
-    def print(self, *args, vlim=1, **kwargs):
+    def print(self, *args: Any, vlim: int = 1, **kwargs: Any) -> None:
         """
-        Print function, based on verbosity.
+        Print output based on the configured verbosity.
 
         Parameters
         ----------
-        args: tuple, optional
-            Arguments for the print function
-        kwargs: dict, optional
-            Keyword arguments for the print function
-        vlim: int
-            The verbosity limit
+        args
+            Positional arguments for the print function.
+        kwargs
+            Keyword arguments for the print function.
+        vlim
+            The verbosity threshold for printing.
 
         """
         if self.verbosity >= vlim:
             print(*args, **kwargs)
 
-    def print_deco(self, func_name=None, n_points=None):
+    def print_deco(
+        self,
+        func_name: str | None = None,
+        n_points: int | None = None,
+    ) -> None:
         """
         Helper function for printing model names
 
         Parameters
         ----------
-        func_name: str, optional
+        func_name
             Name of the calling function
-        n_points: int, optional
+        n_points
             The number of points
 
         """
@@ -213,13 +334,13 @@ class Algorithm(Model):
             print(f"  n_states : {self.n_states}")
             print(f"  n_turbines: {self.n_turbines}")
 
-    def initialize(self, force=False):
+    def initialize(self, force: bool = False) -> None:
         """
         Initializes the algorithm.
 
         Parameters
         ----------
-        force: bool
+        force
             Overwrite existing data
 
         """
@@ -235,7 +356,7 @@ class Algorithm(Model):
             verbosity=self.verbosity - 1,
         )
 
-    def update_n_turbines(self):
+    def update_n_turbines(self) -> None:
         """
         Reset the number of turbines,
         according to self.farm
@@ -293,17 +414,22 @@ class Algorithm(Model):
             self.idata_mem.update(newk)
             """
 
-    def new_point_data(self, points, states_indices=None, n_states=None):
+    def new_point_data(
+        self,
+        points: np.ndarray,
+        states_indices: Any = None,
+        n_states: int | None = None,
+    ) -> xr.Dataset:
         """
         Creates a point data xarray object, containing only points.
 
         Parameters
         ----------
-        points: numpy.ndarray
+        points
             The points, shape: (n_states, n_points, 3)
-        states_indices: array_like, optional
+        states_indices
             The indices of the states dimension
-        n_states: int, optional
+        n_states
             The number of states
 
         Returns
@@ -314,10 +440,14 @@ class Algorithm(Model):
         """
         if n_states is None:
             n_states = self.n_states
+        assert n_states is not None
         if states_indices is None:
-            idata = {"coords": {}, "data_vars": {}}
+            idata: dict[str, Any] = {"coords": {}, "data_vars": {}}
         else:
-            idata = {"coords": {FC.STATE: states_indices}, "data_vars": {}}
+            idata = {
+                "coords": {FC.STATE: states_indices},
+                "data_vars": {},
+            }
 
         if len(points.shape) == 2 and points.shape[1] == 3:
             pts = np.zeros((n_states,) + points.shape, dtype=config.dtype_double)
@@ -346,32 +476,32 @@ class Algorithm(Model):
 
     def add_to_chunk_store(
         self,
-        name,
-        data,
-        dims,
-        mdata,
-        tdata=None,
-        copy=True,
-        subset=None,
-    ):
+        name: str,
+        data: Any,
+        dims: tuple[Any, ...],
+        mdata: MData,
+        tdata: TData | None = None,
+        copy: bool = True,
+        subset: Any = None,
+    ) -> None:
         """
         Add data to the chunk store
 
         Parameters
         ----------
-        name: str
+        name
             The data name
-        data: numpy.ndarray
+        data
             The data
-        dims: tuple
+        dims
             The data dimensions
-        mdata: foxes.core.MData
+        mdata
             The mdata object
-        tdata: foxes.core.TData, optional
+        tdata
             The tdata object
-        copy: bool
+        copy
             Flag for copying incoming data
-        subset: numpy.ndarray or slice, optional
+        subset
             data corresponds to this subset of the already
             stored data, if given.
 
@@ -385,6 +515,7 @@ class Algorithm(Model):
 
         key = (mdata.chunki_states, mdata.chunki_points)
         if key not in self.chunk_store:
+            assert mdata.n_states is not None
             n_states = int(mdata.n_states)
             n_targets = int(tdata.n_targets if tdata is not None else 0)
             self.chunk_store[key] = Dict(
@@ -418,38 +549,38 @@ class Algorithm(Model):
 
     def get_from_chunk_store(
         self,
-        name,
-        mdata,
-        prev_s=0,
-        prev_t=0,
-        ret_inds=False,
-        error=True,
-    ):
+        name: str,
+        mdata: MData,
+        prev_s: int = 0,
+        prev_t: int = 0,
+        ret_inds: bool = False,
+        error: bool = True,
+    ) -> Any:
         """
         Get data from the chunk store
 
         Parameters
         ----------
-        name: str
+        name
             The data name
-        mdata: foxes.core.MData
+        mdata
             The mdata object
-        tdata: foxes.core.TData, optional
+        tdata
             The tdata object
-        prev_s: int
+        prev_s
             How many states chunks backward
-        prev_t: int
+        prev_t
             How many points chunks backward
-        ret_inds: bool
+        ret_inds
             Also return chunk index data (i0, n_states, t0, n_targets)
-        error: bool
+        error
             Flag for raising KeyError if data not found
 
         Returns
         -------
-        data: numpy.ndarray
+        data
             The data
-        inds: tuple, optional
+        inds
             The chunk index data (i0, n_states, t0, n_targets)
 
         """
@@ -488,9 +619,9 @@ class Algorithm(Model):
         # combine data from multiple chunks, in case of states subset selection:
         else:
             data = None
-            for (__, ipoints), d in self.chunk_store.items():
+            for (_, ipoints), d in self.chunk_store.items():
                 if ipoints == key[1] and name in d:
-                    __, j0, j1 = np.intersect1d(
+                    _, j0, j1 = np.intersect1d(
                         d["states_index"], mdata[FC.STATE], return_indices=True
                     )
                     if len(j0) == 0 or len(j1) == 0:
@@ -530,18 +661,18 @@ class Algorithm(Model):
         else:
             return data
 
-    def reset_chunk_store(self, new_chunk_store=None):
+    def reset_chunk_store(self, new_chunk_store: Any = None) -> Dict:
         """
         Resets the chunk store
 
         Parameters
         ----------
-        new_chunk_store: foxes.utils.Dict, optional
+        new_chunk_store
             The new chunk store
 
         Returns
         -------
-        chunk_store: foxes.utils.Dict
+        chunk_store
             The chunk store before resetting
 
         """
@@ -555,13 +686,13 @@ class Algorithm(Model):
             self.__chunk_store.update(new_chunk_store)
         return chunk_store
 
-    def block_convergence(self, **kwargs):
+    def block_convergence(self, **kwargs: Any) -> None:
         """
         Switch on convergence block during iterative run
 
         Parameters
         ----------
-        kwargs: dict, optional
+        kwargs
             Parameters for add_to_chunk_store()
 
         """
@@ -569,13 +700,13 @@ class Algorithm(Model):
             name=FC.BLOCK_CONVERGENCE, data=True, dims=(), copy=False, **kwargs
         )
 
-    def eval_conv_block(self):
+    def eval_conv_block(self) -> bool:
         """
         Evaluate convergence block, removing blocks on the fly
 
         Returns
         -------
-        blocked: bool
+        blocked
             True if convergence is currently blocked
 
         """
@@ -586,32 +717,30 @@ class Algorithm(Model):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
-        Sets this model status to running, and moves
-        all large data to stash.
+        Set this model status to running and move all large data to stash.
 
-        The stashed data will be returned by the
-        unset_running() function after running calculations.
+        The stashed data is returned by ``unset_running`` after the calculations.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict, optional
-            Large data stash, this function adds data here, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            Large-data stash. This function adds data here when provided.
+            Keys are model names and values are dictionaries of large model data.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level; ``0`` is silent.
 
         """
         assert algo is self
@@ -630,29 +759,28 @@ class Algorithm(Model):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
-        Sets this model status to not running, recovering large data
-        from stash
+        Set this model status to not running and recover large data from stash.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict, optional
-            Reconstruct model data from this stash, if given.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
+        algo
+            The calculation algorithm.
+        data_stash
+            Reconstruct model data from this stash when provided.
+            Keys are model names and values are dictionaries of large model data.
+        sel
+            The subset selection dictionary.
+        isel
+            The index subset selection dictionary.
+        verbosity
+            The verbosity level; ``0`` is silent.
 
         """
         assert algo is self
@@ -667,44 +795,49 @@ class Algorithm(Model):
         else:
             self.reset_chunk_store()
 
-    def _launch_parallel_farm_calc(self, *args, **kwargs):
+    def _launch_parallel_farm_calc(self, *args: Any, **kwargs: Any) -> xr.Dataset:
         """
-        Runs the farm calculation in parallel
+        Run the farm calculation in parallel.
 
         Parameters
         ----------
-        args: tuple, optional
-            Additional parameters for running
-        kwargs: dict, optional
-            Additional parameters for running
+        args
+            Additional parameters for running.
+        kwargs
+            Additional keyword parameters for running.
 
         Returns
         -------
-        farm_results: xarray.Dataset
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+        farm_results
+            The farm results. The calculated variables have dimensions
+            ``(state, turbine)``.
 
         """
         return launch_parallel_calc(self, *args, **kwargs)
 
-    def calc_farm(self, *args, clear_mem=False, **kwargs):
+    def calc_farm(
+        self,
+        *args: Any,
+        clear_mem: bool = False,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Calculate farm data.
 
         Parameters
         ----------
-        args: tuple, optional
-            Parameters
-        clear_mem: bool
-            Clear idata memory after starting the run
-        kwargs: dict, optional
-            Keyword parameters
+        args
+            Positional parameters.
+        clear_mem
+            Clear in-memory data after starting the run.
+        kwargs
+            Keyword parameters.
 
         Returns
         -------
-        farm_results: xarray.Dataset
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+        farm_results
+            The farm results. The calculated variables have dimensions
+            ``(state, turbine)``.
 
         """
         if self.running:
@@ -713,7 +846,7 @@ class Algorithm(Model):
             )
 
         # set to running:
-        data_stash = {} if not clear_mem else None
+        data_stash: dict[str, Any] | None = {} if not clear_mem else None
         chunk_store = self.reset_chunk_store()
         mdls = [
             m
@@ -740,44 +873,50 @@ class Algorithm(Model):
 
         return farm_results
 
-    def _launch_parallel_points_calc(self, *args, **kwargs):
+    def _launch_parallel_points_calc(self, *args: Any, **kwargs: Any) -> xr.Dataset:
         """
         Runs the main points calculation in parallel
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Additional parameters for running
-        kwargs: dict, optional
+        kwargs
             Additional parameters for running
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 
         """
         return launch_parallel_calc(self, *args, **kwargs)
 
-    def calc_points(self, *args, sel=None, isel=None, **kwargs):
+    def calc_points(
+        self,
+        *args: Any,
+        sel: dict[str, Any] | None = None,
+        isel: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> xr.Dataset:
         """
         Calculate points data.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Parameters
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        kwargs: dict, optional
+        kwargs
             Keyword parameters
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 
@@ -788,7 +927,7 @@ class Algorithm(Model):
             )
 
         # set to running:
-        data_stash = {}
+        data_stash: dict[str, Any] = {}
         self.set_running(
             self, data_stash, sel=sel, isel=isel, verbosity=self.verbosity - 2
         )
@@ -811,13 +950,13 @@ class Algorithm(Model):
 
         return point_results
 
-    def finalize(self, clear_mem=False):
+    def finalize(self, clear_mem: bool = False) -> None:
         """
         Finalizes the algorithm.
 
         Parameters
         ----------
-        clear_mem: bool
+        clear_mem
             Clear idata memory
 
         """
@@ -829,18 +968,18 @@ class Algorithm(Model):
             # self.reset_chunk_store()
 
     @classmethod
-    def new(cls, algo_type, *args, **kwargs):
+    def new(cls, algo_type: str, *args: Any, **kwargs: Any) -> Algorithm:
         """
         Run-time algorithm factory.
 
         Parameters
         ----------
-        algo_type: str
+        algo_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for the constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the constructor
 
         """
-        return new_instance(cls, algo_type, *args, **kwargs)
+        return cast(Algorithm, new_instance(cls, algo_type, *args, **kwargs))

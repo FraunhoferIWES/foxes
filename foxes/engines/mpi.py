@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import uuid
 
 import numpy as np
+from typing import Any
 
 from foxes.core import MData
 from foxes.utils import import_module
@@ -8,10 +11,10 @@ from foxes.utils import import_module
 from .process import ProcessEngine, ProcessEngineRunner
 
 
-_MPI_SHARED_CACHE = {}
+_MPI_SHARED_CACHE: dict[str, dict[str, Any]] = {}
 
 
-def _mpi_create_worker_shared_cache(token, payload):
+def _mpi_create_worker_shared_cache(token: str, payload: dict[str, Any]) -> str:
     """Creates or reuses a worker-local MPI shared cache for a token."""
     if token in _MPI_SHARED_CACHE:
         return token
@@ -47,7 +50,7 @@ def _mpi_create_worker_shared_cache(token, payload):
         nbytes = arr.nbytes if rank == 0 else 0
         win = MPI.Win.Allocate_shared(nbytes, dtype.itemsize, comm=shared_comm)
         buf, _ = win.Shared_query(0)
-        shm_arr = np.ndarray(shape, dtype=dtype, buffer=buf)
+        shm_arr: np.ndarray[Any, Any] = np.ndarray(shape, dtype=dtype, buffer=buf)
         if rank == 0:
             shm_arr[...] = arr
         shared_comm.Barrier()
@@ -67,7 +70,7 @@ def _mpi_create_worker_shared_cache(token, payload):
     return token
 
 
-def _mpi_release_worker_shared_cache(token):
+def _mpi_release_worker_shared_cache(token: str) -> str:
     """Releases worker-local MPI shared cache for a token."""
     entry = _MPI_SHARED_CACHE.pop(token, None)
     if entry is None:
@@ -85,11 +88,12 @@ class MPIEngineRunner(ProcessEngineRunner):
     """
     Engine runner for MPIEngine.
 
-    :group: engines
 
     """
 
-    def _recombine_mdata_with_shared(self, mdata, handle):
+    def _recombine_mdata_with_shared(
+        self, mdata: MData, handle: dict[str, Any] | None
+    ) -> MData:
         """Attach cached MPI shared arrays to chunk-local mdata inside worker processes."""
         if handle is None:
             return mdata
@@ -135,40 +139,45 @@ class MPIEngine(ProcessEngine):
 
     >>> mpiexec -n 12 -m mpi4py.futures run.py
 
-    :group: engines
 
     """
 
-    def new_runner(self):
+    def new_runner(self) -> MPIEngineRunner:
         """
         Creates a new EngineRunner for running calculations in this engine.
 
         Returns
         -------
-        runner: foxes.core.EngineRunner
+        runner
             The engine runner
 
         """
         return MPIEngineRunner()
 
-    def init_shared_memory(self, shared_memory, mdata, shared_mdata, verbosity=0):
+    def init_shared_memory(
+        self,
+        shared_memory: list[Any],
+        mdata: MData,
+        shared_mdata: MData | None,
+        verbosity: int = 0,
+    ) -> dict[str, Any] | None:
         """
         Sets the shared memory for the chunk calculation
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        mdata: foxes.core.MData
+        mdata
             The mdata to be used in the chunk calculation
-        shared_mdata: foxes.core.MData
+        shared_mdata
             The shared mdata to be used in the chunk calculation
-        verbosity: int
+        verbosity
             The verbosity level, 0=silent
 
         Returns
         -------
-        handle: object
+        handle
             The handle for accessing the shared data
 
         """
@@ -178,10 +187,11 @@ class MPIEngine(ProcessEngine):
             return None
 
         token = str(uuid.uuid4())
-        payload = {
+        payload_data: dict[str, dict[str, Any]] = {}
+        payload: dict[str, Any] = {
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
-            "data": {},
+            "data": payload_data,
             "extra_data": dict(shared_mdata.extra_data),
         }
         for v, d in shared_mdata.items():
@@ -189,23 +199,23 @@ class MPIEngine(ProcessEngine):
                 f"Shared mdata entry '{v}' must be a non-object numpy array"
             )
             arr = np.ascontiguousarray(d)
-            payload["data"][v] = {
+            payload_data[v] = {
                 "arr": arr,
                 "shape": arr.shape,
                 "dtype": arr.dtype.str,
             }
 
-        if len(payload["data"]):
+        if len(payload_data):
             self._print_shared_data(
                 MData(
-                    data={name: shared_mdata[name] for name in payload["data"]},
-                    dims={name: shared_mdata.dims[name] for name in payload["data"]},
+                    data={name: shared_mdata[name] for name in payload_data},
+                    dims={name: shared_mdata.dims[name] for name in payload_data},
                     name=shared_mdata.name,
                 ),
                 verbosity,
             )
 
-        if len(payload["data"]) == 0:
+        if len(payload_data) == 0:
             return None
 
         futures = [
@@ -222,7 +232,9 @@ class MPIEngine(ProcessEngine):
             "dims": shared_mdata.dims,
         }
 
-    def prepare_chunk_mdata_for_shared(self, mdata, shared_handle):
+    def prepare_chunk_mdata_for_shared(
+        self, mdata: MData, shared_handle: dict[str, Any] | None
+    ) -> None:
         """Remove entries that worker recombination restores from MPI shared cache."""
         if shared_handle is None:
             return
@@ -241,15 +253,19 @@ class MPIEngine(ProcessEngine):
                 mdata.pop(v)
                 mdata.dims.pop(v)
 
-    def release_shared_memory(self, shared_memory, shared_handle):
+    def release_shared_memory(
+        self,
+        shared_memory: list[Any],
+        shared_handle: dict[str, Any] | None,
+    ) -> None:
         """
         Releases the shared memory after the chunk calculation
 
         Parameters
         ----------
-        shared_memory: list
+        shared_memory
             The shared memory object for the chunk calculation
-        shared_handle: object
+        shared_handle
             The handle for accessing the shared data
 
         """
@@ -271,7 +287,7 @@ class MPIEngine(ProcessEngine):
 
         shared_memory.clear()
 
-    def _create_pool(self):
+    def _create_pool(self) -> None:
         """Creates the pool"""
         mpi4py_futures = import_module(
             "mpi4py.futures",

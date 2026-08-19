@@ -1,8 +1,18 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import PointDataModel
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core import PointDataModelList, WakeModel
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData
 
 
 class PointWakesCalculation(PointDataModel):
@@ -11,100 +21,113 @@ class PointWakesCalculation(PointDataModel):
 
     Attributes
     ----------
-    pvars: list of str
+    pvars
         The variables of interest
-    emodels: foxes.core.PointDataModelList
+    emodels
         The extra evaluation models
-    emodels_cpars: list of dict
+    emodels_cpars
         The calculation parameters for extra models
-    wake_models: list of foxes.core.WakeModel
+    wake_models
         The wake models to be used
 
-    :group: algorithms.downwind.models
 
     """
 
-    def __init__(self, emodels=None, emodels_cpars=None, wake_models=None):
+    def __init__(
+        self,
+        emodels: PointDataModelList | None = None,
+        emodels_cpars: list[dict[str, Any]] | None = None,
+        wake_models: list[WakeModel] | None = None,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        emodels: foxes.core.PointDataModelList, optional
+        emodels
             The extra evaluation models
-        emodels_cpars: list of dict, optional
+        emodels_cpars
             The calculation parameters for extra models
-        wake_models: list of foxes.core.WakeModel, optional
+        wake_models
             Specific wake models to be used
 
         """
         super().__init__()
-        self.pvars = None
+        self.pvars: list[str] = []
         self.emodels = emodels
-        self.emodels_cpars = emodels_cpars
+        self.emodels_cpars = [] if emodels_cpars is None else emodels_cpars
         self.wake_models = wake_models
 
-    def sub_models(self):
+    def sub_models(self) -> list[Any]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             Names of all sub models
 
         """
         return [self.emodels] if self.emodels is not None else []
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force: bool
+            It contains coordinate data, model variables, and additional data.
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
+            It contains coordinate data, model variables, and additional data.
 
         """
         loaded_data = super().initialize(algo, loaded_data, force, verbosity)
         self.pvars = algo.states.output_point_vars(algo)
         return loaded_data
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
         return self.pvars
 
-    def calculate(self, algo, mdata, fdata, tdata, downwind_index=None):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -113,27 +136,33 @@ class PointWakesCalculation(PointDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
-        tdata: foxes.core.Data
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order of the wake
             causing turbine
 
         Returns
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values with shape
             (n_states, n_targets, n_tpoints)
 
         """
 
-        def _contribute(gmodel, tdata, oi, wdeltas, wmodel):
+        def _contribute(
+            gmodel: Any,
+            tdata: TData,
+            oi: int,
+            wdeltas: dict[str, np.ndarray],
+            wmodel: Any,
+        ) -> None:
             """Helper function for contribution of wake deltas to wake results"""
 
             # reduce to targets within max wake length, if applicable:
@@ -162,7 +191,9 @@ class PointWakesCalculation(PointDataModel):
                     wdeltas0[v][:, tsel, ...] = wdeltas[v]
 
         wmodels = (
-            algo.wake_models.values() if self.wake_models is None else self.wake_models
+            list(algo.wake_models.values())
+            if self.wake_models is None
+            else self.wake_models
         )
         pvrs = self.pvars + [FV.UV]
         for wmodel in wmodels:
@@ -172,6 +203,7 @@ class PointWakesCalculation(PointDataModel):
 
             if len(set(pvrs).intersection(wdeltas.keys())):
                 if downwind_index is None:
+                    assert fdata.n_turbines is not None
                     for oi in range(fdata.n_turbines):
                         _contribute(gmodel, tdata, oi, wdeltas, wmodel)
                 else:
@@ -184,6 +216,12 @@ class PointWakesCalculation(PointDataModel):
                         tdata[v] += wdeltas[v]
 
         if self.emodels is not None:
-            self.emodels.calculate(algo, mdata, fdata, tdata, self.emodels_cpars)
+            self.emodels.calculate(
+                algo,
+                mdata,
+                fdata,
+                tdata,
+                cast(list[dict[str, Any]], self.emodels_cpars),
+            )
 
         return {v: tdata[v] for v in self.pvars}

@@ -1,31 +1,38 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
+from typing import TYPE_CHECKING, cast
 
 from foxes.core import FarmDataModel, TData
 import foxes.variables as FV
 import foxes.constants as FC
 from foxes.config import config
 
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+
 
 class InitFarmData(FarmDataModel):
     """
     Sets basic turbine data and applies downwind order
 
-    :group: algorithms.downwind.models
 
     """
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -41,7 +48,9 @@ class InitFarmData(FarmDataModel):
             FV.ORDER_INV,
         ]
 
-    def calculate(self, algo, mdata, fdata):
+    def calculate(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -50,27 +59,28 @@ class InitFarmData(FarmDataModel):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata
             The model data
-        fdata: foxes.core.Data
+        fdata
             The farm data
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values with shape (n_states, n_turbines)
 
         """
 
         # prepare:
         n_states = fdata.n_states
+        assert n_states is not None
         n_turbines = algo.n_turbines
 
         # initialize with farm order, will be corrected later:
-        order = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
+        order: np.ndarray = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
         order[:] = np.arange(n_turbines)[None, :]
         ssel = np.zeros_like(order)
         ssel[:] = np.arange(n_states)[:, None]
@@ -101,27 +111,32 @@ class InitFarmData(FarmDataModel):
             np.zeros((n_states, n_turbines), dtype=config.dtype_double),
             (FC.STATE, FC.TURBINE),
         )
+        turbine_types = algo.farm_controller.turbine_types
+        assert turbine_types is not None
+
         for ti, t in enumerate(algo.farm.turbines):
             if len(t.xy.shape) == 1:
                 fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
             else:
                 i0 = fdata.states_i0(counter=True)
+                assert i0 is not None
+                assert fdata.n_states is not None
                 s = np.s_[i0 : i0 + fdata.n_states]
                 fdata[FV.TXYH][:, ti, :2] = t.xy[s]
 
             H = t.H
             if H is None:
-                H = algo.farm_controller.turbine_types[ti].H
+                H = turbine_types[ti].H
             fdata[FV.TXYH][:, ti, 2] = H
 
             D = t.D
             if D is None:
-                D = algo.farm_controller.turbine_types[ti].D
+                D = turbine_types[ti].D
             fdata[FV.D][:, ti] = D
 
         # calc WD at rotor centres:
         svrs = algo.states.output_point_vars(algo)
-        tdata = TData.from_points(points=fdata[FV.TXYH], variables=svrs)
+        tdata = cast(TData, TData.from_points(points=fdata[FV.TXYH], variables=svrs))
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
         fdata.add(
             FV.WD,

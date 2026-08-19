@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from typing import Any
 
 from foxes.utils import Dict
 
@@ -7,53 +8,52 @@ from .dict import run_dict
 
 
 def foxes_yaml(
-    yml_file,
-    output_dir=None,
-    rotor=None,
-    pwakes=None,
-    wakes=None,
-    frame=None,
-    engine=None,
-    n_procs=None,
-    chunksize_states=None,
-    chunksize_points=None,
-    iterative=False,
-    nofig=False,
-    verbosity=1,
-):
+    yml_file: Path | str,
+    output_dir: Path | str | None = None,
+    rotor: Any = None,
+    pwakes: Any = None,
+    wakes: Any = None,
+    frame: Any = None,
+    engine: Any = None,
+    n_procs: int | None = None,
+    chunksize_states: int | None = None,
+    chunksize_points: int | None = None,
+    iterative: bool = False,
+    nofig: bool = False,
+    verbosity: int | None = 1,
+) -> tuple[Any, Any, list[tuple[dict[str, Any], list[Any]]]]:
     """
     Run foxes from yaml file input
 
     Parameters
     ----------
-    yml_file: str or Path
+    yml_file
         The yaml file path
-    output_dir: str or Path, optional
+    output_dir
         The output directory, default: None (same as input file)
-    rotor: str, optional
+    rotor
         The rotor model, default: None (use the one from the yaml file)
-    pwakes: list of str, optional
+    pwakes
         The partial wakes models, default: None (use the ones from the yaml file)
-    wakes: list of str, optional
+    wakes
         The wake models, default: None (use the ones from the yaml file)
-    frame: str, optional
+    frame
         The wake frame, default: None (use the one from the yaml file)
-    engine: str, optional
+    engine
         The engine, default: None (use the one from the yaml file)
-    n_procs: int, optional
+    n_procs
         The number of processes, default: None (use the one from the yaml file)
-    chunksize_states: int, optional
+    chunksize_states
         The chunk size for states, default: None (use the one from the yaml file)
-    chunksize_points: int, optional
+    chunksize_points
         The chunk size for points, default: None (use the one from the yaml file)
-    iterative: bool, optional
+    iterative
         Use iterative algorithm, default: False
-    nofig: bool, optional
+    nofig
         Do not show figures, default: False
-    verbosity: int, optional
+    verbosity
         The verbosity level, 0 = silent, default: 1
 
-    :group: input.yaml
 
     """
 
@@ -92,7 +92,7 @@ def foxes_yaml(
     )
 
 
-def main():
+def main() -> None:
     """
     Command line tool for running foxes from yaml file input.
 
@@ -100,7 +100,6 @@ def main():
     --------
     >>> foxes_yaml input.yaml
 
-    :group: input.yaml
 
     """
 

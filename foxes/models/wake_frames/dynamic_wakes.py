@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
+from typing import TYPE_CHECKING, Any
+from typing import cast
 
 from foxes.core import WakeFrame, TData
 from foxes.utils import wd2uv
@@ -7,6 +11,11 @@ from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.model import LoadedData
+
 
 class DynamicWakes(WakeFrame):
     """
@@ -14,78 +23,84 @@ class DynamicWakes(WakeFrame):
 
     Attributes
     ----------
-    max_age: int
+    max_age
         The maximal number of wake steps
-    cl_ipars: dict
+    cl_ipars
         Interpolation parameters for centre line
         point interpolation
-    dt_min: float
+    dt_min
         The delta t value in minutes,
         if not from timeseries data
 
-    :group: models.wake_frames
 
     """
 
     def __init__(
         self,
-        max_age=None,
-        max_age_mean_ws=5,
-        cl_ipars={},
-        dt_min=None,
-        **kwargs,
-    ):
+        max_age: int | None = None,
+        max_age_mean_ws: float = 5,
+        cl_ipars: dict[str, Any] | None = None,
+        dt_min: float | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        max_age: int, optional
+        max_age
             The maximal number of wake steps
-        max_age_mean_ws: float
+        max_age_mean_ws
             The mean wind speed for the max_age calculation,
             if the latter is not given
-        cl_ipars: dict
+        cl_ipars
             Interpolation parameters for centre line
             point interpolation
-        dt_min: float, optional
+        dt_min
             The delta t value in minutes,
             if not from timeseries data
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
         super().__init__(**kwargs)
 
         self.max_age = max_age
-        self.cl_ipars = cl_ipars
+        self.cl_ipars = {} if cl_ipars is None else cl_ipars
         self.dt_min = dt_min
         self._mage_ws = max_age_mean_ws
+        self._dt: np.ndarray = np.array([], dtype=config.dtype_int)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(dt_min={self.dt_min}, max_age={self.max_age})"
 
-    def initialize(self, algo, loaded_data=None, force=False, verbosity=0):
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
         """
         Initializes the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict, optional
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        loaded_data: dict
+        loaded_data
             The loaded data, containing keys "coords", "data_vars", and "extra_data".
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
@@ -128,7 +143,9 @@ class DynamicWakes(WakeFrame):
         # find max age if not given:
         if self.max_age is None:
             step = np.mean(self._mage_ws * self._dt)
-            self.max_age = max(int(algo.max_wake_length_km * 1e3 / step), 1)
+            max_wake_length_km = algo.max_wake_length_km
+            assert max_wake_length_km is not None, "Missing max_wake_length_km"
+            self.max_age = max(int(max_wake_length_km * 1e3 / step), 1)
             if verbosity > 0:
                 print(
                     f"{self.name}: Assumed mean step = {step} m, setting max_age = {self.max_age}"
@@ -138,7 +155,7 @@ class DynamicWakes(WakeFrame):
         self.UPDATE = self.var("update")
         return loaded_data
 
-    def calc_order(self, algo, mdata, fdata):
+    def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -147,35 +164,48 @@ class DynamicWakes(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        order: numpy.ndarray
+        order
             The turbine order, shape: (n_states, n_turbines)
 
         """
-        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_int)
-        order[:] = np.arange(fdata.n_turbines)[None, :]
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        assert n_states is not None and n_turbines is not None
+        order: np.ndarray = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
+        order[:] = np.arange(n_turbines)[None, :]
         return order
 
-    def _calc_wakes(self, algo, mdata, fdata, downwind_index):
+    def _calc_wakes(
+        self, algo: Algorithm, mdata: MData, fdata: FData, downwind_index: int
+    ) -> tuple[np.ndarray, int]:
         """Helper function that computes the dynamic wakes"""
         # prepare:
         n_states = mdata.n_states
+        assert n_states is not None, "Missing n_states in mdata"
         rxyh = fdata[FV.TXYH][:, downwind_index]
         istates = mdata.chunki_states
         itargets = mdata.chunki_points
+        assert istates is not None, "Missing states chunk index in mdata"
+        assert itargets is not None, "Missing points chunk index in mdata"
+        max_wake_length_km = algo.max_wake_length_km
+        assert max_wake_length_km is not None, "Missing max_wake_length_km"
+        max_age = self.max_age
+        assert max_age is not None, "Missing max_age"
         prev_t = itargets
         i0 = mdata.states_i0(counter=True)
+        assert i0 is not None, "Missing states_i0 in mdata"
         i1 = i0 + n_states
         dt = self._dt[i0:i1]
-        tdi = {
+        tdi: dict[str, tuple[str, ...]] = {
             v: (FC.STATE, FC.TARGET, FC.TPOINT)
             for v in algo.states.output_point_vars(algo)
         }
@@ -183,7 +213,7 @@ class DynamicWakes(WakeFrame):
         self.AGE = self.var("age")
         self.XYHL = self.var("xyhl")
 
-        def ukey_fun(fr, to):
+        def ukey_fun(fr: int, to: int) -> str:
             """helper function to create update key"""
             return f"{self.UPDATE}_dw{downwind_index}_from_{fr}_to_{to}"
 
@@ -192,17 +222,15 @@ class DynamicWakes(WakeFrame):
             name=key, mdata=mdata, prev_t=prev_t, error=itargets > 0
         )
         if data is None:
-            data = np.full(
-                (n_states, self.max_age, 4), np.nan, dtype=config.dtype_double
-            )
+            data = np.full((n_states, max_age, 4), np.nan, dtype=config.dtype_double)
             data[:, 0, :3] = rxyh
             data[:, 0, 3] = 0
-            tdt = {
+            tdt: dict[str, np.ndarray] = {
                 v: np.zeros((n_states, 1, 1), dtype=config.dtype_double)
                 for v in tdi.keys()
             }
             pts = data[:, 0, :3].copy()
-            for age in range(self.max_age - 1):
+            for age in range(max_age - 1):
                 if age == n_states:
                     break
                 elif age == 0:
@@ -213,16 +241,16 @@ class DynamicWakes(WakeFrame):
                     )
                     hdt = dt[:, None]
                 else:
-                    s = np.s_[age:]
                     pts = pts[:-1]
-                    hmdata = mdata.get_slice(FC.STATE, s)
-                    hfdata = fdata.get_slice(FC.STATE, s)
-                    htdt = {v: d[s] for v, d in tdt.items()}
+                    hslice = slice(age, None)
+                    hmdata = cast(Any, mdata.get_slice(FC.STATE, hslice))
+                    hfdata = cast(Any, fdata.get_slice(FC.STATE, hslice))
+                    htdt = {v: d[hslice] for v, d in tdt.items()}
                     htdata = TData.from_points(
                         points=pts[:, None], data=htdt, dims=tdi, mdata=hmdata
                     )
-                    hdt = dt[s, None]
-                    del htdt, s
+                    hdt = dt[hslice, None]
+                    del htdt, hslice
 
                 res = algo.states.calculate(algo, hmdata, hfdata, htdata)
                 del hmdata, hfdata, htdata
@@ -230,16 +258,21 @@ class DynamicWakes(WakeFrame):
                 uv = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0]
                 dxy = uv * hdt
                 pts[:, :2] += dxy
-                s = np.s_[:-age] if age > 0 else np.s_[:]
-                data[s, age + 1, :3] = pts
-                data[s, age + 1, 3] = data[s, age, 3] + np.linalg.norm(dxy, axis=-1)
+                if age > 0:
+                    data[:-age, age + 1, :3] = pts
+                    data[:-age, age + 1, 3] = data[:-age, age, 3] + np.linalg.norm(
+                        dxy, axis=-1
+                    )
+                else:
+                    data[:, age + 1, :3] = pts
+                    data[:, age + 1, 3] = data[:, age, 3] + np.linalg.norm(dxy, axis=-1)
 
-                if age < self.max_age - 2:
+                if age < max_age - 2:
                     s = ~np.isnan(data[:, age + 1, 3])
-                    if np.min(data[s, age + 1, 3]) >= algo.max_wake_length_km * 1e3:
+                    if np.min(data[s, age + 1, 3]) >= max_wake_length_km * 1e3:
                         break
 
-                del res, uv, s, hdt, dxy
+                del res, uv, hdt, dxy
             del pts, tdt
 
             # store this chunk's results:
@@ -296,11 +329,15 @@ class DynamicWakes(WakeFrame):
                 else:
                     hdata = hdata.copy()
                     wi0 = h_i0
+                    assert h_n_states is not None, "Missing state count in chunk store"
 
                     # select points with index+age=i0:
                     sts = np.arange(h_n_states)
                     ags = i0 - (h_i0 + sts)
-                    sel = ags < self.max_age - 1
+                    assert h_i0 is not None, (
+                        "Missing source states index in chunk store"
+                    )
+                    sel = ags < max_age - 1
                     if np.any(sel):
                         sts = sts[sel]
                         ags = ags[sel]
@@ -308,7 +345,7 @@ class DynamicWakes(WakeFrame):
                         sel = (
                             np.all(~np.isnan(pts[:, :2]), axis=-1)
                             & np.any(np.isnan(hdata[sts, ags + 1, :2]), axis=-1)
-                            & (hdata[sts, ags, 3] <= algo.max_wake_length_km * 1e3)
+                            & (hdata[sts, ags, 3] <= max_wake_length_km * 1e3)
                         )
                         if np.any(sel):
                             sts = sts[sel]
@@ -326,18 +363,22 @@ class DynamicWakes(WakeFrame):
                             # compute single state wake propagation:
                             isnan0 = np.isnan(hdata)
                             for si in range(n_states):
-                                s = slice(si, si + 1, None)
-                                hmdata = mdata.get_slice(FC.STATE, s)
-                                hfdata = fdata.get_slice(FC.STATE, s)
-                                htdt = {v: d[s] for v, d in tdt.items()}
+                                state_slice = slice(si, si + 1)
+                                hmdata = cast(
+                                    Any, mdata.get_slice(FC.STATE, state_slice)
+                                )
+                                hfdata = cast(
+                                    Any, fdata.get_slice(FC.STATE, state_slice)
+                                )
+                                htdt = {v: d[state_slice] for v, d in tdt.items()}
                                 htdata = TData.from_points(
                                     points=pts[None, :],
                                     data=htdt,
                                     dims=tdi,
                                     mdata=hmdata,
                                 )
-                                hdt = dt[s, None]
-                                del htdt, s
+                                hdt = dt[state_slice, None]
+                                del htdt, state_slice
 
                                 res = algo.states.calculate(
                                     algo, hmdata, hfdata, htdata
@@ -356,9 +397,7 @@ class DynamicWakes(WakeFrame):
                                 ] + np.linalg.norm(dxy, axis=-1)
                                 del dxy
 
-                                hsel = (h_i0 + sts + ags < i1) & (
-                                    ags < self.max_age - 1
-                                )
+                                hsel = (h_i0 + sts + ags < i1) & (ags < max_age - 1)
                                 if np.any(hsel):
                                     sts = sts[hsel]
                                     ags = ags[hsel]
@@ -409,6 +448,10 @@ class DynamicWakes(WakeFrame):
                 if hdata is None:
                     break
                 else:
+                    assert h_i0 is not None, (
+                        "Missing source states index in chunk store"
+                    )
+                    assert h_n_states is not None, "Missing state count in chunk store"
                     data.insert(0, hdata)
                     wi0 = h_i0
 
@@ -430,36 +473,36 @@ class DynamicWakes(WakeFrame):
             plt.close(fig)
         """
 
-        return data, wi0
+        return data, cast(int, wi0)
 
     def get_wake_coos(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+    ) -> np.ndarray:
         """
         Calculate wake coordinates of rotor points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
 
         Returns
         -------
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
@@ -474,6 +517,7 @@ class DynamicWakes(WakeFrame):
         points = targets.reshape(n_states, n_points, 3)
         rxyh = fdata[FV.TXYH][:, downwind_index]
         i0 = mdata.states_i0(counter=True)
+        assert i0 is not None, "Missing states_i0 in mdata"
 
         # initialize:
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=config.dtype_double)
@@ -482,10 +526,12 @@ class DynamicWakes(WakeFrame):
         wake_si[:] = i0 + np.arange(n_states)[:, None]
 
         # loop over states:
+        max_age = self.max_age
+        assert max_age is not None, "Missing max_age"
         for si in range(n_states):
             # select wake ages that exist for this state:
-            ags = np.arange(self.max_age)
-            sts = i0 + si - ags - wi0
+            ags: Any = np.arange(max_age)
+            sts: Any = i0 + si - ags - wi0
             sel = (sts >= 0) & (sts < len(wdata))
             if np.any(sel):
                 # filter to existing wake points:
@@ -556,16 +602,19 @@ class DynamicWakes(WakeFrame):
                     if stsd is not None:
                         # single wake point case, must originate from rotor centre:
                         if aprx == "o":
+                            assert ags0 is not None
                             nx = wd2uv(fdata[FV.WD][si, downwind_index])[None, :2]
                             dx = wdata[stsd, ags0, 3]
 
                         # compute wake tangent vectors, using next and current wake age points:
                         else:
+                            assert ags0 is not None and ags1 is not None
                             nx = wdata[stsd, ags1, :2] - wdata[stsd, ags0, :2]
                             dx = np.linalg.norm(nx, axis=-1)
                             nx /= dx[:, None] + 1e-14
 
                         # project target points onto wake points:
+                        assert agsd is not None
                         dp = points[si, :, None, :2] - wdata[None, stsd, agsd, :2]
                         projx = (
                             dp[:, :, 0] * nx[None, :, 0] + dp[:, :, 1] * nx[None, :, 1]
@@ -610,7 +659,9 @@ class DynamicWakes(WakeFrame):
             (FC.STATE, FC.TARGET, FC.TPOINT),
         )
 
-        return algo.wake_deflection.calc_deflection(
+        wdfl = algo.wake_deflection
+        assert wdfl is not None, "Wake deflection model not initialized"
+        return wdfl.calc_deflection(
             algo,
             mdata,
             fdata,

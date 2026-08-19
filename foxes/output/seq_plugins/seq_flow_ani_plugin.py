@@ -1,4 +1,13 @@
+# mypy: disable-error-code=arg-type
+# mypy: disable-error-code=assignment
+
+from __future__ import annotations
+
 from foxes.algorithms.sequential import SequentialPlugin
+from foxes.algorithms.sequential.sequential import Sequential
+from matplotlib.axes import Axes
+from typing import Any, Callable, Iterator
+from xarray import Dataset
 
 from ..flow_plots_2d.flow_plots import FlowPlots2D
 
@@ -10,30 +19,34 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
     Attributes
     ----------
-    orientation: str
+    orientation
         The orientation, either "yx", "xz" or "yz"
-    title_fun: callable
+    title_fun
         A function that takes the current iteration and state index
         and returns a title string.
-    data_pars: dict
+    data_pars
         Additional parameters for plot data calculation
 
-    :group: output.seq_plugins
 
     """
 
-    def __init__(self, orientation, title_fun=None, **data_pars):
+    def __init__(
+        self,
+        orientation: str,
+        title_fun: Callable[[int, Any], str] | None = None,
+        **data_pars: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        orientation: str
+        orientation
             The orientation, either "yx", "xz" or "yz"
-        title_fun: callable, optional
+        title_fun
             A function that takes the current iteration and state index
             and returns a title string.
-        data_pars: dict, optional
+        data_pars
             Additional parameters for plot data calculation
 
 
@@ -43,31 +56,33 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         self.data_pars = data_pars
         self._tfun = title_fun
 
-    def initialize(self, algo):
+    def initialize(self, algo: Sequential) -> None:
         """
         Initialize data based on the intial iterator
 
         Parameters
         ----------
-        algo: foxes.algorithms.sequential.Sequential
+        algo
             The current sequential algorithm
 
         """
         super().initialize(algo)
-        self._data = []
-        self._titles = []
+        self._data: list[tuple[Any, list[Any]]] = []
+        self._titles: list[str] = []
 
-    def update(self, algo, fres, pres=None):
+    def update(
+        self, algo: Sequential, fres: Dataset, pres: Dataset | None = None
+    ) -> None:
         """
         Updates data based on current iteration
 
         Parameters
         ----------
-        algo: foxes.algorithms.sequential.Sequential
+        algo
             The latest sequential algorithm
-        fres: xarray.Dataset
+        fres
             The latest farm results
-        pres: xarray.Dataset, optional
+        pres
             The latest point results
 
         """
@@ -76,8 +91,10 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         o = FlowPlots2D(algo, fres)
 
         if self._tfun is not None:
-            self._titles.append(self._tfun(algo.states.counter, algo.states.index()[0]))
+            assert algo.counter is not None
+            self._titles.append(self._tfun(algo.counter, algo.states.index()[0]))
 
+        d: Any
         if self.orientation == "xy":
             d = o.get_states_data_xy(**self.data_pars, data_format="numpy")
         elif self.orientation == "xz":
@@ -97,19 +114,19 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
         self._data.append((o, d))
 
-    def gen_images(self, ax, **plot_pars):
+    def gen_images(self, ax: Axes, **plot_pars: Any) -> Iterator[tuple[Any, Any]]:
         """
 
         Parameters
         ----------
-        ax: matplotlib.Axis
+        ax
             The plotting axis
-        plot_pars: dict, optional
+        plot_pars
             Additional parameters for plotting
 
         Yields
         ------
-        imgs: tuple
+        imgs
             The (figure, artists) tuple
 
         """

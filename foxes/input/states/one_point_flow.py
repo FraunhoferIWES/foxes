@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 from scipy.interpolate import interpn
+from typing import Any, cast
 
-from foxes.core import States
+from foxes.core import Algorithm, FData, LoadedData, MData, States, Model, TData
 from foxes.utils import uv2wd
 from foxes.models.wake_frames.timelines import Timelines
 from foxes.config import config
@@ -16,60 +19,55 @@ class OnePointFlowStates(States):
 
     Attributes
     ----------
-    ref_xy: list of float
+    ref_xy
         The [x, y] or [x, y, z] coordinates of the base states.
-        If [x, y, z] then z will serve as height
-    tl_heights: list of float
-        The heights at which timelines will be calculated
-    dt_min: float
-        The delta t value in minutes,
-        if not from timeseries data
-    intp_pars: dict
-        Parameters for height interpolation with
-        scipy.interpolate.interpn
+        If [x, y, z] then z will serve as height.
+    tl_heights
+        The heights at which timelines will be calculated.
+    dt_min
+        The delta-t value in minutes, if not taken from timeseries data.
+    intp_pars
+        Parameters for height interpolation with scipy.interpolate.interpn.
 
-    :group: input.states
 
     """
 
     def __init__(
         self,
-        ref_xy,
-        *base_states_args,
-        base_states=None,
-        tl_heights=None,
-        dt_min=None,
-        **base_states_kwargs,
-    ):
+        ref_xy: list[float] | np.ndarray,
+        *base_states_args: Any,
+        base_states: States | None = None,
+        tl_heights: list[float] | np.ndarray | None = None,
+        dt_min: float | None = None,
+        **base_states_kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        ref_xy: list of float
+        ref_xy
             The [x, y] or [x, y, z] coordinates of the base states.
-            If [x, y, z] then z will serve as height
-        base_states_args: tuple, optional
-            Arguments for creating the base states from
-            States.new(), if not given as base_states
-        base_states: foxes.core.States, optional
-            The base states, representing horizontally
-            homogeneous inflow
-        tl_heights: list of float, optional
-            The heights at which timelines will be calculated
-        dt_min: float, optional
-            The delta t value in minutes,
-            if not from timeseries data
-        base_states_kwargs: dict, optional
-            Arguments for creating the base states from
-            States.new(), if not given as base_states
+            If [x, y, z] then z will serve as height.
+        base_states_args
+            Arguments for creating the base states from States.new(),
+            if not given as base_states.
+        base_states
+            The base states, representing horizontally homogeneous inflow.
+        tl_heights
+            The heights at which timelines will be calculated.
+        dt_min
+            The delta-t value in minutes, if not taken from timeseries data.
+        base_states_kwargs
+            Arguments for creating the base states from States.new(),
+            if not given as base_states.
 
         """
         super().__init__()
-        self.ref_xy = np.array(ref_xy, dtype=config.dtype_double)
+        self.ref_xy: np.ndarray = np.array(ref_xy, dtype=config.dtype_double)
         self.heights = tl_heights
-        self.base_states = base_states
         self.dt_min = dt_min
+        self.timelines_data: Any = None
 
         self.intp_pars = {"fill_value": None}
         if "bounds_error" in base_states_kwargs:
@@ -84,24 +82,31 @@ class OnePointFlowStates(States):
                 f"Base states of type '{type(base_states).__name__}' were given, cannot handle base_states_args of types {[type(a).__name__ for a in base_states_args]}"
             )
         elif base_states is None:
-            self.base_states = States.new(*base_states_args, **base_states_kwargs)
+            base_states = States.new(*base_states_args, **base_states_kwargs)
+        self.base_states: States = base_states
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(base={type(self.base_states).__name__}, heights={self.heights}, dt_min={self.dt_min})"
 
-    def sub_models(self):
+    def sub_models(self) -> list[Model]:
         """
         List of all sub-models
 
         Returns
         -------
-        smdls: list of foxes.core.Model
+        smdls
             All sub models
 
         """
         return [self.base_states]
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -111,16 +116,16 @@ class OnePointFlowStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -139,11 +144,18 @@ class OnePointFlowStates(States):
         # pre-calc data:
         self.WEIGHT = self.var(FV.WEIGHT)
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
-        loaded_data["data_vars"][self.WEIGHT] = Timelines._precalc_data(
-            self, algo, self.base_states, self.heights, verbosity, needs_res=True
+        precalc_data = Timelines._precalc_data(
+            cast(Timelines, self),
+            algo,
+            self.base_states,
+            np.asarray(self.heights, dtype=config.dtype_double),
+            verbosity,
+            needs_res=True,
         )
+        assert precalc_data is not None
+        loaded_data["data_vars"][self.WEIGHT] = precalc_data
 
-    def size(self):
+    def size(self) -> int:
         """
         The total number of states.
 
@@ -155,30 +167,30 @@ class OnePointFlowStates(States):
         """
         return self.base_states.size()
 
-    def index(self):
+    def index(self) -> list[int]:
         """
         The index list
 
         Returns
         -------
-        indices: array_like
+        indices
             The index labels of states, or None for default integers
 
         """
-        return self.base_states.index()
+        return list(self.base_states.index())
 
-    def output_point_vars(self, algo):
+    def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -186,12 +198,12 @@ class OnePointFlowStates(States):
 
     def set_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to running, and moves
         all large data to stash.
@@ -201,16 +213,16 @@ class OnePointFlowStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash
             Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -226,28 +238,28 @@ class OnePointFlowStates(States):
 
     def unset_running(
         self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Sets this model status to not running, recovering large data
         from stash
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data_stash: dict, optional
+        data_stash
             Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
-        sel: dict, optional
+        sel
             The subset selection dictionary
-        isel: dict, optional
+        isel
             The index subset selection dictionary
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -258,7 +270,14 @@ class OnePointFlowStates(States):
             if "data" in data:
                 self.timelines_data = data.pop("data")
 
-    def calc_states_indices(self, algo, mdata, points, hi, ref_xy):
+    def calc_states_indices(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        points: np.ndarray,
+        hi: int,
+        ref_xy: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
         # prepare:
         n_states, n_points = points.shape[:2]
         dxy = self.timelines_data["dxy"].to_numpy()[hi]
@@ -269,7 +288,12 @@ class OnePointFlowStates(States):
         coeffs = np.full((n_states, n_points), np.nan, dtype=config.dtype_double)
 
         # flake8: noqa: F821
-        def _eval_trace(sel, hdxy=None, hdxy0=None, trs=None):
+        def _eval_trace(
+            sel: np.ndarray | slice,
+            hdxy: np.ndarray | None = None,
+            hdxy0: np.ndarray | None = None,
+            trs: np.ndarray | None = None,
+        ) -> None:
             """Helper function that updates trace_done"""
             nonlocal coeffs
 
@@ -338,7 +362,15 @@ class OnePointFlowStates(States):
 
         return trace_si, coeffs
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(  # type: ignore[override]
+        self,
+        algo: Algorithm,
+        mdata: MData | None = None,
+        fdata: FData | None = None,
+        tdata: TData | None = None,
+        *args: Any,
+        **parameters: Any,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -347,25 +379,36 @@ class OnePointFlowStates(States):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
+        args
+            Additional positional parameters for extension compatibility
+        parameters
+            Additional keyword parameters for extension compatibility
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
+            Values
             (n_states, n_targets, n_tpoints)
 
         """
+        if mdata is None or tdata is None:
+            raise KeyError(
+                f"States '{self.name}': Missing input data for calculate(), expected mdata and tdata"
+            )
+
         # prepare:
         self.ensure_output_vars(algo, tdata)
+        n_algo_states = algo.n_states
+        assert n_algo_states is not None
         targets = tdata[FC.TARGETS]
         n_states, n_targets, n_tpoints = targets.shape[:3]
         n_points = n_targets * n_tpoints
@@ -385,7 +428,7 @@ class OnePointFlowStates(States):
             del s, c
 
         # flake8: noqa: F821
-        def _interp_time(hi, v):
+        def _interp_time(hi: int, v: str) -> np.ndarray:
             """Helper function for interpolation bewteen states"""
 
             sts = trace_si[hi]
@@ -397,9 +440,9 @@ class OnePointFlowStates(States):
             if np.any(sel_low):
                 out[sel_low] = data[0]
 
-            sel_hi = sts >= algo.n_states
+            sel_hi = sts >= n_algo_states
             if np.any(sel_hi):
-                out[sel_hi] = data[algo.n_states - 1]
+                out[sel_hi] = data[n_algo_states - 1]
 
             sel = (~sel_low) & (~sel_hi) & (cfs <= 0)
             if np.any(sel):
@@ -422,13 +465,13 @@ class OnePointFlowStates(States):
 
             crds = (heights, ar_states, ar_points)
 
-            data = {
+            data_vars = {
                 v: np.stack([_interp_time(hi, v) for hi in range(n_heights)], axis=0)
                 for v in self.timelines_data.data_vars.keys()
                 if v != "dxy"
             }
-            vres = list(data.keys())
-            data = np.stack(list(data.values()), axis=-1)
+            vres = list(data_vars.keys())
+            data_arr = np.stack(list(data_vars.values()), axis=-1)
 
             eval = np.zeros((n_states, n_points, 3), dtype=config.dtype_double)
             eval[:, :, 0] = points[:, :, 2]
@@ -436,7 +479,7 @@ class OnePointFlowStates(States):
             eval[:, :, 2] = ar_points[None, :]
 
             try:
-                ires = interpn(crds, data, eval, **self.intp_pars)
+                ires = interpn(crds, data_arr, eval, **self.intp_pars)
             except ValueError as e:
                 print(f"\nStates '{self.name}': Interpolation error")
                 print("INPUT VARS: (heights, states, points)")
@@ -454,7 +497,7 @@ class OnePointFlowStates(States):
                     "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
                 )
                 raise e
-            del crds, eval, data, ar_points, ar_states
+            del crds, eval, data_arr, data_vars, ar_points, ar_states
 
             results = {}
             for v in self.output_point_vars(algo):
@@ -495,24 +538,29 @@ class OnePointFlowTimeseries(OnePointFlowStates):
     Inhomogeneous inflow from homogeneous timeseries data
     at one point
 
-    :group: input.states
 
     """
 
-    def __init__(self, ref_xy, *args, tl_heights=None, **kwargs):
+    def __init__(
+        self,
+        ref_xy: np.ndarray,
+        *args: Any,
+        tl_heights: np.ndarray | list[float] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        ref_xy: list of float
+        ref_xy
             The [x, y] or [x, y, z] coordinates of the base states.
             If [x, y, z] then z will serve as height
-        args: tuple, optional
+        args
             Parameters for the base class
-        tl_heights: list of float, optional
+        tl_heights
             The heights at which timelines will be calculated
-        kwargs: dict, optional
+        kwargs
             Parameters for the base class
 
         """
@@ -532,19 +580,18 @@ class OnePointFlowMultiHeightTimeseries(OnePointFlowStates):
     Inhomogeneous inflow from height dependent homogeneous
     timeseries data at one point
 
-    :group: input.states
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Parameters for the base class
-        kwargs: dict, optional
+        kwargs
             Parameters for the base class
 
         """
@@ -556,19 +603,18 @@ class OnePointFlowMultiHeightNCTimeseries(OnePointFlowStates):
     Inhomogeneous inflow from height dependent homogeneous
     timeseries data at one point based on NetCDF input
 
-    :group: input.states
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Parameters for the base class
-        kwargs: dict, optional
+        kwargs
             Parameters for the base class
 
         """

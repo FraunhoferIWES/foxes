@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from xarray import Dataset
+from typing import Any, TYPE_CHECKING, cast
 import matplotlib.pyplot as plt
 
 from foxes.config import get_output_path
@@ -8,74 +11,77 @@ import foxes.variables as FV
 from .flow_plots import FlowPlots2D
 from ..animation import Animator
 
+if TYPE_CHECKING:
+    from foxes.core import Algorithm, FData, MData, TData
+
 
 def write_chunk_ani_xy(
-    algo,
-    mdata,
-    fdata,
-    tdata=None,
-    vars=[FV.WS],
-    resolution=100,
-    figsize=(8, 8),
-    fpath_base="chunk_animation.gif",
-    n_img_points=None,
-    xmin=None,
-    ymin=None,
-    xmax=None,
-    ymax=None,
-    z=None,
-    xspace=500.0,
-    yspace=500.0,
-    states_sel=None,
-    states_isel=None,
-    fps=4,
-    **kwargs,
-):
+    algo: Algorithm,
+    mdata: MData,
+    fdata: FData,
+    tdata: TData | None = None,
+    vars: list[str] = [FV.WS],
+    resolution: float = 100.0,
+    figsize: tuple[int, int] = (8, 8),
+    fpath_base: str = "chunk_animation.gif",
+    n_img_points: tuple[int, int] | None = None,
+    xmin: float | None = None,
+    ymin: float | None = None,
+    xmax: float | None = None,
+    ymax: float | None = None,
+    z: float | None = None,
+    xspace: float = 500.0,
+    yspace: float = 500.0,
+    states_sel: Any = None,
+    states_isel: Any = None,
+    fps: int = 4,
+    **kwargs: Any,
+) -> None:
     """
     Writes an animation of a chunk calculation to file.
 
     Parameters
     ----------
-    algo: foxes.core.Algorithm
+    algo
         The calculation algorithm
-    mdata: foxes.core.MData
+    mdata
         The model data
-    fdata: foxes.core.FData
+    fdata
         The farm data
-    tdata: foxes.core.TData, optional
+    tdata
         The point data, for point calculations
-    vars: list of str
+    vars
         The variables to be plotted
-    resolution: float
+    resolution
         The resolution of the plot
-    figsize: tuple of float
+    figsize
         The figure size
-    fpath_base: str
+    fpath_base
         The base name for the output files, including suffix,
         e.g. 'output/chunk_ani.gif' or 'output/chunk_ani.mp4'
-    n_img_points: int, optional
+    n_img_points
         The number of image points, or `None` for automatic
-    xmin: float, optional
+    xmin
         The minimum x coordinate, or `None` for automatic
-    ymin: float, optional
+    ymin
         The minimum y coordinate, or `None` for automatic
-    xmax: float, optional
+    xmax
         The maximum x coordinate, or `None` for automatic
-    ymax: float, optional
+    ymax
         The maximum y coordinate, or `None` for automatic
-    z: float, optional
+    z
         The z coordinate of the slice, or `None` for automatic
-    xspace: float
+    xspace
         The spacing in x direction if xmin/xmax are automatic
-    yspace: float
+    yspace
         The spacing in y direction if ymin/ymax are automatic
-    states_sel: list, optional
+    states_sel
         Reduce to selected states
-    states_isel: list, optional
+    states_isel
         Reduce to the selected states indices
-    fps: int
+    fps
         The frames per second for the animation
-    kwargs: dict
+    kwargs
         Additional keyword arguments for the plotting function
 
     """
@@ -83,14 +89,14 @@ def write_chunk_ani_xy(
     if mdata is not None and fdata is not None and tdata is None:
         try:
             if states_isel is not None:
-                mdata = mdata.get_slice(FC.STATE, states_isel, force=True)
-                fdata = fdata.get_slice(FC.STATE, states_isel, force=True)
+                mdata = cast(MData, mdata.get_slice(FC.STATE, states_isel, force=True))
+                fdata = cast(FData, fdata.get_slice(FC.STATE, states_isel, force=True))
             if states_sel is not None:
-                s = [
-                    i for i in range(mdata.n_states) if mdata[FC.STATE][i] in states_sel
-                ]
-                mdata = mdata.get_slice(FC.STATE, s, force=True)
-                fdata = fdata.get_slice(FC.STATE, s, force=True)
+                n_states = mdata.n_states
+                assert n_states is not None
+                s = [i for i in range(n_states) if mdata[FC.STATE][i] in states_sel]
+                mdata = cast(MData, mdata.get_slice(FC.STATE, s, force=True))
+                fdata = cast(FData, fdata.get_slice(FC.STATE, s, force=True))
         except IndexError:
             return
 
@@ -103,11 +109,11 @@ def write_chunk_ani_xy(
             coords={FC.STATE: fdata[FC.STATE]},
         )
 
-        fpath_base = get_output_path(fpath_base)
-        odir = fpath_base.parent
+        fpath = get_output_path(fpath_base)
+        odir = fpath.parent
         odir.mkdir(parents=True, exist_ok=True)
-        base_name = fpath_base.stem
-        suffix = fpath_base.suffix
+        base_name = fpath.stem
+        suffix = fpath.suffix
 
         for var in vars:
             chunki = mdata.chunki_states

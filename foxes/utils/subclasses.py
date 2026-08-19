@@ -1,19 +1,23 @@
-def all_subclasses(cls):
+from typing import Any, TypeVar, cast
+
+T = TypeVar("T")
+
+
+def all_subclasses(cls: type[Any]) -> set[type[Any]]:
     """
     Searches all classes derived from some
     base class.
 
     Parameters
     ----------
-    cls: class
+    cls
         The base class
 
     Returns
     -------
-    list of class:
+    The derived classes
         The derived classes
 
-    :group: utils
 
     """
     return set(cls.__subclasses__()).union(
@@ -21,23 +25,22 @@ def all_subclasses(cls):
     )
 
 
-def new_cls(base_cls, cls_name):
+def new_cls(base_cls: type[Any], cls_name: str | None) -> type[Any] | None:
     """
     Run-time class selector.
 
     Parameters
     ----------
-    base_cls: object
+    base_cls
         The base class
-    cls_name: string
+    cls_name
         Name of the class
 
     Returns
     -------
-    cls: object
+    cls
         The derived class
 
-    :group: utils
 
     """
 
@@ -51,6 +54,9 @@ def new_cls(base_cls, cls_name):
         for scls in allc:
             if scls.__name__ == cls_name:
                 return scls
+        raise RuntimeError(
+            f"Class lookup inconsistency for '{cls_name}' in '{base_cls.__name__}'"
+        )
 
     else:
         estr = "Class '{}' not found, available classes derived from '{}' are \n {}".format(
@@ -59,27 +65,28 @@ def new_cls(base_cls, cls_name):
         raise KeyError(estr)
 
 
-def new_instance(base_cls, cls_name, *args, **kwargs):
+def new_instance(
+    base_cls: type[T], cls_name: str | None, *args: Any, **kwargs: Any
+) -> T | None:
     """
     Run-time factory.
 
     Parameters
     ----------
-    base_cls: object
+    base_cls
         The base class
-    cls_name: string
+    cls_name
         Name of the class
-    args: tuple, optional
+    args
         Additional parameters for the constructor
-    kwargs: dict, optional
+    kwargs
         Additional parameters for the constructor
 
     Returns
     -------
-    obj: object
+    obj
         The instance of the derived class
 
-    :group: utils
 
     """
 
@@ -87,4 +94,4 @@ def new_instance(base_cls, cls_name, *args, **kwargs):
     if cls is None:
         return None
     else:
-        return cls(*args, **kwargs)
+        return cast(T, cls(*args, **kwargs))

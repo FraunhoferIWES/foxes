@@ -1,5 +1,9 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from abc import abstractmethod
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.config import config
 from foxes.utils import wd2uv, uv2wd, new_instance
@@ -9,6 +13,10 @@ import foxes.constants as FC
 
 from .data import TData
 from .farm_data_model import FarmDataModel
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class RotorModel(FarmDataModel):
@@ -21,146 +29,152 @@ class RotorModel(FarmDataModel):
 
     Attributes
     ----------
-    calc_vars: list of str
+    calc_vars
         The variables that are calculated by the model
         (Their ambients are added automatically)
 
-    :group: core
 
     """
 
-    def __init__(self, calc_vars=None):
+    def __init__(self, calc_vars: list[str] | None = None) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        calc_vars: list of str, optional
-            The variables that are calculated by the model
-            (Their ambients are added automatically)
+        calc_vars
+            The variables calculated by the model. Their ambients are added
+            automatically.
 
         """
         super().__init__()
         self.calc_vars = calc_vars
 
     @abstractmethod
-    def input_variables(self):
+    def input_variables(self) -> list[str]:
         """
-        The input variables which are required by the model.
+        Return the input variables required by the model.
 
         Returns
         -------
-        input_vars: list of str
-            The input variable names
+        input_vars
+            The input variable names.
 
         """
         pass
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
-        The variables which are being modified by the model.
+        Return the variables modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
+        algo
+            The calculation algorithm.
 
         Returns
         -------
-        output_vars: list of str
-            The output variable names
+        output_vars
+            The output variable names.
 
         """
+        states = algo.states
+        farm_controller = algo.farm_controller
+
         if self.calc_vars is None:
-            vrs = algo.states.output_point_vars(algo)
+            calc_vars: list[str]
+            vrs = states.output_point_vars(algo)
             assert FV.WEIGHT not in vrs, (
-                f"Rotor '{self.name}': States '{algo.states.name}' output_point_vars contain '{FV.WEIGHT}', please remove"
+                f"Rotor '{self.name}': States '{states.name}' output_point_vars contain '{FV.WEIGHT}', please remove"
             )
 
             if FV.WS in vrs:
-                self.calc_vars = [FV.REWS] + [v for v in vrs if v != FV.WS]
+                calc_vars = [FV.REWS] + [v for v in vrs if v != FV.WS]
             else:
-                self.calc_vars = vrs
+                calc_vars = list(vrs)
 
-            if algo.farm_controller.needs_rews2() and FV.REWS2 not in self.calc_vars:
-                self.calc_vars.append(FV.REWS2)
-            if algo.farm_controller.needs_rews3() and FV.REWS3 not in self.calc_vars:
-                self.calc_vars.append(FV.REWS3)
+            if farm_controller.needs_rews2() and FV.REWS2 not in calc_vars:
+                calc_vars.append(FV.REWS2)
+            if farm_controller.needs_rews3() and FV.REWS3 not in calc_vars:
+                calc_vars.append(FV.REWS3)
 
-            self.calc_vars = sorted(self.calc_vars)
+            calc_vars = sorted(calc_vars)
+        else:
+            calc_vars = list(self.calc_vars)
 
-        self.calc_vars = [v for v in self.calc_vars if v not in self.input_variables()]
+        calc_vars = [v for v in calc_vars if v not in self.input_variables()]
 
-        if FV.WEIGHT not in self.calc_vars:
-            self.calc_vars.append(FV.WEIGHT)
+        if FV.WEIGHT not in calc_vars:
+            calc_vars.append(FV.WEIGHT)
 
-        return self.calc_vars
+        self.calc_vars = calc_vars
+        return calc_vars
 
     @abstractmethod
-    def n_rotor_points(self):
+    def n_rotor_points(self) -> int:
         """
-        The number of rotor points
+        Return the number of rotor points.
 
         Returns
         -------
-        n_rpoints: int
-            The number of rotor points
+        n_rpoints
+            The number of rotor points.
 
         """
         pass
 
     @abstractmethod
-    def rotor_point_weights(self):
+    def rotor_point_weights(self) -> np.ndarray:
         """
-        The weights of the rotor points
+        Return the weights of the rotor points.
 
         Returns
         -------
-        weights: numpy.ndarray
-            The weights of the rotor points,
-            add to one, shape: (n_rpoints,)
+        weights
+            The rotor-point weights, which sum to one and have shape
+            ``(n_rpoints,)``.
 
         """
         pass
 
     @abstractmethod
-    def design_points(self):
+    def design_points(self) -> np.ndarray:
         """
-        The rotor model design points.
+        Return the rotor-model design points.
 
-        Design points are formulated in rotor plane
-        (x,y,z)-coordinates in rotor frame, such that
-        - (0,0,0) is the centre point,
-        - (1,0,0) is the point radius * n_rotor_axis
-        - (0,1,0) is the point radius * n_rotor_side
-        - (0,0,1) is the point radius * n_rotor_up
+        Design points are formulated in rotor-plane ``(x, y, z)`` coordinates in
+        the rotor frame, such that ``(0, 0, 0)`` is the center point,
+        ``(1, 0, 0)`` is the point radius times ``n_rotor_axis``,
+        ``(0, 1, 0)`` is the point radius times ``n_rotor_side``, and
+        ``(0, 0, 1)`` is the point radius times ``n_rotor_up``.
 
         Returns
         -------
-        dpoints: numpy.ndarray
-            The design points, shape: (n_points, 3)
+        dpoints
+            The design points with shape ``(n_points, 3)``.
 
         """
         pass
 
-    def get_rotor_points(self, algo, mdata, fdata):
+    def get_rotor_points(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> np.ndarray:
         """
-        Calculates rotor points from design points.
+        Calculate rotor points from design points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
 
         Returns
         -------
-        points: numpy.ndarray
-            The rotor points, shape:
-            (n_states, n_turbines, n_rpoints, 3)
+        points
+            The rotor points with shape ``(n_states, n_turbines, n_rpoints, 3)``.
 
         """
 
@@ -170,14 +184,16 @@ class RotorModel(FarmDataModel):
         dpoints = self.design_points()
         D = fdata[FV.D]
 
-        rax = np.zeros((n_states, n_turbines, 3, 3), dtype=config.dtype_double)
+        rax: np.ndarray = np.zeros(
+            (n_states, n_turbines, 3, 3), dtype=config.dtype_double
+        )
         n = rax[:, :, 0, 0:2]
         m = rax[:, :, 1, 0:2]
         n[:] = wd2uv(fdata[FV.YAW], axis=-1)
         m[:] = np.stack([-n[:, :, 1], n[:, :, 0]], axis=-1)
         rax[:, :, 2, 2] = 1
 
-        points = np.zeros(
+        points: np.ndarray = np.zeros(
             (n_states, n_turbines, n_points, 3), dtype=config.dtype_double
         )
         points[:] = fdata[FV.TXYH][:, :, None, :]
@@ -187,7 +203,13 @@ class RotorModel(FarmDataModel):
 
         return points
 
-    def _set_res(self, fdata, v, res, downwind_index):
+    def _set_res(
+        self,
+        fdata: FData,
+        v: str,
+        res: np.ndarray,
+        downwind_index: int | None,
+    ) -> None:
         """
         Helper function for results setting
         """
@@ -200,45 +222,48 @@ class RotorModel(FarmDataModel):
 
     def eval_rpoint_results(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        rpoint_weights,
-        downwind_index=None,
-        copy_to_ambient=False,
-        set_wd=False,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        rpoint_weights: np.ndarray,
+        downwind_index: int | None = None,
+        copy_to_ambient: bool = False,
+        set_wd: bool = False,
+    ) -> None:
         """
-        Evaluate rotor point results.
+        Evaluate rotor-point results.
 
-        This function modifies `fdata`, either
-        for all turbines or one turbine per state,
-        depending on parameter `states_turbine`. In
-        the latter case, the turbine dimension of the
-        `rpoint_results` is expected to have size one.
+        This function modifies ``fdata`` for either all turbines or one turbine
+        per state, depending on the ``states_turbine`` setting. In the latter
+        case, the turbine dimension of the rotor-point results is expected to have
+        size one.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
-        rpoint_weights: numpy.ndarray
-            The rotor point weights, shape: (n_rpoints,)
-        downwind_index: int, optional
-            The index in the downwind order
-        copy_to_ambient: bool
-            If `True`, the fdata results are copied to ambient
-            variables after calculation
-        set_wd: bool
-            If `True`, the wind direction is updated
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        tdata
+            The target-point data.
+        rpoint_weights
+            The rotor-point weights with shape ``(n_rpoints,)``.
+        downwind_index
+            The index in the downwind order.
+        copy_to_ambient
+            If ``True``, the ``fdata`` results are copied to ambient variables
+            after calculation.
+        set_wd
+            If ``True``, the wind direction is updated.
 
         """
+        if self.calc_vars is None:
+            self.output_farm_vars(algo)
+        assert self.calc_vars is not None
+
         for v in [FV.REWS2, FV.REWS3]:
             if v in fdata and v not in self.calc_vars:
                 self.calc_vars.append(v)
@@ -263,10 +288,12 @@ class RotorModel(FarmDataModel):
         for v in self.calc_vars:
             if (set_wd and v == FV.WD) or v == FV.YAW:
                 if wd is None:
+                    assert uv is not None
                     wd = uv2wd(uv, axis=-1)
                 self._set_res(fdata, v, wd, downwind_index)
                 vdone.append(v)
             elif v == FV.WS:
+                assert uv is not None
                 ws = np.linalg.norm(uv, axis=-1)
                 self._set_res(fdata, v, ws, downwind_index)
                 del ws
@@ -278,6 +305,7 @@ class RotorModel(FarmDataModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
+            assert uvp is not None
             if downwind_index is None:
                 yaw = fdata[FV.YAW].copy()
             else:
@@ -350,41 +378,41 @@ class RotorModel(FarmDataModel):
 
     def calculate(
         self,
-        algo,
-        mdata,
-        fdata,
-        rpoints=None,
-        rpoint_weights=None,
-        store=False,
-        downwind_index=None,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        rpoints: np.ndarray | None = None,
+        rpoint_weights: np.ndarray | None = None,
+        store: bool = False,
+        downwind_index: int | None = None,
+    ) -> dict[str, np.ndarray]:
         """
-        Calculate ambient rotor effective results.
+        Calculate ambient rotor-effective results.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        rpoints: numpy.ndarray, optional
-            The rotor points, or None for automatic for
-            this rotor. Shape: (n_states, n_turbines, n_rpoints, 3)
-        rpoint_weights: numpy.ndarray, optional
-            The rotor point weights, or None for automatic
-            for this rotor. Shape: (n_rpoints,)
-        store: bool, optional
-            Flag for storing ambient rotor point results
-        downwind_index: int, optional
-            Only compute for index in the downwind order
+        algo
+            The calculation algorithm.
+        mdata
+            The model data.
+        fdata
+            The farm data.
+        rpoints
+            The rotor points, or ``None`` for automatic selection for this rotor.
+            Shape is ``(n_states, n_turbines, n_rpoints, 3)``.
+        rpoint_weights
+            The rotor-point weights, or ``None`` for automatic selection for this
+            rotor. Shape is ``(n_rpoints,)``.
+        store
+            Flag for storing ambient rotor-point results.
+        downwind_index
+            Only compute for the selected index in the downwind order.
 
         Returns
         -------
-        results: dict
-            results dict. Keys: Variable name str. Values:
-            numpy.ndarray with results, shape: (n_states, n_turbines)
+        results
+            A dictionary of results keyed by variable name. Values are NumPy
+            arrays with shape ``(n_states, n_turbines)``.
 
         """
         self.ensure_output_vars(algo, fdata)
@@ -393,6 +421,7 @@ class RotorModel(FarmDataModel):
             rpoints = mdata.get(
                 FC.ROTOR_POINTS, self.get_rotor_points(algo, mdata, fdata)
             )
+        assert isinstance(rpoints, np.ndarray)
         if downwind_index is not None:
             rpoints = rpoints[:, downwind_index, None]
         if rpoint_weights is None:
@@ -403,9 +432,11 @@ class RotorModel(FarmDataModel):
                 dims=(FC.ROTOR_POINT,),
                 mdata=mdata,
             )
+        assert isinstance(rpoint_weights, np.ndarray)
 
-        tdata = TData.from_tpoints(rpoints, rpoint_weights)
-        svars = algo.states.output_point_vars(algo)
+        tdata = cast(TData, TData.from_tpoints(rpoints, rpoint_weights))
+        states = algo.states
+        svars = states.output_point_vars(algo)
         for v in svars:
             tdata.add(
                 v,
@@ -413,11 +444,11 @@ class RotorModel(FarmDataModel):
                 dims=(FC.STATE, FC.TARGET, FC.TPOINT),
             )
 
-        sres = algo.states.calculate(algo, mdata, fdata, tdata)
+        sres = states.calculate(algo, mdata, fdata, tdata)
         tdata.update(sres)
         if FV.WEIGHT not in tdata:
             raise KeyError(
-                f"Rotor '{self.name}': States '{algo.states.name}' failed to provide '{FV.WEIGHT}' in tdata"
+                f"Rotor '{self.name}': States '{states.name}' failed to provide '{FV.WEIGHT}' in tdata"
             )
 
         if store:
@@ -436,9 +467,10 @@ class RotorModel(FarmDataModel):
                 mdata=mdata,
                 subset=s,
             )
-            if (
-                downwind_index is None
-                or algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata).shape[1] > 1
+            if downwind_index is None or (
+                (weight_res := algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata))
+                is not None
+                and weight_res.shape[1] > 1
             ):
                 algo.add_to_chunk_store(
                     FC.WEIGHT_RES,
@@ -463,18 +495,18 @@ class RotorModel(FarmDataModel):
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
     @classmethod
-    def new(cls, rmodel_type, *args, **kwargs):
+    def new(cls, rmodel_type: str, *args: Any, **kwargs: Any) -> RotorModel:
         """
         Run-time rotor model factory.
 
         Parameters
         ----------
-        rmodel_type: str
+        rmodel_type
             The selected derived class name
-        args: tuple, optional
+        args
             Additional parameters for constructor
-        kwargs: dict, optional
+        kwargs
             Additional parameters for constructor
 
         """
-        return new_instance(cls, rmodel_type, *args, **kwargs)
+        return cast(RotorModel, new_instance(cls, rmodel_type, *args, **kwargs))

@@ -1,24 +1,29 @@
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import Ellipse
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from typing import Any
 
 from foxes.utils import wd2uv
 
 
 def _draw_rotor_overlay(
-    hax,
-    show_rotor_dict,
-    xlabel,
-    ylabel,
-    rotor_plane,
-    rotor_slice,
-    animated,
-):
+    hax: Any,
+    show_rotor_dict: dict[str, Any],
+    xlabel: str | None,
+    ylabel: str | None,
+    rotor_plane: str | None,
+    rotor_slice: dict[str, Any] | None,
+    animated: bool,
+) -> list[Any]:
     """
     Draw rotor overlay markers and return created matplotlib artists.
     """
-    imr = []
+    imr: list[Any] = []
     data_dict = show_rotor_dict
 
     # Optionally filter turbines to the currently plotted x/y slice.
@@ -124,100 +129,100 @@ def _draw_rotor_overlay(
 
 
 def get_fig(
-    var,
-    data,
-    si,
-    s,
-    x_pos,
-    y_pos,
-    fig=None,
-    figsize=None,
-    ax=None,
-    levels=None,
-    cmap=None,
-    xlabel=None,
-    ylabel=None,
-    title=None,
-    add_bar=True,
-    vlabel=None,
-    ret_state=False,
-    ret_im=False,
-    vmin=None,
-    vmax=None,
-    quiv=None,
-    invert_axis=None,
-    animated=False,
-    show_rotor_dict=None,
-    rotor_plane=None,
-    rotor_slice=None,
-):
+    var: str,
+    data: np.ndarray,
+    si: int,
+    s: Any,
+    x_pos: np.ndarray,
+    y_pos: np.ndarray,
+    fig: Figure | None = None,
+    figsize: tuple[int, int] | None = None,
+    ax: Axes | None = None,
+    levels: int | None = None,
+    cmap: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    title: str | None = None,
+    add_bar: bool = True,
+    vlabel: str | None = None,
+    ret_state: bool = False,
+    ret_im: bool = False,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    quiv: Any = None,
+    invert_axis: str | None = None,
+    animated: bool = False,
+    show_rotor_dict: dict[str, Any] | None = None,
+    rotor_plane: str | None = None,
+    rotor_slice: dict[str, Any] | None = None,
+) -> Any:
     """
     Helper function that creates the flow image plot.
 
     Parameters
     ----------
-    var: str
+    var
         The variable name
-    fig: plt.Figure, optional
+    fig
         The figure object
-    figsize: tuple
+    figsize
         The figsize for plt.Figure
-    ax: plt.Axes, optional
+    ax
         The figure axes
-    data: numpy.ndarray
+    data
         The grid data to plot, shape: (n_states, n_x, x_y)
-    si: int, optional
+    si
         The state counter
-    s: object
+    s
         The state index
-    levels: int
+    levels
         The number of levels for the contourf plot,
         or None for non-contour image
-    x_pos: numpy.ndarray
+    x_pos
         The grid x positions, shape: (n_x, 3)
-    y_pos: numpy.ndarray
+    y_pos
         The grid y positions, shape: (n_y, 3)
-    xlabel: str, optional
+    xlabel
         The x axis label
-    ylabel: str, optional
+    ylabel
         The y axis label
-    title: str, optional
+    title
         The title
-    add_bar: bool
+    add_bar
         Add a color bar
-    vlabel: str, optional
+    vlabel
         The variable label
-    ret_state: bool
+    ret_state
         Flag for state index return
-    ret_im: bool
+    ret_im
         Flag for image return
-    vmin: float, optional
+    vmin
         The minimal variable value
-    vmax: float, optional
+    vmax
         The maximal variable value
-    quiv: tuple, optional
+    quiv
         The quiver data: (n, pars, wd, ws)
-    invert_axis: str, optional
+    invert_axis
         Which axis to invert, either x or y
-    animated: bool
+    animated
         Switch for usage for an animation
-    show_rotor_dict: dict, optional
+    show_rotor_dict
         Parameters for indicating the rotor plane
         by a line in xy or by projected disk markers
         (ellipse/circle, and line for edge-on) in xz/yz
-    rotor_plane: str, optional
+    rotor_plane
         The rotor plotting plane, one of xy, xz, yz
-    rotor_slice: dict, optional
+    rotor_slice
         Optional slice filter for rotor plotting, with keys:
         axis (x or y), value (float), tol (float)
 
     Yields
     ------
-    fig: matplotlib.Figure
+    fig
         The figure object
-    si: int, optional
+    si
         The state index
-    im: tuple, optional
+    im
         The image objects, matplotlib.collections.QuadMesh
         or matplotlib.QuadContourSet
 
@@ -240,7 +245,7 @@ def get_fig(
 
     # raw data image:
     if levels is None:
-        im = hax.pcolormesh(
+        im: Any = hax.pcolormesh(
             x_pos,
             y_pos,
             zz,
@@ -291,7 +296,7 @@ def get_fig(
     hax.set_xlim(x_pos.min(), x_pos.max())
     hax.set_ylim(y_pos.min(), y_pos.max())
 
-    ttl = None
+    ttl: Any = None
     if animated:
         if title is None:
             if hasattr(s, "dtype") and np.issubdtype(s.dtype, np.datetime64):
@@ -336,7 +341,7 @@ def get_fig(
         cax = divider.append_axes("right", size="5%", pad=0.05)
         vlab = vlabel if vlabel is not None else var
         hfig.colorbar(im, cax=cax, orientation="vertical", label=vlab)
-        out = hfig
+        out: Any = hfig
     else:
         out = fig
 

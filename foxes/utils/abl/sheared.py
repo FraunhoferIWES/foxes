@@ -1,24 +1,28 @@
-def calc_ws(height, height0, WS0, shear):
+def calc_ws(
+    height: float,
+    height0: float,
+    WS0: float,
+    shear: float,
+) -> float:
     """
     Calculate wind speeds at given height
 
     Parameters
     ----------
-    height: float
+    height
         The evaluation height
-    height0: float
+    height0
         Reference height
-    WS0: float
+    WS0
         Reference wind speed
-    shear: float
+    shear
         Shear exponent
 
     Returns
     -------
-    ws: float
+    ws
         The wind speed
 
-    :group: utils.abl.sheared
 
     """
     return WS0 * (height / height0) ** shear

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import numpy as np
+
 from foxes.core import AxialInductionModel
 
 
@@ -15,28 +19,29 @@ class MadsenAxialInduction(AxialInductionModel):
 
     Attributes
     ----------
-    k1: float
+    k1
         Model coefficient
-    k2: float
+    k2
         Model coefficient
-    k3: float
+    k3
         Model coefficient
 
-    :group: models.axial_induction
 
     """
 
-    def __init__(self, k1=0.2460, k2=0.0586, k3=0.0883):
+    def __init__(
+        self, k1: float = 0.2460, k2: float = 0.0586, k3: float = 0.0883
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        k1: float
+        k1
             Model coefficient
-        k2: float
+        k2
             Model coefficient
-        k3: float
+        k3
             Model coefficient
 
         """
@@ -45,18 +50,18 @@ class MadsenAxialInduction(AxialInductionModel):
         self.k2 = k2
         self.k3 = k3
 
-    def ct2a(self, ct):
+    def ct2a(self, ct: np.ndarray | float) -> np.ndarray | float:
         """
         Computes induction from ct
 
         Parameters
         ----------
-        ct: numpy.ndarray or float
+        ct
             The ct values
 
         Returns
         -------
-        ct: numpy.ndarray or float
+        ct
             The induction values
 
         """

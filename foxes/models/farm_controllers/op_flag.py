@@ -1,10 +1,19 @@
+from __future__ import annotations
+# mypy: disable-error-code=override
+
 import numpy as np
 from xarray import open_dataset, Dataset
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import FarmController
 from foxes.config import config
 import foxes.constants as FC
 import foxes.variables as FV
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
+    from foxes.core.model import LoadedData
 
 
 class OpFlagController(FarmController):
@@ -14,46 +23,45 @@ class OpFlagController(FarmController):
 
     Parameters
     ----------
-    non_op_values: dict
+    non_op_values
         The non-operational values for variables,
         keys: variable str, values: float
-    var2ncvar: dict
+    var2ncvar
         The mapping of variable names to NetCDF variable names,
         only needed if data_source is a path to a NetCDF file
 
-    :group: models.farm_controllers
 
     """
 
     def __init__(
         self,
-        data_source,
-        non_op_values=None,
-        var2ncvar={},
-        **kwargs,
-    ):
+        data_source: np.ndarray | str | Dataset,
+        non_op_values: dict[str, float] | None = None,
+        var2ncvar: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: numpy.ndarray or str
+        data_source
             The operating flag data, shape: (n_states, n_turbines),
             or path to a NetCDF file
-        non_op_values: dict, optional
+        non_op_values
             The non-operational values for variables,
             keys: variable str, values: float
-        var2ncvar: dict
+        var2ncvar
             The mapping of variable names to NetCDF variable names,
             only needed if data_source is a path to a NetCDF file
-        kwargs: dict, optional
+        kwargs
             Additional keyword arguments for the
             base class constructor
 
         """
         super().__init__(**kwargs)
         self.data_source = data_source
-        self.var2ncvar = var2ncvar
+        self.var2ncvar = {} if var2ncvar is None else var2ncvar
 
         self.non_op_values = {
             FV.P: 0.0,
@@ -62,20 +70,20 @@ class OpFlagController(FarmController):
         if non_op_values is not None:
             self.non_op_values.update(non_op_values)
 
-        self._op_flags = None
+        self._op_flags: np.ndarray | None = None
 
-    def output_farm_vars(self, algo):
+    def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
 
         Returns
         -------
-        output_vars: list of str
+        output_vars
             The output variable names
 
         """
@@ -83,7 +91,13 @@ class OpFlagController(FarmController):
         vrs.update([FV.OPERATING])
         return list(vrs)
 
-    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+    def load_data(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> None:
         """
         Load and/or create all model data that is subject to chunking.
 
@@ -93,16 +107,16 @@ class OpFlagController(FarmController):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        loaded_data: dict
+        loaded_data
             Data that has already been loaded, to be extended by this function.
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
-        force: bool
+        force
             Overwrite existing data
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -124,14 +138,19 @@ class OpFlagController(FarmController):
             self._op_flags = ds[cop].to_numpy()
             del ds
 
-        assert self._op_flags.shape == (algo.n_states, algo.n_turbines), (
-            f"OpFlagController data shape {self._op_flags.shape} does not match "
+        op_flags_data = self._op_flags
+        assert op_flags_data is not None
+        assert op_flags_data.shape == (algo.n_states, algo.n_turbines), (
+            f"OpFlagController data shape {op_flags_data.shape} does not match "
             f"(n_states, n_turbines)=({algo.n_states}, {algo.n_turbines})"
         )
-        op_flags = self._op_flags.astype(bool)
+        op_flags = op_flags_data.astype(bool)
 
         off = np.where(~op_flags)
-        for mi in range(len(self.turbine_model_names)):
+        turbine_model_names = self.turbine_model_names
+        tmall = self._tmall
+        assert turbine_model_names is not None and tmall is not None
+        for mi in range(len(turbine_model_names)):
             vsel = self._tmodel_sels_var(mi)
             if vsel in loaded_data["data_vars"]:
                 tsel = loaded_data["data_vars"][vsel][1]
@@ -141,10 +160,10 @@ class OpFlagController(FarmController):
 
             if np.all(tsel):
                 loaded_data["data_vars"].pop(vsel, None)
-                self._tmall[mi] = True
+                tmall[mi] = True
             else:
                 loaded_data["data_vars"][vsel] = ((FC.STATE, FC.TURBINE), tsel)
-                self._tmall[mi] = False
+                tmall[mi] = False
 
         loaded_data["data_vars"].pop(FC.TMODEL_SELS, None)
         loaded_data["data_vars"][FV.OPERATING] = (
@@ -152,7 +171,14 @@ class OpFlagController(FarmController):
             op_flags,
         )
 
-    def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        pre_rotor: bool,
+        downwind_index: int | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         The main model calculation.
 
@@ -161,23 +187,23 @@ class OpFlagController(FarmController):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        pre_rotor: bool
+        pre_rotor
             Flag for running pre-rotor or post-rotor
             models
-        downwind_index: int, optional
+        downwind_index
             The index in the downwind order
 
         Returns
         -------
-        results: dict
+        results
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_turbines)
+            Values have shape (n_states, n_turbines)
 
         """
         self.ensure_output_vars(algo, fdata)

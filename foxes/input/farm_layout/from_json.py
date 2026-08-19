@@ -1,31 +1,35 @@
 import json
 import numpy as np
 from copy import deepcopy
+from typing import Any
 
-from foxes.core import Turbine
+from foxes.core import Turbine, WindFarm
 from foxes.config import get_input_path
 
 
 def add_from_json(
-    farm, file_path, set_farm_name=True, verbosity=1, **turbine_parameters
-):
+    farm: WindFarm,
+    file_path: str,
+    set_farm_name: bool = True,
+    verbosity: int = 1,
+    **turbine_parameters: Any,
+) -> None:
     """
     Add turbimes from a json file.
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    file_path: str
+    file_path
         Path to the file
-    set_farm_name: bool
+    set_farm_name
         Flag for inferring wind farm name from data
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: dict, optional
+    turbine_parameters
         Parameters forwarded to `foxes.core.Turbine`
 
-    :group: input.farm_layout
 
     """
     fpath = get_input_path(file_path)

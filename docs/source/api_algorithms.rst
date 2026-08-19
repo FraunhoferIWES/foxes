@@ -2,13 +2,9 @@ foxes.algorithms
 ================
 Algorithms manage the calculation of farm and point results.
 
-    .. table::
-        :widths: auto
+.. toctree::
+    :maxdepth: 2
 
-        =========================== ====================================================
-        Algorithm                   Description
-        =========================== ====================================================
-        :ref:`Downwind algorithm`   Orders turbines in downwind direction, single sweep.
-        :ref:`Iterative algorithm`  Iterates until convergence has been reached.
-        :ref:`Sequential algorithm` Computes states as an iterator, not unsing chunks.
-        =========================== ====================================================
+    api_algorithms_downwind
+    api_algorithms_iterative
+    api_algorithms_sequential

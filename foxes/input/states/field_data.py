@@ -1,5 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import xarray as xr
+from typing import Any
+from numpy.typing import ArrayLike
+from foxes.core import Algorithm, LoadedData, MData
 
 from foxes.utils import weibull_weights, get_utm_zone, to_lonlat, from_lonlat
 from foxes.config import config, get_output_path
@@ -17,17 +21,17 @@ class FieldData(DatasetStates):
 
     Attributes
     ----------
-    states_coord: str
+    states_coord
         The states coordinate name in the data
-    x_coord: str
+    x_coord
         The x coordinate name in the data
-    y_coord: str
+    y_coord
         The y coordinate name in the data
-    h_coord: str
+    h_coord
         The height coordinate name in the data
-    weight_ncvar: str
+    weight_ncvar
         Name of the weight data variable in the nc file(s)
-    grid_point_plot: str, optional
+    grid_point_plot
         Path to a plot file, e.g. grid_points.png, to visualize the
         selected data grid points and the layout of the farm.
 
@@ -45,49 +49,50 @@ class FieldData(DatasetStates):
     >>>        ws       (state, h, y, x) float32 64B ...
     >>>        wd       (state, h, y, x) float32 64B ...
 
-    :group: input.states
 
     """
 
     def __init__(
         self,
-        *args,
-        states_coord="Time",
-        x_coord="UTMX",
-        y_coord="UTMY",
-        h_coord="height",
-        time_format=r"%Y-%m-%d_%H:%M:%S",
-        weight_ncvar=None,
-        grid_point_plot=None,
-        **kwargs,
-    ):
+        *args: Any,
+        states_coord: str = "Time",
+        x_coord: str = "UTMX",
+        y_coord: str = "UTMY",
+        h_coord: str | None = "height",
+        time_format: str | None = r"%Y-%m-%d_%H:%M:%S",
+        weight_ncvar: str | None = None,
+        grid_point_plot: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Arguments for the base class
-        states_coord: str
+        states_coord
             The states coordinate name in the data
-        x_coord: str
+        x_coord
             The x coordinate name in the data
-        y_coord: str
+        y_coord
             The y coordinate name in the data
-        h_coord: str, optional
+        h_coord
             The height coordinate name in the data
-        time_format: str
+        time_format
             The datetime parsing format string
-        weight_ncvar: str, optional
+        weight_ncvar
             Name of the weight data variable in the nc file(s)
-        grid_point_plot: str, optional
+        grid_point_plot
             Path to a plot file, e.g. grid_points.png, to visualize the
             selected data grid points and the layout of the farm.
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
-        super().__init__(*args, time_format=time_format, **kwargs)
+        kwargs.pop("time_format", None)
+        kwargs["time_format"] = time_format
+        super().__init__(*args, **kwargs)
         self.states_coord = states_coord
         self.x_coord = x_coord
         self.y_coord = y_coord
@@ -117,31 +122,31 @@ class FieldData(DatasetStates):
 
     def preproc_first(
         self,
-        algo,
-        data,
-        bounds_extra_space=None,
-        height_bounds=None,
-        loaded_data=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data: xr.Dataset,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
+        loaded_data: LoadedData | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Preprocesses the first file.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data: xarray.Dataset
+        data
             The dataset to preprocess
-        bounds_extra_space: float or str, optional
+        bounds_extra_space
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
+        height_bounds
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        loaded_data: dict, optional
+        loaded_data
             If given, optionally add to this loaded data dict with entries
             {"coords": {}, "data_vars": {}, "extra_data": {}}
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -186,7 +191,9 @@ class FieldData(DatasetStates):
                     marker=".",
                     linestyle="None",
                 )
-                anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+                wind_farm_names = algo.farm.wind_farm_names
+                assert wind_farm_names is not None
+                anno = 3 if len(wind_farm_names) > 1 else 0
                 FarmLayoutOutput(farm=algo.farm).get_figure(
                     fig=fig, ax=ax, annotate=anno, fontsize=12
                 )
@@ -204,56 +211,55 @@ class LatLonFieldData(DatasetStates):
 
     Attributes
     ----------
-    states_coord: str
+    states_coord
         The states coordinate name in the data
-    lat_coord: str
+    lat_coord
         The latitude coordinate name in the data
-    lon_coord: str
+    lon_coord
         The longitude coordinate name in the data
-    h_coord: str
+    h_coord
         The height coordinate name in the data
-    grid_point_plot: str, optional
+    grid_point_plot
         Path to a plot file, e.g. wrf_points.png, to visualize the
         selected grid points and the layout of the farm.
 
-    :group: input.states
 
     """
 
     def __init__(
         self,
-        data_source,
-        states_coord="Time",
-        lat_coord=FV.LAT,
-        lon_coord=FV.LON,
-        h_coord=None,
-        time_format=None,
-        grid_point_plot=None,
-        utm_zone=None,
-        **kwargs,
-    ):
+        data_source: Any,
+        states_coord: str = "Time",
+        lat_coord: str = FV.LAT,
+        lon_coord: str = FV.LON,
+        h_coord: str | None = None,
+        time_format: str | None = None,
+        grid_point_plot: str | None = None,
+        utm_zone: Any = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str
+        data_source
             The input netcdf file(s) containing, can contain
             wildcards, e.g. '*2025*.nc'
-        states_coord: str
+        states_coord
             The states coordinate name in the data
-        lat_coord: str
+        lat_coord
             The latitude coordinate name in the data
-        lon_coord: str
+        lon_coord
             The longitude coordinate name in the data
-        h_coord: str, optional
+        h_coord
             The height coordinate name in the data
-        time_format: str
+        time_format
             The datetime parsing format string
-        grid_point_plot: str, optional
+        grid_point_plot
             Path to a plot file, e.g. wrf_points.png, to visualize the
             selected grid points and the layout of the farm.
-        utm_zone: str or tuple, optional
+        utm_zone
             Method for setting UTM zone in config, if not already set.
             Options are:
             - "from_grid": get UTM zone from the centre of the (lon, lat) grid
@@ -261,10 +267,11 @@ class LatLonFieldData(DatasetStates):
             - (lon, lat): use given lon, lat values
             - None: do not set UTM zone, assume it is already set,
             typically during the wind farm creation.
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
+        kwargs.pop("time_format", None)
         super().__init__(
             data_source=data_source,
             time_format=time_format,
@@ -287,7 +294,9 @@ class LatLonFieldData(DatasetStates):
         if self.h_coord is not None:
             self._cmap[FV.H] = self.h_coord
 
-    def _find_xy_bounds(self, algo, bounds_extra_space):
+    def _find_xy_bounds(
+        self, algo: Algorithm, bounds_extra_space: float | str
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Helper function to determine x/y bounds with extra space."""
         return algo.farm.get_xy_bounds(
             extra_space=bounds_extra_space, algo=algo, lonlat=True
@@ -295,31 +304,31 @@ class LatLonFieldData(DatasetStates):
 
     def preproc_first(
         self,
-        algo,
-        data,
-        bounds_extra_space=None,
-        height_bounds=None,
-        loaded_data=None,
-        verbosity=0,
-    ):
+        algo: Algorithm,
+        data: xr.Dataset,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
+        loaded_data: LoadedData | None = None,
+        verbosity: int = 0,
+    ) -> None:
         """
         Preprocesses the first file.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        data: xarray.Dataset
+        data
             The dataset to preprocess
-        bounds_extra_space: float or str, optional
+        bounds_extra_space
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        height_bounds: tuple, optional
+        height_bounds
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        loaded_data: dict, optional
+        loaded_data
             If given, optionally add to this loaded data dict with entries
             {"coords": {}, "data_vars": {}, "extra_data": {}}
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         """
@@ -402,7 +411,9 @@ class LatLonFieldData(DatasetStates):
                     marker=".",
                     linestyle="None",
                 )
-                anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+                wind_farm_names = algo.farm.wind_farm_names
+                assert wind_farm_names is not None
+                anno = 3 if len(wind_farm_names) > 1 else 0
                 FarmLayoutOutput(farm=algo.farm).get_figure(
                     fig=fig, ax=ax, annotate=anno, fontsize=12
                 )
@@ -415,41 +426,41 @@ class LatLonFieldData(DatasetStates):
 
     def interpolate_data(
         self,
-        mdata,
-        idims,
-        d,
-        pts,
-        vrs,
-        state_indices=None,
-        gpts=None,
-    ):
+        mdata: MData,
+        idims: list[str],
+        d: np.ndarray,
+        pts: np.ndarray,
+        vrs: list[str],
+        state_indices: np.ndarray | None = None,
+        gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
+    ) -> np.ndarray:
         """
         Interpolates data to points.
 
         Parameters
         ----------
-        mdata: foxes.core.MData
+        mdata
             The model data
-        idims: list of str
+        idims
             The input dimensions, e.g. ['x', 'y', 'height']
-        d: numpy.ndarray
+        d
             The data array, with shape (n1, n2, ..., nv)
             where ni represents the dimension sizes of the ordered
             icoords keys, and nv is the number of variables
-        pts: numpy.ndarray
+        pts
             The points to interpolate to, with shape (n_pts, n_idims)
-        vrs: list of str
+        vrs
             The variable names, length nv
-        state_indices: numpy.ndarray, optional
+        state_indices
             The indices of the states, with shape (n_states,)
-        gpts: tuple of numpy.ndarray or numpy.ndarray
-            Either a list of 1D arrays for each dimension, or a single 2D array
+        gpts
+            Either one-dimensional arrays for each dimension, or a single array
             with shape (n_points, n_dims). If None, the grid points are extracted
             from mdata.
 
         Returns
         -------
-        d_interp: numpy.ndarray
+        d_interp
             The interpolated data array with shape (n_pts, nv)
 
         """
@@ -472,46 +483,48 @@ class WeibullField(FieldData):
 
     Attributes
     ----------
-    wd_coord: str
+    wd_coord
         The wind direction coordinate name
-    ws_coord: str
+    ws_coord
         The wind speed coordinate name, if wind speed bin
         centres are in data, else None
-    ws_bins: numpy.ndarray
+    ws_bins
         The wind speed bins, including
         lower and upper bounds, shape: (n_ws_bins+1,)
 
-    :group: input.states
 
     """
 
     def __init__(
         self,
-        *args,
-        wd_coord,
-        ws_coord=None,
-        ws_bins=None,
-        **kwargs,
-    ):
+        *args: Any,
+        wd_coord: str,
+        ws_coord: str | None = None,
+        ws_bins: ArrayLike | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        args: tuple, optional
+        args
             Positional arguments for the base class
-        wd_coord: str
+        wd_coord
             The wind direction coordinate name
-        ws_coord: str, optional
+        ws_coord
             The wind speed coordinate name, if wind speed bin
             centres are in data
-        ws_bins: list of float, optional
+        ws_bins
             The wind speed bins, including
             lower and upper bounds
-        kwargs: dict, optional
+        kwargs
             Keyword arguments for the base class
 
         """
+        kwargs.pop("states_coord", None)
+        kwargs.pop("time_format", None)
+        kwargs.pop("load_mode", None)
         super().__init__(
             *args,
             states_coord=wd_coord,
@@ -551,31 +564,39 @@ class WeibullField(FieldData):
         self._n_wd = None
         self._n_ws = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, cmap=None, verbosity=0):
+    def _read_ds(
+        self,
+        ds: xr.Dataset,
+        cmap: dict[str, str] | None = None,
+        verbosity: int = 0,
+    ) -> tuple[
+        dict[str, np.ndarray],
+        dict[str, tuple[tuple[str, ...], np.ndarray]],
+    ]:
         """
         Helper function for _get_data, extracts data from the original Dataset.
 
         Parameters
         ----------
-        ds: xarray.Dataset
+        ds
             The Dataset to read data from
-        cmap: dict, optional
+        cmap
             A mapping from foxes variable names to Dataset dimension names, if not given self._cmap will be used
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
 
         Returns
         -------
-        coords: dict
+        coords
             keys: Foxes variable names, values: 1D coordinate value arrays
-        data: dict
+        data
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
-            where dims is a tuple of dimension names and
-            data_array is a numpy.ndarray with the data values
+            where dims is a sequence of dimension names and
+            data_array contains the data values
 
         """
         # read data, using wd_coord as state coordinate
@@ -628,16 +649,16 @@ class WeibullField(FieldData):
         del wsb, ds
 
         # calculate Weibull weights
-        dms = [FV.WS, FV.WD]
-        shp = [n_ws, n_wd]
+        dimension_names: list[str] = [FV.WS, FV.WD]
+        shape: list[int] = [n_ws, n_wd]
         for c in [FV.X, FV.Y, FV.H]:
             for v in [FV.WEIBULL_A, FV.WEIBULL_k]:
                 if c in data0[v][0]:
-                    dms.append(c)
-                    shp.append(data0[v][1].shape[data0[v][0].index(c)])
+                    dimension_names.append(c)
+                    shape.append(data0[v][1].shape[data0[v][0].index(c)])
                     break
-        dms = tuple(dms)
-        shp = tuple(shp)
+        dms = tuple(dimension_names)
+        shp = tuple(shape)
         if data0[FV.WEIGHT][0] == dms:
             w = data0.pop(FV.WEIGHT)[1]
         else:
@@ -662,28 +683,29 @@ class WeibullField(FieldData):
         # translate binned data to states
         self._N = n_ws * n_wd
         self._inds = np.arange(self._N, dtype=config.dtype_int)
-        data = {
-            FV.WS: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
-            FV.WD: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
-        }
-        data[FV.WS][:] = wss[:, None]
-        data[FV.WD][:] = wd[None, :]
-        data[FV.WS] = ((FC.STATE,), data[FV.WS].reshape(self._N))
-        data[FV.WD] = ((FC.STATE,), data[FV.WD].reshape(self._N))
+        translated_data: dict[str, tuple[tuple[str, ...], np.ndarray]] = {}
+        ws_data: np.ndarray = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+        wd_data: np.ndarray = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+        ws_data[:] = wss[:, None]
+        wd_data[:] = wd[None, :]
+        translated_data[FV.WS] = ((FC.STATE,), ws_data.reshape(self._N))
+        translated_data[FV.WD] = ((FC.STATE,), wd_data.reshape(self._N))
         for v in list(data0.keys()):
             dims, d = data0.pop(v)
             if dims[0] == FV.WD:
                 dms = tuple([FC.STATE] + list(dims[1:]))
-                shp = [n_ws] + list(d.shape)
-                data[v] = np.zeros(shp, dtype=config.dtype_double)
-                data[v][:] = d[None, ...]
-                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
+                shape = [n_ws] + list(d.shape)
+                expanded_data: np.ndarray = np.zeros(shape, dtype=config.dtype_double)
+                expanded_data[:] = d[None, ...]
+                translated_data[v] = (
+                    dms,
+                    expanded_data.reshape([self._N] + shape[2:]),
+                )
             elif len(dims) >= 2 and dims[:2] == (FV.WS, FV.WD):
                 dms = tuple([FC.STATE] + list(dims[2:]))
-                shp = [self._N] + list(d.shape[2:])
-                data[v] = (dms, d.reshape(shp))
+                shape = [self._N] + list(d.shape[2:])
+                translated_data[v] = (dms, d.reshape(shape))
             else:
-                data[v] = (dims, d)
-        data0 = data
+                translated_data[v] = (dims, d)
 
-        return coords, data
+        return coords, translated_data

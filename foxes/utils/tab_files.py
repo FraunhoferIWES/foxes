@@ -1,26 +1,26 @@
 import numpy as np
 from xarray import Dataset
 from io import StringIO
+from pathlib import Path
 
 
-def read_tab_file(fname, normalize=True):
+def read_tab_file(fname: str | Path, normalize: bool = True) -> Dataset:
     """
     Reads a tab file into a Dataset
 
     Parameters
     ----------
-    fname: str
+    fname
         The path to the tab file
-    normalize: bool
+    normalize
         Normalize the frequencies such that
         they add to 1000 in each sector
 
     Returns
     -------
-    out: xarray.Dataset
+    out
         The data
 
-    :group: utils
 
     """
 
@@ -29,10 +29,10 @@ def read_tab_file(fname, normalize=True):
         header.append(f.readline().replace("\t", " ").strip())
         header.append(f.readline().replace("\t", " ").strip())
         header.append(f.readline().replace("\t", " ").strip())
-        sfreqs = f.readline().replace("\t", " ").strip()
+        sfreqs_text = f.readline().replace("\t", " ").strip()
         s = f.read().replace("\t", " ").strip()
     data = np.genfromtxt(StringIO(s))
-    sfreqs = np.fromstring(sfreqs, sep=" ")
+    sfreqs = np.fromstring(sfreqs_text, sep=" ")
 
     descr = header[0]
     lat, lon, height = np.fromstring(header[1], sep=" ")

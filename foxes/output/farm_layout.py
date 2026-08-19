@@ -1,13 +1,27 @@
+# mypy: disable-error-code=arg-type
+# mypy: disable-error-code=assignment
+# mypy: disable-error-code=misc
+# mypy: disable-error-code=union-attr
+
+from __future__ import annotations
+
 import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from xarray import Dataset
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
 from foxes.output.output import Output
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core import Algorithm, WindFarm
 
 
 class FarmLayoutOutput(Output):
@@ -16,46 +30,45 @@ class FarmLayoutOutput(Output):
 
     Attributes
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    fres: xarray.Dataset
+    fres
         The wind farm calculation results
-    from_res: bool
+    from_res
         Flag for coordinates from results data
-    results_state: int
+    results_state
         The state index, for from_res
-    D: float
+    D
         The rotor diameter, if not from data
 
-    :group: output
 
     """
 
     def __init__(
         self,
-        farm,
-        farm_results=None,
-        from_results=False,
-        results_state=None,
-        D=None,
-        **kwargs,
-    ):
+        farm: WindFarm,
+        farm_results: Dataset | None = None,
+        from_results: bool = False,
+        results_state: int | None = None,
+        D: float | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        farm: foxes.WindFarm
+        farm
             The wind farm
-        farm_results: xarray.Dataset, optional
+        farm_results
             The wind farm calculation results
-        from_results: bool, optional
+        from_results
             Flag for coordinates from results data
-        results_state: int, optional
+        results_state
             The state index, for from_res
-        D: float, optional
+        D
             The rotor diameter, if not from data
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -72,25 +85,27 @@ class FarmLayoutOutput(Output):
         if from_results and results_state is None:
             raise ValueError("Please specify results_state for switch from_results.")
 
-    def get_layout_data(self, lonlat=False):
+    def get_layout_data(self, lonlat: bool = False) -> np.ndarray:
         """
         Returns wind farm layout.
 
         Parameters
         ----------
-        lonlat: bool, optional
+        lonlat
             Flag for lonlat coordinates, if available
 
         Returns
         -------
-        numpy.ndarray :
+        Layout data:
             The wind farm layout, shape:
             (n_turbines, 3) where the 3
             represents x, y, h
 
         """
 
-        data = np.zeros([self.farm.n_turbines, 3], dtype=config.dtype_double)
+        data: np.ndarray = np.zeros(
+            [self.farm.n_turbines, 3], dtype=config.dtype_double
+        )
 
         if lonlat:
             if not self.farm.has_lonlat():
@@ -101,6 +116,7 @@ class FarmLayoutOutput(Output):
             data[:, 2] = [t.H for t in self.farm.turbines]
 
         elif self.from_res:
+            assert self.fres is not None
             data[:, 0] = self.fres[FV.X][self.rstate]
             data[:, 1] = self.fres[FV.Y][self.rstate]
             data[:, 2] = self.fres[FV.H][self.rstate]
@@ -112,7 +128,7 @@ class FarmLayoutOutput(Output):
 
         return data
 
-    def get_layout_dict(self):
+    def get_layout_dict(self) -> dict[str, dict[str, dict[str, Any]]]:
         """
         Returns wind farm layout.
 
@@ -126,10 +142,11 @@ class FarmLayoutOutput(Output):
 
         data = self.get_layout_data()
 
-        out = {self.farm.name: {}}
+        out: dict[str, dict[str, dict[str, Any]]] = {self.farm.name: {}}
         for ti, p in enumerate(data):
             t = self.farm.turbines[ti]
-            out[self.farm.name][t.name] = {
+            turbine_name = t.name or str(t.index)
+            out[self.farm.name][turbine_name] = {
                 "id": t.index,
                 "name": t.name,
                 "UTMX": p[0],
@@ -140,66 +157,66 @@ class FarmLayoutOutput(Output):
 
     def get_figure(
         self,
-        color_by=None,
-        fontsize=8,
-        figsize=None,
-        annotate=1,
-        title=None,
-        fig=None,
-        ax=None,
-        normalize_D=False,
-        ret_im=False,
-        bargs={},
-        anno_delx=0,
-        anno_dely=0,
-        lonlat=False,
-        **kwargs,
-    ):
+        color_by: str | None = None,
+        fontsize: int = 8,
+        figsize: Any = None,
+        annotate: int = 1,
+        title: str | None = None,
+        fig: Figure | None = None,
+        ax: Axes | None = None,
+        normalize_D: bool = False,
+        ret_im: bool = False,
+        bargs: dict[str, Any] | None = None,
+        anno_delx: float = 0,
+        anno_dely: float = 0,
+        lonlat: bool = False,
+        **kwargs: Any,
+    ) -> Any:
         """
         Creates farm layout figure.
 
         Parameters
         ----------
-        color_by: str, optional
+        color_by
             Set scatter color by variable results.
             Use "mean_REWS", etc, for means, also
             min, max, sum. All wrt states
-        fontsize: int, optional
+        fontsize
             Size of the turbine numbers
-        figsize: tuple, optional
+        figsize
             The figsize for plt.Figure
-        annotate: int, optional
+        annotate
             Turbine index printing, Choices:
             0 = No annotation
             1 = Turbine indices
             2 = Turbine names
             3 = Wind farm names
-        title: str, optional
+        title
             The plot title, or None for automatic
-        fig: matplotlib.pyplot.Figure, optional
+        fig
             The figure object to which to add
-        ax: matplotlib.pyplot.Axis, optional
+        ax
             The axis object, to which to add
-        normalize_D: bool
+        normalize_D
             Normalize x, y wrt rotor diameter
-        ret_im: bool
+        ret_im
             Flag for returned image object
-        bargs: dict
+        bargs
             Arguments for boundary plotting
-        anno_delx: float
+        anno_delx
             The annotation delta x
-        anno_dely: float
+        anno_dely
             The annotation delta y
-        lonlat: bool
+        lonlat
             Flag for lonlat coordinates, if available
-        kwargs: dict, optional
+        kwargs
             Parameters forwarded to `matplotlib.pyplot.scatter`
 
         Returns
         -------
-        ax: matplotlib.pyplot.Axis
+        ax
             The axis object
-        im: matplotlib.pyplot.PathCollection, optional
+        im
             The image object
 
         """
@@ -217,6 +234,7 @@ class FarmLayoutOutput(Output):
         if self.farm.n_turbines:
             if normalize_D and D is None:
                 if self.from_res:
+                    assert self.fres is not None
                     if self.fres[FV.D].min() != self.fres[FV.D].max():
                         raise ValueError(
                             f"Expecting uniform D, found {self.fres[FV.D]}"
@@ -352,18 +370,20 @@ class FarmLayoutOutput(Output):
 
         return ax
 
-    def write_plot(self, file_name=None, fontsize=8, **kwargs):
+    def write_plot(
+        self, file_name: str | None = None, fontsize: int = 8, **kwargs: Any
+    ) -> None:
         """
         Writes the layout plot to file.
 
         Parameters
         ----------
-        file_name: str
+        file_name
             Name of the file into which to plot, or None
             for default
-        fontsize: int
+        fontsize
             Size of the turbine numbers
-        kwargs: dict, optional
+        kwargs
             Additional arguments for get_figure()
 
         """
@@ -377,13 +397,13 @@ class FarmLayoutOutput(Output):
 
         plt.close(fig)
 
-    def write_xyh(self, file_path=None):
+    def write_xyh(self, file_path: str | None = None) -> None:
         """
         Writes xyh layout file.
 
         Parameters
         ----------
-        file_path: str
+        file_path
             The file into which to plot, or None
             for default
 
@@ -398,28 +418,28 @@ class FarmLayoutOutput(Output):
 
     def get_dataframe(
         self,
-        type_col=None,
-        algo=None,
-        col_farm="wind_farm",
-        col_cluster="cluster",
-    ):
+        type_col: str | None = None,
+        algo: Algorithm | None = None,
+        col_farm: str = "wind_farm",
+        col_cluster: str = "cluster",
+    ) -> pd.DataFrame:
         """
         Returns a pandas DataFrame with the layout data.
 
         Parameters
         ----------
-        type_col: str, optional
+        type_col
             Name of the turbine type column
-        algo: foxes.core.Algorithm, optional
+        algo
             The algorithm, needed for turbine types
-        col_farm: str, optional
+        col_farm
             The wind farm name column
-        col_cluster: str, optional
+        col_cluster
             The cluster name column
 
         Returns
         -------
-        lyt: pandas.DataFrame
+        lyt
             The layout data
 
         """
@@ -463,18 +483,20 @@ class FarmLayoutOutput(Output):
 
         return lyt
 
-    def write_csv(self, file_name=None, verbosity=1, **kwargs):
+    def write_csv(
+        self, file_name: str | None = None, verbosity: int = 1, **kwargs: Any
+    ) -> None:
         """
         Writes the layout data to csv file.
 
         Parameters
         ----------
-        file_name: str
+        file_name
             Name of the file into which to plot, or None
             for default
-        verbosity: int
+        verbosity
             The verbosity level, 0 = silent
-        kwargs: dict, optional
+        kwargs
             Additional arguments for get_dataframe()
 
         """
@@ -484,13 +506,13 @@ class FarmLayoutOutput(Output):
             print(f"Writing farm layout to '{fpath}'")
         self.get_dataframe(**kwargs).to_csv(fpath)
 
-    def write_json(self, file_name=None):
+    def write_json(self, file_name: str | None = None) -> None:
         """
         Writes xyh layout file.
 
         Parameters
         ----------
-        file_name: str
+        file_name
             Name of the file into which to plot, or None
             for default
 

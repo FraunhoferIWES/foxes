@@ -1,7 +1,10 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+from xarray import Dataset
 from inspect import signature
 from copy import deepcopy
+from pathlib import Path
+from typing import Any
 
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
@@ -13,65 +16,64 @@ import foxes.constants as FC
 
 
 def read_dict(
-    idict,
-    farm=None,
-    states=None,
-    mbook=None,
-    algo=None,
-    engine_pars=None,
-    iterative=None,
-    verbosity=None,
-    work_dir=None,
-    input_dir=None,
-    output_dir=None,
-    **algo_pars,
-):
+    idict: Dict[Any, Any],
+    farm: WindFarm | None = None,
+    states: States | None = None,
+    mbook: ModelBook | None = None,
+    algo: Algorithm | None = None,
+    engine_pars: dict[str, Any] | None = None,
+    iterative: bool | None = None,
+    verbosity: int | None = None,
+    work_dir: Path | str | None = None,
+    input_dir: Path | str | None = None,
+    output_dir: Path | str | None = None,
+    **algo_pars: Any,
+) -> tuple[Algorithm, Engine | None]:
     """
     Read dictionary input into foxes objects
 
     Parameters
     ----------
-    idict: foxes.utils.Dict
+    idict
         The input parameter dictionary
-    farm: foxes.core.WindFarm, optional
+    farm
         The wind farm, overrules settings from idict
-    states: foxes.core.States, optional
+    states
         The ambient states, overrules settings from idict
-    mbook: foxes.models.ModelBook, optional
+    mbook
         The model book, overrules settings from idict
-    algo: foxes.core.Algorithm, optional
+    algo
         The algorithm, overrules settings from idict
-    engine_pars: dict, optional
+    engine_pars
         Parameters for engine creation, overrules
         settings from idict
-    iterative: bool, optional
+    iterative
         Force iterative calculations, overrules
         settings from idict
-    verbosity: int, optional
+    verbosity
         Force a verbosity level, 0 = silent, overrules
         settings from idict
-    work_dir: str or pathlib.Path, optional
+    work_dir
         Path to the working directory
-    input_dir: str or pathlib.Path, optional
+    input_dir
         The default input directory
-    output_dir: str or pathlib.Path, optional
+    output_dir
         The default output directory
-    algo_pars: dict, optional
+    algo_pars
         Additional parameters for the algorithm, overrules
         settings from idict
 
     Returns
     -------
-    algo: foxes.core.Algorithm
+    algo
         The algorithm
-    engine: foxes.core.Engine
+    engine
         The engine, or None if not set
 
-    :group: input.yaml
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
@@ -110,7 +112,7 @@ def read_dict(
                 for s, mlst in mdict.items():
                     t = mbook.sources.get_item(s)
                     c = mbook.base_classes.get_item(s)
-                    ms = [
+                    ms: list[Dict[Any, Any]] = [
                         Dict(m, _name=f"{mdict.name}.s.{i}") for i, m in enumerate(mlst)
                     ]
                     for m in ms:
@@ -176,49 +178,50 @@ def read_dict(
 
 
 def get_output_obj(
-    ocls,
-    odict,
-    algo,
-    farm_results=None,
-    point_results=None,
-    base_class=Output,
-    extra_sig={},
-):
+    ocls: str,
+    odict: dict[str, Any],
+    algo: Algorithm | None,
+    farm_results: Dataset | None = None,
+    point_results: Any = None,
+    base_class: type[Output] = Output,
+    extra_sig: dict[str, Any] = {},
+) -> Output | None:
     """
     Create the output object
 
     Parameters
     ----------
-    ocls: str
+    ocls
         Name of the output class
-    odict: dict
+    odict
         The output dict
-    algo: foxes.core.Algorithm
+    algo
         The algorithm
-    farm_results: xarray.Dataset, optional
+    farm_results
         The farm results
-    point_results: xarray.Dataset, optional
+    point_results
         The point results
-    base_class: object
+    base_class
         The output's base class
-    extra_sig: dict
+    extra_sig
         Extra function signature check, sets
         arguments (key) with data (value)
 
     Returns
     -------
-    obj: object or None
+    obj
         The output object
 
-    :group: input.yaml
 
     """
     cls = new_cls(base_class, ocls)
+    assert cls is not None, f"Output class '{ocls}' was not found"
     prs = list(signature(cls.__init__).parameters.keys())
     if "algo" in prs:
         assert algo is not None, f"Output of type '{ocls}' requires algo"
         odict["algo"] = algo
     if "farm" in prs:
+        assert algo is not None, f"Output of type '{ocls}' requires algo"
         odict["farm"] = algo.farm
     if "farm_results" in prs:
         if farm_results is None:
@@ -234,7 +237,7 @@ def get_output_obj(
     return cls(**odict)
 
 
-def _get_object(results_storage, d):
+def _get_object(results_storage: dict[Any, Any], d: str) -> Any:
     """Helper function for object extraction"""
     d = d.replace("]", "")
     i0 = d.find("[")
@@ -246,44 +249,43 @@ def _get_object(results_storage, d):
 
 
 def run_obj_function(
-    obj,
-    fdict,
-    algo,
-    with_engine,
-    results_storage,
-    nofig=False,
-    verbosity=None,
-):
+    obj: Any,
+    fdict: Dict[Any, Any],
+    algo: Algorithm | None,
+    with_engine: bool,
+    results_storage: dict[Any, Any],
+    nofig: bool = False,
+    verbosity: int | None = None,
+) -> Any:
     """
     Runs a function of an object
 
     Parameters
     ----------
-    obj: object
+    obj
         The object
-    fdict: dict
+    fdict
         The function call dict
-    algo: foxes.core.Algorithm
+    algo
         The algorithm
-    with_engine: bool
+    with_engine
         Flag for running from within engine context
-    results_storage: dict
+    results_storage
         Storage for result variables
-    nofig: bool
+    nofig
         Do not show figures, overrules settings from fdict
-    verbosity: int, optional
+    verbosity
         The verbosity level, 0 = silent
 
     Returns
     -------
-    results: object
+    results
         The returns of the function
 
-    :group: input.yaml
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
@@ -303,6 +305,7 @@ def run_obj_function(
     if "algo" in prs:
         fdict["algo"] = algo
     if "farm" in prs:
+        assert algo is not None, f"Output of type '{ocls}' requires algo"
         fdict["farm"] = algo.farm
 
     # replace result labels by objects:
@@ -324,7 +327,7 @@ def run_obj_function(
     # store results under result labels:
     if rlbs is not None:
 
-        def _set_label(results_storage, k, r):
+        def _set_label(results_storage: dict[Any, Any], k: str, r: Any) -> None:
             if k not in ["", "none", "None", "_", "__"]:
                 assert k[0] == "$", (
                     f"Output of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
@@ -345,67 +348,66 @@ def run_obj_function(
 
 
 def run_outputs(
-    idict,
-    algo=None,
-    farm_results=None,
-    point_results=None,
-    with_engine=False,
-    extra_sig={},
-    results_storage=None,
-    ret_results_storage=False,
-    nofig=False,
-    verbosity=None,
-):
+    idict: Dict[Any, Any],
+    algo: Algorithm | None = None,
+    farm_results: Dataset | None = None,
+    point_results: Any = None,
+    with_engine: bool = False,
+    extra_sig: dict[str, Any] = {},
+    results_storage: Dict[Any, Any] | None = None,
+    ret_results_storage: bool = False,
+    nofig: bool = False,
+    verbosity: int | None = None,
+) -> tuple[list[tuple[dict[str, Any], list[Any] | None]], Dict[Any, Any]]:
     """
     Run outputs from dict.
 
     Parameters
     ----------
-    engine: foxes.core.Engine
+    engine
         The engine object
-    idict: foxes.utils.Dict
+    idict
         The input parameter dictionary
-    algo: foxes.core.Algorithm, optional
+    algo
         The algorithm
-    farm_results: xarray.Dataset, optional
+    farm_results
         The farm results
-    point_results: xarray.Dataset, optional
+    point_results
         The point results
-    with_engine: bool
+    with_engine
         Flag for running from within engine context
-    extra_sig: dict
+    extra_sig
         Extra function signature check, sets
         arguments (key) with data (value)
-    results_storage: dict, optional
+    results_storage
         Storage for result variables
-    ret_results_storage: bool
+    ret_results_storage
         Flag for returning results variables
-    nofig: bool
+    nofig
         Do not show figures, overrules settings from idict
-    verbosity: int, optional
+    verbosity
         The verbosity level, 0 = silent
 
     Returns
     -------
-    outputs: list of tuple
+    outputs
         For each output enty, a tuple (dict, results),
         where results is a list that represents one
         entry per function call
-    results_storage: dict, optional
+    results_storage
         The results variables
 
-    :group: input.yaml
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
     if results_storage is None:
         results_storage = Dict(_name="result_storage")
 
-    out = []
+    out: list[tuple[dict[str, Any], list[Any] | None]] = []
     if "outputs" in idict:
         odicts = idict["outputs"]
 
@@ -463,7 +465,7 @@ def run_outputs(
                 out.append((d0, None))
             else:
                 _print(f"Entering output {i}, {ocls} (with_engine={with_engine})")
-                fres = []
+                fres: list[Any | None] = []
                 for fdict, em in zip(flist, ematch):
                     if em:
                         results = (
@@ -490,46 +492,90 @@ def run_outputs(
     return out if not ret_results_storage else out, results_storage
 
 
-def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
+def run_dict(
+    idict: Dict[Any, Any],
+    farm: WindFarm | None = None,
+    states: States | None = None,
+    mbook: ModelBook | None = None,
+    algo: Algorithm | None = None,
+    engine_pars: dict[str, Any] | None = None,
+    iterative: bool | None = None,
+    nofig: bool = False,
+    verbosity: int | None = None,
+    work_dir: Path | str | None = None,
+    input_dir: Path | str | None = None,
+    output_dir: Path | str | None = None,
+    **algo_pars: Any,
+) -> tuple[Any, ...]:
     """
     Runs foxes from dictionary input
 
     Parameters
     ----------
-    idict: foxes.utils.Dict
+    idict
         The input parameter dictionary
-    args: tuple, optional
-        Additional parameters for read_dict
-    nofig: bool
+    farm
+        The wind farm, overrules settings from idict
+    states
+        The ambient states, overrules settings from idict
+    mbook
+        The model book, overrules settings from idict
+    algo
+        The algorithm, overrules settings from idict
+    engine_pars
+        Parameters for engine generation, overrules idict
+    iterative
+        Add iterative algorithm wrapper, overrules idict
+    nofig
         Do not show figures, overrules settings from idict
-    verbosity: int, optional
+    verbosity
         Force a verbosity level, 0 = silent, overrules
         settings from idict
-    kwargs: dict, optional
+    work_dir
+        The main working directory path
+    input_dir
+        The input directory path
+    output_dir
+        The output directory path
+    algo_pars
         Additional parameters for read_dict
 
     Returns
     -------
-    farm_results: xarray.Dataset, optional
+    farm_results
         The farm results
-    point_results: xarray.Dataset, optional
+    point_results
         The point results
-    outputs: list of tuple
+    outputs
         For each output enty, a tuple (dict, results),
         where results is a list that represents one
         entry per function call
 
-    :group: input.yaml
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
     # read components:
-    algo, engine = read_dict(idict, *args, verbosity=verbosity, **kwargs)
+    algo_pars.pop("verbosity", None)
+    algo, engine = read_dict(
+        idict,
+        farm=farm,
+        states=states,
+        mbook=mbook,
+        algo=algo,
+        engine_pars=engine_pars,
+        iterative=iterative,
+        verbosity=verbosity,
+        work_dir=work_dir,
+        input_dir=input_dir,
+        output_dir=output_dir,
+        **algo_pars,
+    )
     results_storage = None
+    assert engine is not None
     with engine:
         # run farm calculation:
         rdict = idict.get_item("calc_farm", Dict(_name=idict.name + ".calc_farm"))
@@ -538,7 +584,7 @@ def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
             farm_results = algo.calc_farm(**rdict)
         else:
             farm_results = None
-        out = (farm_results,)
+        out: tuple[Any, ...] = (farm_results,)
 
         # run points calculation:
         point_results = None

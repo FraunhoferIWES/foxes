@@ -1,6 +1,16 @@
+from __future__ import annotations
+
 from foxes.core import GroundModel
 import foxes.variables as FV
 import foxes.constants as FC
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData, TData
+    from foxes.core.partial_wakes_model import PartialWakesModel
+    from foxes.core.wake_model import WakeModel
 
 
 class WakeMirror(GroundModel):
@@ -9,20 +19,19 @@ class WakeMirror(GroundModel):
 
     Attributes
     ----------
-    heights: list of float
+    heights
         The reflection heights
 
-    :group: models.ground_models
 
     """
 
-    def __init__(self, heights):
+    def __init__(self, heights: list[float]) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        heights: list of float
+        heights
             The reflection heights
 
         """
@@ -31,39 +40,39 @@ class WakeMirror(GroundModel):
 
     def contribute_to_farm_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-        pwake,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+        pwake: PartialWakesModel,
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            Values have shape
             (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
-        pwake: foxes.core.PartialWakesModel
+        pwake
             The partial wakes model
 
         """
@@ -75,7 +84,12 @@ class WakeMirror(GroundModel):
         # assert(np.all(fdata[FV.H]==fdata[FV.TXYH[..., 2]]))
 
         # contribution from main wake:
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wake_frame = getattr(algo, "wake_frame", None)
+        if wake_frame is None:
+            raise ValueError(
+                f"WakeMirror '{self.name}': algorithm '{algo.name}' has no wake_frame"
+            )
+        wcoos = wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
         # contribution from mirrors:
@@ -92,36 +106,36 @@ class WakeMirror(GroundModel):
 
     def contribute_to_point_wakes(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        wake_deltas: dict[str, np.ndarray],
+        wmodel: WakeModel,
+    ) -> None:
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index of the wake causing turbine
             in the downwind order
-        wake_deltas: dict
+        wake_deltas
             The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
+            Values have shape
             (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
+        wmodel
             The wake model
 
         """
@@ -129,7 +143,12 @@ class WakeMirror(GroundModel):
         hh = fdata[FV.H][:, downwind_index].copy()
 
         # contribution from main wake:
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wake_frame = getattr(algo, "wake_frame", None)
+        if wake_frame is None:
+            raise ValueError(
+                f"WakeMirror '{self.name}': algorithm '{algo.name}' has no wake_frame"
+            )
+        wcoos = wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
         # contribution from mirrors:
@@ -137,9 +156,7 @@ class WakeMirror(GroundModel):
         for h in self.heights:
             fdata[FV.TXYH][:, downwind_index, 2] = hh + 2 * (h - hh)
 
-            wcoos = algo.wake_frame.get_wake_coos(
-                algo, mdata, fdata, tdata, downwind_index
-            )
+            wcoos = wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
             wmodel.contribute(
                 algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas
             )
@@ -152,11 +169,10 @@ class GroundMirror(WakeMirror):
     """
     Wake reflection from the ground.
 
-    :group: models.ground_models
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructor.
         """

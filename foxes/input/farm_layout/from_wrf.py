@@ -1,49 +1,54 @@
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
 from pandas import read_csv
 
 from foxes.core import Turbine
 from foxes.config import get_input_path
+from foxes.core import WindFarm
+from foxes.models import ModelBook
 from foxes.models.turbine_types import TBLFile
 
 
 def add_from_wrf(
-    farm,
-    directory,
-    mbook,
-    txt_file="windturbines.txt",
-    tbl_name_fun=lambda i: f"wind-turbine-{i}.tbl",
-    csv_file=None,
-    csv_col_windfarm="wind_farm",
-    csv_col_cluster=None,
-    rho=1.225,
-    verbosity=1,
-    **turbine_parameters,
-):
+    farm: WindFarm,
+    directory: str,
+    mbook: ModelBook,
+    txt_file: str = "windturbines.txt",
+    tbl_name_fun: Callable[[int], str] = lambda i: f"wind-turbine-{i}.tbl",
+    csv_file: str | None = None,
+    csv_col_windfarm: str | None = "wind_farm",
+    csv_col_cluster: str | None = None,
+    rho: float = 1.225,
+    verbosity: int = 1,
+    **turbine_parameters: Any,
+) -> None:
     """
     Add turbines to wind farm from a folder with tbl files
     and a txt file containing lat, lon, tbl_index
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    directory: str
+    directory
         The directory containing the tbl files and the txt file
-    mbook: foxes.ModelBook, optional
+    mbook
         The model book, only needed if tbl_dir is specified
-    txt_file: str
+    txt_file
         The txt file name
-    csv_file: str, optional
+    csv_file
         An optional csv file containing additional turbine parameters.
-    csv_col_windfarm: str, optional
+    csv_col_windfarm
         The column name in the CSV file for the wind farm identifier
-    csv_col_cluster: str, optional
+    csv_col_cluster
         The column name in the CSV file for the cluster identifier
-    rho: float
+    rho
         The air density for the turbine types, if tbl_dir is given
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: dict, optional
+    turbine_parameters
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
     Examples
@@ -56,29 +61,28 @@ def add_from_wrf(
     >>>    57.233467 -1.989579 2
     >>>    ...
 
-    :group: input.farm_layout
 
     """
     assert farm.data_is_lonlat, "Require `input_is_lonlat=True` in WindFarm constructor"
     if verbosity > 0:
         print("Reading directory", directory)
-    directory = get_input_path(directory)
-    txt_path = directory / txt_file
+    directory_path = get_input_path(directory)
+    txt_path = directory_path / txt_file
     if not txt_path.exists():
         raise FileNotFoundError(f"File {txt_path} not found")
     data = np.genfromtxt(txt_path)[:, :3]
     ttypes = {}
     for i in np.unique(data[:, 2]).astype(int):
-        tbl_path = directory / tbl_name_fun(i)
+        tbl_path = directory_path / tbl_name_fun(i)
         ttypes[i] = tbl_path.stem
         if not tbl_path.exists():
             raise FileNotFoundError(f"File {tbl_path} not found")
         if verbosity > 1:
             print(f"Creating turbine type: {ttypes[i]}")
-        mbook.turbine_types[ttypes[i]] = TBLFile(tbl_path, rho=rho)
+        mbook.turbine_types[ttypes[i]] = TBLFile(str(tbl_path), rho=rho)
 
     if csv_file is not None:
-        csv_path = directory / csv_file
+        csv_path = directory_path / csv_file
         if not csv_path.exists():
             raise FileNotFoundError(f"File {csv_path} not found")
         if verbosity > 0:

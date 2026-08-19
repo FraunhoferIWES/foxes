@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from typing import Any
 
 from foxes.core import Algorithm
 from foxes.models import ModelBook
@@ -12,23 +13,22 @@ from .read_outputs import read_outputs
 from ..dict import run_dict
 
 
-def windio_file2dict(yml_file, verbosity=1):
+def windio_file2dict(yml_file: Path | str, verbosity: int = 1) -> Dict[Any, Any]:
     """
     Read windio yaml file and translate to foxes input data dictionary
 
     Parameters
     ----------
-    yml_file: pathlib.Path or str
+    yml_file
         The windio yaml file
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
 
     Returns
     -------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data dictionary
 
-    :group: input.yaml.windio
 
     """
 
@@ -45,41 +45,44 @@ def windio_file2dict(yml_file, verbosity=1):
     return Dict(windio.load_yaml(wio_file), _name="windio")
 
 
-def read_windio_dict(wio_dict, verbosity=1, **algo_kwargs):
+def read_windio_dict(
+    wio_dict: Dict[Any, Any] | dict[str, Any],
+    verbosity: int = 1,
+    **algo_kwargs: Any,
+) -> tuple[Dict[str, Any], Algorithm, str | None]:
     """
     Translate windio data to foxes input data
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
-    ret_algo: bool
+    ret_algo
         Whether to return the algorithm object, otherwise
         return its parameters
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    algo_kwargs: dict, optional
+    algo_kwargs
         Additional keyword arguments for the algorithm
 
     Returns
     -------
-    idict: foxes.utils.Dict or dict
+    idict
         The foxes input data dictionary
-    algo: foxes.core.Algorithm
+    algo
         The algorithm
-    odir: pathlib.Path
+    odir
         The output directory
 
-    :group: input.yaml.windio
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity >= level:
             print(*args, **kwargs)
 
     if not isinstance(wio_dict, Dict):
-        tmp = Dict(_name="windio")
+        tmp: Dict = Dict(_name="windio")
         for k, d in wio_dict.items():
             tmp[k] = d
         wio_dict = tmp
@@ -88,7 +91,7 @@ def read_windio_dict(wio_dict, verbosity=1, **algo_kwargs):
     _print("  Name:", wio_dict.pop_item("name", None))
     _print("  Contents:", [k for k in wio_dict.keys()])
 
-    idict = Dict(
+    idict: Dict[str, Any] = Dict(
         wind_farm=Dict(_name="wio2fxs.farm"),
         algorithm=Dict(
             algo_type="Downwind",
@@ -134,31 +137,35 @@ def read_windio_dict(wio_dict, verbosity=1, **algo_kwargs):
     return idict, algo, odir
 
 
-def read_windio_file(yml_file, ret_wio=False, verbosity=1, **algo_kwargs):
+def read_windio_file(
+    yml_file: Path | str,
+    ret_wio: bool = False,
+    verbosity: int = 1,
+    **algo_kwargs: Any,
+) -> tuple[Any, ...]:
     """
     Read windio yaml file and translate to foxes input data
 
     Parameters
     ----------
-    yml_file: pathlib.Path or str
+    yml_file
         The windio yaml file
-    ret_wio: bool
+    ret_wio
         Whether to return the windio data dictionary as well
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    algo_kwargs: dict, optional
+    algo_kwargs
         Additional keyword arguments for the algorithm
 
     Returns
     -------
-    idict: foxes.utils.Dict or dict
+    idict
         The foxes input data dictionary
-    algo: foxes.core.Algorithm
+    algo
         The algorithm
-    odir: pathlib.Path
+    odir
         The output directory
 
-    :group: input.yaml.windio
 
     """
     wio = windio_file2dict(yml_file, verbosity)
@@ -171,58 +178,58 @@ def read_windio_file(yml_file, ret_wio=False, verbosity=1, **algo_kwargs):
 
 
 def foxes_windio(
-    yml_file,
-    output_dir=None,
-    rotor=None,
-    pwakes=None,
-    wakes=None,
-    frame=None,
-    engine=None,
-    n_procs=None,
-    chunksize_states=None,
-    chunksize_points=None,
-    iterative=False,
-    nofig=False,
-    verbosity=1,
-):
+    yml_file: Path | str,
+    output_dir: Path | str | None = None,
+    rotor: Any = None,
+    pwakes: Any = None,
+    wakes: Any = None,
+    frame: Any = None,
+    engine: Any = None,
+    n_procs: int | None = None,
+    chunksize_states: int | None = None,
+    chunksize_points: int | None = None,
+    iterative: bool = False,
+    nofig: bool = False,
+    verbosity: int = 1,
+) -> tuple[Any, Any, list[tuple[dict[str, Any], list[Any]]]]:
     """Run foxes from windio yaml file input
 
     Parameters
     ----------
-    yml_file: str or Path
+    yml_file
         The yaml file path
-    output_dir: str or Path, optional
+    output_dir
         The output directory, default: None (same as input file)
-    rotor: str, optional
+    rotor
         The rotor model, default: None (use the one from the yaml file)
-    pwakes: list of str, optional
+    pwakes
         The partial wakes models, default: None (use the ones from the yaml file)
-    wakes: list of str, optional
+    wakes
         The wake models, default: None (use the ones from the yaml file)
-    frame: str, optional
+    frame
         The wake frame, default: None (use the one from the yaml file)
-    engine: str, optional
+    engine
         The engine, default: None (use the one from the yaml file)
-    n_procs: int, optional
+    n_procs
         The number of processes, default: None (use the one from the yaml file)
-    chunksize_states: int, optional
+    chunksize_states
         The chunk size for states, default: None (use the one from the yaml file)
-    chunksize_points: int, optional
+    chunksize_points
         The chunk size for points, default: None (use the one from the yaml file)
-    iterative: bool, optional
+    iterative
         Use iterative algorithm, default: False
-    nofig: bool, optional
+    nofig
         Do not show figures, default: False
-    verbosity: int, optional
+    verbosity
         The verbosity level, 0 = silent, default: 1
 
     Returns
     -------
-    farm_results: xarray.Dataset, optional
+    farm_results
         The farm results
-    point_results: xarray.Dataset, optional
+    point_results
         The point results
-    outputs: list of tuple
+    outputs
         For each output enty, a tuple (dict, results),
         where results is a list that represents one
         entry per function call
@@ -267,7 +274,7 @@ def foxes_windio(
     )
 
 
-def main():
+def main() -> None:
     """
     Command line tool for running foxes from windio yaml file input.
 
@@ -275,7 +282,6 @@ def main():
     --------
     >>> foxes_windio input.yaml
 
-    :group: input.yaml.windio
 
     """
 

@@ -1,7 +1,12 @@
 import numpy as np
 
 
-def cubic_roots(a0, a1, a2, a3=None):
+def cubic_roots(
+    a0: np.ndarray,
+    a1: np.ndarray,
+    a2: np.ndarray,
+    a3: np.ndarray | None = None,
+) -> np.ndarray:
     """
     Calculate real roots of polynomials of degree 3.
 
@@ -16,23 +21,22 @@ def cubic_roots(a0, a1, a2, a3=None):
 
     Parameters
     ----------
-    a0: numpy.ndarray
+    a0
         The coefficients a[0]
-    a1: numpy.ndarray
+    a1
         The coefficients a[1]
-    a2: numpy.ndarray
+    a2
         The coefficients a[2]
-    a3: numpy.ndarray
+    a3
         The coefficients a[3], or None for ones
 
     Returns
     -------
-    roots: numpy.ndarray
+    roots
         The real roots of the polynomial,
         shape: (n_a0, 3). If one root only
         the two last columns will be np.nan
 
-    :group: utils
 
     """
 
@@ -78,21 +82,28 @@ def cubic_roots(a0, a1, a2, a3=None):
     return out
 
 
-def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.0e-12):
+def test_cubic_roots(
+    roots: np.ndarray,
+    a0: np.ndarray,
+    a1: np.ndarray,
+    a2: np.ndarray,
+    a3: np.ndarray | None = None,
+    tol: float = 1.0e-12,
+) -> None:
     """
     Test the cubic roots results
 
     Parameters
     ----------
-    roots: numpy.ndarray
+    roots
         The roots to test, shape: (n_a0, 3)
-    a0: numpy.ndarray
+    a0
         The coefficients a[0]
-    a1: numpy.ndarray
+    a1
         The coefficients a[1]
-    a2: numpy.ndarray
+    a2
         The coefficients a[2]
-    a3: numpy.ndarray
+    a3
         The coefficients a[3], or None for ones
 
     """
@@ -102,7 +113,7 @@ def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.0e-12):
         c0 = a0[n]
         c1 = a1[n]
         c2 = a2[n]
-        c3 = a3[n]
+        c3 = 1.0 if a3 is None else a3[n]
 
         print(f"Polynomial {n}: a = {(c0, c1, c2, c3)}")
 

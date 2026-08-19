@@ -1,5 +1,7 @@
 import numpy as np
 from copy import deepcopy
+from numpy.typing import ArrayLike
+from typing import Any
 
 
 class Turbine:
@@ -11,114 +13,120 @@ class Turbine:
 
     Attributes
     ----------
-    xy: array_like
+    xy
         The turbine ground position, shape: (2,)
-    models: list of str
+    models
         The turbine model names, as they appear
         in the model book
-    index: int, optional
+    index
         The index in the wind farm
-    name: str, optional
+    name
         The turbine name/label
-    mstates_sel: list of numpy.ndarray, optional
+    mstates_sel
         For each turbine model, the state selection
         boolean array with shape (n_states,)
-    D: float, optional
+    D
         The rotor diameter. Overwrites turbine type
         settings if given
-    H: float, optional
+    H
         The hub height. Overwrites turbine type
         settings if given
-    wind_farm_name: str, optional
+    wind_farm_name
         The name of the wind farm the turbine belongs to
-    cluster_name: str, optional
+    cluster_name
         The name of the cluster the wind farm belongs to
 
-    :group: core
 
     """
 
     def __init__(
         self,
-        xy,
-        turbine_models=[],
-        index=None,
-        name=None,
-        models_state_sel=None,
-        D=None,
-        H=None,
-        wind_farm_name=None,
-        cluster_name=None,
-    ):
+        xy: ArrayLike,
+        turbine_models: list[str] | None = None,
+        index: int | None = None,
+        name: str | None = None,
+        models_state_sel: list[np.ndarray[Any, Any] | None] | None = None,
+        D: float | np.ndarray[Any, Any] | None = None,
+        H: float | np.ndarray[Any, Any] | None = None,
+        wind_farm_name: str | None = None,
+        cluster_name: str | None = None,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        xy: array_like
-            The turbine ground position, shape: (2,)
-        turbine_models: list of str
-            The turbine model names, as they appear
-            in the model book
-        index: int, optional
-            The index in the wind farm
-        name: str, optional
-            The turbine name/label
-        models_state_sel: list of numpy.ndarray, optional
-            For each turbine model, the state selection
-            boolean array with shape (n_states,)
-        D: float, optional
-            The rotor diameter. Overwrites turbine type
-            settings if given
-        H: float, optional
-            The hub height. Overwrites turbine type
-            settings if given
-        wind_farm_name: str, optional
-            The name of the wind farm the turbine belongs to
-        cluster_name: str, optional
-            The name of the cluster the wind farm belongs to
+        xy
+            The turbine ground position with shape ``(2,)``.
+        turbine_models
+            The turbine model names as they appear in the model book.
+        index
+            The index in the wind farm.
+        name
+            The turbine name or label.
+        models_state_sel
+            For each turbine model, the state-selection boolean array with shape
+            ``(n_states,)``.
+        D
+            The rotor diameter. This overwrites the turbine-type setting when
+            provided.
+        H
+            The hub height. This overwrites the turbine-type setting when
+            provided.
+        wind_farm_name
+            The name of the wind farm to which the turbine belongs.
+        cluster_name
+            The name of the cluster to which the wind farm belongs.
 
         """
         self.index = index
         self.name = name
         self.xy = np.array(xy)
-        self.models = deepcopy(turbine_models)
+        self.models = [] if turbine_models is None else deepcopy(turbine_models)
         self.D = D
         self.H = H
         self.wind_farm_name = wind_farm_name
         self.cluster_name = cluster_name
 
-        self.mstates_sel = models_state_sel
-        if self.mstates_sel is None:
+        self.mstates_sel: list[np.ndarray[Any, Any] | None]
+        self.mstates_sel = models_state_sel if models_state_sel is not None else []
+        if not self.mstates_sel:
             self.mstates_sel = [None] * len(self.models)
 
-    def add_model(self, model, states_sel=None):
+    def add_model(
+        self, model: str, states_sel: np.ndarray[Any, Any] | None = None
+    ) -> None:
         """
         Add a turbine model to the list.
 
         Parameters
         ----------
-        model: str
-            The model name from mbook.turbine_models
-        states_sel: numpy.ndarray of bool, optional
-            The states selection for the model, shape: (n_states,)
+        model
+            The model name from ``mbook.turbine_models``.
+        states_sel
+            The state-selection mask for the model with shape ``(n_states,)``.
 
         """
         self.models.append(model)
         self.mstates_sel.append(states_sel)
 
-    def insert_model(self, index, model, states_sel=None):
+    def insert_model(
+        self,
+        index: int,
+        model: str,
+        states_sel: np.ndarray[Any, Any] | None = None,
+    ) -> None:
         """
-        Insert a turbine model into the list of models.
+        Insert a turbine model into the model list.
 
         Parameters
         ----------
-        index: int
-            The position in the model list
-        model: str
-            The model name from mbook.turbine_models
-        states_sel: numpy.ndarray of bool, optional
-            The states selection for the model, shape: (n_states,)
+        index
+            The position in the model list.
+        model
+            The model name from ``mbook.turbine_models``.
+        states_sel
+            The state-selection mask for the model with shape ``(n_states,)``.
 
         """
         self.models.insert(index, model)

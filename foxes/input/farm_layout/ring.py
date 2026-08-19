@@ -1,46 +1,49 @@
-import numpy as np
+from collections.abc import Sequence
+from typing import Any
 
-from foxes.core import Turbine
+import numpy as np
+from numpy.typing import ArrayLike
+
+from foxes.core import Turbine, WindFarm
 from foxes.utils import wd2wdvec
 
 
 def add_ring(
-    farm,
-    xy_base,
-    dist,
-    n_turbines,
-    offset_deg=0,
-    indices=None,
-    names=None,
-    verbosity=1,
-    **turbine_parameters,
-):
+    farm: WindFarm,
+    xy_base: ArrayLike,
+    dist: float,
+    n_turbines: int,
+    offset_deg: float = 0,
+    indices: Sequence[int] | np.ndarray | None = None,
+    names: Sequence[str] | np.ndarray | None = None,
+    verbosity: int = 1,
+    **turbine_parameters: Any,
+) -> None:
     """
     Add a ring of turbines.
 
     Parameters
     ----------
-    farm: foxes.WindFarm
+    farm
         The wind farm
-    xy_base: numpy.ndarray
+    xy_base
         The base point, shape: (2,)
-    dist: float
+    dist
         The distance between turbines
-    n_turbines: int
+    n_turbines
         The number of turbines
-    offset_deg: float
+    offset_deg
         The offset from north in degrees,
         following wind direction conventions
-    indices: list of int, optional
+    indices
         The turbine indices
-    names: list of str, optional
+    names
         The turbine names
-    verbosity: int
+    verbosity
         The verbosity level, 0 = silent
-    turbine_parameters: dict, optional
+    turbine_parameters
         Parameters forwarded to `foxes.core.Turbine`
 
-    :group: input.farm_layout
 
     """
     p0 = np.array(xy_base)

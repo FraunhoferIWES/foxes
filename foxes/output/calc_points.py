@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from xarray import Dataset
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
 from foxes.utils import write_nc
@@ -8,6 +11,9 @@ import foxes.constants as FC
 
 from .output import Output
 
+if TYPE_CHECKING:
+    from foxes.core import Algorithm
+
 
 class PointCalculator(Output):
     """
@@ -15,26 +21,25 @@ class PointCalculator(Output):
 
     Attributes
     ----------
-    algo: foxes.Algorithm
+    algo
         The algorithm for point calculation
-    farm_results: xarray.Dataset
+    farm_results
         The farm results
 
-    :group: output
 
     """
 
-    def __init__(self, algo, farm_results, **kwargs):
+    def __init__(self, algo: Algorithm, farm_results: Dataset, **kwargs: Any) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        algo: foxes.Algorithm
+        algo
             The algorithm for point calculation
-        farm_results: xarray.Dataset
+        farm_results
             The farm results
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
@@ -44,46 +49,48 @@ class PointCalculator(Output):
 
     def calculate(
         self,
-        points,
-        *args,
-        states_mean=False,
-        weight_turbine=0,
-        to_file=None,
-        write_vars=None,
-        write_pars={},
-        **kwargs,
-    ):
+        points: np.ndarray,
+        *args: Any,
+        states_mean: bool = False,
+        weight_turbine: int = 0,
+        to_file: str | None = None,
+        write_vars: list[str] | None = None,
+        write_pars: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Calculate point results
 
         Parameters
         ----------
-        points: numpy.ndarray
+        points
             The points, shape: (n_points, 3)
             or (n_states, n_points, 3)
-        args: tuple, optional
+        args
             Additional arguments for algo.calc_points
-        states_mean: bool
+        states_mean
             Flag for taking the mean over states
-        weight_turbine: int, optional
+        weight_turbine
             Index of the turbine from which to take the weight
-        to_file: str, optional
+        to_file
             The output netCDF file name
-        write_vars: list of str
+        write_vars
             The variables to be written to file, or None
             for all
-        write_pars: dict, optional
+        write_pars
             Additional parameters for write_nc
-        kwargs: tuple, optional
+        kwargs
             Additional arguments for algo.calc_points
 
         Returns
         -------
-        point_results: xarray.Dataset
+        point_results
             The point results. The calculated variables have
             dimensions (state, point)
 
         """
+        write_pars = {} if write_pars is None else write_pars
+
         if points.shape[-1] == 3 and len(points.shape) == 3:
             pts = points
             p_has_s = True
@@ -114,6 +121,7 @@ class PointCalculator(Output):
 
         vrs = list(pres.data_vars.keys()) if write_vars is None else write_vars
         if to_file is not None:
+            dvars: dict[str, tuple[tuple[str, ...], Any]]
             if states_mean:
                 if p_has_s:
                     points = np.einsum("s,spd->pd", weights, points)
@@ -145,6 +153,8 @@ class PointCalculator(Output):
                 )
 
             fpath = self.get_fpath(to_file)
-            write_nc(ds, fpath, nc_engine=config.nc_engine, **write_pars)
+            nc_engine = config.nc_engine
+            assert nc_engine is not None
+            write_nc(ds, fpath, nc_engine=nc_engine, **write_pars)
 
         return pres

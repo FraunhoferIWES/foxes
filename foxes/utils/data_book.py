@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import importlib.resources as resources
 
 from pathlib import Path
+from typing import Any
 
 
 class DataBook:
@@ -10,20 +13,19 @@ class DataBook:
 
     Parameters
     ----------
-    data_book: DataBook, optional
+    data_book
         A data book to start from
 
     Attributes
     ----------
-    dbase: dict
+    dbase
         The data base. Key: context str,
-        value: dict (file name str to pathlib.Path)
+        value
 
-    :group: utils
 
     """
 
-    def __init__(self, data_book=None):
+    def __init__(self, data_book: DataBook | None = None) -> None:
         """
         Constructor.
 
@@ -33,23 +35,25 @@ class DataBook:
             A data book to start from
 
         """
-        self.dbase = {}
+        self.dbase: dict[str, dict[str, Path]] = {}
         if data_book is not None:
-            for c, d in data_book.items():
+            for c, d in data_book.dbase.items():
                 self.dbase[c] = {}
                 self.dbase[c].update(d)
 
-    def add_data_package(self, context, package, file_sfx):
+    def add_data_package(
+        self, context: str, package: str | Any, file_sfx: str | list[str]
+    ) -> None:
         """
         Add static files from a package location.
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        package: str or package
+        package
             The package, must contain init file
-        file_sfx: list of str
+        file_sfx
             File endings to include
 
         """
@@ -66,7 +70,7 @@ class DataBook:
         except AttributeError:
             contents = list(resources.contents(package))
 
-        def check_f(f):
+        def check_f(f: str) -> bool:
             """little helper function to check file endings"""
             return any([len(f) > len(s) and f[-len(s) :] == s for s in file_sfx])
 
@@ -81,17 +85,19 @@ class DataBook:
                 with resources.path(package, f) as path:
                     self.dbase[context][f] = path
 
-    def add_data_package_file(self, context, package, file_name):
+    def add_data_package_file(
+        self, context: str, package: str | Any, file_name: str
+    ) -> None:
         """
         Add a static file from a package location.
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        package: str or package
+        package
             The package, must contain init.py file
-        file_mane: str
+        file_mane
             The file name
 
         """
@@ -106,15 +112,15 @@ class DataBook:
                 f"File '{file_name}' not found in package '{package}'"
             )
 
-    def add_files(self, context, file_paths):
+    def add_files(self, context: str, file_paths: list[str]) -> None:
         """
         Add file paths
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        file_paths: list of str
+        file_paths
             The file paths
 
         """
@@ -130,40 +136,46 @@ class DataBook:
                 )
             self.dbase[context][path.name] = path
 
-    def add_file(self, context, file_path):
+    def add_file(self, context: str, file_path: str) -> None:
         """
         Add a file path
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        file_path: str
+        file_path
             The file path
 
         """
         self.add_files(context, [file_path])
 
-    def get_file_path(self, context, file_name, check_raw=True, errors=True):
+    def get_file_path(
+        self,
+        context: str,
+        file_name: str,
+        check_raw: bool = True,
+        errors: bool = True,
+    ) -> Path | None:
         """
         Get path of a file
 
         Parameters
         ----------
-        context: str
+        context
             The context
-        file_name: str
+        file_name
             The file name
-        check_raw: bool
+        check_raw
             Check if `file_name` exists as given, and in
             that case return the path
-        errors: bool
+        errors
             Flag for raising KeyError, otherwise return None,
             if context of file_name not found
 
         Returns
         -------
-        path: pathlib.Path
+        path
             The path
 
         """
@@ -193,18 +205,18 @@ class DataBook:
                 f"File '{file_name}' not found in context '{context}'. Available: {sorted(list(cdata.keys()))}"
             )
 
-    def toc(self, context):
+    def toc(self, context: str) -> list[str]:
         """
         Get list of contents
 
         Parameters
         ----------
-        context: str
+        context
             The context
 
         Returns
         -------
-        keys: list of str
+        keys
             The data keys
 
         """

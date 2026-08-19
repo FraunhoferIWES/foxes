@@ -1,41 +1,49 @@
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
 from foxes.utils import Dict
 from foxes.core import Turbine, TurbineType, WindFarm
+from foxes.models import ModelBook
 from foxes.models.farm_controllers import BasicFarmController, OpFlagController
 import foxes.variables as FV
 import foxes.constants as FC
 
 
-def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
+def read_turbine_types(
+    wio_farm: dict[str, Any],
+    mbook: ModelBook,
+    ws_exp_P: int,
+    ws_exp_ct: int,
+    verbosity: int,
+) -> dict[int, str]:
     """
     Reads the turbine type from windio
 
     Parameters
     ----------
-    wio_farm: dict
+    wio_farm
         The windio farm data
-    mbook: foxes.models.ModelBook
+    mbook
         The model book
-    ws_exp_P: int
+    ws_exp_P
         The REWS exponent for power
-    ws_exp_ct: int
+    ws_exp_ct
         The REWS exponent for ct
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     Returns
     -------
-    ttypes: dict
+    ttypes
         Mapping from turbine type key to turbine
         type name in the model book
 
-    :group: input.yaml.windio
 
     """
 
-    def _print(*args, level=1, **kwargs):
+    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
         if verbosity >= level:
             print(*args, **kwargs)
 
@@ -82,7 +90,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
             ws_ct = ct_curve["Ct_wind_speeds"]
             data_ct = pd.DataFrame(data={"ws": ws_ct, "ct": ct})
 
-            def _get_wse_var(wse):
+            def _get_wse_var(wse: int) -> str:
                 if wse not in [1, 2, 3]:
                     raise ValueError(
                         f"Expecting wind speed exponent 1, 2 or 3, got {wse}"
@@ -145,27 +153,33 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
     return ttypes
 
 
-def read_layout(lname, ldict, farm, ttypes, fname=None, verbosity=1):
+def read_layout(
+    lname: str,
+    ldict: Dict[str, Any],
+    farm: WindFarm,
+    ttypes: dict[int, str],
+    fname: str | None = None,
+    verbosity: int = 1,
+) -> None:
     """
     Read wind farm layout from windio input
 
     Parameters
     ----------
-    lname: str
+    lname
         The layout name
-    ldict: dict
+    ldict
         The layout data
-    farm: foxes.core.WindFarm
+    farm
         The wind farm
-    ttypes: dict
+    ttypes
         Mapping from turbine type key to turbine
         type name in the model book
-    fname: str, optional
+    fname
         Name of the sub-farm, if any
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
-    :group: input.yaml.windio
 
     """
     if verbosity > 2:
@@ -188,23 +202,22 @@ def read_layout(lname, ldict, farm, ttypes, fname=None, verbosity=1):
         print(f"          Total number of turbines: {farm.n_turbines}")
 
 
-def read_farm(wio_dict, mbook, verbosity):
+def read_farm(wio_dict: dict[str, Any], mbook: ModelBook, verbosity: int) -> WindFarm:
     """
     Reads the wind farm information
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
-    verbosity: int
+    verbosity
         The verbosity level, 0=silent
 
     Returns
     -------
-    farm: foxes.core.WindFarm
+    farm
         The wind farm
 
-    :group: input.yaml.windio
 
     """
     if not isinstance(wio_dict["wind_farm"], list):
@@ -214,7 +227,7 @@ def read_farm(wio_dict, mbook, verbosity):
 
     farm = WindFarm()
     ws_exp_P = None
-    operating = None
+    operating: list[np.ndarray] | None = None
     for index, wio_farm in enumerate(wio_farms):
         fname = wio_farm.pop_item("name", None)
         if verbosity > 1:
@@ -256,10 +269,12 @@ def read_farm(wio_dict, mbook, verbosity):
         if isinstance(wfarm, dict):
             if "coordinates" in wfarm:
                 wfarm = {"0": wfarm}
-            layouts = Dict(wfarm, _name=wio_farm.name + ".layouts")
+            layouts: Dict[str, Any] = Dict(wfarm, _name=wio_farm.name + ".layouts")
         else:
-            layouts = {str(i): lf for i, lf in enumerate(wfarm)}
-            layouts = Dict(layouts, _name=wio_farm.name + ".layouts")
+            layouts = Dict(
+                {str(i): lf for i, lf in enumerate(wfarm)},
+                _name=wio_farm.name + ".layouts",
+            )
         if verbosity > 2:
             print("    Reading layouts")
             print("      Contents:", [k for k in layouts.keys()])
@@ -269,8 +284,8 @@ def read_farm(wio_dict, mbook, verbosity):
     if operating is None:
         mbook.farm_controllers["farm_cntrl"] = BasicFarmController()
     else:
-        operating = np.concatenate(operating, axis=1)
-        mbook.farm_controllers["farm_cntrl"] = OpFlagController(operating)
+        operating_data = np.concatenate(operating, axis=1)
+        mbook.farm_controllers["farm_cntrl"] = OpFlagController(operating_data)
     if verbosity > 1:
         print(
             f"Farm controller type: {type(mbook.farm_controllers['farm_cntrl']).__name__}"
@@ -279,32 +294,34 @@ def read_farm(wio_dict, mbook, verbosity):
     return farm
 
 
-def read_n_turbines(wio_dict):
+def read_n_turbines(wio_dict: dict[str, Any]) -> int:
     """
     Reads the number of turbines from windio input
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
 
     Returns
     -------
-    n_turbines: int
+    n_turbines
         The number of turbines
 
-    :group: input.yaml.windio
 
     """
     wio_farm = wio_dict["wind_farm"]
     wfarm = wio_farm["layouts"]
+    layouts: Dict[str, Any]
     if isinstance(wfarm, dict):
         if "coordinates" in wfarm:
             wfarm = {"0": wfarm}
         layouts = Dict(wfarm, _name=wio_farm.name + ".layouts")
     else:
-        layouts = {str(i): lf for i, lf in enumerate(wfarm)}
-        layouts = Dict(layouts, _name=wio_farm.name + ".layouts")
+        layouts = Dict(
+            {str(i): lf for i, lf in enumerate(wfarm)},
+            _name=wio_farm.name + ".layouts",
+        )
     n_turbines = 0
     for ldict in layouts.values():
         n_turbines += len(ldict["coordinates"]["x"])
@@ -312,21 +329,20 @@ def read_n_turbines(wio_dict):
     return n_turbines
 
 
-def read_hub_heights(wio_dict):
+def read_hub_heights(wio_dict: dict[str, Any]) -> list[float]:
     """
     Reads the hub heights from windio input
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
 
     Returns
     -------
-    hub_heights: list of float
+    hub_heights
         The hub heights of all turbines
 
-    :group: input.yaml.windio
 
     """
     wio_farm = wio_dict["wind_farm"]
@@ -340,21 +356,20 @@ def read_hub_heights(wio_dict):
     return hub_heights
 
 
-def read_rotor_diameters(wio_dict):
+def read_rotor_diameters(wio_dict: dict[str, Any]) -> list[float]:
     """
     Reads the rotor diameters from windio input
 
     Parameters
     ----------
-    wio_dict: foxes.utils.Dict
+    wio_dict
         The windio data
 
     Returns
     -------
-    rotor_diameters: list of float
+    rotor_diameters
         The rotor diameters of all turbines
 
-    :group: input.yaml.windio
 
     """
     wio_farm = wio_dict["wind_farm"]

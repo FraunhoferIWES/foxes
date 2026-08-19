@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 
 from .circle import Circle
 from .polygon import ClosedPolygon
-from .area_geometry import AreaIntersection
+from .area_geometry import AreaGeometry, AreaIntersection
 
 if __name__ == "__main__":
-    centres = []
-    radii = []
+    centres: list[np.ndarray] = []
+    radii: list[float] = []
     N = 500
 
     plist = [
@@ -15,35 +15,39 @@ if __name__ == "__main__":
         np.array([[1.5, 1.5], [1.5, 8], [2.5, 8], [2.5, 1.5]]),
     ]
 
-    circles = [Circle(centres[i], radii[i]) for i in range(len(centres))]
-    polygons = [ClosedPolygon(plist[i]) for i in range(len(plist))]
+    circles: list[AreaGeometry] = [
+        Circle(centres[i], radii[i]) for i in range(len(centres))
+    ]
+    polygons: list[AreaGeometry] = [ClosedPolygon(plist[i]) for i in range(len(plist))]
+    geoms: list[AreaGeometry] = circles + polygons
+    g: AreaGeometry
 
     fig, ax = plt.subplots()
-    g = AreaIntersection(circles + polygons)
+    g = AreaIntersection(geoms)
     g.add_to_figure(ax, show_boundary=True)
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g = AreaIntersection(circles + polygons)
+    g = AreaIntersection(geoms)
     g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g = AreaIntersection(circles + polygons)
+    g = AreaIntersection(geoms)
     g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g = AreaIntersection(circles + polygons).inverse()
+    g = AreaIntersection(geoms).inverse()
     g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g = AreaIntersection(circles + polygons).inverse()
+    g = AreaIntersection(geoms).inverse()
     g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)

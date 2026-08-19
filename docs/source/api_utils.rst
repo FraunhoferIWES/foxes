@@ -1,26 +1,10 @@
 foxes.utils
 ===========
-Utilities and helper functions that are not *foxes* specific.
+Utilities and helper functions.
 
-    .. python-apigen-group:: utils
+.. toctree::
+    :maxdepth: 2
 
-foxes.utils.abl
----------------
-
-    .. toctree::
-        api_utils_abl
-
-foxes.utils.geom2d
-------------------
-
-    .. python-apigen-group:: utils.geom2d
-
-foxes.utils.runners
--------------------
-
-    .. python-apigen-group:: utils.runners
-
-foxes.utils.two_circles
------------------------
-
-    .. python-apigen-group:: utils.two_circles
+    autoapi/foxes/utils/index
+    autoapi/foxes/utils/abl/index
+    autoapi/foxes/utils/geom2d/index

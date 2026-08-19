@@ -7,7 +7,6 @@ class FarmModel(FarmDataModel):
     (in contrast to a TurbineModel, which allows
     application to a subset of turbines).
 
-    :group: core
 
     """
 

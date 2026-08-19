@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from scipy.interpolate import interpn
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import WakeFrame
 from foxes.core import TData
@@ -8,6 +11,10 @@ from foxes.config import config
 
 import foxes.variables as FV
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core.algorithm import Algorithm
+    from foxes.core.data import FData, MData
 
 
 class Streamlines2D(WakeFrame):
@@ -24,58 +31,57 @@ class Streamlines2D(WakeFrame):
 
     Attributes
     ----------
-    step: float
+    step
         The streamline step size in m
-    chunksize_steps: int
+    chunksize_steps
         The number of steps per chunk for streamline
-    cl_ipars: dict
+    cl_ipars
         Interpolation parameters for centre line
         point interpolation
-    intersection_error: bool
+    intersection_error
         Whether to check for streamline
         self-intersections
 
-    :group: models.wake_frames
 
     """
 
     def __init__(
         self,
-        step,
-        chunksize_steps=100,
-        cl_ipars={},
-        intersection_error=True,
-        **kwargs,
-    ):
+        step: float,
+        chunksize_steps: int = 100,
+        cl_ipars: dict[str, Any] | None = None,
+        intersection_error: bool = True,
+        **kwargs: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        step: float
+        step
             The streamline step size in m
-        chunksize_steps: int
+        chunksize_steps
             The number of steps per chunk for streamline
-        cl_ipars: dict
+        cl_ipars
             Interpolation parameters for centre line
             point interpolation
-        intersection_error: bool
+        intersection_error
             Whether to check for streamline
             self-intersections
-        kwargs: dict, optional
+        kwargs
             Additional parameters for the base class
 
         """
         super().__init__(**kwargs)
         self.step = step
         self.chunksize_steps = chunksize_steps
-        self.cl_ipars = cl_ipars
+        self.cl_ipars = {} if cl_ipars is None else cl_ipars
         self.intersection_error = intersection_error
 
         self.WPOINTS = self.var("wpoints")
         self.STEP = self.var("step")
 
-    def calc_order(self, algo, mdata, fdata):
+    def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
         Calculates the order of turbine evaluation.
 
@@ -84,23 +90,25 @@ class Streamlines2D(WakeFrame):
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
 
         Returns
         -------
-        order: numpy.ndarray
+        order
             The turbine order, shape: (n_states, n_turbines)
 
         """
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
-        tdata = TData.from_points(points=fdata[FV.TXYH], mdata=mdata)
+        assert n_states is not None, "Missing n_states in fdata"
+        assert n_turbines is not None, "Missing n_turbines in algorithm"
+        tdata = cast(TData, TData.from_points(points=fdata[FV.TXYH], mdata=mdata))
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
@@ -110,35 +118,40 @@ class Streamlines2D(WakeFrame):
 
         # derive turbine order:
         # TODO: Remove loop over states
-        order = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
+        order: np.ndarray = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
         for si in range(n_states):
             order[si] = np.lexsort(keys=coosx[si])
 
         return order
 
-    def _get_streamlines(self, algo, mdata, fdata):
+    def _get_streamlines(
+        self, algo: Algorithm, mdata: MData, fdata: FData
+    ) -> np.ndarray:
         """Helper function for streamline calculation"""
+
+        cpoints = mdata.chunki_points
+        assert cpoints is not None, "Missing points chunk index in mdata"
 
         # check if already computed:
         wpoints = algo.get_from_chunk_store(
-            name=self.WPOINTS, mdata=mdata, prev_t=mdata.chunki_points, error=False
+            name=self.WPOINTS, mdata=mdata, prev_t=cpoints, error=False
         )
 
         # compute chunk store
         if wpoints is None:
-            assert mdata.chunki_points == 0, (
+            assert cpoints == 0, (
                 f"Wake frame '{self.name}': Streamlines can only be computed "
                 f"from the start of the points chunk (chunki_points=0), "
-                f"found (chunki_states, chunki_points)=({mdata.chunki_states}, {mdata.chunki_points}). "
+                f"found (chunki_states, chunki_points)=({mdata.chunki_states}, {cpoints}). "
                 f"Existing chunk store keys: {list(algo.chunk_store.keys())}"
             )
 
             # prepare:
             n_states = mdata.n_states
             n_turbines = algo.n_turbines
-            n_steps = (
-                np.ceil((algo.max_wake_length_km * 1000) / self.step).astype(int) + 1
-            )
+            max_wake_length_km = algo.max_wake_length_km
+            assert max_wake_length_km is not None, "Missing max_wake_length_km"
+            n_steps = np.ceil((max_wake_length_km * 1000) / self.step).astype(int) + 1
             states_ovars = algo.states.output_point_vars(algo)
             assert FV.WD in states_ovars and FV.WS in states_ovars, (
                 f"Wake frame '{self.name}': Require '{FV.WD}' and '{FV.WS}' in states output, found {states_ovars}"
@@ -217,32 +230,32 @@ class Streamlines2D(WakeFrame):
 
     def get_wake_coos(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index=None,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int | None = None,
+    ) -> np.ndarray:
         """
         Calculate wake coordinates of rotor points.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int, optional
+        downwind_index
             The index of the wake causing turbine
             in the downwind order, or all if None
 
         Returns
         -------
-        wake_coos: numpy.ndarray
+        wake_coos
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
             if downwind_index is not None, else shape:
@@ -339,31 +352,41 @@ class Streamlines2D(WakeFrame):
         else:
             coos = coos[:, 0, :, :].reshape(n_states, n_targets, n_tpoints, 3)
 
-        return algo.wake_deflection.calc_deflection(
-            algo, mdata, fdata, tdata, downwind_index, coos
-        )
+        if downwind_index is None:
+            return coos
 
-    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
+        wdfl = algo.wake_deflection
+        assert wdfl is not None, "Wake deflection model not initialized"
+        return wdfl.calc_deflection(algo, mdata, fdata, tdata, downwind_index, coos)
+
+    def get_centreline_points(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        downwind_index: int,
+        x: np.ndarray,
+    ) -> np.ndarray:
         """
         Gets the points along the centreline for given
         values of x.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points: numpy.ndarray
+        points
             The centreline points, shape: (n_states, n_points, 3)
 
         """
@@ -374,13 +397,13 @@ class Streamlines2D(WakeFrame):
         xs = self.step * np.arange(n_steps)
 
         # interpolate to x of interest:
-        qts = np.zeros((n_states, n_points, 2), dtype=config.dtype_double)
+        qts: np.ndarray = np.zeros((n_states, n_points, 2), dtype=config.dtype_double)
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = np.minimum(x, xs[-1])
-        qts = qts.reshape(n_states * n_points, 2)
+        qts_flat = qts.reshape(n_states * n_points, 2)
         ipars = dict(bounds_error=False, fill_value=0.0)
         ipars.update(self.cl_ipars)
-        results = interpn((np.arange(n_states), xs), wpoints, qts, **ipars)
+        results = interpn((np.arange(n_states), xs), wpoints, qts_flat, **ipars)
 
         # add hub heights to results:
         results = results.reshape(n_states, n_points, 2)
