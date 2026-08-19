@@ -260,7 +260,7 @@ class SingleTurbineWakeModel(WakeModel):
     def __init__(
         self,
         wind_superposition: str | None = None,
-        other_superpositions: dict[str, str] = {},
+        other_superpositions: dict[str, str] | None = None,
     ) -> None:
         """
         Constructor.
@@ -278,12 +278,14 @@ class SingleTurbineWakeModel(WakeModel):
         """
         super().__init__()
         self.wind_superposition = wind_superposition
-        self.other_superpositions = other_superpositions
+        self.other_superpositions = (
+            {} if other_superpositions is None else dict(other_superpositions)
+        )
         self.vec_superp: Any | None = None
         self.superp: dict[str, Any] = {}
 
         for v in [FV.WS, FV.WD]:
-            assert v not in other_superpositions, (
+            assert v not in self.other_superpositions, (
                 f"Wake model '{self.name}': Found variable '{v}' among 'other_superposition' keyword, use 'wind_superposition' instead"
             )
 

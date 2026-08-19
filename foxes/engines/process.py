@@ -14,7 +14,7 @@ from foxes.core import EngineRunner, MData
 from .pool import PoolEngine
 
 if TYPE_CHECKING:
-    from foxes.core import FData, TData
+    from foxes.core import Algorithm, DataCalcModel, FData, TData
 
 
 _resource_tracker_register = resource_tracker.register
@@ -146,8 +146,8 @@ class ProcessEngineRunner(EngineRunner):
 
     def run(
         self,
-        algo: Any,
-        model: Any,
+        algo: Algorithm,
+        model: DataCalcModel,
         mdata: MData,
         fdata: FData,
         tdata: TData | None = None,
@@ -168,6 +168,7 @@ class ProcessEngineRunner(EngineRunner):
         algo.reset_chunk_store(chunk_store.copy())
         mdata = self._recombine_mdata_with_shared(mdata, shared)
 
+        results: dict[str, Any] | None
         if tdata is None:
             results = model.calculate(algo, mdata, fdata, **cpars)
         else:

@@ -3,6 +3,7 @@ from foxes.config import get_input_path
 from pathlib import Path
 from typing import Any
 from foxes.core import WindFarm
+from foxes.utils import DataBook
 
 from .from_json import add_from_json
 from .from_csv import add_from_csv
@@ -13,7 +14,7 @@ def add_from_file(
     file_path: str,
     *args: Any,
     verbosity: int = 1,
-    dbook: StaticData | None = None,
+    dbook: DataBook | None = None,
     **kwargs: Any,
 ) -> None:
     """

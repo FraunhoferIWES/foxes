@@ -1217,7 +1217,7 @@ class DatasetStates(States):
         assert self._N is not None
         return self._N
 
-    def index(self) -> np.ndarray | None:
+    def index(self) -> list[int]:
         """
         The index list
 
@@ -1229,7 +1229,9 @@ class DatasetStates(States):
         """
         if self.running:
             raise ValueError(f"States '{self.name}': Cannot access index while running")
-        return self._inds
+        if self._inds is None:
+            return []
+        return self._inds.astype(int).tolist()
 
     def get_grid_points(
         self,

@@ -1,6 +1,7 @@
 import numpy as np
 from copy import deepcopy
 from numpy.typing import ArrayLike
+from typing import Any
 
 
 class Turbine:
@@ -41,12 +42,12 @@ class Turbine:
     def __init__(
         self,
         xy: ArrayLike,
-        turbine_models: list[str] = [],
+        turbine_models: list[str] | None = None,
         index: int | None = None,
         name: str | None = None,
-        models_state_sel: list[np.ndarray | None] | None = None,
-        D: float | np.ndarray | None = None,
-        H: float | np.ndarray | None = None,
+        models_state_sel: list[np.ndarray[Any, Any] | None] | None = None,
+        D: float | np.ndarray[Any, Any] | None = None,
+        H: float | np.ndarray[Any, Any] | None = None,
         wind_farm_name: str | None = None,
         cluster_name: str | None = None,
     ) -> None:
@@ -81,18 +82,20 @@ class Turbine:
         self.index = index
         self.name = name
         self.xy = np.array(xy)
-        self.models = deepcopy(turbine_models)
+        self.models = [] if turbine_models is None else deepcopy(turbine_models)
         self.D = D
         self.H = H
         self.wind_farm_name = wind_farm_name
         self.cluster_name = cluster_name
 
-        self.mstates_sel: list[np.ndarray | None]
+        self.mstates_sel: list[np.ndarray[Any, Any] | None]
         self.mstates_sel = models_state_sel if models_state_sel is not None else []
         if not self.mstates_sel:
             self.mstates_sel = [None] * len(self.models)
 
-    def add_model(self, model: str, states_sel: np.ndarray | None = None) -> None:
+    def add_model(
+        self, model: str, states_sel: np.ndarray[Any, Any] | None = None
+    ) -> None:
         """
         Add a turbine model to the list.
 
@@ -111,7 +114,7 @@ class Turbine:
         self,
         index: int,
         model: str,
-        states_sel: np.ndarray | None = None,
+        states_sel: np.ndarray[Any, Any] | None = None,
     ) -> None:
         """
         Insert a turbine model into the model list.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from scipy.spatial.distance import cdist
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.utils import wd2uv
 from foxes.core.data import TData
@@ -229,7 +229,7 @@ class SeqDynamicWakes(FarmOrder):
         assert n_targets is not None and n_tpoints is not None
         n_points = n_targets * n_tpoints
         points = tdata[FC.TARGETS][:1].reshape(n_states, n_points, 3)
-        counter = algo.states.counter
+        counter = cast(Any, algo.states).counter
         N = counter + 1
         traces_l = self._traces_l
         traces_p = self._traces_p
@@ -362,7 +362,7 @@ class SeqDynamicWakes(FarmOrder):
             n_targets = tdata.n_targets
             n_tpoints = tdata.n_tpoints
             n_points = n_targets * n_tpoints
-            counter = algo.states.counter
+            counter = cast(Any, algo.states).counter
 
             s = tdata[FC.STATES_SEL][0].reshape(n_points)
             fresults = algo.farm_results_downwind

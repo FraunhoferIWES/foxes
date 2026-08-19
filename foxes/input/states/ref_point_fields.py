@@ -377,7 +377,7 @@ class SectorSimRefPointField(States):
         """
         return self.ref_point_states.size()
 
-    def index(self) -> np.ndarray | None:
+    def index(self) -> list[int]:
         """
         The index list
 
@@ -387,11 +387,16 @@ class SectorSimRefPointField(States):
             The index labels of states, or None for default integers
 
         """
-        return self.ref_point_states.index()
+        return list(self.ref_point_states.index())
 
-    def calculate(  # type: ignore[override]
-        self, algo: Algorithm, mdata: MData, fdata: FData, tdata: TData
+    def calculate(
+        self, algo: Algorithm, *data: Any, **parameters: Any
     ) -> dict[str, np.ndarray]:
+        if len(data) != 3:
+            raise TypeError(
+                f"States '{self.name}': Expecting 3 data arguments (mdata, fdata, tdata), got {len(data)}"
+            )
+        mdata, fdata, tdata = data
         """
         The main model calculation.
 
@@ -450,12 +455,7 @@ class SectorSimRefPointField(States):
         htdata = TData.from_points(points=points, mdata=mdata)
         raw_ref_results: dict[str, np.ndarray] = cast(
             dict[str, np.ndarray],
-            self.ref_point_states.calculate(
-                algo,
-                mdata,
-                fdata,
-                htdata,  # type: ignore[arg-type]
-            ),
+            self.ref_point_states.calculate(algo, mdata, fdata, htdata),
         )
         ref_results: dict[str, np.ndarray] = {
             str(k): d[:, 0, 0] for k, d in raw_ref_results.items()

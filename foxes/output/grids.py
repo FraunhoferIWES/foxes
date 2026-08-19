@@ -1,16 +1,21 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from xarray import Dataset
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from foxes.utils import wd2uv, write_nc
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
+if TYPE_CHECKING:
+    from foxes.core import Algorithm
+
 
 def calc_point_results(
-    algo: Any,
+    algo: Algorithm,
     g_pts: np.ndarray,
     farm_results: Dataset | None = None,
     seq_iter: Any = None,

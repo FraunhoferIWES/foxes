@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from math import sqrt
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import foxes.models as fm
 import foxes.variables as FV
@@ -23,6 +23,9 @@ from foxes.core import (
     GroundModel,
     WakeDeflection,
 )
+
+if TYPE_CHECKING:
+    from foxes.core import Algorithm
 
 
 class ModelBook:
@@ -806,7 +809,7 @@ class ModelBook:
                 f"No default partial wakes model defined for wake model type '{type(wake_model).__name__}'"
             )
 
-    def finalize(self, algo: Any, verbosity: int = 0) -> None:
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
         """
         Finalizes the model.
 

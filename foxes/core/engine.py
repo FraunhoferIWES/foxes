@@ -16,6 +16,7 @@ from .data import MData, FData, TData
 
 if TYPE_CHECKING:
     from .algorithm import Algorithm
+    from .data_calc_model import DataCalcModel
 
 __global_engine_data__: dict[str, Engine | None] = dict(engine=None)
 
@@ -696,7 +697,7 @@ class Engine(ABC):
     def run_calculation(
         self,
         algo: Algorithm,
-        model: Any,
+        model: DataCalcModel,
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
         point_data: Dataset | None = None,

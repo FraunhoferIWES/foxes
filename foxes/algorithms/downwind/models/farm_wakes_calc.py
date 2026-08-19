@@ -5,13 +5,13 @@ import numpy as np
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
-from foxes.core import FarmDataModel
+from foxes.core import FarmDataModel, TData
 import foxes.constants as FC
 import foxes.variables as FV
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
-    from foxes.core.data import FData, MData
+    from foxes.core.data import FData, MData, TData
 
 
 class FarmWakesCalculation(FarmDataModel):
@@ -69,6 +69,7 @@ class FarmWakesCalculation(FarmDataModel):
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
         controller = algo.farm_controller
+        rpts = algo.get_from_chunk_store(FC.ROTOR_POINTS, mdata=mdata)
         rwghts = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
         amb_res = algo.get_from_chunk_store(FC.AMB_ROTOR_RES, mdata=mdata)
         weights = algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata)
@@ -132,7 +133,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         def _evaluate(
             gmodel: Any,
-            tdata: Any,
+            tdata: TData,
             rwghts: np.ndarray,
             wake_res: dict[str, np.ndarray],
             wdeltas: dict[str, np.ndarray],
@@ -169,10 +170,20 @@ class FarmWakesCalculation(FarmDataModel):
                 for v, d in wres.items():
                     if v in wake_res:
                         hres[v] += d[:, None]
-                hres[FV.WEIGHT] = weights
+                hdims: dict[str, tuple[str, ...]] = {
+                    v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hres.keys()
+                }
+                htdata = TData.from_tpoints(
+                    rpts[:, oi, None, :, :],
+                    tweights=rwghts,
+                    data=hres,
+                    dims=hdims,
+                )
+                htdata[FV.WEIGHT] = weights
+                del hres, hdims
 
                 rotor.eval_rpoint_results(
-                    algo, mdata, fdata, hres, rwghts, downwind_index=oi
+                    algo, mdata, fdata, htdata, rwghts, downwind_index=oi
                 )
 
             if controller.has_post_rotor_models:

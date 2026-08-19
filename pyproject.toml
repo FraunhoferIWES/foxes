@@ -115,6 +115,13 @@ include = ["foxes*"]
 
 [tool.mypy]
 python_version = "3.10"
+files = ["foxes"]
+exclude = [
+    "examples/",
+    "docs/",
+    "notebooks/",
+    "tests/",
+]
 ignore_missing_imports = true
 follow_imports = "silent"
 show_error_codes = true

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
         WakeModel,
         WindFarm,
     )
+    from foxes.models import ModelBook
     from .models.population import PopulationModel
 
 
@@ -93,7 +94,7 @@ class Downwind(Algorithm):
         partial_wakes: dict[str, str] | list[str] | str | None = None,
         ground_models: dict[str, str] | list[str] | str | None = None,
         farm_controller: str = "basic_ctrl",
-        mbook: Any = None,
+        mbook: ModelBook | None = None,
         max_wake_length_km: float | None = None,
         population_params: dict[str, Any] | None = None,
         **kwargs: Any,

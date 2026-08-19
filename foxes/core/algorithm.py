@@ -6,7 +6,7 @@ import xarray as xr
 from typing import TYPE_CHECKING, Any, cast
 
 from foxes.data import StaticData
-from foxes.utils import Dict, new_instance
+from foxes.utils import DataBook, Dict, new_instance
 from foxes.config import config
 import foxes.constants as FC
 
@@ -14,9 +14,18 @@ from .engine import launch_parallel_calc
 from .model import Model
 
 if TYPE_CHECKING:
-    from foxes.core.data import MData
+    from foxes.core.data import MData, TData
     from foxes.core.model import LoadedData
+    from foxes.core.rotor_model import RotorModel
+    from foxes.core.states import States
     from foxes.core.wind_farm import WindFarm
+    from foxes.core.wake_frame import WakeFrame
+    from foxes.core.wake_deflection import WakeDeflection
+    from foxes.core.wake_model import WakeModel
+    from foxes.core.partial_wakes_model import PartialWakesModel
+    from foxes.core.ground_model import GroundModel
+    from foxes.core.farm_controller import FarmController
+    from foxes.models import ModelBook
 
 
 class Algorithm(Model):
@@ -37,10 +46,10 @@ class Algorithm(Model):
 
     def __init__(
         self,
-        mbook: Any,
+        mbook: ModelBook,
         farm: WindFarm,
         verbosity: int = 1,
-        dbook: Any = None,
+        dbook: DataBook | None = None,
     ) -> None:
         """
         Constructor.
@@ -67,7 +76,9 @@ class Algorithm(Model):
         self.__farm = farm
         self.__mbook = mbook
         self.__dbook = StaticData() if dbook is None else dbook
-        self.__chunk_store: Dict[Any, Any] = Dict(_name="chunk_store")
+        self.__chunk_store: Dict[tuple[int, int], dict[str, Any]] = Dict(
+            _name="chunk_store"
+        )
         self.__loaded_data: LoadedData | None = None
         self.__farm_vars: list[str] = []
 
@@ -85,7 +96,7 @@ class Algorithm(Model):
         return self.__farm
 
     @property
-    def mbook(self) -> Any:
+    def mbook(self) -> ModelBook:
         """
         The model book
 
@@ -102,7 +113,7 @@ class Algorithm(Model):
         return self.__mbook
 
     @property
-    def dbook(self) -> Any:
+    def dbook(self) -> DataBook:
         """
         The data book
 
@@ -119,55 +130,55 @@ class Algorithm(Model):
         return self.__dbook
 
     @property
-    def chunk_store(self) -> Dict:
+    def chunk_store(self) -> Dict[tuple[int, int], dict[str, Any]]:
         """
         The current chunk store
 
         Returns
         -------
         chunk_store
-            Keys: model name, value: idata dict
+            Keys: chunk-state/point tuple, value: idata dict
 
         """
         return self.__chunk_store
 
     @property
-    def states(self) -> Any:
+    def states(self) -> States:
         """Ambient states model, provided by concrete algorithms."""
         raise ValueError(f"Algorithm '{self.name}': states model not available")
 
     @property
-    def rotor_model(self) -> Any:
+    def rotor_model(self) -> RotorModel:
         """Rotor model, provided by concrete algorithms."""
         raise ValueError(f"Algorithm '{self.name}': rotor_model not available")
 
     @property
-    def wake_frame(self) -> Any:
+    def wake_frame(self) -> WakeFrame:
         """Wake frame model, provided by concrete algorithms."""
         raise ValueError(f"Algorithm '{self.name}': wake_frame not available")
 
     @property
-    def wake_deflection(self) -> Any | None:
+    def wake_deflection(self) -> WakeDeflection | None:
         """Wake deflection model, optional for algorithms without wake calculations."""
         return None
 
     @property
-    def wake_models(self) -> dict[str, Any]:
+    def wake_models(self) -> dict[str, WakeModel]:
         """Wake model mapping by name."""
         return {}
 
     @property
-    def partial_wakes(self) -> dict[str, Any]:
+    def partial_wakes(self) -> dict[str, PartialWakesModel]:
         """Partial wakes model mapping by wake-model name."""
         return {}
 
     @property
-    def ground_models(self) -> dict[str, Any]:
+    def ground_models(self) -> dict[str, GroundModel]:
         """Ground model mapping by wake-model name."""
         return {}
 
     @property
-    def farm_controller(self) -> Any:
+    def farm_controller(self) -> FarmController:
         """Farm controller, provided by concrete algorithms."""
         raise ValueError(f"Algorithm '{self.name}': farm_controller not available")
 
@@ -199,6 +210,17 @@ class Algorithm(Model):
         """Return algorithm-specific helper model class by name."""
         raise NotImplementedError(
             f"Algorithm '{cls.__name__}': get_model is not implemented"
+        )
+
+    def _collect_point_models(
+        self,
+        calc_parameters: dict[str, dict[str, Any]] | None = None,
+        point_models: Any = None,
+        ambient: bool = False,
+    ) -> tuple[Any, list[dict[str, Any]]]:
+        """Collect the point-data model list for downstream point calculations."""
+        raise NotImplementedError(
+            f"Algorithm '{self.name}': _collect_point_models is not implemented"
         )
 
     @property
@@ -458,7 +480,7 @@ class Algorithm(Model):
         data: Any,
         dims: tuple[Any, ...],
         mdata: MData,
-        tdata: Any = None,
+        tdata: TData | None = None,
         copy: bool = True,
         subset: Any = None,
     ) -> None:
@@ -597,9 +619,9 @@ class Algorithm(Model):
         # combine data from multiple chunks, in case of states subset selection:
         else:
             data = None
-            for (__, ipoints), d in self.chunk_store.items():
+            for (_, ipoints), d in self.chunk_store.items():
                 if ipoints == key[1] and name in d:
-                    __, j0, j1 = np.intersect1d(
+                    _, j0, j1 = np.intersect1d(
                         d["states_index"], mdata[FC.STATE], return_indices=True
                     )
                     if len(j0) == 0 or len(j1) == 0:

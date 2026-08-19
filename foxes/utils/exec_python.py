@@ -49,7 +49,7 @@ def exec_python(
             "__builtins__": __builtins__,
         }
     if locals is None:
-        locals = {}
+        locals = dict()
 
     if isinstance(s, str):
         L = len(indicator)
@@ -104,6 +104,8 @@ def eval_dict_values(
     """
     if globals is None:
         globals = {"np": np, "pd": pd, "xr": xr, "plt": plt}
+    if locals is None:
+        locals = dict()
 
     for k, v in d.items():
         if isinstance(v, dict):

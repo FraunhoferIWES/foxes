@@ -2,7 +2,7 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 import numpy as np
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from foxes.core import FarmDataModel, TData
 import foxes.variables as FV
@@ -111,6 +111,9 @@ class InitFarmData(FarmDataModel):
             np.zeros((n_states, n_turbines), dtype=config.dtype_double),
             (FC.STATE, FC.TURBINE),
         )
+        turbine_types = algo.farm_controller.turbine_types
+        assert turbine_types is not None
+
         for ti, t in enumerate(algo.farm.turbines):
             if len(t.xy.shape) == 1:
                 fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
@@ -123,17 +126,17 @@ class InitFarmData(FarmDataModel):
 
             H = t.H
             if H is None:
-                H = algo.farm_controller.turbine_types[ti].H
+                H = turbine_types[ti].H
             fdata[FV.TXYH][:, ti, 2] = H
 
             D = t.D
             if D is None:
-                D = algo.farm_controller.turbine_types[ti].D
+                D = turbine_types[ti].D
             fdata[FV.D][:, ti] = D
 
         # calc WD at rotor centres:
         svrs = algo.states.output_point_vars(algo)
-        tdata = TData.from_points(points=fdata[FV.TXYH], variables=svrs)
+        tdata = cast(TData, TData.from_points(points=fdata[FV.TXYH], variables=svrs))
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
         fdata.add(
             FV.WD,

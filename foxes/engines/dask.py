@@ -11,7 +11,7 @@ from foxes.utils import import_module
 from .process import ProcessEngine, ProcessEngineRunner
 
 if TYPE_CHECKING:
-    from foxes.core import FData, TData
+    from foxes.core import Algorithm, DataCalcModel, FData, TData
 
 
 dask = None
@@ -179,8 +179,8 @@ class DaskProcessRunner(ProcessEngineRunner):
 
     def run(
         self,
-        algo: Any,
-        model: Any,
+        algo: Algorithm,
+        model: DataCalcModel,
         mdata: MData,
         fdata: FData,
         tdata: TData | None = None,
@@ -205,6 +205,7 @@ class DaskProcessRunner(ProcessEngineRunner):
         tdata = self._resolve_data_container(tdata)
         cpars = self._resolve_nested_value(cpars)
 
+        results: dict[str, Any] | None
         if tdata is None:
             results = model.calculate(algo, mdata, fdata, **cpars)
         else:
@@ -226,7 +227,7 @@ class DaskEngine(ProcessEngine):
     def __init__(
         self,
         *args: Any,
-        dask_config: dict[str, Any] = {},
+        dask_config: dict[str, Any] | None = None,
         supports_shared_data: bool = True,
         min_shared_array_bytes: int = 0,
         progress_bar: bool = True,
@@ -253,7 +254,7 @@ class DaskEngine(ProcessEngine):
             progress_bar=None,
             **kwargs,
         )
-        self.dask_config = dask_config
+        self.dask_config = {} if dask_config is None else dask_config
         self._dask_progress_bar = progress_bar
         self._pbar: Any | None = None
 
@@ -404,12 +405,12 @@ class LocalClusterEngine(ProcessEngine):
     def __init__(
         self,
         *args: Any,
-        dask_config: dict[str, Any] = {},
+        dask_config: dict[str, Any] | None = None,
         supports_shared_data: bool = True,
         min_shared_array_bytes: int = 0,
         min_submit_array_bytes: int = 0,  # 1048576,
-        cluster_pars: dict[str, Any] = {},
-        client_pars: dict[str, Any] = {},
+        cluster_pars: dict[str, Any] | None = None,
+        client_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -440,9 +441,9 @@ class LocalClusterEngine(ProcessEngine):
 
         load_distributed()
 
-        self.cluster_pars = cluster_pars
-        self.client_pars = client_pars
-        self.dask_config = dask_config
+        self.cluster_pars = {} if cluster_pars is None else cluster_pars
+        self.client_pars = {} if client_pars is None else client_pars
+        self.dask_config = {} if dask_config is None else dask_config
         self.min_submit_array_bytes = int(min_submit_array_bytes)
 
         self.dask_config["scheduler"] = "distributed"

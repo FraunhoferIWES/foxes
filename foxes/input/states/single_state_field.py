@@ -197,9 +197,11 @@ class SingleStateField(States):
                             print(
                                 f"States '{self.name}': Reading static data '{fpath.name}' from context '{STATES}'"
                             )
-                        fpath = algo.dbook.get_file_path(
+                        fpath0 = algo.dbook.get_file_path(
                             STATES, fpath.name, check_raw=False
                         )
+                        assert fpath0 is not None
+                        fpath = fpath0
                     else:
                         raise FileNotFoundError(
                             f"States '{self.name}': File {fpath} not found."

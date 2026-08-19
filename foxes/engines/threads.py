@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from .process import ProcessEngine, ProcessEngineRunner
 
 if TYPE_CHECKING:
-    from foxes.core import MData, FData, TData
+    from foxes.core import Algorithm, DataCalcModel, FData, MData, TData
 
 
 class ThreadsEngineRunner(ProcessEngineRunner):
@@ -18,8 +18,8 @@ class ThreadsEngineRunner(ProcessEngineRunner):
 
     def run(
         self,
-        algo: Any,
-        model: Any,
+        algo: Algorithm,
+        model: DataCalcModel,
         mdata: MData,
         fdata: FData,
         tdata: TData | None = None,
@@ -35,6 +35,7 @@ class ThreadsEngineRunner(ProcessEngineRunner):
     ) -> tuple[dict[str, Any] | None, dict[Any, Any]]:
         """Helper function for running in a single process"""
         mdata = self._recombine_mdata_with_shared(mdata, shared)
+        results: dict[str, Any] | None
         if tdata is None:
             results = model.calculate(algo, mdata, fdata, **cpars)
         else:

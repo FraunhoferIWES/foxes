@@ -2,7 +2,7 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 import numpy as np
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import TurbineModel
 from foxes.config import config
@@ -170,8 +170,9 @@ class SetFarmVars(TurbineModel):
                 and vdata.shape[0] != n_states
                 and hasattr(algo.states, "n_pop")
             ):
-                n_pop = algo.states.n_pop
-                n_ost = algo.states.states.size()
+                states = cast(Any, algo.states)
+                n_pop = states.n_pop
+                n_ost = states.states.size()
                 n_trb = n_turbines
                 vdata = np.zeros((n_pop, n_ost, n_trb), dtype=config.dtype_double)
                 vdata[:] = self.__vdata[i][None, :]

@@ -37,7 +37,7 @@ class States(PointDataModel):
         """
         pass
 
-    def index(self) -> Any:
+    def index(self) -> list[int]:
         """
         The index list
 
@@ -53,7 +53,7 @@ class States(PointDataModel):
         self,
         algo: Algorithm | None = None,
         states_sel: slice | range | list[int] | None = None,
-        states_loc: list[Any] | None = None,
+        states_loc: list[int] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -101,7 +101,9 @@ class States(PointDataModel):
         """
         yield None
 
-    def __add__(self, s: Any) -> ExtendedStates:
+    def __add__(
+        self, s: PointDataModel | list[PointDataModel] | ExtendedStates
+    ) -> ExtendedStates:
         if isinstance(s, list):
             return ExtendedStates(self, s)
         elif isinstance(s, ExtendedStates):
@@ -207,7 +209,7 @@ class ExtendedStates(States):
         """
         return self.states.size()
 
-    def index(self) -> Any:
+    def index(self) -> list[int]:
         """
         The index list
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from abc import ABC
 from itertools import count
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, overload
+from typing import TYPE_CHECKING, Any, Iterator, Literal, TypedDict, overload
 
 from foxes.config import config
 import foxes.constants as FC
@@ -17,9 +17,12 @@ if TYPE_CHECKING:
 class LoadedData(TypedDict):
     coords: dict[
         str,
-        np.ndarray | list[str] | tuple[tuple[str, ...], np.ndarray],
+        np.ndarray[Any, Any]
+        | list[str]
+        | list[int]
+        | tuple[tuple[str, ...], np.ndarray[Any, Any]],
     ]
-    data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]]
+    data_vars: dict[str, tuple[tuple[str, ...], np.ndarray[Any, Any]]]
     extra_data: dict[str, Any]
 
 
@@ -35,7 +38,7 @@ class Model(ABC):
 
     """
 
-    _ids: dict[str, Any] = {}
+    _ids: dict[str, Iterator[int]] = {}
 
     def __init__(self) -> None:
         """
@@ -364,8 +367,8 @@ class Model(ABC):
         accept_nan: bool = True,
         algo: Algorithm | None = None,
         upcast: bool = False,
-        selection: np.ndarray | tuple[Any, ...] | list[Any] | None = None,
-    ) -> np.ndarray: ...
+        selection: np.ndarray[Any, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> np.ndarray[Any, Any]: ...
 
     @overload
     def get_data(
@@ -381,8 +384,8 @@ class Model(ABC):
         accept_nan: bool = True,
         algo: Algorithm | None = None,
         upcast: bool = False,
-        selection: np.ndarray | tuple[Any, ...] | list[Any] | None = None,
-    ) -> np.ndarray | None: ...
+        selection: np.ndarray[Any, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> np.ndarray[Any, Any] | None: ...
 
     def get_data(
         self,
@@ -397,8 +400,8 @@ class Model(ABC):
         accept_nan: bool = True,
         algo: Algorithm | None = None,
         upcast: bool = False,
-        selection: np.ndarray | tuple[Any, ...] | list[Any] | None = None,
-    ) -> np.ndarray | None:
+        selection: np.ndarray[Any, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> np.ndarray[Any, Any] | None:
         """
         Getter for a data entry in the model object
         or provided data sources
@@ -484,7 +487,7 @@ class Model(ABC):
                 f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
             )
 
-        def _match_shape(a: Any) -> np.ndarray:
+        def _match_shape(a: Any) -> np.ndarray[Any, Any]:
             out = np.asarray(a)
             if len(out.shape) < len(shp):
                 for i, s in enumerate(shp):
@@ -502,7 +505,7 @@ class Model(ABC):
 
         def _filter_dims(
             source: MData | FData | TData,
-        ) -> tuple[np.ndarray, tuple[str, ...]]:
+        ) -> tuple[np.ndarray[Any, Any], tuple[str, ...]]:
             a = source[variable]
             a_dims = tuple(source.dims[variable])
             if downwind_index is None or FC.TURBINE not in a_dims:
@@ -662,7 +665,9 @@ class Model(ABC):
         if selection is not None:
             selected_out = out
 
-            def _upcast_sel(sel_shape: tuple[int, ...]) -> tuple[np.ndarray, list[int]]:
+            def _upcast_sel(
+                sel_shape: tuple[int, ...],
+            ) -> tuple[np.ndarray[Any, Any], list[int]]:
                 chp: list[int] = []
                 for i, s in enumerate(selected_out.shape):
                     if i < len(sel_shape) and sel_shape[i] > 1:

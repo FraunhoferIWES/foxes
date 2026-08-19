@@ -3,11 +3,14 @@ from __future__ import annotations
 import numpy as np
 from xarray import Dataset
 from abc import abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
 from foxes.core import Engine
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core import Algorithm, DataCalcModel, MData
 
 
 def _run_map(func: Any, inputs: Any, *args: Any, **kwargs: Any) -> list[Any]:
@@ -39,7 +42,7 @@ class PoolEngine(Engine):
         self,
         *args: Any,
         share_cstore: bool = False,
-        pool_args: dict[str, Any] = {},
+        pool_args: dict[str, Any] | None = None,
         supports_shared_data: bool = True,
         min_shared_array_bytes: int = 65536,
         **kwargs: Any,
@@ -68,7 +71,7 @@ class PoolEngine(Engine):
         super().__init__(*args, **kwargs)
         self._pool: Any = None
         self.share_cstore = share_cstore
-        self.pool_args = pool_args
+        self.pool_args = {} if pool_args is None else pool_args
         self.supports_shared_data = supports_shared_data
         self.min_shared_array_bytes = int(min_shared_array_bytes)
 
@@ -146,14 +149,14 @@ class PoolEngine(Engine):
 
     def run_calculation(
         self,
-        algo: Any,
-        model: Any,
+        algo: Algorithm,
+        model: DataCalcModel,
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
         point_data: Dataset | None = None,
-        extra_data: dict[str, Any] = {},
-        out_vars: list[str] = [],
-        chunk_store: dict[Any, Any] = {},
+        extra_data: dict[str, Any] | None = None,
+        out_vars: list[str] | None = None,
+        chunk_store: dict[Any, Any] | None = None,
         sel: dict[str, Any] | None = None,
         isel: dict[str, Any] | None = None,
         iterative: bool = False,
@@ -218,6 +221,10 @@ class PoolEngine(Engine):
             The model results
 
         """
+
+        extra_data = {} if extra_data is None else extra_data
+        out_vars = [] if out_vars is None else out_vars
+        chunk_store = {} if chunk_store is None else chunk_store
 
         # reset chunk store:
         if self.share_cstore:
@@ -400,7 +407,7 @@ class PoolEngine(Engine):
     def init_shared_memory(
         self,
         shared_memory: list[Any],
-        mdata: Any,
+        mdata: MData,
         shared_mdata: Any,
         verbosity: int = 0,
     ) -> Any:
@@ -427,7 +434,7 @@ class PoolEngine(Engine):
         mdata.recombine_with_shared(shared_mdata)
         return None
 
-    def prepare_chunk_mdata_for_shared(self, mdata: Any, shared_handle: Any) -> None:
+    def prepare_chunk_mdata_for_shared(self, mdata: MData, shared_handle: Any) -> None:
         """Hook for engine-specific mdata adjustments before worker submission.
 
         Parameters

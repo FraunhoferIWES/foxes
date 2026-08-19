@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import Engine
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core import Algorithm, DataCalcModel
 
 
 class DefaultEngine(Engine):
@@ -57,7 +60,9 @@ class DefaultEngine(Engine):
         e.__enter__()
         return e, True
 
-    def _select_engine_name(self, algo: Any = None, point_data: Any = None) -> str:
+    def _select_engine_name(
+        self, algo: Algorithm | None = None, point_data: Any = None
+    ) -> str:
         """Selects SingleChunkEngine vs ProcessEngine where possible."""
         if algo is None:
             return "process"
@@ -199,8 +204,8 @@ class DefaultEngine(Engine):
 
     def run_calculation(
         self,
-        algo: Any,
-        model: Any,
+        algo: Algorithm,
+        model: DataCalcModel,
         model_data: Any = None,
         farm_data: Any = None,
         point_data: Any = None,

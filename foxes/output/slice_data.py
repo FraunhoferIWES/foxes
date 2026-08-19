@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from xarray import Dataset
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
 from foxes.utils import write_nc
@@ -9,6 +11,9 @@ import foxes.constants as FC
 
 from .output import Output
 from . import grids
+
+if TYPE_CHECKING:
+    from foxes.core import Algorithm
 
 
 class SliceData(Output):
@@ -29,7 +34,7 @@ class SliceData(Output):
 
     def __init__(
         self,
-        algo: Any,
+        algo: Algorithm,
         farm_results: Dataset,
         verbosity_delta: int = 1,
         **kwargs: Any,

@@ -483,8 +483,10 @@ class FarmResultsEval(Output):
 
         """
         if self.algo is not None:
+            turbine_types = self.algo.farm_controller.turbine_types
+            assert turbine_types is not None
             P_unit_W: np.ndarray = np.array(
-                [FC.P_UNITS[t.P_unit] for t in self.algo.farm_controller.turbine_types],
+                [FC.P_UNITS[t.P_unit] for t in turbine_types],
                 dtype=config.dtype_double,
             )
             return P_unit_W

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from xarray import Dataset
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import Engine, EngineRunner
 import foxes.constants as FC
+
+if TYPE_CHECKING:
+    from foxes.core import Algorithm, DataCalcModel, MData
 
 
 class SingleChunkEngineRunner(EngineRunner):
@@ -16,9 +19,9 @@ class SingleChunkEngineRunner(EngineRunner):
 
     def run(
         self,
-        algo: Any,
-        model: Any,
-        mdata: Any,
+        algo: Algorithm,
+        model: DataCalcModel,
+        mdata: MData,
         *data: Any,
         shared: Any,
         chunk_key: Any,
@@ -30,7 +33,9 @@ class SingleChunkEngineRunner(EngineRunner):
         """Helper function for running in a single chunk."""
         if shared is not None:
             mdata.recombine_with_shared(shared)
-        results = model.calculate(algo, mdata, *data, **cpars)
+        results: dict[str, Any] | None = model.calculate(algo, mdata, *data, **cpars)
+        if results is None:
+            results = {}
         cstore = (
             {chunk_key: algo.chunk_store[chunk_key]}
             if chunk_key in algo.chunk_store
@@ -202,8 +207,8 @@ class SingleChunkEngine(Engine):
 
     def run_calculation(
         self,
-        algo: Any,
-        model: Any,
+        algo: Algorithm,
+        model: DataCalcModel,
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
         point_data: Dataset | None = None,
@@ -296,6 +301,7 @@ class SingleChunkEngine(Engine):
         # prepare:
         algo.reset_chunk_store(chunk_store)
         n_states_eff = n_states if n_states is not None else algo.n_states
+        assert n_states_eff is not None
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         out_dims = model.output_coords()
         coords = {}

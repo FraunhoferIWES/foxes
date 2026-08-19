@@ -113,7 +113,7 @@ class MultiHeightStates(States):
         self.fixed_vars = fixed_vars
         self.ipars = ipars
         self.states_sel = states_sel
-        self.states_loc = states_loc
+        self.states_loc = cast(list[int] | None, states_loc)
         self.check_nans = check_nans
         self.interpolate_nans_pars = interpolate_nans_pars
 
@@ -148,7 +148,7 @@ class MultiHeightStates(States):
         self,
         algo: Algorithm | None = None,
         states_sel: slice | range | list[int] | None = None,
-        states_loc: list[object] | None = None,
+        states_loc: list[int] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -258,7 +258,9 @@ class MultiHeightStates(States):
                     print(
                         f"States '{self.name}': Reading static data '{fpath}' from context '{STATES}'"
                     )
-                fpath = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                fpath0 = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                assert fpath0 is not None
+                fpath = fpath0
                 self._data_source = fpath
                 if verbosity > 0:
                     print(f"Path: {fpath}")
@@ -418,7 +420,7 @@ class MultiHeightStates(States):
         assert self._N is not None
         return self._N
 
-    def index(self) -> np.ndarray | None:
+    def index(self) -> list[Any]:
         """
         The index list
 
@@ -430,7 +432,7 @@ class MultiHeightStates(States):
         """
         if self.running:
             raise ValueError(f"States '{self.name}': Cannot access index while running")
-        return self._inds
+        return list(self._inds)
 
     def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
@@ -697,7 +699,9 @@ class MultiHeightNCStates(MultiHeightStates):
                     print(
                         f"States '{self.name}': Reading static data '{fpath}' from context '{STATES}'"
                     )
-                fpath = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                fpath0 = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                assert fpath0 is not None
+                fpath = fpath0
                 self._data_source = fpath
                 if verbosity > 0:
                     print(f"Path: {fpath}")

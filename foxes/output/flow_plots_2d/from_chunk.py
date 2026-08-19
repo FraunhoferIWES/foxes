@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from xarray import Dataset
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, cast
 import matplotlib.pyplot as plt
 
 from foxes.config import get_output_path
@@ -12,14 +12,14 @@ from .flow_plots import FlowPlots2D
 from ..animation import Animator
 
 if TYPE_CHECKING:
-    from foxes.core import Algorithm
+    from foxes.core import Algorithm, FData, MData, TData
 
 
 def write_chunk_ani_xy(
     algo: Algorithm,
-    mdata: Any,
-    fdata: Any,
-    tdata: Any = None,
+    mdata: MData,
+    fdata: FData,
+    tdata: TData | None = None,
     vars: list[str] = [FV.WS],
     resolution: float = 100.0,
     figsize: tuple[int, int] = (8, 8),
@@ -89,14 +89,14 @@ def write_chunk_ani_xy(
     if mdata is not None and fdata is not None and tdata is None:
         try:
             if states_isel is not None:
-                mdata = mdata.get_slice(FC.STATE, states_isel, force=True)
-                fdata = fdata.get_slice(FC.STATE, states_isel, force=True)
+                mdata = cast(MData, mdata.get_slice(FC.STATE, states_isel, force=True))
+                fdata = cast(FData, fdata.get_slice(FC.STATE, states_isel, force=True))
             if states_sel is not None:
-                s = [
-                    i for i in range(mdata.n_states) if mdata[FC.STATE][i] in states_sel
-                ]
-                mdata = mdata.get_slice(FC.STATE, s, force=True)
-                fdata = fdata.get_slice(FC.STATE, s, force=True)
+                n_states = mdata.n_states
+                assert n_states is not None
+                s = [i for i in range(n_states) if mdata[FC.STATE][i] in states_sel]
+                mdata = cast(MData, mdata.get_slice(FC.STATE, s, force=True))
+                fdata = cast(FData, fdata.get_slice(FC.STATE, s, force=True))
         except IndexError:
             return
 

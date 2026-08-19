@@ -141,7 +141,9 @@ class WeibullSectors(StatesTable):
                     print(
                         f"States '{self.name}': Reading static data '{fpath}' from context '{STATES}'"
                     )
-                fpath = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                fpath0 = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                assert fpath0 is not None
+                fpath = fpath0
                 if verbosity > 0:
                     print(f"Path: {fpath}")
             elif verbosity > 0:

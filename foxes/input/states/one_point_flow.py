@@ -167,7 +167,7 @@ class OnePointFlowStates(States):
         """
         return self.base_states.size()
 
-    def index(self) -> object:
+    def index(self) -> list[int]:
         """
         The index list
 
@@ -177,7 +177,7 @@ class OnePointFlowStates(States):
             The index labels of states, or None for default integers
 
         """
-        return self.base_states.index()
+        return list(self.base_states.index())
 
     def output_point_vars(self, algo: Algorithm) -> list[str]:
         """

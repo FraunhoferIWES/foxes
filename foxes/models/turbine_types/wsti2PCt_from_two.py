@@ -203,9 +203,14 @@ class WsTI2PCtFromTwo(TurbineType):
         else:
             fpath = get_input_path(self.source_P)
             if not fpath.is_file():
-                fpath = algo.dbook.get_file_path(
+                fpath2 = algo.dbook.get_file_path(
                     PCTCURVE, self.source_P, check_raw=False
                 )
+                if fpath2 is None:
+                    raise FileNotFoundError(
+                        f"Power curve file '{self.source_P}' not found in context '{PCTCURVE}'"
+                    )
+                fpath = fpath2
             pars = {"index_col": 0}
             pars.update(self.rpars_P)
             data = PandasFileHelper.read_file(fpath, **pars)
@@ -222,9 +227,14 @@ class WsTI2PCtFromTwo(TurbineType):
         else:
             fpath = get_input_path(self.source_ct)
             if not fpath.is_file():
-                fpath = algo.dbook.get_file_path(
+                fpath2 = algo.dbook.get_file_path(
                     PCTCURVE, self.source_ct, check_raw=False
                 )
+                if fpath2 is None:
+                    raise FileNotFoundError(
+                        f"Ct curve file '{self.source_ct}' not found in context '{PCTCURVE}'"
+                    )
+                fpath = fpath2
             pars = {"index_col": 0}
             pars.update(self.rpars_ct)
             data = PandasFileHelper.read_file(fpath, **pars)

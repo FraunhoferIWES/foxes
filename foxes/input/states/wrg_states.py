@@ -107,7 +107,9 @@ class WRGStates(States):
                 print(
                     f"States '{self.name}': Reading static data '{self.wrg_fname}' from context '{STATES}'"
                 )
-            fpath = algo.dbook.get_file_path(STATES, self.wrg_fname, check_raw=False)
+            fpath0 = algo.dbook.get_file_path(STATES, self.wrg_fname, check_raw=False)
+            assert fpath0 is not None
+            fpath = fpath0
             if verbosity > 0:
                 print(f"Path: {fpath}")
         elif verbosity:

@@ -181,6 +181,7 @@ class ICONStates(LatLonFieldData):
             fpath = algo.dbook.get_file_path(
                 MODEL_DATA, f"icon_heights_{A}.csv", check_raw=False
             )
+            assert fpath is not None
             algo.print(f"States '{self.name}': Loading '{fpath.stem}'")
             hdata[A] = read_csv(fpath, index_col="eu_nest")["height"].to_numpy()
         self.__icon_heights_TKE = hdata["A1"]

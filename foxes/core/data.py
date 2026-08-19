@@ -1188,7 +1188,7 @@ class TData(Data):
         mdata: MData | None = None,
         name: str = "tdata",
         **kwargs: Any,
-    ) -> Data:
+    ) -> TData:
         """
         Create from points
 
@@ -1251,7 +1251,7 @@ class TData(Data):
         mdata: MData | None = None,
         name: str = "tdata",
         **kwargs: Any,
-    ) -> Data:
+    ) -> TData:
         """
         Create from points at targets
 

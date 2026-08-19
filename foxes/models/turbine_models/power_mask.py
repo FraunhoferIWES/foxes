@@ -148,7 +148,9 @@ class PowerMask(TurbineModel):
         )
 
         p_rated: list[float] = []
-        for t in algo.farm_controller.turbine_types:
+        turbine_types = algo.farm_controller.turbine_types
+        assert turbine_types is not None
+        for t in turbine_types:
             Pnom = config.dtype_double(t.P_nominal)
             if np.isnan(Pnom):
                 raise ValueError(

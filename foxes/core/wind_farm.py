@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 from typing import TYPE_CHECKING, Any
 
@@ -12,7 +14,9 @@ from foxes.utils.geojson_utils import (
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
+    from foxes.core.farm_controller import FarmController
     from foxes.core.turbine import Turbine
+    from foxes.utils.geom2d.area_geometry import AreaGeometry
 
 
 class WindFarm:
@@ -34,9 +38,9 @@ class WindFarm:
     def __init__(
         self,
         name: str = "wind_farm",
-        boundary: Any = None,
+        boundary: AreaGeometry | None = None,
         input_is_lonlat: bool = False,
-        utm_zone: Any = None,
+        utm_zone: str | tuple[int, str] | tuple[float, float] | None = None,
     ) -> None:
         """
         Construct the wind farm.
@@ -64,7 +68,7 @@ class WindFarm:
         self.__data_is_lonlat = input_is_lonlat
         self.__utm_zone = utm_zone
         self.__locked = False
-        self.__cluster_areas: dict[str, Any] | None = None
+        self.__cluster_areas: dict[str, AreaGeometry] | None = None
         self.__lonlat: np.ndarray | None = None
 
     @property
@@ -291,7 +295,14 @@ class WindFarm:
 
     def map_turbines_to_areas(
         self,
-        areas: Any,
+        areas: (
+            dict[str, AreaGeometry]
+            | list[AreaGeometry]
+            | list[tuple[str, AreaGeometry]]
+            | str
+            | Path
+            | dict[str, Any]
+        ),
         set_cluster: bool = True,
         geojson_name_key: str | list[str] = "name",
     ) -> dict[str, list[int]]:
@@ -341,7 +352,7 @@ class WindFarm:
         return mapping
 
     @property
-    def cluster_areas(self) -> dict[str, Any] | None:
+    def cluster_areas(self) -> dict[str, AreaGeometry] | None:
         """
         The cluster areas, if set by map_turbines_to_areas.
 
@@ -618,8 +629,12 @@ class WindFarm:
 
         """
         farm_controller = self._get_farm_controller(algo)
+        ttypes = farm_controller.turbine_types
+        assert ttypes is not None, (
+            f"WindFarm '{self.name}': turbine types not set in farm controller {farm_controller.name}"
+        )
         rds = [
-            t.D if t.D is not None else farm_controller.turbine_types[i].D
+            t.D if t.D is not None else ttypes[i].D
             for i, t in enumerate(self.__turbines)
         ]
         return np.array(rds, dtype=config.dtype_double)
@@ -640,8 +655,12 @@ class WindFarm:
 
         """
         farm_controller = self._get_farm_controller(algo)
+        ttypes = farm_controller.turbine_types
+        assert ttypes is not None, (
+            f"WindFarm '{self.name}': turbine types not set in farm controller {farm_controller.name}"
+        )
         hhs = [
-            t.H if t.H is not None else farm_controller.turbine_types[i].H
+            t.H if t.H is not None else ttypes[i].H
             for i, t in enumerate(self.__turbines)
         ]
         return np.array(hhs, dtype=config.dtype_double)
@@ -707,5 +726,5 @@ class WindFarm:
             capacity_array[i] = tt.P_nominal
         return capacity_array
 
-    def _get_farm_controller(self, algo: Algorithm) -> Any:
+    def _get_farm_controller(self, algo: Algorithm) -> FarmController:
         return algo.farm_controller

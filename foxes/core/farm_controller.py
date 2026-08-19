@@ -62,7 +62,7 @@ class FarmController(FarmDataModel):
         self._tmall: list[bool] | None = None
         self._tmsels: dict[int, np.ndarray] | None = None
 
-    def sub_models(self) -> list[Any]:
+    def sub_models(self) -> list[FarmDataModelList | None]:
         """
         List of all sub-models
 
@@ -146,9 +146,9 @@ class FarmController(FarmDataModel):
         """
         Helper function for model analysis
         """
-        tmodels: list[Any] = []
+        tmodels: list[FarmDataModel] = []
         tmsels: list[np.ndarray] = []
-        mnames = [[m.name for m in mlist] for mlist in models]
+        mnames: list[list[str]] = [[m.name for m in mlist] for mlist in models]
         tmis: np.ndarray = np.zeros(algo.n_turbines, dtype=config.dtype_int)
         news = True
         while news:

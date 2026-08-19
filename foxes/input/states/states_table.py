@@ -5,7 +5,7 @@ import pandas as pd
 from collections.abc import Collection
 from xarray import Dataset
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from foxes.core import (
     Algorithm,
@@ -96,7 +96,7 @@ class StatesTable(States):
         self.fixed_vars = {} if fixed_vars is None else fixed_vars
         self.profdicts = {} if profiles is None else profiles
         self.states_sel = states_sel
-        self.states_loc = states_loc
+        self.states_loc = cast(list[int] | None, states_loc)
 
         if self.states_loc is not None and self.states_sel is not None:
             raise ValueError(
@@ -130,7 +130,7 @@ class StatesTable(States):
         self,
         algo: Algorithm | None = None,
         states_sel: slice | range | list[int] | None = None,
-        states_loc: list[object] | None = None,
+        states_loc: list[int] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -258,7 +258,9 @@ class StatesTable(States):
                     print(
                         f"States '{self.name}': Reading static data '{fpath}' from context '{STATES}'"
                     )
-                fpath = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                fpath0 = algo.dbook.get_file_path(STATES, fpath.name, check_raw=False)
+                assert fpath0 is not None
+                fpath = fpath0
                 self._data = fpath
                 if verbosity > 0:
                     print(f"Path: {fpath}")
@@ -275,6 +277,7 @@ class StatesTable(States):
         self.__inds = data.index.to_numpy()
 
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+        loaded_data["coords"][FC.STATE] = self.__inds
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         weights = None
@@ -319,7 +322,7 @@ class StatesTable(States):
         """
         return self._N
 
-    def index(self) -> np.ndarray:
+    def index(self) -> list[Any]:
         """
         The index list
 
@@ -331,7 +334,7 @@ class StatesTable(States):
         """
         if self.running:
             raise ValueError(f"States '{self.name}': Cannot access index while running")
-        return self.__inds
+        return list(self.__inds)
 
     def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
@@ -605,9 +608,11 @@ class TabStates(StatesTable):
                         print(
                             f"States '{self.name}': Reading static data '{self.__tab_source}' from context '{STATES}'"
                         )
-                    self.__tab_source = algo.dbook.get_file_path(
+                    fpath = algo.dbook.get_file_path(
                         STATES, self.__tab_source.name, check_raw=False
                     )
+                    assert fpath is not None
+                    self.__tab_source = fpath
                     if verbosity > 0:
                         print(f"Path: {self.__tab_source}")
                 elif verbosity:

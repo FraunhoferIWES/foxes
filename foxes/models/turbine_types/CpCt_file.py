@@ -181,7 +181,14 @@ class CpCtFile(TurbineType):
                     print(
                         f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
                     )
-                fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=False)
+                fpath2 = algo.dbook.get_file_path(
+                    PCTCURVE, self.source, check_raw=False
+                )
+                if fpath2 is None:
+                    raise FileNotFoundError(
+                        f"Curve file '{self.source}' not found in context '{PCTCURVE}'"
+                    )
+                fpath = fpath2
             if verbosity > 0:
                 print(f"Turbine type '{self.name}': Reading file", fpath)
             data = PandasFileHelper.read_file(fpath, **self.rpars)

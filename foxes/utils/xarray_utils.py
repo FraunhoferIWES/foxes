@@ -57,7 +57,7 @@ def pack_value(
     unpacked_value: float | np.ndarray,
     scale_factor: float,
     add_offset: float,
-    dtype: np.dtype[Any] | type,
+    dtype: np.dtype[Any] | type[Any],
     fill_value: float | None,
 ) -> np.ndarray:
     """

@@ -6,7 +6,7 @@ from foxes.config import config
 import foxes.variables as FV
 from foxes.core import TurbineModel
 from foxes.utils import wd2uv, uv2wd, delta_wd
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
@@ -89,10 +89,8 @@ class YawController(TurbineModel):
         n_turbines = algo.n_turbines
         assert n_turbines is not None, "Missing n_turbines in algorithm"
 
-        delta_t = algo.states.index()[1] - algo.states.index()[0]
-        self._dt = delta_t.astype("timedelta64[s]").astype(
-            float
-        )  # number of time steps to consider
+        delta_t = np.asarray(algo.states.index()[1] - algo.states.index()[0])
+        self._dt = delta_t.astype("timedelta64[s]").astype(float)
         self._n = int(self._avg_time / self._dt)  # number of time steps to consider
         self._targetyaw = np.full((n_turbines), np.nan, dtype=config.dtype_double)
         self._windowstart = np.zeros((n_turbines), dtype=config.dtype_int)
@@ -147,7 +145,7 @@ class YawController(TurbineModel):
         t_sel = t_sel_2d[0, :]
 
         # get current data:
-        counter = algo.states.counter
+        counter = cast(Any, algo.states).counter
         fresults = algo.farm_results_downwind
         assert fresults is not None, "Missing farm_results_downwind"
         wd = fdata[FV.AMB_WD][0, :]

@@ -12,7 +12,7 @@ from matplotlib.lines import Line2D
 from typing import Any
 
 from foxes.algorithms import Downwind
-from foxes.core import WindFarm, Turbine
+from foxes.core import States, Turbine, WindFarm
 from foxes.models import ModelBook
 import foxes.variables as FV
 import foxes.constants as FC
@@ -368,7 +368,7 @@ class StatesRosePlotOutput(RosePlotOutput):
 
     def __init__(
         self,
-        states: Any,
+        states: States,
         point: np.ndarray,
         mbook: ModelBook | None = None,
         ws_var: str = FV.AMB_REWS,

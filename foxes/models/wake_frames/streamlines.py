@@ -352,6 +352,9 @@ class Streamlines2D(WakeFrame):
         else:
             coos = coos[:, 0, :, :].reshape(n_states, n_targets, n_tpoints, 3)
 
+        if downwind_index is None:
+            return coos
+
         wdfl = algo.wake_deflection
         assert wdfl is not None, "Wake deflection model not initialized"
         return wdfl.calc_deflection(algo, mdata, fdata, tdata, downwind_index, coos)

@@ -202,9 +202,14 @@ class CpCtFromTwo(TurbineType):
         else:
             fpath = get_input_path(self.source_cp)
             if not fpath.is_file():
-                fpath = algo.dbook.get_file_path(
+                fpath2 = algo.dbook.get_file_path(
                     PCTCURVE, self.source_cp, check_raw=False
                 )
+                if fpath2 is None:
+                    raise FileNotFoundError(
+                        f"Power curve file '{self.source_cp}' not found in context '{PCTCURVE}'"
+                    )
+                fpath = fpath2
             self._data_cp = PandasFileHelper.read_file(fpath, **self.rpars_cp)
         assert self._data_cp is not None
 
@@ -218,9 +223,14 @@ class CpCtFromTwo(TurbineType):
         else:
             fpath = get_input_path(self.source_ct)
             if not fpath.is_file():
-                fpath = algo.dbook.get_file_path(
+                fpath2 = algo.dbook.get_file_path(
                     PCTCURVE, self.source_ct, check_raw=False
                 )
+                if fpath2 is None:
+                    raise FileNotFoundError(
+                        f"Ct curve file '{self.source_ct}' not found in context '{PCTCURVE}'"
+                    )
+                fpath = fpath2
             self._data_ct = PandasFileHelper.read_file(fpath, **self.rpars_ct)
         assert self._data_ct is not None
 

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from foxes.algorithms import Iterative
 from foxes.config import config
-from foxes.core import get_engine
+from foxes.core import Algorithm, get_engine
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -355,7 +355,7 @@ class Sequential(Iterative):
         """
         return self._seq_state()._indx if self.iterating else None
 
-    def states_i0(self, counter: bool, algo: Any = None) -> Any:
+    def states_i0(self, counter: bool, algo: Algorithm | None = None) -> Any:
         """
         Returns counter or index
 
