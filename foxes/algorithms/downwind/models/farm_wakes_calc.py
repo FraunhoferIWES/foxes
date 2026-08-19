@@ -12,6 +12,9 @@ import foxes.variables as FV
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData, TData
+    from foxes.core.ground_model import GroundModel
+    from foxes.core.partial_wakes_model import PartialWakesModel
+    from foxes.core.wake_model import WakeModel
 
 
 class FarmWakesCalculation(FarmDataModel):
@@ -93,8 +96,8 @@ class FarmWakesCalculation(FarmDataModel):
                 pwake2wmodels[pwake.name] = wmodels
 
         def _contribute(
-            gmodel: Any,
-            pwake: Any,
+            gmodel: GroundModel,
+            pwake: PartialWakesModel,
             tdatap: Any,
             wdeltas: dict[str, np.ndarray],
             variables: list[str],
@@ -132,60 +135,62 @@ class FarmWakesCalculation(FarmDataModel):
                     wdelta0[v][:, tsel, ...] = wdelta[v]
 
         def _evaluate(
-            gmodel: Any,
+            gmodel: GroundModel,
             tdata: TData,
             rwghts: np.ndarray,
             wake_res: dict[str, np.ndarray],
             wdeltas: dict[str, np.ndarray],
             oi: int,
-            wmodel: Any,
-            pwake: Any,
+            wmodel: WakeModel,
+            pwake: PartialWakesModel,
         ) -> None:
             """Helper function for data evaluation at turbines"""
             nonlocal weights
 
-            wres = gmodel.finalize_farm_wakes(
-                algo, mdata, fdata, tdata, rwghts, wdeltas, wmodel, oi, pwake
-            )
-
+            # run pre-rotor models and rotor model, if applicable:
             if controller.has_pre_rotor_models:
                 res = controller.calculate(
                     algo, mdata, fdata, pre_rotor=True, downwind_index=oi
                 )
                 fdata.update(res)
-                rotor.calculate(
+                res = rotor.calculate(
                     algo, mdata, fdata, downwind_index=oi, rpoint_weights=rwghts
                 )
+                fdata.update(res)
                 weights = algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata)
                 wmdls = pwake2wmodels[pwake.name]
                 pwake.update_tdata(
                     algo, mdata, fdata, tdata, wake_res, rwghts, wmdls, oi
                 )
 
-            else:
-                hres = {
-                    v: d[:, oi, None] if d.shape[1] > 1 else d[:, 0, None]
-                    for v, d in wake_res.items()
-                }
-                for v, d in wres.items():
-                    if v in wake_res:
-                        hres[v] += d[:, None]
-                hdims: dict[str, tuple[str, ...]] = {
-                    v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hres.keys()
-                }
-                htdata = TData.from_tpoints(
-                    rpts[:, oi, None, :, :],
-                    tweights=rwghts,
-                    data=hres,
-                    dims=hdims,
-                )
-                htdata[FV.WEIGHT] = weights
-                del hres, hdims
+            # apply wake effects:
+            wres = gmodel.finalize_farm_wakes(
+                algo, mdata, fdata, tdata, rwghts, wdeltas, wmodel, oi, pwake
+            )
+            hres = {
+                v: d[:, oi, None] if d.shape[1] > 1 else d[:, 0, None]
+                for v, d in wake_res.items()
+            }
+            for v, d in wres.items():
+                if v in wake_res:
+                    hres[v] += d[:, None]
+            hdims: dict[str, tuple[str, ...]] = {
+                v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hres.keys()
+            }
+            htdata = TData.from_tpoints(
+                rpts[:, oi, None, :, :],
+                tweights=rwghts,
+                data=hres,
+                dims=hdims,
+            )
+            htdata[FV.WEIGHT] = weights
+            del hres, hdims
 
-                rotor.eval_rpoint_results(
-                    algo, mdata, fdata, htdata, rwghts, downwind_index=oi
-                )
+            rotor.eval_rpoint_results(
+                algo, mdata, fdata, htdata, rwghts, downwind_index=oi
+            )
 
+            # run post-rotor models, if applicable:
             if controller.has_post_rotor_models:
                 res = controller.calculate(
                     algo, mdata, fdata, pre_rotor=False, downwind_index=oi
