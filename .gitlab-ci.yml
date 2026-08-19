@@ -20,7 +20,7 @@ pre-commit:
       - main
       - dev
   script:
-    - uv sync --dev
+    - uv sync --extra test
     - uv run pre-commit run --all-files
   cache:
     key: pre-commit-cache
@@ -38,7 +38,7 @@ test:
       paths:
         - $UV_CACHE_DIR
   script:
-    - uv sync --extra test --dev
+    - uv sync --extra test
     - uv run pytest tests
     - uv cache prune --ci
 
@@ -53,6 +53,6 @@ notebooks:
       paths:
         - $UV_CACHE_DIR
   script:
-    - uv sync --extra test --dev
+    - uv sync --extra test
     - uv run pytest --nbmake notebooks
     - uv cache prune --ci
