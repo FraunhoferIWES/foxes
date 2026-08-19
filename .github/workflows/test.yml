@@ -36,6 +36,9 @@ jobs:
           restore-keys: |
             pre-commit-${{ runner.os }}-
 
+      - name: Install dependencies
+        run: uv sync --extra test
+
       - name: Run pre-commit
         run: uv run pre-commit run --all-files
 
@@ -62,7 +65,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --extra test --dev
+        run: uv sync --extra test
 
       - name: Running tests
         run: uv run pytest tests
@@ -93,7 +96,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --extra test --dev
+        run: uv sync --extra test
 
       - name: Running tests
         run: uv run pytest --nbmake notebooks
