@@ -87,7 +87,7 @@ doc = [
 test = [
     "pytest>=7.0",
     "nbmake>=1.0",
-    "mypy>=1.11.0",
+    "mypy>=1.11.0,!=2.3.1",
     "multiprocess>=0.70.17",
     "pre-commit>=3.0",
 ]

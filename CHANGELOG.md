@@ -1027,5 +1027,6 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Removed Python 3.9 from the CI matrix and gated MPI smoke coverage behind `FOXES_RUN_MPI_TESTS=1` for deterministic constrained-runner behavior
   - Fixed the CI pre-commit job by moving `pre-commit` into the `test` optional dependencies and installing `--extra test` before running hooks
   - Fixed CI mypy crashes in pre-commit by running pre-commit jobs on Python 3.10 (matching the configured mypy target version)
+  - Excluded `mypy==2.3.1` from test dependencies due upstream internal-error crashes during pre-commit runs
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
