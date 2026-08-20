@@ -5,6 +5,7 @@ import numpy as np
 from xarray import Dataset
 from copy import deepcopy
 from typing import Any
+from typing import TYPE_CHECKING
 
 from foxes.algorithms.downwind.downwind import Downwind
 from foxes.core import FarmDataModelList
@@ -12,6 +13,10 @@ from foxes.utils import Dict
 import foxes.constants as FC
 
 from . import models as mdls
+
+if TYPE_CHECKING:
+    from foxes.core import MData
+    from xarray import Dataset
 
 
 class Iterative(Downwind):
@@ -107,9 +112,25 @@ class Iterative(Downwind):
         """
         return self.__prev_farm_results
 
-    @property
-    def prev_farm_results(self) -> Dataset | None:
-        return self.__prev_farm_results
+    def prev_farm_results(self, mdata: MData | None = None) -> Dataset | None:
+        """
+        Farm results from the previous iteration, if available.
+
+        Parameters
+        ----------
+        mdata
+            The model data
+
+        Returns
+        -------
+        prev_farm_results
+            The previous iteration farm results, or ``None`` if not available
+
+        """
+        if self.__prev_farm_results is not None:
+            return self.__prev_farm_results
+        else:
+            return super().prev_farm_results(mdata)
 
     def set_urelax(self, entry_point: str, **urel: Any) -> None:
         """
@@ -280,18 +301,26 @@ class Iterative(Downwind):
         **kwargs: Any,
     ) -> Dataset:
         """Helper function for running the main farm calculation"""
-        if self.conv_crit.conv_states is not None:
+        if self._final_run:
+            isel = None
+        elif self.conv_crit.conv_states is not None:
             isel = {FC.STATE: ~self.conv_crit.conv_states}
         else:
             isel = None
-        return super()._launch_parallel_farm_calc(
+
+        prev_fres = self.__prev_farm_results
+        self.__prev_farm_results = None
+        fres = super()._launch_parallel_farm_calc(
             mlist,
             *data,
-            farm_data=self.__prev_farm_results,
+            farm_data=prev_fres,
             iterative=True,
             isel=isel,
             **kwargs,
         )
+        self.__prev_farm_results = prev_fres
+
+        return fres
 
     @property
     def final_iteration(self) -> bool:
@@ -399,6 +428,8 @@ class Iterative(Downwind):
         # final run, recovers farm order of results:
         self.print("Starting final run", vlim=0)
         self._final_run = True
+        if self.conv_crit is not None:
+            self.conv_crit._conv_states = None
         fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
 
         # finalize models:

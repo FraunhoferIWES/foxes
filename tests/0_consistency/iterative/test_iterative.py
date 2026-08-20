@@ -85,5 +85,46 @@ def test():
                 assert (chk < lim).all()
 
 
+def test_iterative_max_it_final_run_regression():
+    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
+
+    ttype = "DTU10MW"
+    sfile = "wind_rose_bremen.csv"
+    lfile = thisdir / "test_farm.csv"
+
+    mbook = foxes.models.ModelBook()
+
+    states = foxes.input.states.StatesTable(
+        data_source=sfile,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        var2col={FV.WS: "ws", FV.WD: "wd", FV.WEIGHT: "weight"},
+        fixed_vars={FV.RHO: 1.225, FV.TI: 0.05},
+    )
+
+    farm = foxes.WindFarm()
+    foxes.input.farm_layout.add_from_file(
+        farm, lfile, turbine_models=[ttype], verbosity=1
+    )
+
+    algo = foxes.algorithms.Iterative(
+        farm,
+        states,
+        mbook=mbook,
+        rotor_model="grid16",
+        wake_models=["Bastankhah2014_linear_k004", "IECTI2019_max"],
+        wake_frame="rotor_wd",
+        partial_wakes="rotor_points",
+        verbosity=0,
+        max_it=1,
+        mod_cutin={"modify_ct": False, "modify_P": False},
+    )
+
+    with foxes.Engine.new("threads", chunk_size_states=1000, n_procs=2):
+        results = algo.calc_farm()
+
+    assert results.sizes["state"] == algo.n_states
+    assert results.sizes["turbine"] == farm.n_turbines
+
+
 if __name__ == "__main__":
     test()

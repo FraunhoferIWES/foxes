@@ -284,6 +284,7 @@ class SingleChunkEngine(Engine):
             out_vars = []
         if chunk_store is None:
             chunk_store = {}
+        extra_data[FC.PREV_FARM_RESULTS] = farm_data
 
         # subset selection:
         (model_data, farm_data, point_data), n_states = self.select_subsets(

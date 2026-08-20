@@ -90,7 +90,7 @@ class URelax(FarmDataModel):
         assert i0 is not None
         assert fdata.n_states is not None
         i1 = i0 + fdata.n_states
-        pres = algo.prev_farm_results
+        pres = algo.prev_farm_results(mdata)
 
         cur = fdata if res is None else res
         out = {}

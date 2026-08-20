@@ -725,6 +725,12 @@ class Engine(ABC):
 
         """
         n_states = algo.n_states
+        if model_data is not None and FC.STATE in model_data.sizes:
+            n_states = model_data.sizes[FC.STATE]
+        elif farm_data is not None and FC.STATE in farm_data.sizes:
+            n_states = farm_data.sizes[FC.STATE]
+        elif point_data is not None and FC.STATE in point_data.sizes:
+            n_states = point_data.sizes[FC.STATE]
         if point_data is None:
             self.print(
                 f"{self.name}: Calculating {n_states} states for {algo.n_turbines} turbines"

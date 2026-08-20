@@ -229,11 +229,6 @@ class Algorithm(Model):
         return None
 
     @property
-    def prev_farm_results(self) -> xr.Dataset | None:
-        """Farm results from the previous iteration, if available."""
-        return None
-
-    @property
     def final_iteration(self) -> bool:
         """Whether the algorithm currently performs a final iteration pass."""
         return False
@@ -253,6 +248,27 @@ class Algorithm(Model):
         if self.__loaded_data is None:
             self.__loaded_data = self._empty_loaded_data()
         return self.__loaded_data
+
+    def prev_farm_results(self, mdata: MData | None = None) -> xr.Dataset | None:
+        """
+        Farm results from the previous iteration, if available.
+
+        Parameters
+        ----------
+        mdata
+            The model data
+
+        Returns
+        -------
+        prev_farm_results
+            The previous iteration farm results, or ``None`` if not available
+
+        """
+        return (
+            mdata.extra_data.get(FC.PREV_FARM_RESULTS, None)
+            if mdata is not None
+            else None
+        )
 
     def _empty_loaded_data(self) -> LoadedData:
         return {"coords": {}, "data_vars": {}, "extra_data": {}}

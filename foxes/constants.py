@@ -128,6 +128,10 @@ BLOCK_CONVERGENCE = "block_convergence"
 """Identifier for convergence blocking signal
 """
 
+PREV_FARM_RESULTS = "prev_farm_results"
+"""Identifier for previous iteration farm results
+"""
+
 
 WDEFL_ROT_ANGLE = "wake_deflection_rotation_angle"
 """Identifier for the wake deflection rotation angle data
