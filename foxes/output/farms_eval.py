@@ -46,7 +46,7 @@ class WindFarmsEval(FarmResultsEval):
         farm
             The wind farm object
         farm_results
-            The farm results
+            The farm results, if available
         results
             The aggregated results, if already computed
         algo
@@ -55,21 +55,21 @@ class WindFarmsEval(FarmResultsEval):
             Additional parameters for the base class
 
         """
-        if farm_results is None:
-            raise ValueError("Missing farm_results")
         super().__init__(farm_results=farm_results, **kwargs)
         self.farm = farm
-        farm_results_with_farm: Dataset = cast(
-            Dataset,
-            merge(
-                (
-                    farm_results,
-                    DataArray(farm.wind_farm_list, dims=[FC.TURBINE], name=FC.FARM),
+        if farm_results is not None:
+            self.farm_results = cast(
+                Dataset,
+                merge(
+                    (
+                        farm_results,
+                        DataArray(farm.wind_farm_list, dims=[FC.TURBINE], name=FC.FARM),
+                    ),
+                    join="exact",
                 ),
-                join="exact",
-            ),
-        )
-        self.farm_results = farm_results_with_farm
+            )
+        else:
+            self.farm_results = None
 
         if self.algo is not None:
             assert self.farm == self.algo.farm, (
