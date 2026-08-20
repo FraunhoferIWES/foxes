@@ -6,7 +6,7 @@ from cycler import cycler
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from typing import Any, Iterator
+from typing import Any, Iterator, cast
 from xarray import Dataset
 from matplotlib.lines import Line2D
 from typing import TYPE_CHECKING
@@ -37,7 +37,7 @@ class FarmResultsEval(Output):
     """
 
     def __init__(
-        self, farm_results: Dataset, algo: Algorithm | None = None, **kwargs: Any
+        self, farm_results: Dataset | None, algo: Algorithm | None = None, **kwargs: Any
     ) -> None:
         """
         Constructor.
@@ -45,7 +45,7 @@ class FarmResultsEval(Output):
         Parameters
         ----------
         farm_results
-            The farm results
+            The farm results, if available
         algo
             The algorithm object
         kwargs
@@ -54,7 +54,7 @@ class FarmResultsEval(Output):
         """
         super().__init__(**kwargs)
         self.algo = algo
-        self._results = farm_results
+        self._results = cast(Dataset, farm_results)
         self._LEVEL = FC.TURBINE
 
     @property

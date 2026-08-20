@@ -75,3 +75,14 @@ def test_aggregate_rejects_zero_sum_turbine_weights(eval_case):
 
     with pytest.raises(ValueError, match="Cannot normalize"):
         out._aggregate(mapping=None)
+
+
+def test_farm_eval_allows_missing_farm_results():
+    farm = _build_two_farm()
+    out = foxes.output.WindFarmsEval(farm=farm, farm_results=None)
+
+    assert out.farm_results is None
+    assert out.get_mapping() == {"west": [0], "east": [1]}
+
+    with pytest.raises(AssertionError, match="farm_results are required"):
+        out._aggregate(mapping=None)
