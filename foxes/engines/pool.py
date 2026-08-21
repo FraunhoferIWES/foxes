@@ -378,11 +378,10 @@ class PoolEngine(Engine):
                         )
                         del data, mdata_chunk, fdata_chunk, tdata_chunk
 
-                        if self.n_workers > 4:
-                            while len(futures) > self.n_workers * 3:
-                                k = next(iter(futures))
-                                results[k] = self.await_result(futures.pop(k))
-                                results_mgr.update(results, list(futures.values()))
+                        while len(futures) > self.n_workers * 3:
+                            k = next(iter(futures))
+                            results[k] = self.await_result(futures.pop(k))
+                            results_mgr.update(results, list(futures.values()))
 
                         i0_targets = i1_targets
                     i0_states = i1_states
