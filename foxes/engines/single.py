@@ -369,6 +369,9 @@ class SingleChunkEngine(Engine):
                 calc_pars,
             )
 
+        allow_none_results = write_nc is not None and write_nc.get("ret_data") is False
         if results_mgr.results is None:
+            if allow_none_results:
+                return None
             raise RuntimeError("SingleChunkEngine did not produce calculation results")
         return results_mgr.results

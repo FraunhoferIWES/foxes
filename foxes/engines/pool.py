@@ -401,7 +401,10 @@ class PoolEngine(Engine):
         chunk_store.update(new_chunk_store)
         algo.reset_chunk_store(chunk_store)
 
+        allow_none_results = write_nc is not None and write_nc.get("ret_data") is False
         if results_mgr.results is None:
+            if allow_none_results:
+                return None
             raise RuntimeError(
                 f"{type(self).__name__} did not produce calculation results"
             )
