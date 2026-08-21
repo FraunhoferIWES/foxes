@@ -104,6 +104,7 @@ if __name__ == "__main__":
         plt.close(ax.get_figure())
 
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+    algo_kwargs = {"max_it": None} if args.iterative else {}
     algo = Algo(
         farm,
         states=states,
@@ -113,6 +114,7 @@ if __name__ == "__main__":
         partial_wakes=args.pwakes,
         mbook=mbook,
         verbosity=1,
+        **algo_kwargs,
     )
 
     engine = foxes.Engine.new(

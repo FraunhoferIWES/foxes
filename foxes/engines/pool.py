@@ -222,9 +222,11 @@ class PoolEngine(Engine):
 
         """
 
-        extra_data = {} if extra_data is None else extra_data
+        # prepare data:
         out_vars = [] if out_vars is None else out_vars
         chunk_store = {} if chunk_store is None else chunk_store
+        extra_data = {} if extra_data is None else extra_data
+        extra_data[FC.PREV_FARM_RESULTS] = farm_data
 
         # reset chunk store:
         if self.share_cstore:
@@ -376,10 +378,11 @@ class PoolEngine(Engine):
                         )
                         del data, mdata_chunk, fdata_chunk, tdata_chunk
 
-                        while len(futures) > self.n_workers * 3:
-                            k = next(iter(futures))
-                            results[k] = self.await_result(futures.pop(k))
-                            results_mgr.update(results, list(futures.values()))
+                        if self.n_workers > 4:
+                            while len(futures) > self.n_workers * 3:
+                                k = next(iter(futures))
+                                results[k] = self.await_result(futures.pop(k))
+                                results_mgr.update(results, list(futures.values()))
 
                         i0_targets = i1_targets
                     i0_states = i1_states

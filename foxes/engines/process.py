@@ -177,6 +177,7 @@ class ProcessEngineRunner(EngineRunner):
         cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
         self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)
         results = self._write_chunk_results(algo, results, write_nc, out_dims, mdata)
+
         return results, cstore
 
 
