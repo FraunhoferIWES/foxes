@@ -222,17 +222,11 @@ class ICONStates(LatLonFieldData):
             weights are among data. Shape: (n_states,)
 
         """
-        data, weights = super()._get_calc_data(mdata, fdata)
-        dmlst = list(data.keys())
-        for dims in dmlst:
-            if self.H_TKE in dims:
-                vrs, d = data.pop(dims)
-                assert FV.H not in dims, (
-                    f"States {self.name}: Cannot have both {FV.H} and {self.H_TKE} in dims for variables {vrs}, got dims = {dims}"
-                )
-                dims_new = tuple(FV.H if dim == self.H_TKE else dim for dim in dims)
-                data[dims_new] = (vrs, d)
-        return data, weights
+        return super()._get_calc_data(mdata, fdata)
+
+    def is_height_dimension(self, dim: str) -> bool:
+        """Check if a logical data dimension describes height."""
+        return super().is_height_dimension(dim) or dim == self.H_TKE
 
     def get_interpolation_coords(
         self, mdata: MData, idims: list[str]

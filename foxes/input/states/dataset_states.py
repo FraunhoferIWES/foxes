@@ -1432,6 +1432,10 @@ class DatasetStates(States):
             gpts.append(mdata[cc])
         return tuple(gpts)
 
+    def is_height_dimension(self, dim: str) -> bool:
+        """Check if a logical data dimension describes height."""
+        return dim == FV.H
+
     def interpolate_data(
         self,
         mdata: MData,
@@ -1690,10 +1694,13 @@ class DatasetStates(States):
                     or FC.POINT in idims
                     or FC.TURBINE in idims
                 )
-                has_h = FV.H in idims or FC.TURBINE in idims
+                has_h = (
+                    any(self.is_height_dimension(c) for c in idims)
+                    or FC.TURBINE in idims
+                )
                 is_tpc_dims = is_turbine_point_cloud and FC.TURBINE in idims
                 for c in idims.copy():
-                    if c in [FV.X, FV.Y, FV.H]:
+                    if c in [FV.X, FV.Y] or self.is_height_dimension(c):
                         points_data = _analyze_points(
                             has_p,
                             has_h,
