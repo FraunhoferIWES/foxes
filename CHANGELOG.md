@@ -1026,8 +1026,5 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed `TurbinePointCloud` ambient-data corruption for non-collinear layouts with varying wind direction by preserving state/turbine point ordering, and avoided quadratic point-reconstruction scaling in that path
   - Removed Python 3.9 from the CI matrix and gated MPI smoke coverage behind `FOXES_RUN_MPI_TESTS=1` for deterministic constrained-runner behavior
   - Fixed bug that prevented wake effects in the presence of pre-rotor turbine models
-  - Generalized initial farm-data reconstruction and result backfilling from thread-only execution to all engine runners, including single-chunk and process-derived paths
-  - Harmonized `PREV_FARM_RESULTS` reconstruction and result merging across process-derived runners (`ProcessEngine`, `MultiprocessEngine`, `RayEngine`, `MPIEngine`), `DaskEngine`, `ThreadsEngine`, and `SingleChunkEngine`, and removed a stray debug early-exit path in process-runner execution
-  - Fixed `Iterative` to avoid carrying state-subset datasets as previous-iteration farm results; previous results are now kept as all-state datasets across subset iterations
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
