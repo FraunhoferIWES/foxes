@@ -30,6 +30,8 @@ PyPi reference: [https://pypi.org/project/foxes/](https://pypi.org/project/foxes
 
 Anaconda reference: [https://anaconda.org/conda-forge/foxes](https://anaconda.org/conda-forge/foxes)
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/FraunhoferIWES/foxes)
+
 ## Citation
 
 Please cite the JOSS paper `"FOXES: Farm Optimization and eXtended yield
