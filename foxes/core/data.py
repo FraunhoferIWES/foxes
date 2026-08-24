@@ -677,6 +677,22 @@ class Data(Dict[str, np.ndarray]):
             data[FC.STATE] = np.arange(n_states)
             dims[FC.STATE] = (FC.STATE,)
 
+        if (
+            FV.TXYH not in data
+            and FV.X in data
+            and FV.Y in data
+            and FV.H in data
+            and dims[FV.X][:2] == (FC.STATE, FC.TURBINE)
+        ):
+            assert dims[FV.X] == dims[FV.Y] == dims[FV.H], (
+                f"Expecting same dimensions for {FV.X}, {FV.Y}, and {FV.H}, got {dims[FV.X]}, {dims[FV.Y]}, and {dims[FV.H]}"
+            )
+            data[FV.TXYH] = np.stack([data[FV.X], data[FV.Y], data[FV.H]], axis=-1)
+            dims[FV.TXYH] = tuple(list(dims[FV.X]) + [FC.XYH])
+            data[FV.X] = data[FV.TXYH][..., 0]
+            data[FV.Y] = data[FV.TXYH][..., 1]
+            data[FV.H] = data[FV.TXYH][..., 2]
+
         return cls(*args, data=data, dims=dims, **kwargs)  # type: ignore[misc]
 
     @classmethod

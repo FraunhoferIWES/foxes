@@ -107,6 +107,65 @@ class EngineRunner(ABC):
             if _do_run(chk):
                 write_chunk_ani_xy(algo, *data, **pars)
 
+    def _apply_prev_farm_results(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+    ) -> tuple[FData, bool]:
+        """Rebuild chunk-local farm data from previous farm results when available."""
+        prev_farm_results = (
+            algo.prev_farm_results(mdata=mdata)
+            if hasattr(algo, "prev_farm_results")
+            else mdata.extra_data.get(FC.PREV_FARM_RESULTS, None)
+        )
+        if prev_farm_results is None:
+            return fdata, False
+        if isinstance(prev_farm_results, Dataset):
+            if len(prev_farm_results.data_vars) == 0:
+                return fdata, False
+            prev_n_states = prev_farm_results.sizes.get(FC.STATE, 0)
+            if prev_n_states == 0:
+                return fdata, False
+
+        i0 = mdata.states_i0(counter=True)
+        if i0 is None or mdata.n_states is None:
+            return fdata, False
+        i1 = i0 + mdata.n_states
+        s_states = np.s_[i0:i1]
+        if isinstance(prev_farm_results, Dataset):
+            prev_n_states = prev_farm_results.sizes.get(FC.STATE, 0)
+            if prev_n_states == mdata.n_states:
+                s_states = np.s_[:]
+            elif prev_n_states < i1:
+                return fdata, False
+        fdata = cast(
+            FData,
+            FData.from_dataset(
+                prev_farm_results,
+                mdata=mdata,
+                s_states=s_states,
+                callback=None,
+                states_i0=i0,
+                n_states=mdata.n_states,
+                n_turbines=algo.n_turbines,
+                copy=True,
+            ),
+        )
+        return fdata, True
+
+    @staticmethod
+    def _merge_prev_farm_results(
+        has_prev_farm_results: bool,
+        fdata: FData,
+        results: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """Merge reconstructed farm-data fields into model results for downstream use."""
+        merged_results = {} if results is None else results
+        if has_prev_farm_results:
+            merged_results = {**fdata, **merged_results}
+        return merged_results
+
     @abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> Any:
         """Runs the chunk calculation"""

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from xarray import Dataset
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from foxes.core import Engine, EngineRunner
+from foxes.core import Engine, EngineRunner, FData
 import foxes.constants as FC
 
 if TYPE_CHECKING:
@@ -33,9 +33,27 @@ class SingleChunkEngineRunner(EngineRunner):
         """Helper function for running in a single chunk."""
         if shared is not None:
             mdata.recombine_with_shared(shared)
+
+        has_prev_farm_results = (
+            mdata.extra_data.get(FC.PREV_FARM_RESULTS, None) is not None
+        )
+        if len(data) == 0:
+            if has_prev_farm_results:
+                raise ValueError(
+                    "SingleChunkEngineRunner: Missing farm data while previous farm results are present"
+                )
+        else:
+            fdata, has_prev_farm_results = self._apply_prev_farm_results(
+                algo, mdata, cast(FData, data[0])
+            )
+            data = (fdata, *data[1:])
+
         results: dict[str, Any] | None = model.calculate(algo, mdata, *data, **cpars)
-        if results is None:
-            results = {}
+        results = self._merge_prev_farm_results(
+            has_prev_farm_results,
+            cast(FData, data[0]) if len(data) else cast(FData, {}),
+            results,
+        )
         cstore = (
             {chunk_key: algo.chunk_store[chunk_key]}
             if chunk_key in algo.chunk_store

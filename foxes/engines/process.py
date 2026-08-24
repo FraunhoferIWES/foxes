@@ -9,12 +9,12 @@ from multiprocessing import resource_tracker
 from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
-from foxes.core import EngineRunner, MData
+from foxes.core import EngineRunner, FData, MData
 
 from .pool import PoolEngine
 
 if TYPE_CHECKING:
-    from foxes.core import Algorithm, DataCalcModel, FData, TData
+    from foxes.core import Algorithm, DataCalcModel, TData
 
 
 _resource_tracker_register = resource_tracker.register
@@ -167,12 +167,14 @@ class ProcessEngineRunner(EngineRunner):
             config.set_utm_zone(*utm_zone)
         algo.reset_chunk_store(chunk_store.copy())
         mdata = self._recombine_mdata_with_shared(mdata, shared)
+        fdata, has_prev_farm_results = self._apply_prev_farm_results(algo, mdata, fdata)
 
         results: dict[str, Any] | None
         if tdata is None:
             results = model.calculate(algo, mdata, fdata, **cpars)
         else:
             results = model.calculate(algo, mdata, fdata, tdata, **cpars)
+        results = self._merge_prev_farm_results(has_prev_farm_results, fdata, results)
         chunk_store = algo.reset_chunk_store()
         cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
         self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)

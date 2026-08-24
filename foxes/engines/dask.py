@@ -204,12 +204,14 @@ class DaskProcessRunner(ProcessEngineRunner):
         fdata = self._resolve_data_container(fdata)
         tdata = self._resolve_data_container(tdata)
         cpars = self._resolve_nested_value(cpars)
+        fdata, has_prev_farm_results = self._apply_prev_farm_results(algo, mdata, fdata)
 
         results: dict[str, Any] | None
         if tdata is None:
             results = model.calculate(algo, mdata, fdata, **cpars)
         else:
             results = model.calculate(algo, mdata, fdata, tdata, **cpars)
+        results = self._merge_prev_farm_results(has_prev_farm_results, fdata, results)
         chunk_store = algo.reset_chunk_store()
         cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
         self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)

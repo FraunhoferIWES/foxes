@@ -226,7 +226,6 @@ class PoolEngine(Engine):
         out_vars = [] if out_vars is None else out_vars
         chunk_store = {} if chunk_store is None else chunk_store
         extra_data = {} if extra_data is None else extra_data
-        extra_data[FC.PREV_FARM_RESULTS] = farm_data
 
         # reset chunk store:
         if self.share_cstore:
@@ -248,6 +247,9 @@ class PoolEngine(Engine):
             raise ValueError(f"Engine '{self.name}': Missing model_data")
         if n_states is None:
             raise ValueError(f"Engine '{self.name}': Could not determine n_states")
+        if farm_data is not None and point_data is None:
+            extra_data[FC.PREV_FARM_RESULTS] = farm_data
+            farm_data = None
 
         # basic checks:
         super().run_calculation(algo, model, model_data, farm_data, point_data)

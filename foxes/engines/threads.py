@@ -35,11 +35,16 @@ class ThreadsEngineRunner(ProcessEngineRunner):
     ) -> tuple[dict[str, Any] | None, dict[Any, Any]]:
         """Helper function for running in a single process"""
         mdata = self._recombine_mdata_with_shared(mdata, shared)
+
+        fdata, has_prev_farm_results = self._apply_prev_farm_results(algo, mdata, fdata)
+
         results: dict[str, Any] | None
         if tdata is None:
             results = model.calculate(algo, mdata, fdata, **cpars)
         else:
             results = model.calculate(algo, mdata, fdata, tdata, **cpars)
+        results = self._merge_prev_farm_results(has_prev_farm_results, fdata, results)
+
         cstore = (
             {chunk_key: algo.chunk_store[chunk_key]}
             if chunk_key in algo.chunk_store
