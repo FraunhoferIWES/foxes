@@ -216,6 +216,22 @@ def test_farm_layout_output_write_plot_smoke_and_cleanup(tmp_path):
     assert not fpath.exists()
 
 
+def test_farm_layout_output_figure_accepts_default_boundary_args():
+    farm = foxes.WindFarm(boundary=foxes.utils.geom2d.Circle([0.0, 0.0], 1000.0))
+    foxes.input.farm_layout.add_row(
+        farm=farm,
+        xy_base=[0.0, 0.0],
+        xy_step=[400.0, 0.0],
+        n_turbines=1,
+        turbine_models=["NREL5MW"],
+        H=90.0,
+        verbosity=0,
+    )
+
+    ax = FarmLayoutOutput(farm=farm).get_figure()
+    plt.close(ax.get_figure())
+
+
 def test_layout2d_figure_write_smoke_and_cleanup(tmp_path):
     algo, farm_results = _calc_farm_results()
     out = FarmLayoutOutput(

@@ -330,7 +330,8 @@ class FarmLayoutOutput(Output):
 
         if self.farm.boundary is not None:
             hbargs = {"fill_mode": "inside_lightgray"}
-            hbargs.update(bargs)
+            if bargs is not None:
+                hbargs.update(bargs)
             self.farm.boundary.add_to_figure(ax, **hbargs)
 
         if title is not None or annotate != 3:

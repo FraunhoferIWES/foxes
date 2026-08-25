@@ -377,58 +377,7 @@ class Algorithm(Model):
         Reset the number of turbines,
         according to self.farm
         """
-        raise NotImplementedError()
-        """
-        if self.n_turbines != self.farm.n_turbines:
-            self.n_turbines = self.farm.n_turbines
-
-            # resize stored idata, if dependent on turbine coord:
-            newk = {}
-            for mname, idata in self.idata_mem.items():
-                if mname[:2] == "__":
-                    continue
-                for dname, d in idata["data_vars"].items():
-                    k = f"__{mname}_{dname}_turbine"
-                    if k in self.idata_mem:
-                        ok = self.idata_mem[k]
-                    else:
-                        ok = None
-                        if FC.TURBINE in d[0]:
-                            i = d[0].index(FC.TURBINE)
-                            ok = np.unique(d[1], axis=1).shape[i] == 1
-                        newk[k] = ok
-                    if ok is not None:
-                        if not ok:
-                            raise ValueError(
-                                f"{self.name}: Stored idata entry '{mname}:{dname}' is turbine dependent, unable to reset n_turbines"
-                            )
-                        if FC.TURBINE in idata["coords"]:
-                            idata["coords"][FC.TURBINE] = np.arange(self.n_turbines)
-                        i = d[0].index(FC.TURBINE)
-                        n0 = d[1].shape[i]
-                        if n0 > self.n_turbines:
-                            idata["data_vars"][dname] = (
-                                d[0],
-                                np.take(d[1], range(self.n_turbines), axis=i),
-                            )
-                        elif n0 < self.n_turbines:
-                            shp = [
-                                d[1].shape[j] if j != i else self.n_turbines - n0
-                                for j in range(len(d[1].shape))
-                            ]
-                            a = np.zeros(shp, dtype=d[1].dtype)
-                            shp = [
-                                d[1].shape[j] if j != i else 1
-                                for j in range(len(d[1].shape))
-                            ]
-                            a[:] = np.take(d[1], -1, axis=i).reshape(shp)
-                            idata["data_vars"][dname] = (
-                                d[0],
-                                np.append(d[1], a, axis=i),
-                            )
-
-            self.idata_mem.update(newk)
-            """
+        self.n_turbines = self.farm.n_turbines
 
     def new_point_data(
         self,

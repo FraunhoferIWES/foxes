@@ -217,6 +217,8 @@ class WindFarm:
         assert not algo.initialized, (
             f"WindFarm '{self.name}': cannot reset turbines, algorithm '{algo.name}' is already initialized"
         )
+        algo.clear_loaded_data()
+        algo.reset_chunk_store()
         self.__locked = False
         if turbines is None:
             self.__turbines = []
