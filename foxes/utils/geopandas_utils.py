@@ -65,7 +65,6 @@ def read_shp(fname: str, **kwargs: Any) -> Any:
     data
         The data frame in WSG84
 
-
     """
     check_import_gpd()
     gpdf = gpd.read_file(fname, **kwargs)
@@ -84,9 +83,9 @@ def shp2csv(
 
     Parameters
     ----------
-    iname
+    ifile
         Path to the input .shp file
-    oname
+    ofile
         Path to the output .csv file
     in_kwargs
         Additional parameters for geopandas.read_file()
@@ -94,7 +93,6 @@ def shp2csv(
         Additional parameters for geopandas to_csv()
     verbosity
         The verbosity level, 0 = silent
-
 
     """
     if verbosity > 0:
@@ -110,33 +108,111 @@ def shp2csv(
     return gpdf
 
 
-def _extract_poly_coords(geom: Any) -> tuple[Any, Any]:
+def _ring_to_2d(coords: Any) -> np.ndarray:
     """
-    Helper function for shapefile reading
+    Converts a single ring's coordinate sequence into a (N, 2) float array.
+
+    Shapefiles may store Z (and M) coordinates. Matplotlib and the 2D geometry
+    code expect planar (x, y) points only, so any extra coordinate columns are
+    dropped here.
+
+    Parameters
+    ----------
+    coords
+        Sequence of coordinate tuples of a single ring
+
+    Returns
+    -------
+    ring
+        Array of shape (N, 2), possibly (0, 2) if empty
+
     """
-    if geom.geom_type == "Polygon":
-        exterior_coords = geom.exterior.coords[:]
-        interior_coords = []
+    arr = np.asarray(coords, dtype=np.float64)
+    if arr.size == 0:
+        return np.zeros((0, 2), dtype=np.float64)
+    if arr.ndim != 2:
+        raise ValueError(
+            f"Expected a 2D ring coordinate array, got shape {arr.shape}. "
+            "This usually indicates a nesting bug in the geometry extraction."
+        )
+    if arr.shape[1] < 2:
+        raise ValueError(f"Ring has fewer than 2 coordinate columns: {arr.shape}")
+    return np.ascontiguousarray(arr[:, :2])
+
+
+def _extract_poly_coords(geom: Any) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """
+    Helper function for shapefile reading.
+
+    Extracts exterior and interior rings from a (Multi)Polygon geometry.
+    Both return values are always *flat* lists of (N, 2) arrays, regardless
+    of the nesting depth of the input geometry. This is essential so that no
+    part of a MultiPolygon gets lost or mis-sliced downstream.
+
+    Parameters
+    ----------
+    geom
+        A shapely Polygon, MultiPolygon or GeometryCollection
+
+    Returns
+    -------
+    exterior_coords
+        Flat list of exterior ring arrays, each of shape (N, 2)
+    interior_coords
+        Flat list of interior ring (hole) arrays, each of shape (N, 2)
+
+    """
+    exterior_coords: list[np.ndarray] = []
+    interior_coords: list[np.ndarray] = []
+
+    if geom is None or getattr(geom, "is_empty", False):
+        return exterior_coords, interior_coords
+
+    gtype = geom.geom_type
+
+    if gtype == "Polygon":
+        ext = _ring_to_2d(geom.exterior.coords[:])
+        if len(ext):
+            exterior_coords.append(ext)
         for interior in geom.interiors:
-            interior_coords.append(interior.coords[:])
-    elif geom.geom_type == "MultiPolygon":
-        exterior_coords = []
-        interior_coords = []
+            ring = _ring_to_2d(interior.coords[:])
+            if len(ring):
+                interior_coords.append(ring)
+
+    elif gtype in ("MultiPolygon", "GeometryCollection"):
         for part in geom.geoms:
-            epe, epi = _extract_poly_coords(part)  # Recursive call
-            exterior_coords.append(epe)
-            interior_coords.append(epi)
+            epe, epi = _extract_poly_coords(part)  # recursive call
+            exterior_coords.extend(epe)  # extend, NOT append
+            interior_coords.extend(epi)  # extend, NOT append
+
     else:
-        raise ValueError("Unhandled geometry type: " + repr(geom.type))
+        raise ValueError(f"Unhandled geometry type: {gtype!r}")
+
     return exterior_coords, interior_coords
 
 
 def _extract_utm(to_utm: bool | str) -> tuple[bool, int | None, str | None]:
     """
     Helper function for UTM zone parsing
+
+    Parameters
+    ----------
+    to_utm
+        Convert to UTM coordinates. If str, then UTM zone
+        plus letter, e.g. "32U"
+
+    Returns
+    -------
+    apply_utm
+        Flag for UTM conversion
+    utmz
+        The forced UTM zone number, or None
+    utml
+        The forced UTM zone letter, or None
+
     """
-    utmz = None
-    utml = None
+    utmz: int | None = None
+    utml: str | None = None
     apply_utm = False
     if isinstance(to_utm, str) or to_utm:
         utmz = int(to_utm[:-1]) if isinstance(to_utm, str) else None
@@ -152,6 +228,89 @@ def _extract_utm(to_utm: bool | str) -> tuple[bool, int | None, str | None]:
     return apply_utm, utmz, utml
 
 
+def _find_utm_zone(
+    rings: list[np.ndarray],
+    utmz: int | None = None,
+    utml: str | None = None,
+) -> tuple[int, str]:
+    """
+    Determines a single UTM zone for a whole set of rings.
+
+    The zone is derived from the centroid of the bounding box of all points,
+    so that geometries spanning a zone boundary are handled consistently
+    instead of the zone being fixed by whichever ring happens to come first.
+
+    Parameters
+    ----------
+    rings
+        Flat list of (N, 2) lon/lat arrays
+    utmz
+        Forced UTM zone number, or None
+    utml
+        Forced UTM zone letter, or None
+
+    Returns
+    -------
+    zone_number
+        The UTM zone number
+    zone_letter
+        The UTM zone letter
+
+    """
+    if utmz is not None and utml is not None:
+        return utmz, utml
+
+    check_import_utm()
+
+    non_empty = [r for r in rings if len(r)]
+    if not len(non_empty):
+        raise ValueError("No points found for UTM zone scouting")
+    pts = np.concatenate(non_empty, axis=0)
+
+    lon = 0.5 * (pts[:, 0].min() + pts[:, 0].max())
+    lat = 0.5 * (pts[:, 1].min() + pts[:, 1].max())
+
+    __, __, zone_number, zone_letter = utm.from_latlon(
+        lat, lon, force_zone_number=utmz, force_zone_letter=utml
+    )
+    return int(zone_number), str(zone_letter)
+
+
+def _rings_to_utm(rings: list[np.ndarray], utmz: int, utml: str) -> list[np.ndarray]:
+    """
+    Converts a flat list of lon/lat rings into UTM coordinates.
+
+    Parameters
+    ----------
+    rings
+        Flat list of (N, 2) lon/lat arrays
+    utmz
+        The UTM zone number
+    utml
+        The UTM zone letter
+
+    Returns
+    -------
+    out
+        Flat list of (N, 2) UTM easting/northing arrays
+
+    """
+    check_import_utm()
+
+    out: list[np.ndarray] = []
+    for ring in rings:
+        if not len(ring):
+            continue
+        e, n, __, __ = utm.from_latlon(
+            ring[:, 1],
+            ring[:, 0],
+            force_zone_number=utmz,
+            force_zone_letter=utml,
+        )
+        out.append(np.stack([np.asarray(e), np.asarray(n)], axis=-1))
+    return out
+
+
 def read_shp_polygons(
     fname: str,
     names: Any = None,
@@ -163,6 +322,10 @@ def read_shp_polygons(
 ) -> Any:
     """
     Reads the polygon points from a shp file.
+
+    All rings of all matching features are collected. In particular,
+    MultiPolygons are fully expanded and multiple rows sharing the same
+    name are merged, so no sub-area is silently dropped.
 
     Parameters
     ----------
@@ -186,60 +349,79 @@ def read_shp_polygons(
     Returns
     -------
     point_dict_exterior
-        Mapping from area names to point arrays. Each key is an area name,
-        Value
+        Mapping from area names to lists of (N, 2) exterior ring arrays
     point_dict_interior
-        Mapping from area names to point arrays. Each key is an area name,
-        Value
+        Mapping from area names to lists of (N, 2) interior ring arrays
     utm_zone_str
         The UTM zone plus letter as str, e.g. "32U"
 
-
     """
-
     pdf = read_shp(fname, **kwargs)
-    pnames = list(pdf[name_col])
-    apply_utm, utmz, utml = _extract_utm(to_utm)
+
+    if name_col in pdf.columns:
+        pnames = list(pdf[name_col])
+    else:
+        # fall back to positional names if the column is missing
+        pnames = [f"area_{i}" for i in range(len(pdf))]
+
+    apply_utm, force_z, force_l = _extract_utm(to_utm)
     if apply_utm:
         check_import_utm()
 
+    # select the requested names, preserving order and skipping nan:
+    if names is None:
+        sel_names = []
+        for n in pnames:
+            if n == n and n not in sel_names:  # n == n excludes nan
+                sel_names.append(n)
+    else:
+        sel_names = [n for n in names if n == n]
+        for n in sel_names:
+            if n not in pnames:
+                raise KeyError(
+                    f"Name '{n}' not found in file '{fname}'. Names: {pnames}"
+                )
+
+    # collect all rings per name, over ALL matching rows:
+    raw_ext: dict[Any, list[np.ndarray]] = {}
+    raw_int: dict[Any, list[np.ndarray]] = {}
+    for name in sel_names:
+        ext_rings: list[np.ndarray] = []
+        int_rings: list[np.ndarray] = []
+        for i, pn in enumerate(pnames):
+            if pn != name:
+                continue
+            geom = pdf.iloc[i][geom_col]
+            epe, epi = _extract_poly_coords(geom)
+            ext_rings.extend(epe)
+            int_rings.extend(epi)
+        raw_ext[name] = ext_rings
+        raw_int[name] = int_rings
+
     exterior: Any = Dict()
     interior: Any = Dict()
-    names = pnames if names is None else names
-    for name in names:
-        if name == name:  # exclude nan values
-            if name not in pnames:
-                raise KeyError(
-                    f"Name '{name}' not found in file '{fname}'. Names: {pnames}"
-                )
+    utm_zone: str | None = None
 
-            a = pdf.loc[pnames.index(name), geom_col]
-            epe, epi = _extract_poly_coords(a)
+    if apply_utm:
+        # determine one common UTM zone for the whole file:
+        all_rings: list[np.ndarray] = []
+        for rings in raw_ext.values():
+            all_rings.extend(rings)
+        for rings in raw_int.values():
+            all_rings.extend(rings)
 
-            def _to_utm(poly: np.ndarray) -> np.ndarray:
-                nonlocal utmz, utml
-                utm_poly = np.zeros_like(poly)
-                utm_poly[:, 0], utm_poly[:, 1], utmz, utml = utm.from_latlon(
-                    poly[:, 1],
-                    poly[:, 0],
-                    force_zone_number=utmz,
-                    force_zone_letter=utml,
-                )
-                return utm_poly
+        zone_number, zone_letter = _find_utm_zone(all_rings, force_z, force_l)
+        utm_zone = f"{zone_number}{zone_letter}"
 
-            def _to_numpy(data: Any) -> Any:
-                if not len(data):
-                    return []
-                if isinstance(data[0], tuple):
-                    out = np.array(data, dtype=np.float64)
-                    return _to_utm(out) if apply_utm else out
-                return [_to_numpy(d) for d in data]
-
-            exterior[name] = _to_numpy(epe)
-            interior[name] = _to_numpy(epi)
+        for name in sel_names:
+            exterior[name] = _rings_to_utm(raw_ext[name], zone_number, zone_letter)
+            interior[name] = _rings_to_utm(raw_int[name], zone_number, zone_letter)
+    else:
+        for name in sel_names:
+            exterior[name] = raw_ext[name]
+            interior[name] = raw_int[name]
 
     if ret_utm_zone:
-        utm_zone = f"{utmz}{utml}" if utmz is not None and utml is not None else None
         return exterior, interior, utm_zone
     else:
         return exterior, interior
@@ -281,9 +463,7 @@ def shp2geom2d(
     utm_zone_str
         The UTM zone plus letter as str, e.g. "32U"
 
-
     """
-
     if "to_utm" in kwargs:
         to_utm = kwargs.pop("to_utm")
     if "ret_utm_zone" in kwargs:
@@ -294,20 +474,12 @@ def shp2geom2d(
             f"Invalid combine_mode '{combine_mode}', expected 'union' or 'intersection'"
         )
 
-    def _combine(gs: list[Any], mode: str) -> Any:
-        gs = [g for g in gs if g is not None]
-        if not len(gs):
-            return None
-        if len(gs) == 1:
-            return gs[0]
-        return AreaUnion(gs) if mode == "union" else AreaIntersection(gs)
-
     def _expand_files(path_spec: Any) -> list[str]:
         s = str(path_spec)
-        return glob(s) if has_magic(s) else [s]
+        return sorted(glob(s)) if has_magic(s) else [s]
 
     if isinstance(shp_files, (list, tuple)):
-        fnames = []
+        fnames: list[str] = []
         for f in shp_files:
             fnames.extend(_expand_files(f))
     else:
@@ -316,100 +488,91 @@ def shp2geom2d(
     if not len(fnames):
         raise FileNotFoundError(f"No files matched '{shp_files}'")
 
-    # case one area only:
-    if len(fnames) == 1:
-        if ret_utm_zone:
-            read_kwargs = dict(kwargs)
-            read_kwargs["to_utm"] = to_utm
-            read_kwargs["ret_utm_zone"] = True
-            data, utm_zone = read_shp_polygons(fnames[0], *args, **read_kwargs)
-            data = [data]
-        else:
-            read_kwargs = dict(kwargs)
-            read_kwargs["to_utm"] = to_utm
-            read_kwargs["ret_utm_zone"] = False
-            data = [read_shp_polygons(fnames[0], *args, **read_kwargs)]
-            utm_zone = None
+    apply_utm, force_z, force_l = _extract_utm(to_utm)
 
-    # case multiple areas:
-    else:
-        apply_utm, utmz, utml = _extract_utm(to_utm)
-        utm_zone = False
-        if apply_utm and utmz is not None and utml is not None:
-            utm_zone = f"{utmz}{utml}"
+    # first pass: read everything in lon/lat, so that a single UTM zone
+    # can be determined across all files consistently
+    raw: list[tuple[Any, Any]] = []
+    for f in fnames:
+        read_kwargs = dict(kwargs)
+        read_kwargs["to_utm"] = False
+        read_kwargs["ret_utm_zone"] = False
+        raw.append(read_shp_polygons(f, *args, **read_kwargs))
+
+    utm_zone: str | None = None
+    data: list[tuple[Any, Any]]
+
+    if apply_utm:
+        all_rings: list[np.ndarray] = []
+        for ext, int_ in raw:
+            for rings in ext.values():
+                all_rings.extend(rings)
+            for rings in int_.values():
+                all_rings.extend(rings)
+
+        zone_number, zone_letter = _find_utm_zone(all_rings, force_z, force_l)
+        utm_zone = f"{zone_number}{zone_letter}"
 
         data = []
-        for f in fnames:
-            read_kwargs = dict(kwargs)
-            read_kwargs["to_utm"] = utm_zone
-            read_kwargs["ret_utm_zone"] = False
-            data.append(read_shp_polygons(f, *args, **read_kwargs))
+        for ext, int_ in raw:
+            ext_utm: Any = Dict()
+            int_utm: Any = Dict()
+            for k, v in ext.items():
+                ext_utm[k] = _rings_to_utm(v, zone_number, zone_letter)
+            for k, v in int_.items():
+                int_utm[k] = _rings_to_utm(v, zone_number, zone_letter)
+            data.append((ext_utm, int_utm))
+    else:
+        data = raw
 
-        # auto determine UTM zone and apply:
-        if (
-            isinstance(to_utm, bool)
-            and to_utm
-            and isinstance(utm_zone, bool)
-            and not utm_zone
-        ):
-            pts = []
-            for d in data:
-                if d[0] is not None:
-                    pts += list(d[0].values())
-                if d[1] is not None:
-                    pts += list(d[1].values())
-            pts = [p for p in pts if len(p) > 0]
-            assert len(pts) > 0, "No points found for UTM zone scouting"
-            pts = np.concatenate(pts, axis=0)
-
-            check_import_utm()
-            __, __, utmz, utml = utm.from_latlon(
-                pts[:, 1],
-                pts[:, 0],
-                force_zone_number=utmz,
-                force_zone_letter=utml,
-            )
-            utm_zone = f"{utmz}{utml}"
-            del pts
-
-            for d in data:
-                if d[0] is not None:
-                    for k in d[0].keys():
-                        if len(d[0][k]) > 0:
-                            d[0][k] = np.array(
-                                utm.from_latlon(
-                                    d[0][k][:, 1],
-                                    d[0][k][:, 0],
-                                    force_zone_number=utmz,
-                                    force_zone_letter=utml,
-                                )[:2]
-                            ).T
-                if d[1] is not None:
-                    for k in d[1].keys():
-                        if len(d[1][k]) > 0:
-                            d[1][k] = np.array(
-                                utm.from_latlon(
-                                    d[1][k][:, 1],
-                                    d[1][k][:, 0],
-                                    force_zone_number=utmz,
-                                    force_zone_letter=utml,
-                                )[:2]
-                            ).T
-
-    def _create_geom(data: Any, mode: str) -> Any:
-        if not len(data):
+    def _combine(gs: list[Any], mode: str) -> Any:
+        gs = [g for g in gs if g is not None]
+        if not len(gs):
             return None
-        if isinstance(data, dict):
-            gs = [_create_geom(g, mode) for g in data.values()]
-            return _combine(gs, mode)
-        if isinstance(data, np.ndarray) and len(data.shape) == 2:
-            return ClosedPolygon(data)
-        gs = [_create_geom(g, mode) for g in data]
-        return _combine(gs, mode)
+        if len(gs) == 1:
+            return gs[0]
+        return AreaUnion(gs) if mode == "union" else AreaIntersection(gs)
 
-    gext = _create_geom([d[0] for d in data], combine_mode)
-    # Keep interior rings combined as union before subtraction.
-    gint = _create_geom([d[1] for d in data], "union")
+    def _create_geom(obj: Any, mode: str) -> Any:
+        """
+        Recursively builds a geometry from nested dicts / lists / arrays.
+        """
+        if obj is None:
+            return None
+        if isinstance(obj, np.ndarray):
+            if obj.ndim == 2 and obj.shape[0] >= 3:
+                return ClosedPolygon(obj)
+            return None
+        if isinstance(obj, dict):
+            return _combine([_create_geom(g, mode) for g in obj.values()], mode)
+        if isinstance(obj, (list, tuple)):
+            if not len(obj):
+                return None
+            return _combine([_create_geom(g, mode) for g in obj], mode)
+        raise ValueError(f"Cannot build geometry from type {type(obj).__name__}")
+
+    # exterior rings of one area are always a union of its parts:
+    # the combine_mode applies across areas/files, not within a MultiPolygon.
+    gs_ext: list[Any] = []
+    for ext, __ in data:
+        for rings in ext.values():
+            g = _create_geom(rings, "union")
+            if g is not None:
+                gs_ext.append(g)
+    gext = _combine(gs_ext, combine_mode)
+
+    # interior rings (holes) are always unioned before subtraction:
+    gs_int: list[Any] = []
+    for __, int_ in data:
+        for rings in int_.values():
+            g = _create_geom(rings, "union")
+            if g is not None:
+                gs_int.append(g)
+    gint = _combine(gs_int, "union")
+
+    if gext is None:
+        raise ValueError(f"No exterior polygons found in {fnames}")
+
     geom = gext - gint if gint is not None else gext
 
     if ret_utm_zone:
