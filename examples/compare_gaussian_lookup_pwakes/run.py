@@ -89,7 +89,7 @@ def benchmark_large_case(
 ) -> None:
     """Compare runtime on the packaged 8000-state case and generated farm."""
     runtimes: dict[str, float] = {}
-    for partial_wakes in ("gaussian_lookup", "axiwake6"):
+    for partial_wakes in ("gaussian_lookup", "axiwake9"):
         mbook = foxes.models.ModelBook()
         farm = build_benchmark_farm(n_turbines, mbook.turbine_types["NREL5MW"].D)
         states = foxes.input.states.Timeseries(
@@ -145,9 +145,7 @@ def parse_args() -> argparse.Namespace:
         default=0.05,
         help="Lateral scan spacing in rotor diameters",
     )
-    parser.add_argument(
-        "-e", "--engine", default="process", help="Engine type"
-    )
+    parser.add_argument("-e", "--engine", default="process", help="Engine type")
     parser.add_argument("-n", "--n-cpus", type=int, default=None, help="Worker count")
     parser.add_argument(
         "-c",
@@ -227,7 +225,9 @@ def main() -> None:
         linewidth=2,
     )
     axes[0].set_ylabel("Downstream REWS / ambient WS")
-    axes[0].set_title("Partial-wake comparison at a lateral scan of the downstream rotor")
+    axes[0].set_title(
+        "Partial-wake comparison at a lateral scan of the downstream rotor"
+    )
     axes[0].grid(alpha=0.3)
     axes[0].legend()
 
@@ -245,11 +245,9 @@ def main() -> None:
     else:
         plt.close(fig)
 
-    
     if args.runtime_benchmark:
         with engine:
             benchmark_large_case(engine, args.benchmark_turbines)
-
 
 
 if __name__ == "__main__":
