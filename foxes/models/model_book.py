@@ -227,6 +227,7 @@ class ModelBook:
             rotor_points=fm.partial_wakes.RotorPoints(),
             top_hat=fm.partial_wakes.PartialTopHat(),
             centre=fm.partial_wakes.PartialCentre(),
+            gaussian_lookup=fm.partial_wakes.PartialGaussianLookup(),
         )
         self.partial_wakes.add_factory(
             fm.partial_wakes.PartialAxiwake,
@@ -800,6 +801,8 @@ class ModelBook:
             return "grid9"
         elif isinstance(wake_model, fm.wake_models.TopHatWakeModel):
             return "top_hat"
+        elif isinstance(wake_model, fm.wake_models.GaussianWakeModel):
+            return "gaussian_lookup"
         elif isinstance(wake_model, fm.wake_models.AxisymmetricWakeModel):
             return "axiwake6"
         elif isinstance(wake_model, fm.wake_models.DistSlicedWakeModel):

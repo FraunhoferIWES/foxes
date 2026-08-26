@@ -7,3 +7,4 @@ include foxes/data/states/*.tab
 include foxes/data/states/*.txt
 include foxes/data/farms/*.csv
 include foxes/data/model_data/*.csv
+include foxes/data/model_data/*.nc

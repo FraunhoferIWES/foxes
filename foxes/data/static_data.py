@@ -38,4 +38,4 @@ class StaticData(DataBook):
             STATES, states, [".csv", ".csv.gz", ".nc", ".tab", ".txt"]
         )
         self.add_data_package(PCTCURVE, power_ct_curves, ".csv")
-        self.add_data_package(MODEL_DATA, model_data, ".csv")
+        self.add_data_package(MODEL_DATA, model_data, [".csv", ".nc"])

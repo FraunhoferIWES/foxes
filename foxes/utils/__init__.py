@@ -63,6 +63,15 @@ from .random_xy import random_xy_square as random_xy_square
 from .wrg_utils import ReaderWRG as ReaderWRG
 from .weibull import weibull_weights as weibull_weights
 from .download import download_file as download_file
+from .gaussian_lookup import create_lookup_axes as create_lookup_axes
+from .gaussian_lookup import gaussian_disc_weight as gaussian_disc_weight
+from .gaussian_lookup import build_lookup_dataset as build_lookup_dataset
+from .gaussian_lookup import generate_lookup_dataset as generate_lookup_dataset
+from .gaussian_lookup import evaluate_lookup_dataset as evaluate_lookup_dataset
+from .gaussian_lookup import evaluate_lookup_geometry as evaluate_lookup_geometry
+from .gaussian_lookup import save_lookup_dataset as save_lookup_dataset
+from .gaussian_lookup import load_lookup_dataset as load_lookup_dataset
+from .gaussian_lookup import validate_lookup_dataset as validate_lookup_dataset
 
 from . import two_circles as two_circles
 from . import abl as abl

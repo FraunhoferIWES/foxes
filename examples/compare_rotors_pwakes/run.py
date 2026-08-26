@@ -98,7 +98,7 @@ if __name__ == "__main__":
         "-p",
         "--pwakes",
         help="The partial wakes model(s)",
-        default=["grid16", "axiwake6", "rotor_points"],
+        default=["grid16", "axiwake6", "gaussian_lookup", "rotor_points"],
         nargs="+",
     )
     parser.add_argument("-tt", "--title", help="The figure title", default=None)

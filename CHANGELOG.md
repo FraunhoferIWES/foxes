@@ -132,45 +132,27 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Turbine models:
   - New: `SectorManagement`, sets variables by range rules on other variables
 - Point models:
-  - New: `SetUniformData`, set uniform variables (optionally state dependent)
-- Examples:
-  - New: `sector_management`, demonstrates how to model wind sector management
-- Notebooks:
   - New: `sector_man.ipynb`, demonstrates how to model wind sector management
-  - New: `data.ipynb`, lists and shows the static data
 - Bug fixes:
   - Fix for bug with option `col_models` in farm layout from csv
-
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.2.5](https://github.com/FraunhoferIWES/foxes/commits/v0.2.5)
-
 ## v0.2.6-alpha
 
 - Output:
-  - Improved: `FarmResultsEval` can now handle NaN data in Einstein sums
   - Improved: `ResultsWriter` can now also write turbine names
-- Turbine models:
   - New: `TableFactors`, multiplies variables with data from a two dimensional table
   - New: `YAW2YAWM`, calculates yaw deltas from absolute yaw and wind direction
   - New `YAWM2YAW`, calculates absolute yaw from yaw deltas and wind direction
-  - Generalized: `kTI`, now includes optional offset `kb`
 - Turbine types:
-  - Changed: Now yaw correction of `P` and `CT` switched on by default
 - Point models:
-  - New: `TKE2TI`, calculates turbulence intensity from TKE
 - Wake models:
-  - New: `PorteAgel`, calculates wakes based on the Bastankhah PorteAgel 2016 wake model
 - Wake frames:
-  - New: `YawedWake`, bends wakes in yawed conditions
 - Wake superposition models:
-  - Improved: `LinearSuperposition`, now includes options for lower/higher limits of total wake deltas
 - Examples:
-  - New: `compare_wakes`, compares wake models along horizontal lines
   - New: `yawed_wake`, demonstrates wake bending by yawing a rotor
 - Notebooks:
  - New: `yawed_wake.ipynb`, demonstrates wake bending by yawing a rotor
-- Bug fixes:
   - Fix for bug with `ExtendedStates`, now it is actually working
-  - Fix for bug with wake width in `CrespoHernandezTIWake`
   - Fix for bug with YAW and WD when using the `YAWM2YAW` turbine model
   - Fix for bug in `TurbOPark` wake model, double counting constant offset in sigma
 
@@ -274,12 +256,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)
 
 ## v0.4.0
-
   - Improved: New option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
-  - New turbine model: `LookupTable`, interpolates data based on a multi-dimensional lookup table
-  - Improved `DaskRunner`: Now supports clusters that run the Slurm queueing system
   - New: `timeseries_slurm`, shows how to run foxes on a HPC with Slurm queueing system
-- Optimization:
   - Improved: `foxes.opt` is now able to optimize for flow variables (at selected points in space) in addition to turbine variables
 - Documentation:
   - Improved API docu, now based on `python-apigen`
@@ -288,7 +266,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.1
 
-- Algorithms:
   - Improved: `Iterative` now iterates through outer loop instead of within chunk
 - Models:
   - New wake frame: `Timelines`, propagates wakes for spatially uniform time series
@@ -1019,6 +996,10 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Utils:
   - Added `AreaGeometry.from_shp(...)` as a direct geom2d entry point for reading `.shp` polygon data
   - Extended `shp2geom2d`/`AreaGeometry.from_shp(...)` to accept glob patterns and support union/intersection combination modes
+  - Added command `foxes_create_gaussian_lookup` to generate Gaussian partial-wake NetCDF lookup artifacts offline
+- Models:
+  - Added opt-in `PartialGaussianLookup` for Gaussian wake models with lookup artifact loading and lookup-weight based rotor-effective wake contribution
+  - Registered model-book partial-wakes entry `gaussian_lookup` for `PartialGaussianLookup` and made it the default for Gaussian wake models
 - Tests:
   - Expanded test coverage substantially over the previous release, including new smoke tests and consistency checks for engine execution, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
 - Bug fixes:
@@ -1028,5 +1009,6 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Removed Python 3.9 from the CI matrix and gated MPI smoke coverage behind `FOXES_RUN_MPI_TESTS=1` for deterministic constrained-runner behavior
   - Fixed bug that prevented wake effects in the presence of pre-rotor turbine models
   - Fixed a crash during dynamic farm turbine resets where `Algorithm.update_n_turbines` raised `NotImplementedError` (affecting regular-grid layout optimization workflows)
+  - Changed `PartialGaussianLookup` default to `bounds_policy="clip"`; clipped radial out-of-range points now raise when clipped weights exceed `min_weight`, and Gaussian lookup generation now uses `R/sigma` and `sigma/D` axes with explicit sigma bounds instead of a centerline-weight sizing parameter
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)

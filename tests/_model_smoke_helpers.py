@@ -960,6 +960,22 @@ def _run_partial_wakes_smoke(cls):
     name = cls.__name__
     if name == "PartialAxiwake":
         model = cls(6)
+    elif name == "PartialGaussianLookup":
+        r_axis, s_axis = foxes.utils.create_lookup_axes(
+            r_over_sigma_max=8.0,
+            n_r=17,
+            sigma_over_d_min=0.03,
+            sigma_over_d_max=2.0,
+            n_sigma=19,
+        )
+        model = cls(
+            foxes.utils.build_lookup_dataset(
+                r_over_sigma=r_axis,
+                sigma_over_d=s_axis,
+                n_rho=96,
+                version_tag="smoke-v1",
+            )
+        )
     elif name == "PartialSegregated":
         model = cls(foxes.models.rotor_models.CentreRotor())
     elif name == "PartialGrid":

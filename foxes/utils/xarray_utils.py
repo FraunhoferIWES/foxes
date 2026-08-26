@@ -191,7 +191,7 @@ def write_nc(
     fpath: Path | str,
     round: dict[str, int] | int | None = None,
     complevel: int = 5,
-    nc_engine: str = "netcdf4",
+    nc_engine: str | None = None,
     pack: bool = False,
     verbosity: int = 1,
     **kwargs: Any,
@@ -220,6 +220,11 @@ def write_nc(
 
     """
     fpath = Path(fpath)
+    if nc_engine is None:
+        from foxes.config import config
+
+        nc_engine = config.nc_engine
+    nc_engine = nc_engine or "netcdf4"
 
     def _round(x: np.ndarray, v: str, d: int | None) -> np.ndarray:
         """Helper function to round values"""
