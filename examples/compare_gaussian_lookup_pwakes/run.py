@@ -89,7 +89,7 @@ def benchmark_large_case(
 ) -> None:
     """Compare runtime on the packaged 8000-state case and generated farm."""
     runtimes: dict[str, float] = {}
-    for partial_wakes in ("gaussian_lookup", "axiwake9"):
+    for partial_wakes in ("gaussian_lookup", "axiwake6"):
         mbook = foxes.models.ModelBook()
         farm = build_benchmark_farm(n_turbines, mbook.turbine_types["NREL5MW"].D)
         states = foxes.input.states.Timeseries(
