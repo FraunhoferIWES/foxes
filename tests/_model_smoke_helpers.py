@@ -348,6 +348,7 @@ def _field_states(cls):
             fixed_vars={FV.TI: 0.08, FV.RHO: 1.225},
             bounds_extra_space=np.inf,
             height_bounds=np.inf,
+            interp_pars={"bounds_error": False},
         )
     if cls.__name__ == "FieldData":
         example_dir = ROOT / "examples" / "field_data_nc" / "data" / "data_*.nc"
