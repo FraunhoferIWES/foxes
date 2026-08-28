@@ -1263,7 +1263,13 @@ def _run_wake_model_smoke(cls):
         model = cls(superposition="ws_linear", dx=40.0, k=0.04)
     elif name == "RankineHalfBody":
         model = cls(superposition="vector")
-    elif name in {"JensenWake", "Bastankhah2014", "Bastankhah2016", "TurbOParkWake"}:
+    elif name in {
+        "JensenWake",
+        "JensenTurbOParkWake",
+        "Bastankhah2014",
+        "Bastankhah2016",
+        "TurbOParkWake",
+    }:
         model = cls(superposition="ws_linear", k=0.04)
     else:
         model = cls(superposition="ws_linear")
