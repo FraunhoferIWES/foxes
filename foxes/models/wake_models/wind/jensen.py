@@ -199,15 +199,15 @@ class JensenTurbOParkWake(TopHatWakeModel):
 
     Attributes
     ----------
-    sbeta_factor: float
+    sbeta_factor
         Factor multiplying sbeta
-    c1: float
+    c1
         Factor from Frandsen turbulence model
-    c2: float
+    c2
         Factor from Frandsen turbulence model
-    induction: foxes.core.AxialInductionModel or str
+    induction
         The induction model
-    wake_k: foxes.core.WakeK
+    wake_k
         Handler for the wake growth parameter k
 
     :group: models.wake_models.wind
@@ -216,29 +216,29 @@ class JensenTurbOParkWake(TopHatWakeModel):
 
     def __init__(
         self,
-        superposition,
-        sbeta_factor=0.25,
-        c1=1.5,
-        c2=0.8,
-        induction="Madsen",
-        **wake_k,
-    ):
+        superposition: str,
+        sbeta_factor: float = 0.25,
+        c1: float = 1.5,
+        c2: float = 0.8,
+        induction: str = "Madsen",
+        **wake_k: Any,
+    ) -> None:
         """
         Constructor.
 
         Parameters
         ----------
-        superposition: str
+        superposition
             The wind deficit superposition
-        sbeta_factor: float
+        sbeta_factor
             Factor multiplying sbeta
-        c1: float
+        c1
             Factor from Frandsen turbulence model
-        c2: float
+        c2
             Factor from Frandsen turbulence model
-        induction: foxes.core.AxialInductionModel or str
+        induction
             The induction model
-        wake_k: dict, optional
+        wake_k
             Parameters for the WakeK class
 
         """
@@ -248,7 +248,7 @@ class JensenTurbOParkWake(TopHatWakeModel):
         self.c2 = c2
         self.wake_k = WakeK(**wake_k)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
@@ -258,13 +258,13 @@ class JensenTurbOParkWake(TopHatWakeModel):
         return s
 
     @property
-    def affects_ws(self):
+    def affects_ws(self) -> bool:
         """
         Flag for wind speed wake models
 
         Returns
         -------
-        dws: bool
+        dws
             If True, this model affects wind speed
 
         """
@@ -272,41 +272,43 @@ class JensenTurbOParkWake(TopHatWakeModel):
 
     def calc_wake_radius(
         self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        x,
-        ct,
-    ):
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        downwind_index: int,
+        x: np.ndarray,
+        ct: np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate the wake radius using a TurbOPark-like growth law.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
+        algo
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata
             The model data
-        fdata: foxes.core.FData
+        fdata
             The farm data
-        tdata: foxes.core.TData
+        tdata
             The target point data
-        downwind_index: int
+        downwind_index
             The index in the downwind order
-        x: numpy.ndarray
+        x
             The x values, shape: (n_states, n_targets)
-        ct: numpy.ndarray
+        ct
             The ct values of the wake-causing turbines,
             shape: (n_states, n_targets)
 
         Returns
         -------
-        wake_r: numpy.ndarray
+        wake_r
             The wake radii, shape: (n_states, n_targets)
 
         """
+        assert not isinstance(self.induction, str)
+
         wake_r = np.zeros_like(x, dtype=np.float64)
         st_sel = (x > 1e-8) & (ct > 1e-8)
 
@@ -346,23 +348,19 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 selection=st_sel,
             )
 
-            a = self.induction.ct2a(ct[st_sel])
-            beta = np.maximum((1 - a) / (1 - 2 * a), 0)
-            del a, beta
-
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct[st_sel])
 
             sigma = D * (
-                k / beta
+                k
+                / beta
                 * (
                     np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1)
                     - np.sqrt(1 + alpha**2)
                     - np.log(
                         (np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1) + 1)
                         * alpha
-                        / ((np.sqrt(1 + alpha**2) + 1)
-                           * (alpha + beta * x[st_sel] / D))
+                        / ((np.sqrt(1 + alpha**2) + 1) * (alpha + beta * x[st_sel] / D))
                     )
                 )
             )

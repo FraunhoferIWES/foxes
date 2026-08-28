@@ -453,9 +453,9 @@ class ModelBook:
             fm.wake_models.wind.JensenTurbOParkWake,
             "JensenTurbOPark_<superposition>_[wake_k]",
             kwargs=dict(induction="Betz"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -465,9 +465,9 @@ class ModelBook:
             fm.wake_models.wind.JensenTurbOParkWake,
             "JensenTurbOPark_<superposition>_[wake_k]",
             kwargs=dict(induction="Betz"),
-            superposition=lambda s: f"ws_{s}"
-            if f"ws_{s}" in self.wake_superpositions
-            else s,
+            superposition=lambda s: (
+                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
+            ),
             hints={
                 "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
             },
@@ -554,10 +554,10 @@ class ModelBook:
         )
 
         self.wake_models["JensenTurbOPark"] = fm.wake_models.wind.JensenTurbOParkWake(
-                superposition="ws_quadratic",
-                ka=0.6,
-                ti_var=FV.AMB_TI,
-                induction="Madsen",
+            superposition="ws_quadratic",
+            ka=0.6,
+            ti_var=FV.AMB_TI,
+            induction="Madsen",
         )
 
         self.wake_models.add_k_factory(
