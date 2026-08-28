@@ -15,6 +15,7 @@ MODEL_PATHS = [
     "foxes.models.wake_models.wind.bastankhah16:Bastankhah2016",
     "foxes.models.wake_models.wind.bastankhah16:Bastankhah2016Model",
     "foxes.models.wake_models.wind.jensen:JensenWake",
+    "foxes.models.wake_models.wind.jensen:JensenTurbOParkWake",
     "foxes.models.wake_models.wind.turbopark:TurbOParkWake",
     "foxes.models.wake_models.wind.turbopark:TurbOParkWakeIX",
 ]
