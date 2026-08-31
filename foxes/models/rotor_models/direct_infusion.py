@@ -246,9 +246,17 @@ class DirectMDataInfusion(CentreRotor):
                     break
 
             if v not in sres:
-                raise ValueError(
-                    f"Rotor '{self.name}': mdata variable '{w}' not found in any of the mdata variables {mdvs}"
-                )
+                if v == FV.WEIGHT:
+                    n_states = algo.n_states
+                    assert n_states is not None, (
+                        f"Rotor '{self.name}': algo.n_states is not set"
+                    )
+                    tdata[v][:] = 1 / n_states
+                else:
+                    raise ValueError(
+                        f"Rotor '{self.name}': mdata variable '{w}' not found in any of the mdata variables {mdvs}"
+                    )
+
         if FV.WEIGHT not in tdata:
             raise KeyError(f"Rotor '{self.name}': Missing '{FV.WEIGHT}' in tdata")
 

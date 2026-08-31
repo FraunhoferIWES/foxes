@@ -4,9 +4,10 @@ from abc import abstractmethod
 import numpy as np
 from typing import TYPE_CHECKING
 
-from foxes.core import SingleTurbineWakeModel
 from foxes.config import config
 import foxes.variables as FV
+
+from .single_turbine_wake_model import SingleTurbineWakeModel
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm

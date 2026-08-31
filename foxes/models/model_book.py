@@ -7,6 +7,7 @@ import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import FDict
 
+from foxes.models.wake_models import TurbineInductionModel
 from foxes.core import (
     PointDataModel,
     FarmDataModel,
@@ -19,7 +20,6 @@ from foxes.core import (
     WakeSuperposition,
     WakeModel,
     AxialInductionModel,
-    TurbineInductionModel,
     GroundModel,
     WakeDeflection,
 )

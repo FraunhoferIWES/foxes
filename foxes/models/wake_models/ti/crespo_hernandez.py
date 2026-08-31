@@ -128,6 +128,18 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         s += self.wake_k.repr() + ")"
         return s
 
+    def waked_variables(self) -> list[str]:
+        """
+        Returns a list of variable names that are affected by this wake model.
+
+        Returns
+        -------
+        waked_variables
+            A list of variable names affected by this wake model.
+
+        """
+        return [FV.TI]
+
     def sub_models(self) -> list[Model]:
         """
         List of all sub-models

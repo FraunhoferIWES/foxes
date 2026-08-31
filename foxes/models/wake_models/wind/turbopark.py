@@ -88,18 +88,17 @@ class TurbOParkWake(GaussianWakeModel):
         s += self.wake_k.repr() + ")"
         return s
 
-    @property
-    def affects_ws(self) -> bool:
+    def waked_variables(self) -> list[str]:
         """
-        Flag for wind speed wake models
+        Returns a list of variable names that are affected by this wake model.
 
         Returns
         -------
-        dws
-            If True, this model affects wind speed
+        waked_variables
+            A list of variable names affected by this wake model.
 
         """
-        return True
+        return [FV.WS]
 
     def sub_models(self) -> list[Model]:
         """
@@ -375,18 +374,17 @@ class TurbOParkWakeIX(GaussianWakeModel):
         s += self.wake_k.repr() + ")"
         return s
 
-    @property
-    def affects_ws(self) -> bool:
+    def waked_variables(self) -> list[str]:
         """
-        Flag for wind speed wake models
+        Returns a list of variable names that are affected by this wake model.
 
         Returns
         -------
-        dws
-            If True, this model affects wind speed
+        waked_variables
+            A list of variable names affected by this wake model.
 
         """
-        return True
+        return [FV.WS]
 
     def sub_models(self) -> list[Model]:
         """

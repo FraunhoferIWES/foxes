@@ -4,7 +4,7 @@ import numpy as np
 from typing import TYPE_CHECKING
 
 from foxes.config import config
-from foxes.core import TurbineInductionModel
+from foxes.models.wake_models.turbine_induction_model import TurbineInductionModel
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -68,18 +68,17 @@ class Rathmann(TurbineInductionModel):
         )
         return f"{type(self).__name__}({self.wind_superposition}, induction={iname})"
 
-    @property
-    def affects_ws(self) -> bool:
+    def waked_variables(self) -> list[str]:
         """
-        Flag for wind speed wake models
+        Returns a list of variable names that are affected by this wake model.
 
         Returns
         -------
-        dws
-            If True, this model affects wind speed
+        waked_variables
+            A list of variable names affected by this wake model.
 
         """
-        return True
+        return [FV.WS]
 
     def sub_models(self) -> list[Model]:
         """
