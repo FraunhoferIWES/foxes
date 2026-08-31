@@ -7,7 +7,7 @@ MODEL_PATHS = [
     "foxes.models.wake_models.induction.rankine_half_body:RankineHalfBody",
     "foxes.models.wake_models.induction.rathmann:Rathmann",
     "foxes.models.wake_models.induction.self_similar:SelfSimilar",
-    "foxes.models.wake_models.induction.self_similar2020:SelfSimilar2020",
+    "foxes.models.wake_models.induction.self_similar:SelfSimilar2020",
     "foxes.models.wake_models.induction.vortex_sheet:VortexSheet",
     "foxes.models.wake_models.ti.crespo_hernandez:CrespoHernandezTIWake",
     "foxes.models.wake_models.ti.iec_ti:IECTIWake",
