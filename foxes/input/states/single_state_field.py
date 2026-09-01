@@ -208,7 +208,7 @@ class SingleStateField(States):
                         )
                     if verbosity > 0:
                         print(f"Path: {fpath}")
-                elif verbosity:
+                elif verbosity > 0:
                     print(f"States '{self.name}': Reading file {fpath}")
                 data = open_dataset(fpath, engine=config.nc_engine)
 
