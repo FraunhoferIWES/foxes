@@ -140,10 +140,20 @@ class OpFlagController(FarmController):
 
         op_flags_data = self._op_flags
         assert op_flags_data is not None
-        assert op_flags_data.shape == (algo.n_states, algo.n_turbines), (
-            f"OpFlagController data shape {op_flags_data.shape} does not match "
-            f"(n_states, n_turbines)=({algo.n_states}, {algo.n_turbines})"
+        assert op_flags_data.ndim == 2, (
+            f"OpFlagController data must be 2D representing (n_states, n_turbines), got shape {op_flags_data.shape}"
         )
+        if op_flags_data.shape == (algo.n_turbines, algo.n_states):
+            pass
+        elif op_flags_data.shape in [(1, algo.n_turbines), (algo.n_states, 1)]:
+            op_flags_data = (
+                np.zeros((algo.n_states, algo.n_turbines), dtype=bool) + op_flags_data
+            )
+        else:
+            raise ValueError(
+                f"OpFlagController data shape {op_flags_data.shape} does not broadcast to "
+                f"(n_states, n_turbines)=({algo.n_states}, {algo.n_turbines})"
+            )
         op_flags = op_flags_data.astype(bool)
 
         off = np.where(~op_flags)

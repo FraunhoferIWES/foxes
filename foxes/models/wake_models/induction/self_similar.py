@@ -4,7 +4,7 @@ import numpy as np
 from typing import TYPE_CHECKING
 
 from foxes.config import config
-from foxes.core import TurbineInductionModel
+from foxes.models.wake_models.turbine_induction_model import TurbineInductionModel
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -90,18 +90,17 @@ class SelfSimilar(TurbineInductionModel):
         )
         return f"{type(self).__name__}({self.wind_superposition}, induction={iname}, gamma={self.gamma})"
 
-    @property
-    def affects_ws(self) -> bool:
+    def waked_variables(self) -> list[str]:
         """
-        Flag for wind speed wake models
+        Returns a list of variable names that are affected by this wake model.
 
         Returns
         -------
-        dws
-            If True, this model affects wind speed
+        waked_variables
+            A list of variable names affected by this wake model.
 
         """
-        return True
+        return [FV.WS]
 
     def sub_models(self) -> list[Model]:
         """
@@ -347,3 +346,55 @@ class SelfSimilar(TurbineInductionModel):
                 add_wake(sp_sel, wake_deltas, blockage)
 
         return None
+
+
+class SelfSimilar2020(SelfSimilar):
+    """
+    The self-similar 2020 induction wake model
+    from Troldborg and Meyer Forsting
+
+    Notes
+    -----
+    References:
+    [1] Troldborg, Niels, and Alexander Raul Meyer Forsting.
+    "A simple model of the wind turbine induction zone derived from numerical simulations."
+    Wind Energy 20.12 (2017): 2011-2020.
+    https://onlinelibrary.wiley.com/doi/full/10.1002/we.2137
+
+    [2] Forsting, Alexander R. Meyer, et al.
+    "On the accuracy of predicting wind-farm blockage."
+    Renewable Energy (2023).
+    https://www.sciencedirect.com/science/article/pii/S0960148123007620
+
+
+    """
+
+    def _a0(self, ct: np.ndarray, x_R: np.ndarray) -> np.ndarray:
+        """Helper function: define a0 with gamma factor, eqn 8 from [2]"""
+
+        x_new = np.minimum(np.maximum(-1 * np.abs(x_R), -6), -1)
+        x_m1 = np.asarray(-1.0)
+        x_m6 = np.asarray(-6.0)
+        c = (self._mu(x_new) - self._mu(x_m1)) / (self._mu(x_m6) - self._mu(x_m1))
+
+        fg1 = -0.06489
+        fg2 = 0.4911
+        fg3 = 0.1577
+        fg4 = 1.116
+        far_gamma = fg1 * np.sin((ct - fg2) / fg3) + fg4
+
+        ng1 = -1.381
+        ng2 = 2.627
+        ng3 = -1.524
+        ng4 = 1.336
+        near_gamma = ng1 * ct**3 + ng2 * ct**2 + (ng3 * ct) + ng4
+
+        gamma = c * far_gamma + (1 - c) * near_gamma
+
+        induction = self.induction
+        assert not isinstance(induction, str)
+        return induction.ct2a(gamma * ct)
+
+    def _r_half(self, x_R: np.ndarray) -> np.ndarray:
+        """Helper function: define induction zone half radius (eqn 13)"""
+        return -0.672 * x_R + 0.4897

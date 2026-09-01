@@ -348,6 +348,7 @@ def _field_states(cls):
             fixed_vars={FV.TI: 0.08, FV.RHO: 1.225},
             bounds_extra_space=np.inf,
             height_bounds=np.inf,
+            interp_pars={"bounds_error": False},
         )
     if cls.__name__ == "FieldData":
         example_dir = ROOT / "examples" / "field_data_nc" / "data" / "data_*.nc"
@@ -1278,7 +1279,13 @@ def _run_wake_model_smoke(cls):
         model = cls(superposition="ws_linear", dx=40.0, k=0.04)
     elif name == "RankineHalfBody":
         model = cls(superposition="vector")
-    elif name in {"JensenWake", "Bastankhah2014", "Bastankhah2016", "TurbOParkWake"}:
+    elif name in {
+        "JensenWake",
+        "JensenTurbOParkWake",
+        "Bastankhah2014",
+        "Bastankhah2016",
+        "TurbOParkWake",
+    }:
         model = cls(superposition="ws_linear", k=0.04)
     else:
         model = cls(superposition="ws_linear")

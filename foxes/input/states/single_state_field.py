@@ -208,7 +208,7 @@ class SingleStateField(States):
                         )
                     if verbosity > 0:
                         print(f"Path: {fpath}")
-                elif verbosity:
+                elif verbosity > 0:
                     print(f"States '{self.name}': Reading file {fpath}")
                 data = open_dataset(fpath, engine=config.nc_engine)
 
@@ -352,11 +352,43 @@ class SingleStateField(States):
         # interpolate through Dataset.interp():
         if np.any(valid):
             pvalid = DataFrame({c: pts[c][valid] for c in self._cmap}).to_xarray()
-            results = data.interp(
-                **{c: pvalid[c] for c in self._cmap.keys()},
-                **self.interp_pars,
-            )
-            del pvalid
+            pars: dict[str, bool | float | str | None] = {
+                "fill_value": None,
+                "bounds_error": True,
+            }
+            pars.update(self.interp_pars)
+            try:
+                results = data.interp(
+                    **{c: pvalid[c] for c in self._cmap.keys()},
+                    kwargs=pars,
+                )
+            except ValueError as e:
+                print(f"\nStates '{self.name}': Interpolation error")
+                print(f"INTERPOLATION DIMENSIONS: {list(self._cmap.keys())}")
+                print(
+                    "DATA BOUNDS:",
+                    [float(np.min(data[c].to_numpy())) for c in self._cmap.keys()],
+                    [float(np.max(data[c].to_numpy())) for c in self._cmap.keys()],
+                )
+                print(
+                    "EVAL BOUNDS:",
+                    [float(np.min(pvalid[c])) for c in self._cmap.keys()],
+                    [float(np.max(pvalid[c])) for c in self._cmap.keys()],
+                )
+                print(
+                    "INSIDE     :",
+                    [
+                        float(np.min(p)) >= float(np.min(data[c].to_numpy()))
+                        and float(np.max(p)) <= float(np.max(data[c].to_numpy()))
+                        for i, (c, p) in enumerate(pts.items())
+                    ],
+                )
+                print(
+                    "\nMaybe you want to try the option 'bounds_error=False' in 'interp_pars'? This will extrapolate the data.\n"
+                )
+                raise e
+            finally:
+                del pvalid
 
             for v in vrs:
                 out[v][valid] = results[v].to_numpy()

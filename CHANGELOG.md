@@ -993,6 +993,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed `windio` `ka`/`kb` interpretation and extended `windio` support to multiple wind farms
   - Generalized `DatasetStates` lazy loading and hardened threaded NetCDF reading
   - Added `SectorSimRefPointField` for combining sector-based field data with reference-point timeseries
+- Models:
+  - Added `JensenTurbOParkWake`, combining Jensen top-hat wake deficits with TurbOPark-style wake-radius growth
 - Utils:
   - Added `AreaGeometry.from_shp(...)` as a direct geom2d entry point for reading `.shp` polygon data
   - Extended `shp2geom2d`/`AreaGeometry.from_shp(...)` to accept glob patterns and support union/intersection combination modes

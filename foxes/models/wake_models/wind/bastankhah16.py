@@ -495,19 +495,6 @@ class Bastankhah2016(DistSlicedWakeModel):
         s += self.wake_k.repr() + ")"
         return s
 
-    @property
-    def affects_ws(self) -> bool:
-        """
-        Flag for wind speed wake models
-
-        Returns
-        -------
-        dws
-            If True, this model affects wind speed
-
-        """
-        return True
-
     def sub_models(self) -> list[Model]:
         """
         List of all sub-models
@@ -522,6 +509,18 @@ class Bastankhah2016(DistSlicedWakeModel):
         if self.model is not None:
             smdls.append(self.model)
         return smdls
+
+    def waked_variables(self) -> list[str]:
+        """
+        Returns a list of variable names that are affected by this wake model.
+
+        Returns
+        -------
+        waked_variables
+            A list of variable names affected by this wake model.
+
+        """
+        return [FV.WS]
 
     def initialize(
         self,

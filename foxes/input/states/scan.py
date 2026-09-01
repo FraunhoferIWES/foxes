@@ -19,11 +19,17 @@ class ScanStates(States):
     scans
         The scans, key: variable name,
         value: scan values
-
+    fixed_vars
+        A dictionary containing the fixed variables, with variable names as keys and corresponding float values as values.
 
     """
 
-    def __init__(self, scans: dict[str, ArrayLike], **kwargs: object) -> None:
+    def __init__(
+        self,
+        scans: dict[str, ArrayLike],
+        fixed_vars: dict[str, float] | None = None,
+        **kwargs: object,
+    ) -> None:
         """
         Constructor.
 
@@ -32,12 +38,30 @@ class ScanStates(States):
         scans
             The scans, key: variable name,
             value: scan values
+        fixed_vars
+            A dictionary containing the fixed variables, with variable names as keys and corresponding float values as values.
         kwargs
             Parameters for the base class
 
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
-        self.scans = {v: np.asarray(d) for v, d in scans.items()}
+        self.fixed_vars = fixed_vars if fixed_vars is not None else {}
+        self.scans = {
+            v: np.asarray(d) for v, d in scans.items() if v not in self.fixed_vars
+        }
+
+    @property
+    def shp(self) -> tuple[int, ...]:
+        """
+        Shape of the scan states.
+
+        Returns
+        -------
+        shp
+            The shape of the scan states, i.e., the lengths of the scan arrays for each variable.
+
+        """
+        return tuple([len(v) for v in self.scans.values()])
 
     def load_data(
         self,
@@ -67,11 +91,10 @@ class ScanStates(States):
 
         """
         n_v = len(self.scans)
-        shp: list[int] = [len(v) for v in self.scans.values()]
-        self._N = int(np.prod(shp))
+        self._N = int(np.prod(self.shp))
         self._vars = list(self.scans.keys())
 
-        data: np.ndarray = np.zeros(tuple(shp + [n_v]), dtype=config.dtype_double)
+        data: np.ndarray = np.zeros(self.shp + (n_v,), dtype=config.dtype_double)
         for i, d in enumerate(self.scans.values()):
             s: list[slice | None] = [None] * n_v
             s[i] = slice(None)
@@ -84,6 +107,8 @@ class ScanStates(States):
         super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
         loaded_data["coords"][self.VARS] = np.asarray(self._vars, dtype=str)
         loaded_data["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
+
+        self._vars += list(self.fixed_vars.keys())
 
     def set_running(
         self,
@@ -214,7 +239,10 @@ class ScanStates(States):
         for i, v in enumerate(self._vars):
             if v not in tdata:
                 tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
-            tdata[v][:] = mdata[self.DATA][:, None, None, i]
+            if v in self.fixed_vars:
+                tdata[v][:] = self.fixed_vars[v]
+            else:
+                tdata[v][:] = mdata[self.DATA][:, None, None, i]
 
         # add weights:
         tdata[FV.WEIGHT] = np.full(
