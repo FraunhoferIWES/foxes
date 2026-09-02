@@ -1009,6 +1009,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Updated `PartialGaussianLookup` so bounds policies apply only to radial
     `R/sigma` queries; high `sigma/D` queries always use the validated
     large-sigma asymptote
+  - Fixed yawed Gaussian lookup partial-wake calculations with wake-direction
+    rotation
   - Fixed `FarmResultsEval.calc_yield` default output selection, `TurbinePointCloud` initialization/interpolation issues, `SingleStateField` NaN handling, `Downwind` state-subset propagation, `Sequential` state-count behavior, and several plotting and memory-splitting edge cases
   - Fixed `FarmLayoutOutput.get_figure` when plotting a farm boundary without `bargs`
   - Fixed `TurbinePointCloud` ambient-data corruption for non-collinear layouts with varying wind direction by preserving state/turbine point ordering, and avoided quadratic point-reconstruction scaling in that path

@@ -225,11 +225,12 @@ class PartialGaussianLookup(PartialCentre):
         if wmodel.affects_ws and FV.WS in wdeltas:
             if FC.WDEFL_ROT_ANGLE in tdata:
                 dwd_defl = tdata.pop(FC.WDEFL_ROT_ANGLE)
+                dwd_defl = dwd_defl[st_sel].reshape(-1)
                 if FV.WD not in wdeltas:
                     wdeltas[FV.WD] = np.zeros_like(wdeltas[FV.WS])
-                    wdeltas[FV.WD][:] = dwd_defl[st_sel]
+                    wdeltas[FV.WD][:] = dwd_defl
                 else:
-                    wdeltas[FV.WD] += dwd_defl[st_sel]
+                    wdeltas[FV.WD] += dwd_defl
 
             if FC.WDEFL_DWS_FACTOR in tdata:
                 dws_defl = tdata.pop(FC.WDEFL_DWS_FACTOR)

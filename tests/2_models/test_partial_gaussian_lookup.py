@@ -4,6 +4,7 @@ from pathlib import Path
 
 import foxes
 import numpy as np
+import pandas as pd
 import pytest
 
 from _model_smoke_helpers import _engine
@@ -111,6 +112,41 @@ def test_partial_gaussian_lookup_rejects_non_gaussian_wake_model() -> None:
 
     with pytest.raises(TypeError, match="GaussianWakeModel"):
         model.check_wmodel(wmodel, error=True)
+
+
+def test_partial_gaussian_lookup_handles_yawed_vector_wakes() -> None:
+    yawm = np.array([[30.0, 0.0], [0.0, 0.0], [-30.0, 0.0]])
+    states_data = pd.DataFrame({FV.WS: np.full(3, 8.0), FV.WD: np.full(3, 270.0)})
+    states = foxes.input.states.StatesTable(
+        states_data,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        fixed_vars={FV.RHO: 1.225, FV.TI: 0.05},
+    )
+    mbook = foxes.ModelBook()
+    mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars()
+    mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
+    farm = foxes.WindFarm()
+    for x in (0.0, 1000.0):
+        farm.add_turbine(
+            foxes.Turbine(
+                xy=[x, 0.0],
+                turbine_models=["set_yawm", "yawm2yaw", "NREL5MW", "kTI_05"],
+            )
+        )
+    algo = foxes.algorithms.Downwind(
+        farm,
+        states,
+        rotor_model="centre",
+        wake_models=["TurbOPark_vector_ambka004", "CrespoHernandez_quadratic"],
+        wake_deflection="Jimenez",
+        mbook=mbook,
+        verbosity=0,
+    )
+
+    with _engine():
+        farm_results = algo.calc_farm()
+
+    assert np.all(np.isfinite(farm_results[FV.WD]))
 
 
 def test_partial_gaussian_lookup_out_of_range_clips_and_can_raise_by_default() -> None:
