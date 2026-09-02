@@ -86,3 +86,54 @@ def test_farm_eval_allows_missing_farm_results():
 
     with pytest.raises(AssertionError, match="farm_results are required"):
         out._aggregate(mapping=None)
+
+
+def test_map_turbines_to_areas_preserves_clusters_unless_forced():
+    farm = _build_two_farm()
+    farm.add_turbine(foxes.Turbine([50.0, 0.0]), verbosity=0)
+    areas = {"all": foxes.utils.geom2d.Circle([50.0, 0.0], 100.0)}
+
+    mapping = farm.map_turbines_to_areas(areas, farm_single_cluster=False)
+
+    assert mapping == {"all": [0, 1, 2]}
+    assert farm.cluster_list == ["west", "east", "all"]
+
+    mapping = farm.map_turbines_to_areas(areas, force=True)
+
+    assert mapping == {"all": [0, 1, 2]}
+    assert farm.cluster_list == ["all", "all", "all"]
+
+
+def test_map_turbines_to_areas_uses_wind_farm_area_majority():
+    farm = foxes.WindFarm()
+    turbines = [
+        ([0.0, 0.0], "previous"),
+        ([10.0, 0.0], None),
+        ([100.0, 0.0], None),
+    ]
+    for xy, cluster_name in turbines:
+        farm.add_turbine(
+            foxes.Turbine(xy, wind_farm_name="farm", cluster_name=cluster_name),
+            verbosity=0,
+        )
+    farm.add_turbine(foxes.Turbine([50.0, 100.0], wind_farm_name="farm"), verbosity=0)
+    areas = {
+        "west": foxes.utils.geom2d.Circle([5.0, 0.0], 25.0),
+        "east": foxes.utils.geom2d.Circle([100.0, 0.0], 25.0),
+    }
+
+    mapping = farm.map_turbines_to_areas(areas)
+
+    assert mapping == {"west": [0, 1], "east": [2]}
+    assert farm.cluster_list == ["west", "west", "west", "west"]
+
+
+def test_map_turbines_to_areas_keeps_unmapped_farm_clusters():
+    farm = foxes.WindFarm()
+    farm.add_turbine(foxes.Turbine([100.0, 0.0], cluster_name="previous"), verbosity=0)
+    areas = {"west": foxes.utils.geom2d.Circle([0.0, 0.0], 25.0)}
+
+    mapping = farm.map_turbines_to_areas(areas)
+
+    assert mapping == {"west": []}
+    assert farm.cluster_list == ["previous"]

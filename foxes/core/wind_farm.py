@@ -307,6 +307,8 @@ class WindFarm:
         ),
         set_cluster: bool = True,
         geojson_name_key: str | list[str] = "name",
+        force: bool = False,
+        farm_single_cluster: bool = True,
     ) -> dict[str, list[int]]:
         """
         Maps turbines to areas.
@@ -322,10 +324,19 @@ class WindFarm:
             - GeoJSON object
         set_cluster
             If True, set each mapped turbine's cluster_name to
-            the mapped area name.
+            the mapped area name when it has no cluster name, or when
+            force is True.
         geojson_name_key
             Preferred GeoJSON feature property key(s) used
             to read area names from GeoJSON inputs.
+        force
+            If True, overwrite existing cluster names when set_cluster
+            is True.
+        farm_single_cluster
+            If True, assign every turbine in a wind farm to the area
+            containing the most turbines from that wind farm. Ties are
+            resolved by the input area order. Wind farms with no mapped
+            turbines are left unchanged.
 
         Returns
         -------
@@ -341,11 +352,22 @@ class WindFarm:
             for name, area in area_map.items():
                 if area_contains_point(area, t.xy):
                     mapping[name].append(i)
-                    if set_cluster:
+                    if set_cluster and (force or t.cluster_name is None):
                         t.cluster_name = name
                     break
 
         if set_cluster:
+            if farm_single_cluster:
+                for turbine_indices in self.get_wind_farm_mapping().values():
+                    counts = {
+                        name: sum(i in indices for i in turbine_indices)
+                        for name, indices in mapping.items()
+                    }
+                    if not any(counts.values()):
+                        continue
+                    cluster_name = max(counts, key=lambda name: counts[name])
+                    for i in turbine_indices:
+                        self.__turbines[i].cluster_name = cluster_name
             if self.__cluster_areas is None:
                 self.__cluster_areas = area_map
             else:
