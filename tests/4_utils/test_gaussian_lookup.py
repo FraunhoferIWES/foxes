@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from foxes.config import config
-from foxes.utils.gaussian_lookup import (
+from foxes.utils.gaussian_pwakes_utils import (
     AXIS_R_OVER_SIGMA,
     AXIS_SIGMA_OVER_D,
     DATA_WEIGHT,
@@ -11,6 +11,7 @@ from foxes.utils.gaussian_lookup import (
     evaluate_lookup_dataset,
     evaluate_lookup_geometry,
     gaussian_disc_weight,
+    gaussian_disc_weight_analytical,
     generate_lookup_dataset,
     load_lookup_dataset,
     save_lookup_dataset,
@@ -28,7 +29,7 @@ def test_create_lookup_axes_defaults_are_monotonic_and_positive():
     assert r_axis[0] == pytest.approx(0.0)
     assert np.all(s_axis > 0.0)
     assert r_axis[-1] == pytest.approx(28.0)
-    assert s_axis[-1] == pytest.approx(20.0)
+    assert s_axis[-1] > s_axis[0]
 
 
 def test_gaussian_disc_weight_large_sigma_approaches_one():
@@ -49,9 +50,41 @@ def test_gaussian_disc_weight_decreases_with_offset():
     assert np.all(np.diff(w) < 0.0)
 
 
+def test_gaussian_disc_weight_analytical_matches_quadrature():
+    r_axis = np.linspace(0.0, 8.0, 81)
+    s_axis = np.geomspace(0.02, 20.0, 41)
+    reference = gaussian_disc_weight(r_axis, s_axis, n_rho=2048)
+
+    actual = gaussian_disc_weight_analytical(
+        r_axis[:, None] * s_axis[None, :],
+        np.ones(reference.shape),
+        s_axis[None, :],
+    )
+
+    np.testing.assert_allclose(actual, reference, rtol=1.0e-5, atol=1.0e-8)
+
+
+def test_gaussian_disc_weight_analytical_masks_and_validates_geometry():
+    out = gaussian_disc_weight_analytical(
+        r=np.array([1.0, 1.0]),
+        d=np.array([100.0, 0.0]),
+        sigma=np.array([10.0, -1.0]),
+        is_waked=np.array([True, False]),
+    )
+    assert out[0] > 0.0
+    assert out[1] == pytest.approx(0.0)
+
+    with pytest.raises(ValueError, match="Invalid geometry"):
+        gaussian_disc_weight_analytical(
+            r=np.array([1.0]),
+            d=np.array([0.0]),
+            sigma=np.array([10.0]),
+        )
+
+
 def test_build_and_evaluate_lookup_dataset_shape_and_coords():
     r_axis = np.linspace(0.0, 1.2, 25)
-    s_axis = np.geomspace(0.05, 0.6, 21)
+    s_axis = np.geomspace(0.05, 40.0, 21)
     ds = build_lookup_dataset(r_axis, s_axis, n_rho=256)
 
     assert AXIS_R_OVER_SIGMA in ds.coords
@@ -73,16 +106,15 @@ def test_create_lookup_axes_rejects_invalid_ranges():
     with pytest.raises(ValueError, match="sigma_over_d_min"):
         create_lookup_axes(sigma_over_d_min=0.0)
 
-    with pytest.raises(ValueError, match="sigma_over_d_max"):
-        create_lookup_axes(sigma_over_d_min=0.2, sigma_over_d_max=0.1)
+    with pytest.raises(ValueError, match="asymptote_rel_tol"):
+        create_lookup_axes(asymptote_rel_tol=0.0)
 
 
 def test_generate_lookup_dataset_has_expected_metadata_and_is_deterministic():
     kw = dict(
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         sigma_spacing="log",
         n_rho=192,
         version_tag="test-v1",
@@ -93,8 +125,10 @@ def test_generate_lookup_dataset_has_expected_metadata_and_is_deterministic():
     assert ds0.attrs["version_tag"] == "test-v1"
     assert ds0.attrs["sigma_spacing"] == "log"
     assert ds0.attrs["n_rho"] == 192
+    assert ds0.attrs["min_weight"] == pytest.approx(1.0e-8)
     assert ds0.attrs["radial_resolution"] == pytest.approx(0.1)
-    assert ds0.attrs["sigma_resolution"] == pytest.approx(0.05)
+    assert ds0.attrs["sigma_resolution"] == pytest.approx(2.0)
+    assert ds0.attrs["asymptote_rel_tol"] == pytest.approx(1.0e-3)
     assert np.array_equal(ds0[DATA_WEIGHT].to_numpy(), ds1[DATA_WEIGHT].to_numpy())
 
 
@@ -105,8 +139,7 @@ def test_save_lookup_dataset_uses_configured_nc_engine(tmp_path):
         ds = generate_lookup_dataset(
             radial_resolution=0.1,
             sigma_over_d_min=0.02,
-            sigma_over_d_max=1.0,
-            sigma_resolution=0.05,
+            sigma_resolution=2.0,
             sigma_spacing="linear",
             n_rho=160,
             version_tag="config-engine-v1",
@@ -118,23 +151,19 @@ def test_save_lookup_dataset_uses_configured_nc_engine(tmp_path):
         config["nc_engine"] = old_engine
 
 
-def test_generate_lookup_dataset_rejects_invalid_sigma_bounds():
+def test_generate_lookup_dataset_rejects_invalid_asymptote_tolerance():
     with pytest.raises(ValueError, match="sigma_over_d_min"):
         generate_lookup_dataset(sigma_over_d_min=0.0)
 
-    with pytest.raises(ValueError, match="sigma_over_d_max"):
-        generate_lookup_dataset(
-            sigma_over_d_min=0.2,
-            sigma_over_d_max=0.1,
-        )
+    with pytest.raises(ValueError, match="asymptote_rel_tol"):
+        generate_lookup_dataset(asymptote_rel_tol=0.0)
 
 
 def test_lookup_dataset_netcdf_roundtrip(tmp_path):
     ds = generate_lookup_dataset(
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         sigma_spacing="linear",
         n_rho=160,
         version_tag="roundtrip-v1",
@@ -163,8 +192,7 @@ def test_evaluate_lookup_dataset_bounds_policies():
     ds = generate_lookup_dataset(
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         n_rho=128,
     )
 
@@ -189,8 +217,7 @@ def test_evaluate_lookup_dataset_clip_uses_high_sigma_asymptote():
     ds = generate_lookup_dataset(
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         n_rho=128,
     )
     r_max = float(ds.coords[AXIS_R_OVER_SIGMA].to_numpy()[-1])
@@ -213,8 +240,7 @@ def test_evaluate_lookup_geometry_masks_non_waked_and_guards_invalid():
     ds = generate_lookup_dataset(
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         n_rho=128,
     )
 
@@ -229,15 +255,16 @@ def test_evaluate_lookup_geometry_masks_non_waked_and_guards_invalid():
     assert out[2] == pytest.approx(0.0)
 
     with pytest.raises(ValueError, match="Invalid geometry"):
-        evaluate_lookup_geometry(ds, r, d, sigma, is_waked=np.array([True, True, False]))
+        evaluate_lookup_geometry(
+            ds, r, d, sigma, is_waked=np.array([True, True, False])
+        )
 
 
 def test_evaluate_lookup_geometry_clip_masks_radial_oob_below_min_weight():
     ds = generate_lookup_dataset(
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         n_rho=128,
     )
 
@@ -258,8 +285,7 @@ def test_generate_lookup_dataset_auto_expands_r_for_min_weight():
     ds = generate_lookup_dataset(
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         n_rho=96,
         min_weight=1.0e-4,
         radial_expand_factor=1.5,
@@ -267,7 +293,7 @@ def test_generate_lookup_dataset_auto_expands_r_for_min_weight():
 
     assert ds.attrs["axis_r_over_sigma_max"] > 0.5
     assert ds.attrs["axis_sigma_over_d_min"] == pytest.approx(0.02)
-    assert ds.attrs["axis_sigma_over_d_max"] == pytest.approx(1.0)
+    assert ds.attrs["axis_sigma_over_d_upper"] > 0.02
     assert ds.attrs["auto_edge_weight_max"] <= 1.0e-4
     assert ds.attrs["auto_edge_weight_r_max"] <= 1.0e-4
 
@@ -277,9 +303,8 @@ def test_generate_lookup_dataset_respects_explicit_r_over_sigma_max():
         min_weight=1.0e-8,
         r_over_sigma_max=4.0,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
         radial_resolution=0.1,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         n_rho=96,
     )
 
@@ -291,8 +316,7 @@ def test_evaluate_lookup_geometry_clip_uses_high_sigma_asymptote():
     ds = generate_lookup_dataset(
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         n_rho=128,
     )
 
@@ -307,3 +331,98 @@ def test_evaluate_lookup_geometry_clip_uses_high_sigma_asymptote():
         clip_check_min_weight=1.0e-4,
     )
     assert out[0] == pytest.approx(np.exp(-0.5 * (0.05 / 100.0) ** 2))
+
+
+@pytest.mark.parametrize("bounds_policy", ["clip", "nan", "raise"])
+def test_evaluate_lookup_dataset_always_uses_high_sigma_asymptote(bounds_policy):
+    ds = generate_lookup_dataset(
+        radial_resolution=0.1,
+        sigma_over_d_min=0.02,
+        sigma_resolution=2.0,
+        n_rho=128,
+    )
+
+    out = evaluate_lookup_dataset(
+        ds,
+        r_over_sigma=np.array([0.2]),
+        sigma_over_d=np.array([80.0]),
+        bounds_policy=bounds_policy,
+    )
+
+    assert out[0] == pytest.approx(np.exp(-0.5 * 0.2**2))
+
+
+@pytest.mark.parametrize("bounds_policy", ["clip", "nan", "raise"])
+def test_evaluate_lookup_dataset_policies_do_not_apply_to_low_sigma(bounds_policy):
+    ds = generate_lookup_dataset(
+        radial_resolution=0.1,
+        sigma_over_d_min=0.02,
+        sigma_resolution=2.0,
+        n_rho=128,
+    )
+    sigma_min = float(ds.coords[AXIS_SIGMA_OVER_D].to_numpy()[0])
+
+    out = evaluate_lookup_dataset(
+        ds,
+        r_over_sigma=np.array([0.2]),
+        sigma_over_d=np.array([0.5 * sigma_min]),
+        bounds_policy=bounds_policy,
+    )
+    expected = evaluate_lookup_dataset(
+        ds,
+        r_over_sigma=np.array([0.2]),
+        sigma_over_d=np.array([sigma_min]),
+    )
+
+    np.testing.assert_allclose(out, expected)
+
+
+def test_validate_lookup_dataset_rejects_inaccurate_high_sigma_asymptote():
+    r_axis = np.linspace(0.0, 8.0, 81)
+    s_axis = np.geomspace(0.02, 10.0, 21)
+    ds = build_lookup_dataset(r_axis, s_axis, n_rho=128)
+
+    with pytest.raises(ValueError, match="large-sigma asymptote"):
+        validate_lookup_dataset(ds)
+
+
+@pytest.mark.parametrize(
+    ("invalid_weight", "message"),
+    [
+        (np.nan, "must be finite"),
+        (-0.1, "must be within"),
+        (1.1, "must be within"),
+    ],
+)
+def test_validate_lookup_dataset_rejects_invalid_weight_values(invalid_weight, message):
+    ds = generate_lookup_dataset(
+        radial_resolution=0.1,
+        sigma_over_d_min=0.02,
+        sigma_resolution=2.0,
+        n_rho=128,
+    )
+    ds[DATA_WEIGHT].data[0, 0] = invalid_weight
+
+    with pytest.raises(ValueError, match=message):
+        validate_lookup_dataset(ds)
+
+
+def test_generate_lookup_dataset_expands_sigma_range_for_tolerance():
+    loose = generate_lookup_dataset(
+        radial_resolution=0.1,
+        sigma_resolution=2.0,
+        n_rho=128,
+        asymptote_rel_tol=1.0e-2,
+    )
+    strict = generate_lookup_dataset(
+        radial_resolution=0.1,
+        sigma_resolution=2.0,
+        n_rho=128,
+        asymptote_rel_tol=1.0e-3,
+    )
+
+    assert loose.attrs["asymptote_rel_tol"] == pytest.approx(1.0e-2)
+    assert strict.attrs["asymptote_rel_tol"] == pytest.approx(1.0e-3)
+    assert (
+        strict.attrs["axis_sigma_over_d_upper"] > loose.attrs["axis_sigma_over_d_upper"]
+    )

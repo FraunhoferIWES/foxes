@@ -966,8 +966,6 @@ def _run_partial_wakes_smoke(cls):
             r_over_sigma_max=8.0,
             n_r=17,
             sigma_over_d_min=0.03,
-            sigma_over_d_max=2.0,
-            n_sigma=19,
         )
         model = cls(
             foxes.utils.build_lookup_dataset(

@@ -12,7 +12,12 @@ import foxes
 import foxes.variables as FV
 
 
-def build_case(y_values: np.ndarray, distance: float, partial_wakes: str):
+def build_case(
+    y_values: np.ndarray,
+    distance: float,
+    rotor_model: str,
+    partial_wakes: str,
+):
     """Build and run the two-turbine lateral-offset comparison case."""
     mbook = foxes.models.ModelBook()
     turbine_type = mbook.turbine_types["NREL5MW"]
@@ -54,7 +59,7 @@ def build_case(y_values: np.ndarray, distance: float, partial_wakes: str):
         farm,
         states,
         wake_models=["Bastankhah2014_linear_k004"],
-        rotor_model="centre",
+        rotor_model=rotor_model,
         partial_wakes={"Bastankhah2014_linear_k004": partial_wakes},
         wake_frame="rotor_wd",
         mbook=mbook,
@@ -89,7 +94,12 @@ def benchmark_large_case(
 ) -> None:
     """Compare runtime on the packaged 8000-state case and generated farm."""
     runtimes: dict[str, float] = {}
-    for partial_wakes in ("gaussian_lookup", "axiwake6"):
+    cases = {
+        "gaussian": ("centre", "gaussian"),
+        "gaussian_lookup": ("centre", "gaussian_lookup"),
+        "grid400": ("grid400", "rotor_points"),
+    }
+    for name, (rotor_model, partial_wakes) in cases.items():
         mbook = foxes.models.ModelBook()
         farm = build_benchmark_farm(n_turbines, mbook.turbine_types["NREL5MW"].D)
         states = foxes.input.states.Timeseries(
@@ -102,7 +112,7 @@ def benchmark_large_case(
             farm,
             states,
             wake_models=["Bastankhah2014_linear_k004"],
-            rotor_model="centre",
+            rotor_model=rotor_model,
             partial_wakes=partial_wakes,
             wake_frame="rotor_wd",
             mbook=mbook,
@@ -110,19 +120,23 @@ def benchmark_large_case(
         )
         start = time.perf_counter()
         _ = algo.calc_farm()
-        runtimes[partial_wakes] = time.perf_counter() - start
+        runtimes[name] = time.perf_counter() - start
 
-    lookup_time = runtimes["gaussian_lookup"]
-    axiwake_time = runtimes["axiwake6"]
+    grid_time = runtimes["grid400"]
     print(f"\nLarge-case runtime comparison ({n_turbines} turbines, 8000 states)")
-    print(f"gaussian_lookup: {lookup_time:.3f} s")
-    print(f"axiwake6:        {axiwake_time:.3f} s")
-    print(f"lookup / axiwake6 runtime ratio: {lookup_time / axiwake_time:.3f}")
+    print(f"gaussian:        {runtimes['gaussian']:.3f} s")
+    print(f"gaussian_lookup: {runtimes['gaussian_lookup']:.3f} s")
+    print(f"grid400:         {grid_time:.3f} s")
+    print(f"gaussian / grid400 runtime ratio: {runtimes['gaussian'] / grid_time:.3f}")
+    print(
+        "gaussian_lookup / grid400 runtime ratio: "
+        f"{runtimes['gaussian_lookup'] / grid_time:.3f}"
+    )
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Compare Gaussian lookup and axiwake6 partial wakes"
+        description="Compare Gaussian, Gaussian lookup, and grid400 partial wakes"
     )
     parser.add_argument(
         "-d",
@@ -195,16 +209,37 @@ def main() -> None:
         chunk_size_points=args.chunk_size_points,
     )
     with engine:
-        lookup_rews, diameter = build_case(y_values, args.distance, "gaussian_lookup")
-        axiwake_rews, _ = build_case(y_values, args.distance, "axiwake6")
+        gaussian_rews, diameter = build_case(
+            y_values, args.distance, "centre", "gaussian"
+        )
+        lookup_rews, diameter = build_case(
+            y_values, args.distance, "centre", "gaussian_lookup"
+        )
+        grid_rews, _ = build_case(y_values, args.distance, "grid400", "rotor_points")
 
+    gaussian_norm = gaussian_rews / 9.0
     lookup_norm = lookup_rews / 9.0
-    axiwake_norm = axiwake_rews / 9.0
-    difference = np.abs(lookup_norm - axiwake_norm)
+    grid_norm = grid_rews / 9.0
+    gaussian_difference = np.abs(gaussian_norm - grid_norm)
+    lookup_difference = np.abs(lookup_norm - grid_norm)
 
-    print("Gaussian lookup vs axiwake6")
-    print(f"Maximum absolute normalized REWS difference: {difference.max():.3e}")
-    print(f"Mean absolute normalized REWS difference: {difference.mean():.3e}")
+    print("Gaussian and Gaussian lookup vs grid400")
+    print(
+        "Gaussian maximum absolute normalized REWS difference: "
+        f"{gaussian_difference.max():.3e}"
+    )
+    print(
+        "Gaussian mean absolute normalized REWS difference: "
+        f"{gaussian_difference.mean():.3e}"
+    )
+    print(
+        "Gaussian lookup maximum absolute normalized REWS difference: "
+        f"{lookup_difference.max():.3e}"
+    )
+    print(
+        "Gaussian lookup mean absolute normalized REWS difference: "
+        f"{lookup_difference.mean():.3e}"
+    )
     print(f"Scan range: {y_values_D[0]:.2f}D to {y_values_D[-1]:.2f}D")
     print(f"Downstream distance: {args.distance:.2f}D (NREL5MW D={diameter:.1f} m)")
 
@@ -216,12 +251,13 @@ def main() -> None:
         gridspec_kw={"height_ratios": (3, 1)},
         layout="constrained",
     )
+    axes[0].plot(y_values_D, gaussian_norm, label="gaussian", linewidth=2)
     axes[0].plot(y_values_D, lookup_norm, label="gaussian_lookup", linewidth=2)
     axes[0].plot(
         y_values_D,
-        axiwake_norm,
+        grid_norm,
         "--",
-        label="axiwake6",
+        label="grid400",
         linewidth=2,
     )
     axes[0].set_ylabel("Downstream REWS / ambient WS")
@@ -231,10 +267,22 @@ def main() -> None:
     axes[0].grid(alpha=0.3)
     axes[0].legend()
 
-    axes[1].plot(y_values_D, difference, color="black", linewidth=1.5)
+    axes[1].plot(
+        y_values_D,
+        gaussian_difference,
+        label="gaussian - grid400",
+        linewidth=1.5,
+    )
+    axes[1].plot(
+        y_values_D,
+        lookup_difference,
+        label="gaussian_lookup - grid400",
+        linewidth=1.5,
+    )
     axes[1].set_xlabel("Downstream turbine lateral offset [D]")
     axes[1].set_ylabel("Absolute difference")
     axes[1].grid(alpha=0.3)
+    axes[1].legend()
 
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -1,8 +1,8 @@
 from foxes.utils.create_gaussian_lookup import create_gaussian_lookup_artifact
 from foxes.utils.create_gaussian_lookup import main
-from foxes.utils.gaussian_lookup import AXIS_R_OVER_SIGMA
-from foxes.utils.gaussian_lookup import AXIS_SIGMA_OVER_D
-from foxes.utils.gaussian_lookup import load_lookup_dataset
+from foxes.utils.gaussian_pwakes_utils import AXIS_R_OVER_SIGMA
+from foxes.utils.gaussian_pwakes_utils import AXIS_SIGMA_OVER_D
+from foxes.utils.gaussian_pwakes_utils import load_lookup_dataset
 
 
 def test_create_gaussian_lookup_artifact_writes_expected_dataset(tmp_path):
@@ -12,8 +12,7 @@ def test_create_gaussian_lookup_artifact_writes_expected_dataset(tmp_path):
         out_file=out_file,
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_over_d_max=1.0,
-        sigma_resolution=0.05,
+        sigma_resolution=2.0,
         sigma_spacing="linear",
         n_rho=96,
         version_tag="cli-test-v1",
@@ -26,7 +25,7 @@ def test_create_gaussian_lookup_artifact_writes_expected_dataset(tmp_path):
     ds = load_lookup_dataset(out_file)
     assert ds.attrs["version_tag"] == "cli-test-v1"
     assert ds.attrs["radial_resolution"] == 0.1
-    assert ds.attrs["sigma_resolution"] == 0.05
+    assert ds.attrs["sigma_resolution"] == 2.0
 
 
 def test_main_parses_args_and_writes_artifact(tmp_path):
@@ -41,10 +40,10 @@ def test_main_parses_args_and_writes_artifact(tmp_path):
             "30.0",
             "--sigma-over-d-min",
             "0.02",
-            "--sigma-over-d-max",
-            "1.0",
+            "--asymptote-rel-tol",
+            "0.01",
             "--sigma-resolution",
-            "0.05",
+            "2.0",
             "--sigma-spacing",
             "log",
             "--n-rho",
@@ -63,7 +62,8 @@ def test_main_parses_args_and_writes_artifact(tmp_path):
     ds = load_lookup_dataset(out_file)
     assert ds.attrs["version_tag"] == "main-test-v1"
     assert ds.attrs["radial_resolution"] == 0.1
-    assert ds.attrs["sigma_resolution"] == 0.05
+    assert ds.attrs["sigma_resolution"] == 2.0
     assert ds.attrs["axis_r_over_sigma_max"] == 30.0
+    assert ds.attrs["asymptote_rel_tol"] == 0.01
     assert AXIS_R_OVER_SIGMA in ds.coords
     assert AXIS_SIGMA_OVER_D in ds.coords

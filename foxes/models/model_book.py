@@ -227,6 +227,7 @@ class ModelBook:
             rotor_points=fm.partial_wakes.RotorPoints(),
             top_hat=fm.partial_wakes.PartialTopHat(),
             centre=fm.partial_wakes.PartialCentre(),
+            gaussian=fm.partial_wakes.PartialGaussian(),
             gaussian_lookup=fm.partial_wakes.PartialGaussianLookup(),
         )
         self.partial_wakes.add_factory(

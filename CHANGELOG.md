@@ -994,6 +994,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Generalized `DatasetStates` lazy loading and hardened threaded NetCDF reading
   - Added `SectorSimRefPointField` for combining sector-based field data with reference-point timeseries
 - Models:
+  - Added `PartialGaussian`, an opt-in analytical Gaussian rotor-disc partial wakes model
   - Added `JensenTurbOParkWake`, combining Jensen top-hat wake deficits with TurbOPark-style wake-radius growth
 - Utils:
   - Added `AreaGeometry.from_shp(...)` as a direct geom2d entry point for reading `.shp` polygon data
@@ -1005,6 +1006,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Tests:
   - Expanded test coverage substantially over the previous release, including new smoke tests and consistency checks for engine execution, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
 - Bug fixes:
+  - Updated `PartialGaussianLookup` so bounds policies apply only to radial
+    `R/sigma` queries; high `sigma/D` queries always use the validated
+    large-sigma asymptote
   - Fixed `FarmResultsEval.calc_yield` default output selection, `TurbinePointCloud` initialization/interpolation issues, `SingleStateField` NaN handling, `Downwind` state-subset propagation, `Sequential` state-count behavior, and several plotting and memory-splitting edge cases
   - Fixed `FarmLayoutOutput.get_figure` when plotting a farm boundary without `bargs`
   - Fixed `TurbinePointCloud` ambient-data corruption for non-collinear layouts with varying wind direction by preserving state/turbine point ordering, and avoided quadratic point-reconstruction scaling in that path

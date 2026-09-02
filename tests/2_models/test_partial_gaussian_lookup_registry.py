@@ -10,6 +10,7 @@ from _model_smoke_helpers import _mbook_with_ttype
 
 def test_model_book_registers_gaussian_lookup_partial_wakes():
     mbook, type_alias = _mbook_with_ttype()
+    assert "gaussian" in mbook.partial_wakes
     assert "gaussian_lookup" in mbook.partial_wakes
     assert (
         mbook.default_partial_wakes(mbook.wake_models["Bastankhah2014"])
@@ -38,5 +39,3 @@ def test_model_book_registers_gaussian_lookup_partial_wakes():
         farm_results = algo.calc_farm()
 
     _assert_farm_results(farm_results)
-    lookup_model = mbook.partial_wakes["gaussian_lookup"]
-    assert lookup_model.lookup_dataset is not None

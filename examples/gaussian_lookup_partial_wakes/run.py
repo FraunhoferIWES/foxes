@@ -167,7 +167,7 @@ def main() -> None:
 
     if not args.nofig and plot_data is not None:
         fig_gen = out.gen_states_fig_xy(plot_data, rotor_color="red", figsize=(7, 6))
-        fig = next(fig_gen)
+        next(fig_gen)
         plt.show()
 
 

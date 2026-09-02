@@ -4,9 +4,9 @@ import argparse
 from pathlib import Path
 from typing import Literal, Sequence
 
-from foxes.utils.gaussian_lookup import LOOKUP_VERSION
-from foxes.utils.gaussian_lookup import generate_lookup_dataset
-from foxes.utils.gaussian_lookup import save_lookup_dataset
+from foxes.utils.gaussian_pwakes_utils import LOOKUP_VERSION
+from foxes.utils.gaussian_pwakes_utils import generate_lookup_dataset
+from foxes.utils.gaussian_pwakes_utils import save_lookup_dataset
 
 
 def create_gaussian_lookup_artifact(
@@ -14,13 +14,13 @@ def create_gaussian_lookup_artifact(
     min_weight: float = 1.0e-8,
     r_over_sigma_max: float | None = None,
     sigma_over_d_min: float = 0.02,
-    sigma_over_d_max: float = 20.0,
     radial_resolution: float = 0.1,
     sigma_resolution: float = 0.05,
     sigma_spacing: Literal["linear", "log"] = "log",
     n_rho: int = 512,
     version_tag: str = LOOKUP_VERSION,
     radial_expand_factor: float = 1.2,
+    asymptote_rel_tol: float = 1.0e-3,
     complevel: int = 5,
     nc_engine: str | None = None,
     verbosity: int = 1,
@@ -49,10 +49,10 @@ def create_gaussian_lookup_artifact(
         Optional upper bound of the ``R/sigma`` axis.
     sigma_over_d_min
         Lower bound of the ``sigma/D`` axis.
-    sigma_over_d_max
-        Upper bound of the ``sigma/D`` axis.
     radial_expand_factor
         Radial auto-expansion multiplier.
+    asymptote_rel_tol
+        Maximum relative error permitted for the large-sigma asymptote.
     complevel
         NetCDF compression level.
     nc_engine
@@ -77,8 +77,8 @@ def create_gaussian_lookup_artifact(
         min_weight=min_weight,
         r_over_sigma_max=r_over_sigma_max,
         sigma_over_d_min=sigma_over_d_min,
-        sigma_over_d_max=sigma_over_d_max,
         radial_expand_factor=radial_expand_factor,
+        asymptote_rel_tol=asymptote_rel_tol,
     )
     if verbosity > 0:
         print(f"Writing Gaussian lookup artifact to {out_path}")
@@ -155,11 +155,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Lower sigma/D axis bound",
     )
     parser.add_argument(
-        "--sigma-over-d-max",
-        dest="sigma_over_d_max",
+        "--asymptote-rel-tol",
+        dest="asymptote_rel_tol",
         type=float,
-        default=20.0,
-        help="Upper sigma/D axis bound",
+        default=1.0e-3,
+        help="Maximum relative error for the large-sigma asymptote",
     )
     parser.add_argument(
         "--expand-factor",
@@ -213,8 +213,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         min_weight=args.min_weight,
         r_over_sigma_max=args.r_over_sigma_max,
         sigma_over_d_min=args.sigma_over_d_min,
-        sigma_over_d_max=args.sigma_over_d_max,
         radial_expand_factor=args.radial_expand_factor,
+        asymptote_rel_tol=args.asymptote_rel_tol,
         complevel=args.complevel,
         nc_engine=args.nc_engine,
         verbosity=args.verbosity,

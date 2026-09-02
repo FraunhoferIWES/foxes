@@ -203,6 +203,7 @@ the associated wake model:
 * :ref:`RotorPoints<foxes.models.partial_wakes.RotorPoints>`: Evaluate the wake model at exactly the rotor points, then take the average of the combined result. For large number of rotor points this is accurate, but potentially slow.
 * :ref:`PartialTopHat<foxes.models.partial_wakes.PartialTopHat>`: Compute the overlap of the wake circle with the rotor disc. This is mathematically exact and fast, but limited to wakes with top-hat shapes.
 * :ref:`PartialAxiwake<foxes.models.partial_wakes.PartialAxiwake>`: Compute the numerical integral of axi-symmetric wakes with the rotor disc. This needs less evaluation points than grid-type wake averaging.
+* :ref:`PartialGaussian<foxes.models.partial_wakes.PartialGaussian>`: Gaussian-only partial wakes model using the exact analytical rotor-disc average.
 * :ref:`PartialGaussianLookup<foxes.models.partial_wakes.PartialGaussianLookup>`: Gaussian-only partial wakes model using a precomputed lookup artifact for rotor-effective wake weighting at one rotor-centre target point.
 * :ref:`PartialSegregated<foxes.models.partial_wakes.PartialSegregated>`: Abstract base class for segregated wake averaging, which means adding the averaged wake to the averaged background result (in contrast to `RotorPoints`).
 * :ref:`PartialGrid<foxes.models.partial_wakes.PartialGrid>`: Segregated partial wakes evaluated at points of a :ref:`grid-type rotor<GridRotor>` (which is usually not equal to the selected rotor model).
@@ -213,6 +214,7 @@ can be found under the names
 * `centre`: The centre point model,
 * `rotor_points`: The rotor points model,
 * `top_hat`: The top-hat model,
+* `gaussian`: Analytical Gaussian rotor-disc averaging,
 * `gaussian_lookup`: Gaussian lookup-table partial wakes model,
 * `axiwake<n>`: The axiwake model, with `n` representing the number of steps for the discretization of the integral over each downstream rotor,
 * `grid<n2>`: The grid model with `n2` representing the number of points in a regular square grid.
@@ -239,22 +241,26 @@ can be generated offline via:
     foxes_create_gaussian_lookup ./gaussian_lookup.nc --radial-resolution 0.1 --sigma-resolution 0.05 --sigma-spacing log
 
 The resulting NetCDF artifact stores rotor-disc averaged Gaussian factors on
-the normalized geometry axes ``R/sigma`` and ``sigma/D``.
+the normalized geometry axes ``R/sigma`` and ``sigma/D``, along with its
+``min_weight`` cutoff.
 
 The default lookup-axis settings are tuned for typical
 ``Bastankhah2014_linear_k004`` use cases. During artifact generation,
 ``min_weight`` derives the ``R/sigma`` extent when no explicit
-``r_over_sigma_max`` is provided. The ``sigma/D`` bounds are explicit
-generation settings.
+``r_over_sigma_max`` is provided. The upper ``sigma/D`` extent is derived to
+meet the selected large-sigma asymptote relative-error tolerance.
 
 By default, :ref:`PartialGaussianLookup<foxes.models.partial_wakes.PartialGaussianLookup>`
-uses clipped out-of-bounds handling (``bounds_policy="clip"``). If clipped
-out-of-bounds points yield weights above ``min_weight``, an error is
+uses clipped radial out-of-bounds handling (``bounds_policy="clip"``). If
+clipped ``R/sigma`` points yield weights above ``min_weight``, an error is
 raised to indicate insufficient lookup-table coverage for a non-negligible
-wake contribution. Query points above the generated ``sigma/D`` range use the
-large-sigma asymptote ``exp(-0.5 * (R/sigma)**2)``. Small values can be
-suppressed via ``min_weight``. Optional alternatives are ``bounds_policy="nan"``
-or ``"raise"``.
+wake contribution. The policy applies only to ``R/sigma``. Query points above
+the generated ``sigma/D`` range always use the large-sigma asymptote
+``exp(-0.5 * (R/sigma)**2)``, while points below the range use the lower table
+bound. Artifacts are validated against their configured
+``asymptote_rel_tol`` for weights at or above the artifact ``min_weight``. Small
+values can be suppressed via ``min_weight``. Optional radial policies are
+``bounds_policy="nan"`` or ``"raise"``.
 
 Turbine models
 --------------

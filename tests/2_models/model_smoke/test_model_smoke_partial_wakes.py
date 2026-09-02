@@ -6,7 +6,8 @@ from _model_smoke_helpers import run_model_smoke
 MODEL_PATHS = [
     "foxes.models.partial_wakes.axiwake:PartialAxiwake",
     "foxes.models.partial_wakes.centre:PartialCentre",
-    "foxes.models.partial_wakes.gaussian_lookup:PartialGaussianLookup",
+    "foxes.models.partial_wakes.gaussian:PartialGaussian",
+    "foxes.models.partial_wakes.gaussian:PartialGaussianLookup",
     "foxes.models.partial_wakes.grid:PartialGrid",
     "foxes.models.partial_wakes.rotor_points:RotorPoints",
     "foxes.models.partial_wakes.segregated:PartialSegregated",
