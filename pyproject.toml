@@ -79,7 +79,6 @@ doc = [
     "tomli>=2.0; python_version < '3.11'",
     "ipykernel>=6.0.2",
     "ipywidgets>=8.0",
-    "m2r2>=0.2.3",
     "lxml_html_clean>=0.4",
     "dask>=2022.0",
     "distributed>=2022.0",

@@ -1,5 +1,5 @@
-API overview
-============
+API
+===
 
 The API is generated with AutoAPI.
 

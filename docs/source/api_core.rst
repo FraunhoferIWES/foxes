@@ -1,8 +1,8 @@
-foxes.core API
-==============
+foxes.core
+==========
 Contains core functionality and abstract base classes.
 
 .. toctree::
     :maxdepth: 2
 
-    autoapi/foxes/core/index
+    _autoapi/foxes/core/index

@@ -6,4 +6,4 @@ input or a calculation result.
 .. toctree::
     :maxdepth: 2
 
-    autoapi/foxes/variables
+    _autoapi/foxes/variables

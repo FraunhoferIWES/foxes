@@ -9,4 +9,4 @@ via the *foxes* package, e.g. *foxes.WindFarm*.
 .. toctree::
     :maxdepth: 2
 
-    autoapi/foxes/index
+    _autoapi/foxes/index

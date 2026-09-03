@@ -1,8 +1,8 @@
-foxes.config API
-================
+foxes.config
+============
 The *foxes* configurational data
 
 .. toctree::
     :maxdepth: 2
 
-    autoapi/foxes/config/index
+    _autoapi/foxes/config/index

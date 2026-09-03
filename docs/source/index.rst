@@ -2,19 +2,20 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionadded:: 1.8.0
-    New output classes `WindFarmsEval` and `ClusterEval` for handling splitting and
-    aggregation of results for simulations of multiple wind farms and wind farm clusters.
+.. versionadded:: 1.9.0
+    New efficient partial wakes treatment for Gaussian wake models by `PartialGaussianLookup`
+    and `PartialGaussian` classes, reducing computational cost and improving accuracy. The
+    gaussian lookup approach is now also selected as default for such models.
 
-.. versionadded:: 1.8.0
-    New command line application `era52foxes`, converting data files from ERA5
-    NetCDF format into a regular UTM based grid that is readable by the `LatLonFieldData`
-    states class.
+.. versionadded:: 1.9.0
+    New input states `SectorSimRefPointField` and `MesoMicroField`, combining timeseries
+    data, e.g. from a local measurement or a mesoscale model,
+    with wind rose field results, typically from CFD.
 
-.. versionadded:: 1.7.6
-    All algorithms now accept the new optional parameter `max_wake_length_km`, reducing the
-    number of target points in wake calculations. Note that this replaces the correcponding
-    parameter in some of the wake frames, like `DynamicWakes` or `Streamlines2D`.
+.. versionadded:: 1.9.0
+    New wake model `JensenTurbOParkWake`, combining Jensen top-hat wake deficits with
+    TurbOPark-style wake-radius growth
+
 
 Welcome to FOXES
 ================

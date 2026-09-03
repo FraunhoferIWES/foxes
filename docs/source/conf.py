@@ -47,7 +47,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.doctest",
-    "m2r2",
     "myst_nb",
 ]
 
@@ -60,7 +59,7 @@ intersphinx_mapping = {
 # Source file types handled by Sphinx and MyST-NB.
 source_suffix = {
     ".rst": "restructuredtext",
-    ".md": "restructuredtext",
+    ".md": "myst-nb",
     ".ipynb": "myst-nb",
     ".myst": "myst-nb",
 }
@@ -74,22 +73,26 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "**.ipynb_checkpoints",
-    # "notebooks/dyn_wakes.ipynb",
-    # "notebooks/timelines.ipynb",
-    # "notebooks/sequential.ipynb",
+    "notebooks/dyn_wakes.ipynb",
+    "notebooks/timelines.ipynb",
+    "notebooks/sequential.ipynb",
 ]
 
 pygments_style = None
 
 # NumPy-style docstrings and stable cross-reference labels.
+# Keep class members visible so constructors and inherited API members appear in
+# the generated reference pages for the concrete model classes.
 numpydoc_use_rtype = False
-numpydoc_show_class_members = False
+numpydoc_show_class_members = True
+numpydoc_class_members_toctree = False
 autosectionlabel_prefix_document = True
 
 
 # -- Options for autodoc ----------------------------------------------------
 autodoc_typehints = "signature"
 autodoc_class_signature = "separated"
+autoapi_python_class_content = "both"
 
 # -- HTML output -------------------------------------------------------------
 
@@ -126,8 +129,24 @@ epub_exclude_files = ["search.html"]
 autoapi_dirs = [
     str(repository_root / "foxes"),
 ]
+autoapi_root = "_autoapi"
 autoapi_add_toctree_entry = False
-autoapi_options = ["members", "undoc-members", "show-inheritance"]
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+    "special-members",
+    "inherited-members",
+]
+autoapi_member_order = "groupwise"
+autoapi_python_use_implicit_namespaces = False
+autoapi_keep_files = False
+autoapi_ignore = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/_version.py",
+]
 
 # -- Notebook configuration --------------------------------------------------
 

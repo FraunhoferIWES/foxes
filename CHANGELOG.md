@@ -977,46 +977,33 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.0
 
+- General:
+  - Completed repository-wide type-annotation cleanup and aligned full-codebase `mypy` checks
 - Dependencies:
   - Dropped Python 3.9 support; project now requires Python >=3.10
-  - Added optional dependency group `shp` with `geopandas>=0.14.4`
-  - Raised lower bounds for `h5netcdf`, `h5py`, and `multiprocess`, and switched the default NetCDF backend to `h5netcdf`
-- Core:
-  - Extended chunk/state metadata propagation in data containers and algorithm data construction
-  - Completed repository-wide type-annotation cleanup and aligned full-codebase `mypy` checks
+  - Added optional dependency group `shp` with `geopandas`
+  - Switched the default NetCDF backend to `h5netcdf`
 - Engines:
   - Added new shared-memory handling and execution flow improvements across `DaskEngine`, `DefaultEngine`, `NumpyEngine`, and pool-based engines, in particular `ProcessEngine` and `MPIEngine`
-  - Added and stabilized `ProcessEngine`, `RayEngine`, and `ThreadsEngine`, and improved large-payload handling in `LocalClusterEngine` and `SlurmClusterEngine`
 - Algorithms:
-  - Reworked `PopulationStates` chunk-loading behavior and recovery paths
+  - Reworked `PopulationStates` chunk-loading behavior
 - Input:
   - Fixed `windio` `ka`/`kb` interpretation and extended `windio` support to multiple wind farms
-  - Generalized `DatasetStates` lazy loading and hardened threaded NetCDF reading
   - Added `SectorSimRefPointField` for combining sector-based field data with reference-point timeseries
+  - Added `MesoMicroField` for combining sector-based field data with timeseries field data
 - Models:
-  - Added `PartialGaussian`, an opt-in analytical Gaussian rotor-disc partial wakes model
+  - Added `PartialGaussian`, an opt-in analytical Gaussian rotor-disc partial wakes model that require only a single target point per rotor
+  - Added opt-in `PartialGaussianLookup` for Gaussian wake models with lookup artifact loading and lookup-weight based rotor-effective wake contribution with a single wake target point per rotor
   - Added `JensenTurbOParkWake`, combining Jensen top-hat wake deficits with TurbOPark-style wake-radius growth
 - Utils:
   - Added `AreaGeometry.from_shp(...)` as a direct geom2d entry point for reading `.shp` polygon data
-  - Extended `shp2geom2d`/`AreaGeometry.from_shp(...)` to accept glob patterns and support union/intersection combination modes
   - Added command `foxes_create_gaussian_lookup` to generate Gaussian partial-wake NetCDF lookup artifacts offline
-- Models:
-  - Added opt-in `PartialGaussianLookup` for Gaussian wake models with lookup artifact loading and lookup-weight based rotor-effective wake contribution
-  - Registered model-book partial-wakes entry `gaussian_lookup` for `PartialGaussianLookup` and made it the default for Gaussian wake models
 - Tests:
-  - Expanded test coverage substantially over the previous release, including new smoke tests and consistency checks for engine execution, memory splitting/recombination, `DatasetStates` threading, and `PopulationStates` chunk loading
+  - Expanded test coverage substantially over the previous release, including new smoke tests and consistency checks
 - Bug fixes:
-  - Updated `PartialGaussianLookup` so bounds policies apply only to radial
-    `R/sigma` queries; high `sigma/D` queries always use the validated
-    large-sigma asymptote
-  - Fixed yawed Gaussian lookup partial-wake calculations with wake-direction
-    rotation
   - Fixed `FarmResultsEval.calc_yield` default output selection, `TurbinePointCloud` initialization/interpolation issues, `SingleStateField` NaN handling, `Downwind` state-subset propagation, `Sequential` state-count behavior, and several plotting and memory-splitting edge cases
-  - Fixed `FarmLayoutOutput.get_figure` when plotting a farm boundary without `bargs`
   - Fixed `TurbinePointCloud` ambient-data corruption for non-collinear layouts with varying wind direction by preserving state/turbine point ordering, and avoided quadratic point-reconstruction scaling in that path
-  - Removed Python 3.9 from the CI matrix and gated MPI smoke coverage behind `FOXES_RUN_MPI_TESTS=1` for deterministic constrained-runner behavior
   - Fixed bug that prevented wake effects in the presence of pre-rotor turbine models
-  - Fixed a crash during dynamic farm turbine resets where `Algorithm.update_n_turbines` raised `NotImplementedError` (affecting regular-grid layout optimization workflows)
-  - Changed `PartialGaussianLookup` default to `bounds_policy="clip"`; clipped radial out-of-range points now raise when clipped weights exceed `min_weight`, and Gaussian lookup generation now uses `R/sigma` and `sigma/D` axes with explicit sigma bounds instead of a centerline-weight sizing parameter
+  - Included `__init__` parameter documentation in generated API reference pages
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)

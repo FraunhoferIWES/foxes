@@ -5,6 +5,6 @@ Utilities and helper functions.
 .. toctree::
     :maxdepth: 2
 
-    autoapi/foxes/utils/index
-    autoapi/foxes/utils/abl/index
-    autoapi/foxes/utils/geom2d/index
+    _autoapi/foxes/utils/index
+    _autoapi/foxes/utils/abl/index
+    _autoapi/foxes/utils/geom2d/index
