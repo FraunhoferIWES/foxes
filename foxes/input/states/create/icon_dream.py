@@ -1,4 +1,6 @@
 import argparse
+import sys
+
 import numpy as np
 from xarray import Dataset
 from pandas import DataFrame
@@ -361,7 +363,7 @@ def iconDream2foxes(
     pack: bool = True,
     cdo_tmp_dir: str | Path = "cdo_tmp",
     verbosity: int = 1,
-) -> None:
+) -> int:
     """
     Download ICON-DREAM-EU hourly files for specified variables and time range,
     and convert them into foxes compatible NetCDF files.
@@ -399,6 +401,11 @@ def iconDream2foxes(
     verbosity
         The verbosity level, 0 = silent, 1 = progress bars and summary.
 
+    Returns
+    -------
+    n_failed
+        The number of failures: 0 on success, otherwise the count of files or
+        checks that failed. Also returned as the process exit code by ``main``.
 
     """
     engine = get_engine()
@@ -509,7 +516,7 @@ def iconDream2foxes(
             if verbosity > 0:
                 print("Some downloads failed. Please retry.")
             _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
-            return
+            return int(failed)
         elif verbosity > 0:
             print(f"All grb files present in {grb_dir}.")
 
@@ -578,7 +585,7 @@ def iconDream2foxes(
                     f"Found {failed} GBR files that failed checks. Writing file {fpath}. Please investigate."
                 )
             _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
-            return
+            return int(failed)
         elif verbosity > 0:
             print("All GRB files passed the check.")
 
@@ -620,8 +627,10 @@ def iconDream2foxes(
 
     _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
 
+    return int(failed)
 
-def main() -> None:
+
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "out_dir",
@@ -729,4 +738,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
