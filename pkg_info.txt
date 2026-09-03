@@ -282,6 +282,7 @@ jupyter-server-terminals==0.5.4
     # via jupyter-server
 jupyterlab==4.6.3
     # via
+    #   foxes
     #   jupyter
     #   notebook
 jupyterlab-pygments==0.3.0
@@ -342,7 +343,9 @@ mdurl==0.1.2
 metpy==1.7.1
     # via foxes
 mistune==3.3.4
-    # via nbconvert
+    # via
+    #   foxes
+    #   nbconvert
 moocore==0.3.2
     # via pymoo
 mpi4py==4.1.2
@@ -371,6 +374,7 @@ nbclient==0.11.0
     #   nbmake
 nbconvert==7.17.1
     # via
+    #   foxes
     #   jupyter
     #   jupyter-server
 nbformat==5.11.1
@@ -513,7 +517,9 @@ pathspec==1.1.1
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via ipython
 pillow==12.3.0
-    # via matplotlib
+    # via
+    #   foxes
+    #   matplotlib
 pint==0.24.4 ; python_full_version < '3.11'
     # via metpy
 pint==0.25.3 ; python_full_version >= '3.11'
@@ -763,6 +769,7 @@ toolz==1.1.0
 tornado==6.5.8
     # via
     #   distributed
+    #   foxes
     #   ipykernel
     #   jupyter-client
     #   jupyter-server

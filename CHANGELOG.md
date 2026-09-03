@@ -983,6 +983,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Dropped Python 3.9 support; project now requires Python >=3.10
   - Added optional dependency group `shp` with `geopandas`
   - Switched the default NetCDF backend to `h5netcdf`
+  - Raised development dependency floors to address Dependabot security alerts
 - Engines:
   - Added new shared-memory handling and execution flow improvements across `DaskEngine`, `DefaultEngine`, `NumpyEngine`, and pool-based engines, in particular `ProcessEngine` and `MPIEngine`
 - Algorithms:
