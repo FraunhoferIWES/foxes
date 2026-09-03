@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import xarray as xr
+import re
 import threading
 from copy import copy
 from collections.abc import Callable, Generator
@@ -24,6 +25,20 @@ from foxes.utils.wind_dir import uv2wd, wd2uv
 from foxes.config import config, get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
+
+
+_PATTERN_CHARS = re.compile(r"[*?\[]")
+"""Characters that turn a path into a glob pattern.
+
+This is the set that :mod:`glob` treats as magic. Checking for ``*`` alone misses
+patterns such as ``file_20240[12].nc`` or ``file_?.nc``, which ``Path.glob`` below
+handles correctly but which never reach it.
+"""
+
+
+def _is_pattern(path: Any) -> bool:
+    """Whether a path is a glob pattern rather than a plain file name."""
+    return _PATTERN_CHARS.search(str(path)) is not None
 
 
 # Serialize netcdf4 file opens to avoid HDF5 attribute access errors in threaded reads.
@@ -651,7 +666,7 @@ class DatasetStates(States):
         if not isinstance(self.data_source, xr.Dataset):
             # check static data:
             fpath = get_input_path(self.data_source)
-            if "*" not in str(self.data_source):
+            if not _is_pattern(self.data_source):
                 if not fpath.is_file():
                     static_path = StaticData().get_file_path(
                         STATES, fpath.name, check_raw=False
@@ -662,7 +677,7 @@ class DatasetStates(States):
             # find files:
             prt = fpath.resolve().parent
             glb = fpath.name
-            while "*" in str(prt):
+            while _is_pattern(prt):
                 glb = prt.name + "/" + glb
                 prt = prt.parent
             files = sorted(list(prt.glob(glb)))
