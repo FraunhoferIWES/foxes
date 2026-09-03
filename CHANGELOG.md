@@ -1005,6 +1005,5 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed `FarmResultsEval.calc_yield` default output selection, `TurbinePointCloud` initialization/interpolation issues, `SingleStateField` NaN handling, `Downwind` state-subset propagation, `Sequential` state-count behavior, and several plotting and memory-splitting edge cases
   - Fixed `TurbinePointCloud` ambient-data corruption for non-collinear layouts with varying wind direction by preserving state/turbine point ordering, and avoided quadratic point-reconstruction scaling in that path
   - Fixed bug that prevented wake effects in the presence of pre-rotor turbine models
-  - Included `__init__` parameter documentation in generated API reference pages
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
