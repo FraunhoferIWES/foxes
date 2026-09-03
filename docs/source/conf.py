@@ -73,9 +73,9 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "**.ipynb_checkpoints",
-    "notebooks/dyn_wakes.ipynb",
-    "notebooks/timelines.ipynb",
-    "notebooks/sequential.ipynb",
+    # "notebooks/dyn_wakes.ipynb",
+    # "notebooks/timelines.ipynb",
+    # "notebooks/sequential.ipynb",
 ]
 
 pygments_style = None
