@@ -1,38 +1,39 @@
 from pathlib import Path
-import inspect
-import argparse
 import os
 import pytest
 
 from foxes.utils import load_module
 
 
-def test():
-    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
-    print("TESTDIR:", thisdir)
+EXAMPLES_DIR = Path(__file__).resolve().parents[2] / "examples"
+RUN_ALL_PATH = EXAMPLES_DIR / "run_all.py"
+EXAMPLE_DIRS = sorted(
+    path.parent
+    for path in EXAMPLES_DIR.glob("**/README.md")
+    if path.parent.name != "windio"
+)
 
-    rdir = thisdir.parent.parent / "examples"
-    rpath = rdir / "run_all.py"
-    print(rpath)
+pytestmark = pytest.mark.skipif(
+    os.environ.get("CONDA_BUILD") is not None,
+    reason="example subprocesses are not run in conda-forge builds",
+)
 
-    if not rpath.is_file():
-        pytest.skip("examples/run_all.py is not available in the test environment")
+if not RUN_ALL_PATH.is_file():
+    pytestmark = pytest.mark.skip(
+        reason="examples/run_all.py is not available in the test environment"
+    )
 
-    run_all = load_module("run_all", rpath)
 
-    args = argparse.Namespace()
-    args.include = None
-    args.exclude = ["windio"]
-    args.incopt = False
-    args.forceopt = False
-    args.step = 0
-    args.dry = False
-    args.Dry = False
-    args.nofig = True
+@pytest.mark.parametrize(
+    "example_dir",
+    EXAMPLE_DIRS,
+    ids=lambda path: path.relative_to(Path(__file__).parents[2]).as_posix(),
+)
+def test_example(example_dir):
+    run_all = load_module("run_all", RUN_ALL_PATH)
 
-    os.chdir(rdir)
-    run_all.run(args)
+    assert run_all.run_example(str(example_dir), nofig=True) == 0
 
 
 if __name__ == "__main__":
-    test()
+    pytest.main([__file__])
