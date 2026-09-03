@@ -1,5 +1,5 @@
 import numpy as np
-from xarray import Dataset, SerializationWarning
+from xarray import DataArray, Dataset, SerializationWarning
 from pathlib import Path
 import warnings
 from typing import Any
@@ -238,19 +238,32 @@ def write_nc(
                 return r
         return x
 
+    def _keep_attrs(x: DataArray, encoding: dict[str, Any]) -> dict[Hashable, Any]:
+        """Attributes of a variable, minus those the encoding now owns.
+
+        The rebuilt Dataset below is assembled from plain arrays, so without this
+        every variable and coordinate attribute is lost -- units, long_name,
+        cell_methods. The output then no longer says in which unit it is given, or
+        whether the values are means or instantaneous.
+
+        Keys that the computed encoding sets are dropped, because xarray refuses to
+        write a variable that carries the same key in both attrs and encoding.
+        """
+        return {k: val for k, val in x.attrs.items() if k not in encoding}
+
     enc: dict[Hashable, dict[str, Any]] = {}
     if round is not None:
-        crds: dict[Hashable, np.ndarray] = {}
+        crds: dict[Hashable, tuple[Any, np.ndarray, dict[Hashable, Any]]] = {}
         for v, x in ds.coords.items():
             v = str(v)
             if isinstance(round, int):
                 d = round
             else:
                 d = round.get(v, FV.get_default_digits(v))
-            crds[v] = _round(x.to_numpy(), v, d)
-            enc[v] = get_encoding(crds[v], complevel=complevel, pack=pack)
-            # print("WRITENC ENC",v, enc[v])
-        dvrs: dict[Hashable, tuple[Any, np.ndarray]] = {}
+            data = _round(x.to_numpy(), v, d)
+            enc[v] = get_encoding(data, complevel=complevel, pack=pack)
+            crds[v] = (x.dims, data, _keep_attrs(x, enc[v]))
+        dvrs: dict[Hashable, tuple[Any, np.ndarray, dict[Hashable, Any]]] = {}
         for v, x in ds.data_vars.items():
             v = str(v)
             if isinstance(round, int):
@@ -258,11 +271,11 @@ def write_nc(
             else:
                 d = round.get(v, FV.get_default_digits(v))
             if v != FV.WEIGHT:
-                dvrs[v] = (x.dims, _round(x.to_numpy(), v, d))
+                data = _round(x.to_numpy(), v, d)
             else:
-                dvrs[v] = (x.dims, x.to_numpy())
-            enc[v] = get_encoding(dvrs[v][1], complevel=complevel, pack=pack)
-            # print("WRITENC ENC",v, enc[v])
+                data = x.to_numpy()
+            enc[v] = get_encoding(data, complevel=complevel, pack=pack)
+            dvrs[v] = (x.dims, data, _keep_attrs(x, enc[v]))
         ds = Dataset(coords=crds, data_vars=dvrs, attrs=ds.attrs)
 
     if verbosity > 1:
