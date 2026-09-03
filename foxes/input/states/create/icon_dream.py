@@ -463,21 +463,21 @@ def iconDream2foxes(
     ymv = list(_ymv(vrs=var2ncvar.keys()))
 
     # download grid file and prepare grid conversion:
-    futures = [
-        engine.submit(
-            _prepare_grid,
-            path_grid_select,
-            path_icon_grid,
-            path_grid_weights,
-            url_icon_grid,
-            cdo_tmp_dir=cdo_tmp_dir,
-            verbosity=verbosity - 1,
-        )
-    ]
+    # This future is awaited separately below, not together with the downloads: it is
+    # needed in every case, while the download branch runs only for skip_download=False.
+    grid_future = engine.submit(
+        _prepare_grid,
+        path_grid_select,
+        path_icon_grid,
+        path_grid_weights,
+        url_icon_grid,
+        cdo_tmp_dir=cdo_tmp_dir,
+        verbosity=verbosity - 1,
+    )
 
     # download files in parallel:
     if not skip_download:
-        futures += [
+        futures = [
             engine.submit(
                 _download_icon_dream,
                 ymv_i,
@@ -512,6 +512,13 @@ def iconDream2foxes(
             return
         elif verbosity > 0:
             print(f"All grb files present in {grb_dir}.")
+
+    # await the grid weights, whether or not downloads ran:
+    if engine.await_result(grid_future) < 0:
+        if verbosity > 0:
+            print("Grid preparation failed. Please check the grid file and CDO.")
+        _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
+        return
 
     # check grb files in parallel:
     if check_grb:
