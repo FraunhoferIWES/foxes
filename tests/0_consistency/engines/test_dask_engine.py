@@ -136,6 +136,16 @@ def test_dask_runner_resolves_nested_future_payloads():
     assert cstore == {}
 
 
+def test_dask_runner_preserves_xarray_dataset_values():
+    dataset = xr.Dataset(
+        data_vars={"weights": ("point", np.arange(8, dtype=np.float64))}
+    )
+
+    resolved = DaskProcessRunner._resolve_nested_value(dataset)
+
+    assert resolved is dataset
+
+
 def test_local_cluster_dataset_extra_data_uses_scattered_arrays(monkeypatch):
     monkeypatch.setattr("foxes.engines.dask.load_dask", lambda: None)
     monkeypatch.setattr("foxes.engines.dask.load_distributed", lambda: None)

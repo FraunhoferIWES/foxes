@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import xarray as xr
 from copy import deepcopy
 from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any
@@ -124,8 +125,9 @@ class DaskProcessRunner(ProcessEngineRunner):
     @classmethod
     def _resolve_nested_value(cls, value: Any) -> Any:
         """Resolve future-like values recursively in nested containers."""
+        if isinstance(value, (xr.Dataset, xr.DataArray)):
+            return value
         value = cls._resolve_shared_value(value)
-
         if isinstance(value, Mapping):
             return {k: cls._resolve_nested_value(v) for k, v in value.items()}
         if isinstance(value, list):
