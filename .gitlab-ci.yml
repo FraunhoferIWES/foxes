@@ -19,6 +19,7 @@ pre-commit:
     refs:
       - main
       - dev
+      - merge_requests
   before_script:
     - apt-get update
     - apt-get install -y --no-install-recommends git
