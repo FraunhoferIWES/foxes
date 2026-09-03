@@ -1,5 +1,6 @@
 import numpy as np
 import re
+import xarray as xr
 
 import foxes.constants as FC
 from foxes.core import FData, MData
@@ -28,14 +29,14 @@ def test_pop_shared_extra_data_keeps_strict_threshold_for_arrays():
 
     assert np.array_equal(mdata.extra_data["extra_small"], extra_small)
     assert np.array_equal(mdata.extra_data["extra_equal"], extra_equal)
-    assert mdata.extra_data["extra_large"] is None
+    assert "extra_large" not in mdata.extra_data
 
-    assert shared.extra_data["extra_small"] is None
-    assert shared.extra_data["extra_equal"] is None
+    assert "extra_small" not in shared.extra_data
+    assert "extra_equal" not in shared.extra_data
     assert np.array_equal(shared.extra_data["extra_large"], extra_large)
 
 
-def test_pop_shared_extra_data_splits_nested_payloads_by_size():
+def test_pop_shared_extra_data_keeps_nested_payloads_atomic_and_local():
     nested = {
         "inner": [
             np.arange(8, dtype=np.int32),  # 32 bytes
@@ -47,17 +48,26 @@ def test_pop_shared_extra_data_splits_nested_payloads_by_size():
     shared = mdata.pop_shared(min_shared_array_bytes=64)
 
     assert "nested" in mdata.extra_data
-    assert "nested" in shared.extra_data
+    assert "nested" not in shared.extra_data
+    assert np.array_equal(mdata.extra_data["nested"]["inner"][0], nested["inner"][0])
+    assert np.array_equal(mdata.extra_data["nested"]["inner"][1], nested["inner"][1])
 
-    local_inner = mdata.extra_data["nested"]["inner"]
-    shared_inner = shared.extra_data["nested"]["inner"]
 
-    assert len(local_inner) == 2
-    assert len(shared_inner) == 2
-    assert local_inner[0].nbytes == 32
-    assert local_inner[1] is None
-    assert shared_inner[0] is None
-    assert shared_inner[1].nbytes == 96
+def test_pop_shared_extra_data_uses_xarray_dataset_payload_size():
+    lookup_dataset = xr.Dataset(
+        data_vars={"weights": ("point", np.arange(10_000, dtype=np.float64))}
+    )
+    mdata = MData(
+        data={},
+        dims={},
+        extra_data={"gaussian_lookup": lookup_dataset},
+        name="mdata",
+    )
+
+    shared = mdata.pop_shared()
+
+    assert "gaussian_lookup" not in mdata.extra_data
+    assert shared.extra_data["gaussian_lookup"] is lookup_dataset
 
 
 def test_recombine_with_shared_deep_updates_extra_data():

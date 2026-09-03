@@ -8,6 +8,10 @@ from typing import TYPE_CHECKING, Any
 from foxes.core import Engine, MData
 from foxes.config import config
 from foxes.utils import import_module
+from foxes.utils.shared_data import (
+    decode_shared_extra_data,
+    encode_shared_extra_data,
+)
 from .process import ProcessEngine, ProcessEngineRunner
 
 if TYPE_CHECKING:
@@ -85,11 +89,13 @@ def _recombine_mdata_with_shared(mdata: MData, shared: dict[str, Any] | None) ->
             "DaskEngine: unsupported shared handle type, expecting 'dask_shared_token'"
         )
 
-    shared_extra_data = shared.get("extra_data")
+    shared_extra_data = decode_shared_extra_data(
+        shared.get("extra_data", {}), shared.get("extra_arrays", {})
+    )
     shared_mdata = MData(
         data=shared.get("data", {}),
         dims=shared["dims"],
-        extra_data={} if shared_extra_data is None else dict(shared_extra_data),
+        extra_data=shared_extra_data,
         name=shared["name"],
         raw=True,
     )
@@ -157,14 +163,18 @@ class DaskProcessRunner(ProcessEngineRunner):
         for name, value in handle.get("data", {}).items():
             shared_data[name] = self._resolve_shared_value(value)
 
-        shared_extra_data = handle.get("extra_data")
-        if shared_extra_data is not None:
-            shared_extra_data = self._resolve_shared_value(shared_extra_data)
+        extra_arrays = {
+            name: self._resolve_shared_value(value)
+            for name, value in handle.get("extra_arrays", {}).items()
+        }
+        shared_extra_data = decode_shared_extra_data(
+            handle.get("extra_data", {}), extra_arrays
+        )
 
         shared_mdata = MData(
             data=shared_data,
             dims=handle["dims"],
-            extra_data={} if shared_extra_data is None else dict(shared_extra_data),
+            extra_data=shared_extra_data,
             name=handle["name"],
             raw=True,
         )
@@ -325,6 +335,13 @@ class DaskEngine(ProcessEngine):
             shared_data[name] = ref
             shared_memory.append(ref)
 
+        extra_data, extra_arrays = encode_shared_extra_data(shared_mdata.extra_data)
+        shared_extra_arrays = {}
+        for name, data in extra_arrays.items():
+            ref = delayed(_as_shared_local)(np.ascontiguousarray(data))
+            shared_extra_arrays[name] = ref
+            shared_memory.append(ref)
+
         if len(shared_data) > 0 or len(shared_mdata.extra_data) > 0:
             self._print_shared_data(shared_mdata, verbosity=verbosity)
 
@@ -333,7 +350,9 @@ class DaskEngine(ProcessEngine):
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
             "data": shared_data,
-            "extra_data": dict(shared_mdata.extra_data),
+            "extra_data": extra_data,
+            "extra_arrays": shared_extra_arrays,
+            "extra_data_keys": tuple(shared_mdata.extra_data),
         }
 
     def prepare_chunk_mdata_for_shared(
@@ -350,6 +369,7 @@ class DaskEngine(ProcessEngine):
             if v in mdata:
                 mdata.pop(v)
                 mdata.dims.pop(v)
+        self._prepare_chunk_extra_data_for_shared(mdata, shared_handle)
 
     def release_shared_memory(
         self,
@@ -511,6 +531,13 @@ class LocalClusterEngine(ProcessEngine):
             shared_data[name] = ref
             shared_memory.append(ref)
 
+        extra_data, extra_arrays = encode_shared_extra_data(shared_mdata.extra_data)
+        shared_extra_arrays = {}
+        for name, data in extra_arrays.items():
+            ref = client.scatter(np.ascontiguousarray(data), broadcast=True, hash=False)
+            shared_extra_arrays[name] = ref
+            shared_memory.append(ref)
+
         if len(shared_data) > 0 or len(shared_mdata.extra_data) > 0:
             self._print_shared_data(shared_mdata, verbosity=verbosity)
 
@@ -519,7 +546,9 @@ class LocalClusterEngine(ProcessEngine):
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
             "data": shared_data,
-            "extra_data": dict(shared_mdata.extra_data),
+            "extra_data": extra_data,
+            "extra_arrays": shared_extra_arrays,
+            "extra_data_keys": tuple(shared_mdata.extra_data),
         }
 
     def prepare_chunk_mdata_for_shared(
@@ -536,6 +565,7 @@ class LocalClusterEngine(ProcessEngine):
             if v in mdata:
                 mdata.pop(v)
                 mdata.dims.pop(v)
+        self._prepare_chunk_extra_data_for_shared(mdata, shared_handle)
 
     def release_shared_memory(
         self,

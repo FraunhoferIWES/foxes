@@ -32,8 +32,9 @@ class PoolEngine(Engine):
         Flag for whether this engine supports shared data for chunk calculations.
     min_shared_array_bytes
         Minimum array size in bytes for placing model data into process
-        shared memory. Arrays with ``nbytes`` less than or equal to this
-        threshold are transferred inline to workers.
+        shared storage. Arrays with ``nbytes`` less than or equal to this
+        threshold are transferred inline to workers. Supported top-level
+        ``extra_data`` values use their complete payload size.
 
 
     """
@@ -62,8 +63,9 @@ class PoolEngine(Engine):
             Flag for whether this engine supports shared data for chunk calculations.
         min_shared_array_bytes
             Minimum array size in bytes for placing model data into process
-            shared memory. Arrays with ``nbytes`` less than or equal to this
-            threshold are transferred inline to workers.
+            shared storage. Arrays with ``nbytes`` less than or equal to this
+            threshold are transferred inline to workers. Supported top-level
+            ``extra_data`` values use their complete payload size.
         kwargs
             Additional arguments for the base class
 
@@ -453,6 +455,13 @@ class PoolEngine(Engine):
 
         """
         pass
+
+    def _prepare_chunk_extra_data_for_shared(
+        self, mdata: MData, shared_handle: Any
+    ) -> None:
+        """Remove extra data that the shared handle restores in workers."""
+        for key in shared_handle.get("extra_data_keys", ()):
+            mdata.extra_data.pop(key, None)
 
     def release_shared_memory(
         self, shared_memory: list[Any], shared_handle: Any

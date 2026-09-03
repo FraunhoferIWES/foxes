@@ -6,10 +6,10 @@ from typing import Any, Callable
 
 from foxes.utils import Dict
 from foxes.utils.memory_utils import (
-    deep_split_by_nbytes,
     deep_update,
     get_object_nbytes,
 )
+from foxes.utils.shared_data import is_shareable_extra_data
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -526,8 +526,9 @@ class Data(Dict[str, np.ndarray]):
         min_shared_array_bytes
             Minimum array size in bytes for moving loop-independent arrays into
             the shared data container. Smaller arrays stay in the current data
-            object. The threshold is also applied recursively to ``extra_data``
-            values.
+            object. Supported top-level ``extra_data`` arrays and xarray
+            datasets are moved atomically when their payload exceeds the same
+            threshold. Other extra-data values remain local.
 
         Returns
         -------
@@ -548,12 +549,13 @@ class Data(Dict[str, np.ndarray]):
                 data[v] = self.pop(v)
                 dims[v] = self.dims.pop(v)
 
-        # split extra data by size:
-        self.extra_data, extra_data = deep_split_by_nbytes(
-            self.extra_data,
-            max_nbytes=min_shared_array_bytes + 1,
-            fill_None=True,
-        )
+        extra_data = {}
+        for key, value in list(self.extra_data.items()):
+            if (
+                is_shareable_extra_data(value)
+                and get_object_nbytes(value) > min_shared_array_bytes
+            ):
+                extra_data[key] = self.extra_data.pop(key)
 
         shared = type(self)(
             data,

@@ -3,13 +3,17 @@ from __future__ import annotations
 import numpy as np
 import atexit
 from collections.abc import Sized
-from multiprocessing import Manager, shared_memory as mp_shared_memory
+from multiprocessing import shared_memory as mp_shared_memory
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import resource_tracker
 from typing import TYPE_CHECKING, Any
 
 from foxes.config import config
 from foxes.core import EngineRunner, FData, MData
+from foxes.utils.shared_data import (
+    decode_shared_extra_data,
+    encode_shared_extra_data,
+)
 
 from .pool import PoolEngine
 
@@ -113,7 +117,12 @@ class ProcessEngineRunner(EngineRunner):
             return mdata
 
         shared_data = handle.get("data", {})
-        active_shm_names = {value["name"] for value in shared_data.values()}
+        shared_extra_arrays = handle.get("extra_arrays", {})
+        active_shm_names = {
+            value["name"]
+            for entries in (shared_data, shared_extra_arrays)
+            for value in entries.values()
+        }
         for shm_name in list(_PROCESS_WORKER_SHM_CACHE):
             if shm_name not in active_shm_names:
                 _close_cached_shared_memory(shm_name)
@@ -131,11 +140,25 @@ class ProcessEngineRunner(EngineRunner):
                 buffer=shm.buf,
             )
 
-        shared_extra_data = handle.get("extra_data")
+        extra_arrays: dict[str, np.ndarray[Any, Any]] = {}
+        for name, value in shared_extra_arrays.items():
+            shm_name = value["name"]
+            shm = _PROCESS_WORKER_SHM_CACHE.get(shm_name)
+            if shm is None:
+                shm = mp_shared_memory.SharedMemory(name=shm_name)
+                _PROCESS_WORKER_SHM_CACHE[shm_name] = shm
+            extra_arrays[name] = np.ndarray(
+                tuple(value["shape"]),
+                dtype=np.dtype(value["dtype"]),
+                buffer=shm.buf,
+            )
+        shared_extra_data = decode_shared_extra_data(
+            handle.get("extra_data", {}), extra_arrays
+        )
         shared_mdata = MData(
             data=data,
             dims=handle["dims"],
-            extra_data={} if shared_extra_data is None else dict(shared_extra_data),
+            extra_data=shared_extra_data,
             raw=True,
             name=handle["name"],
         )
@@ -295,8 +318,7 @@ class ProcessEngine(PoolEngine):
         ):
             return None
 
-        shared_data = {}
-        for name, data in shared_mdata.items():
+        def share_array(name: str, data: np.ndarray[Any, Any]) -> dict[str, Any]:
             assert isinstance(data, np.ndarray) and data.dtype.kind != "O", (
                 f"Shared mdata entry '{name}' must be a non-object numpy array"
             )
@@ -309,19 +331,21 @@ class ProcessEngine(PoolEngine):
             )
             shm_arr[...] = arr
 
-            shared_data[name] = {
+            return {
                 "name": shm.name,
                 "shape": arr.shape,
                 "dtype": arr.dtype.str,
             }
 
-        extra_data = None
-        if len(shared_mdata.extra_data):
-            manager = Manager()
-            shared_memory.append({"kind": "manager", "obj": manager})
-            extra_data = manager.dict(shared_mdata.extra_data)
+        shared_data = {
+            name: share_array(name, data) for name, data in shared_mdata.items()
+        }
+        extra_data, extra_arrays = encode_shared_extra_data(shared_mdata.extra_data)
+        shared_extra_arrays = {
+            name: share_array(name, data) for name, data in extra_arrays.items()
+        }
 
-        if len(shared_data) > 0 or extra_data is not None:
+        if len(shared_data) > 0 or len(extra_data) > 0:
             self._print_shared_data(shared_mdata, verbosity=verbosity)
 
         return {
@@ -329,6 +353,8 @@ class ProcessEngine(PoolEngine):
             "dims": shared_mdata.dims,
             "data": shared_data,
             "extra_data": extra_data,
+            "extra_arrays": shared_extra_arrays,
+            "extra_data_keys": tuple(shared_mdata.extra_data),
         }
 
     def prepare_chunk_mdata_for_shared(
@@ -339,6 +365,7 @@ class ProcessEngine(PoolEngine):
             if v in mdata:
                 mdata.pop(v)
                 mdata.dims.pop(v)
+        self._prepare_chunk_extra_data_for_shared(mdata, shared_handle)
 
     def release_shared_memory(
         self,

@@ -1,4 +1,5 @@
 import numpy as np
+import xarray as xr
 
 from foxes.core import MData, FData
 from foxes.engines.dask import DaskProcessRunner, LocalClusterEngine
@@ -133,3 +134,23 @@ def test_dask_runner_resolves_nested_future_payloads():
 
     assert np.isclose(results["out"][0], np.sum(np.arange(8, dtype=np.float64)))
     assert cstore == {}
+
+
+def test_local_cluster_dataset_extra_data_uses_scattered_arrays(monkeypatch):
+    monkeypatch.setattr("foxes.engines.dask.load_dask", lambda: None)
+    monkeypatch.setattr("foxes.engines.dask.load_distributed", lambda: None)
+    engine = LocalClusterEngine(n_procs=2, verbosity=0)
+    engine._client = _FakeClient()
+    lookup_dataset = xr.Dataset(
+        data_vars={"weights": ("point", np.arange(8, dtype=np.float64))},
+        coords={"point": np.arange(8, dtype=np.int32)},
+    )
+    shared = MData(extra_data={"lookup": lookup_dataset}, name="shared")
+
+    handle = engine.init_shared_memory([], MData(name="chunk"), shared)
+    out = DaskProcessRunner()._recombine_mdata_with_shared(MData(name="chunk"), handle)
+
+    assert handle["extra_data_keys"] == ("lookup",)
+    assert len(handle["extra_arrays"]) == 2
+    assert len(engine._client.scatter_calls) == 2
+    xr.testing.assert_identical(out.extra_data["lookup"], lookup_dataset)

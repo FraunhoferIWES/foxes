@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import xarray as xr
 from multiprocessing import shared_memory as mp_shared_memory
 from multiprocessing import resource_tracker
 from xarray import Dataset
@@ -113,7 +114,8 @@ def test_process_engine_init_shared_memory_roundtrip_and_release():
     assert handle is not None
     assert handle["name"] == "shared"
     assert "A" in handle["data"]
-    assert dict(handle["extra_data"]) == {"source": "unit-test"}
+    assert handle["extra_data"] == {"source": {"kind": "inline", "value": "unit-test"}}
+    assert handle["extra_data_keys"] == ("source",)
 
     shm_name = handle["data"]["A"]["name"]
     shm = mp_shared_memory.SharedMemory(name=shm_name)
@@ -174,16 +176,12 @@ def test_mdata_pop_shared_respects_min_size_threshold():
     assert "shared_large" not in mdata
     assert "chunked" in mdata
     assert "extra_large" in shared.extra_data
-    assert "extra_small" in shared.extra_data
-    assert shared.extra_data["extra_small"] is None
-    assert "nested_extra_large" in shared.extra_data
-    assert "nested_extra_small" in shared.extra_data
-    assert shared.extra_data["nested_extra_small"] == {"inner": [None]}
-    assert "extra_large" in mdata.extra_data
-    assert mdata.extra_data["extra_large"] is None
+    assert "extra_small" not in shared.extra_data
+    assert "nested_extra_large" not in shared.extra_data
+    assert "nested_extra_small" not in shared.extra_data
+    assert "extra_large" not in mdata.extra_data
     assert "extra_small" in mdata.extra_data
     assert "nested_extra_large" in mdata.extra_data
-    assert mdata.extra_data["nested_extra_large"] == {"inner": [None]}
     assert "nested_extra_small" in mdata.extra_data
     assert "meta" in mdata.extra_data
 
@@ -218,6 +216,67 @@ def test_process_engine_get_chunk_input_data_uses_min_size_threshold_for_split()
     assert "shared_small" in mdata
     assert "chunked" in mdata
     assert FC.STATE in fdata
+
+
+def test_process_engine_prepare_chunk_removes_shared_extra_data():
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=64)
+    lookup_dataset = Dataset(
+        data_vars={"weights": ("point", np.arange(10_000, dtype=np.float64))}
+    )
+    local_array = np.arange(4, dtype=np.int32)
+    mdata = MData(
+        extra_data={
+            "gaussian_lookup": lookup_dataset,
+            "local_array": local_array,
+        },
+        name="chunk",
+    )
+
+    engine.prepare_chunk_mdata_for_shared(
+        mdata,
+        {"data": {}, "extra_data_keys": ("gaussian_lookup",)},
+    )
+
+    assert "gaussian_lookup" not in mdata.extra_data
+    assert np.array_equal(mdata.extra_data["local_array"], local_array)
+
+
+def test_process_engine_dataset_extra_data_uses_shared_memory():
+    engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=0)
+    lookup_dataset = Dataset(
+        data_vars={"weights": ("point", np.arange(8, dtype=np.float64))},
+        coords={"point": np.arange(8, dtype=np.int32)},
+        attrs={"min_weight": 1.0e-8},
+    )
+    shared = MData(extra_data={"lookup": lookup_dataset}, name="shared")
+    shared_memory, handle = _init_shared(engine, shared)
+
+    try:
+        assert handle["extra_data_keys"] == ("lookup",)
+        assert len(handle["extra_arrays"]) == 2
+        assert not any(entry["kind"] == "manager" for entry in shared_memory)
+
+        mdata = MData(name="chunk")
+        ProcessEngineRunner()._recombine_mdata_with_shared(mdata, handle)
+        xr.testing.assert_identical(mdata.extra_data["lookup"], lookup_dataset)
+
+        descriptor = handle["extra_data"]["lookup"]
+        weights = next(
+            variable
+            for variable in descriptor["variables"]
+            if variable["name"] == "weights"
+        )
+        shm_name = handle["extra_arrays"][weights["array_key"]]["name"]
+        mdata.extra_data["lookup"]["weights"].data[0] = 123.0
+        shm = mp_shared_memory.SharedMemory(name=shm_name)
+        try:
+            shared_values = np.ndarray((8,), dtype=np.float64, buffer=shm.buf)
+            assert shared_values[0] == 123.0
+        finally:
+            shm.close()
+    finally:
+        _PROCESS_WORKER_SHM_CACHE.clear()
+        engine.release_shared_memory(shared_memory, handle)
 
 
 def test_process_engine_init_shared_memory_respects_min_size_threshold():
@@ -501,7 +560,10 @@ def test_process_engine_pool_run_shares_memory_but_keeps_extra_data_local():
             finally:
                 shm.close()
 
-            assert handle["extra_data"]["source"] == "unit-test"
+            assert handle["extra_data"]["source"] == {
+                "kind": "inline",
+                "value": "unit-test",
+            }
             assert "first" not in handle["extra_data"]
             assert "second" not in handle["extra_data"]
         finally:

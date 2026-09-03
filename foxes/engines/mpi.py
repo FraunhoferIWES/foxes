@@ -7,6 +7,10 @@ from typing import Any
 
 from foxes.core import MData
 from foxes.utils import import_module
+from foxes.utils.shared_data import (
+    decode_shared_extra_data,
+    encode_shared_extra_data,
+)
 
 from .process import ProcessEngine, ProcessEngineRunner
 
@@ -36,33 +40,40 @@ def _mpi_create_worker_shared_cache(token: str, payload: dict[str, Any]) -> str:
     shared_comm = base_comm.Split_type(MPI.COMM_TYPE_SHARED, 0, MPI.INFO_NULL)
     rank = shared_comm.rank
 
-    data = {}
-    windows = {}
-    for name, meta in payload["data"].items():
-        arr = np.ascontiguousarray(meta["arr"])
-        shape = tuple(meta["shape"])
-        dtype = np.dtype(meta["dtype"])
-        if arr.shape != shape or arr.dtype != dtype:
-            raise ValueError(
-                f"Invalid shared payload for '{name}': expected shape={shape}, dtype={dtype}, got shape={arr.shape}, dtype={arr.dtype}"
-            )
+    data: dict[str, np.ndarray[Any, Any]] = {}
+    extra_arrays: dict[str, np.ndarray[Any, Any]] = {}
+    windows: dict[str, Any] = {}
+    for target, entries in (
+        (data, payload["data"]),
+        (extra_arrays, payload.get("extra_arrays", {})),
+    ):
+        for name, meta in entries.items():
+            arr = np.ascontiguousarray(meta["arr"])
+            shape = tuple(meta["shape"])
+            dtype = np.dtype(meta["dtype"])
+            if arr.shape != shape or arr.dtype != dtype:
+                raise ValueError(
+                    f"Invalid shared payload for '{name}': expected shape={shape}, dtype={dtype}, got shape={arr.shape}, dtype={arr.dtype}"
+                )
 
-        nbytes = arr.nbytes if rank == 0 else 0
-        win = MPI.Win.Allocate_shared(nbytes, dtype.itemsize, comm=shared_comm)
-        buf, _ = win.Shared_query(0)
-        shm_arr: np.ndarray[Any, Any] = np.ndarray(shape, dtype=dtype, buffer=buf)
-        if rank == 0:
-            shm_arr[...] = arr
-        shared_comm.Barrier()
+            nbytes = arr.nbytes if rank == 0 else 0
+            win = MPI.Win.Allocate_shared(nbytes, dtype.itemsize, comm=shared_comm)
+            buf, _ = win.Shared_query(0)
+            shm_arr: np.ndarray[Any, Any] = np.ndarray(shape, dtype=dtype, buffer=buf)
+            if rank == 0:
+                shm_arr[...] = arr
+            shared_comm.Barrier()
 
-        data[name] = shm_arr
-        windows[name] = win
+            target[name] = shm_arr
+            windows[f"{id(target)}:{name}"] = win
 
     _MPI_SHARED_CACHE[token] = {
         "data": data,
         "dims": payload["dims"],
         "name": payload["name"],
-        "extra_data": payload.get("extra_data", {}),
+        "extra_data": decode_shared_extra_data(
+            payload.get("extra_data", {}), extra_arrays
+        ),
         "shared_comm": shared_comm,
         "windows": windows,
     }
@@ -205,17 +216,21 @@ class MPIEngine(ProcessEngine):
                 "dtype": arr.dtype.str,
             }
 
-        if len(payload_data):
-            self._print_shared_data(
-                MData(
-                    data={name: shared_mdata[name] for name in payload_data},
-                    dims={name: shared_mdata.dims[name] for name in payload_data},
-                    name=shared_mdata.name,
-                ),
-                verbosity,
-            )
+        extra_data, extra_arrays = encode_shared_extra_data(shared_mdata.extra_data)
+        payload["extra_data"] = extra_data
+        payload["extra_arrays"] = {
+            name: {
+                "arr": np.ascontiguousarray(data),
+                "shape": data.shape,
+                "dtype": data.dtype.str,
+            }
+            for name, data in extra_arrays.items()
+        }
 
-        if len(payload_data) == 0:
+        if len(payload_data) or len(extra_data):
+            self._print_shared_data(shared_mdata, verbosity)
+
+        if len(payload_data) == 0 and len(extra_data) == 0:
             return None
 
         futures = [
@@ -230,6 +245,7 @@ class MPIEngine(ProcessEngine):
             "token": token,
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
+            "extra_data_keys": tuple(shared_mdata.extra_data),
         }
 
     def prepare_chunk_mdata_for_shared(
@@ -244,14 +260,12 @@ class MPIEngine(ProcessEngine):
                 "MPIEngine: unsupported shared handle type, expecting 'mpi_shared_token'"
             )
 
-        # MPI token handles do not carry a ``data`` dict like ProcessEngine;
-        # shared variable names are available via the shared dims mapping.
         shared_vars = shared_handle.get("dims", {}).keys()
-
         for v in shared_vars:
             if v in mdata:
                 mdata.pop(v)
                 mdata.dims.pop(v)
+        self._prepare_chunk_extra_data_for_shared(mdata, shared_handle)
 
     def release_shared_memory(
         self,

@@ -100,7 +100,8 @@ def test_mpi_init_shared_memory_submits_setup_once_per_worker():
     payload = calls[0][1][1]
     assert payload["name"] == "shared"
     assert "A" in payload["data"]
-    assert payload["extra_data"] == {"source": "unit-test"}
+    assert payload["extra_data"] == {"source": {"kind": "inline", "value": "unit-test"}}
+    assert handle["extra_data_keys"] == ("source",)
     assert payload["data"]["A"]["shape"] == arr.shape
     assert payload["data"]["A"]["dtype"] == arr.dtype.str
     assert np.array_equal(payload["data"]["A"]["arr"], arr)
@@ -142,6 +143,31 @@ def test_mpi_init_shared_memory_respects_min_size_threshold():
     payload = calls[0][1][1]
     assert "large" in payload["data"]
     assert "small" not in payload["data"]
+
+
+def test_mpi_init_shared_memory_supports_extra_data_only():
+    engine = MPIEngine(n_procs=4, verbosity=0, min_shared_array_bytes=0)
+    shared = MData(
+        extra_data={"lookup": np.arange(24, dtype=np.float64)},
+        name="shared",
+    )
+    calls = []
+
+    def fake_submit(fn, *args, **kwargs):
+        calls.append((fn, args, kwargs))
+        return (fn, args, kwargs)
+
+    engine.submit = fake_submit
+    engine.await_result = lambda future: future
+
+    handle = engine.init_shared_memory([], MData(name="chunk"), shared)
+
+    assert handle["type"] == "mpi_shared_token"
+    assert handle["extra_data_keys"] == ("lookup",)
+    assert len(calls) == engine.n_workers
+    payload = calls[0][1][1]
+    assert payload["data"] == {}
+    assert len(payload["extra_arrays"]) == 1
 
 
 def test_mpi_init_shared_memory_returns_local_handle_when_below_threshold():

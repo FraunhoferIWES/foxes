@@ -6,6 +6,10 @@ import numpy as np
 from typing import Any
 
 from foxes.utils import import_module
+from foxes.utils.shared_data import (
+    decode_shared_extra_data,
+    encode_shared_extra_data,
+)
 
 from foxes.core import MData
 from .process import ProcessEngineRunner
@@ -49,11 +53,17 @@ class RayEngineRunner(ProcessEngineRunner):
         ray_mod = _get_ray()
         data = {name: ray_mod.get(ref) for name, ref in handle.get("data", {}).items()}
 
-        shared_extra_data = handle.get("extra_data")
+        extra_arrays = {
+            name: ray_mod.get(ref)
+            for name, ref in handle.get("extra_arrays", {}).items()
+        }
+        shared_extra_data = decode_shared_extra_data(
+            handle.get("extra_data", {}), extra_arrays
+        )
         shared_mdata = MData(
             data=data,
             dims=handle["dims"],
-            extra_data={} if shared_extra_data is None else dict(shared_extra_data),
+            extra_data=shared_extra_data,
             name=handle["name"],
             raw=True,
         )
@@ -115,6 +125,13 @@ class RayEngine(PoolEngine):
             shared_data[name] = ref
             shared_memory.append(ref)
 
+        extra_data, extra_arrays = encode_shared_extra_data(shared_mdata.extra_data)
+        shared_extra_arrays = {}
+        for name, data in extra_arrays.items():
+            ref = ray_mod.put(np.ascontiguousarray(data))
+            shared_extra_arrays[name] = ref
+            shared_memory.append(ref)
+
         if len(shared_data) > 0 or len(shared_mdata.extra_data) > 0:
             self._print_shared_data(shared_mdata, verbosity=verbosity)
 
@@ -123,7 +140,9 @@ class RayEngine(PoolEngine):
             "name": shared_mdata.name,
             "dims": shared_mdata.dims,
             "data": shared_data,
-            "extra_data": dict(shared_mdata.extra_data),
+            "extra_data": extra_data,
+            "extra_arrays": shared_extra_arrays,
+            "extra_data_keys": tuple(shared_mdata.extra_data),
         }
 
     def prepare_chunk_mdata_for_shared(
@@ -136,11 +155,11 @@ class RayEngine(PoolEngine):
             raise ValueError(
                 "RayEngine: unsupported shared handle type, expecting 'ray_shared_token'"
             )
-
         for v in shared_handle.get("data", {}).keys():
             if v in mdata:
                 mdata.pop(v)
                 mdata.dims.pop(v)
+        self._prepare_chunk_extra_data_for_shared(mdata, shared_handle)
 
     def release_shared_memory(
         self,
@@ -159,6 +178,7 @@ class RayEngine(PoolEngine):
         load_ray()
         ray_mod = _get_ray()
         refs = list(shared_handle.get("data", {}).values())
+        refs.extend(shared_handle.get("extra_arrays", {}).values())
         try:
             if (
                 len(refs)

@@ -986,6 +986,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Raised development dependency floors to address Dependabot security alerts
 - Engines:
   - Added new shared-memory handling and execution flow improvements across `DaskEngine`, `DefaultEngine`, `NumpyEngine`, and pool-based engines, in particular `ProcessEngine` and `MPIEngine`
+  - Added atomic top-level sharing for NumPy array and xarray Dataset `extra_data`, using backend-native array storage and explicit per-chunk manifests; this also fixes extra-data-only sharing with `MPIEngine`
 - Algorithms:
   - Reworked `PopulationStates` chunk-loading behavior
 - Input:

@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import xarray as xr
 
 from foxes.core import MData
 from foxes.engines import ray as ray_mod
@@ -75,7 +76,8 @@ def test_ray_init_shared_memory_returns_token_handle(monkeypatch):
     assert handle["type"] == "ray_shared_token"
     assert handle["name"] == "shared"
     assert "A" in handle["data"]
-    assert handle["extra_data"] == {"source": "unit-test"}
+    assert handle["extra_data"] == {"source": {"kind": "inline", "value": "unit-test"}}
+    assert handle["extra_data_keys"] == ("source",)
     assert handle["data"]["A"] in shared_memory
     assert len(shared_memory) >= 1
     assert np.array_equal(fake.get(handle["data"]["A"]), shared["A"])
@@ -93,7 +95,8 @@ def test_ray_runner_recombine_uses_ray_refs(monkeypatch):
         "name": "shared",
         "dims": {"A": ("s",)},
         "data": {"A": ref},
-        "extra_data": {"source": "unit-test"},
+        "extra_data": {"source": {"kind": "inline", "value": "unit-test"}},
+        "extra_arrays": {},
     }
 
     out = RayEngineRunner()._recombine_mdata_with_shared(mdata, handle)
@@ -101,6 +104,26 @@ def test_ray_runner_recombine_uses_ray_refs(monkeypatch):
     assert out is mdata
     assert np.array_equal(mdata["A"], arr)
     assert mdata.extra_data["source"] == "unit-test"
+
+
+def test_ray_dataset_extra_data_uses_object_refs(monkeypatch):
+    fake = _install_fake_ray(monkeypatch)
+    engine = RayEngine(n_procs=2, verbosity=0, min_shared_array_bytes=0)
+    lookup_dataset = xr.Dataset(
+        data_vars={"weights": ("point", np.arange(8, dtype=np.float64))},
+        coords={"point": np.arange(8, dtype=np.int32)},
+    )
+    shared = MData(extra_data={"lookup": lookup_dataset}, name="shared")
+
+    shared_memory = []
+    handle = engine.init_shared_memory(shared_memory, MData(name="chunk"), shared)
+    out = RayEngineRunner()._recombine_mdata_with_shared(MData(name="chunk"), handle)
+
+    assert handle["extra_data_keys"] == ("lookup",)
+    assert len(handle["extra_arrays"]) == 2
+    assert set(handle["extra_arrays"].values()).issubset(shared_memory)
+    xr.testing.assert_identical(out.extra_data["lookup"], lookup_dataset)
+    assert all(ref in fake._store for ref in handle["extra_arrays"].values())
 
 
 def test_ray_runner_recombine_rejects_non_token_handle(monkeypatch):
@@ -127,7 +150,11 @@ def test_ray_prepare_chunk_mdata_for_shared_removes_shared_keys(monkeypatch):
 
     engine.prepare_chunk_mdata_for_shared(
         mdata,
-        {"type": "ray_shared_token", "data": {"A": "ref-0"}},
+        {
+            "type": "ray_shared_token",
+            "data": {"A": "ref-0"},
+            "extra_data_keys": (),
+        },
     )
 
     assert "A" not in mdata

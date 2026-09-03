@@ -47,6 +47,11 @@ def get_object_nbytes(
         return int(value.dtype.itemsize)
     if isinstance(value, (bytes, bytearray, memoryview, str)):
         return len(value)
+
+    nbytes = getattr(value, "nbytes", None)
+    if isinstance(nbytes, (int, np.integer)):
+        return int(nbytes)
+
     if isinstance(value, Mapping):
         if not recursive:
             if not allow_shallow_fallback:
@@ -125,10 +130,6 @@ def get_object_nbytes(
             )
             for v in value
         )
-
-    nbytes = getattr(value, "nbytes", None)
-    if isinstance(nbytes, (int, np.integer)):
-        return int(nbytes)
 
     if not allow_shallow_fallback:
         return 0
