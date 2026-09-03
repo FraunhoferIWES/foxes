@@ -525,7 +525,7 @@ def iconDream2foxes(
         if verbosity > 0:
             print("Grid preparation failed. Please check the grid file and CDO.")
         _rm_tmp_dir(cdo_tmp_dir, verbosity=verbosity)
-        return
+        return 1
 
     # check grb files in parallel:
     if check_grb:
