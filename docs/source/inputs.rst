@@ -52,9 +52,9 @@ A typical example might look like this, see the :doc:`Examples <examples>` page 
         )
 
 It is also possible to manually add a single turbine to the wind farm. For doing so,
-plug an object of the :class:`Turbine<foxes.core.Turbine>` class into the
+plug an object of the :class:`Turbine<foxes.core.turbine.Turbine>` class into the
 :meth:`add_turbine<foxes.core.WindFarm.add_turbine>` function of the
-:class:`WindFarm<foxes.core.WindFarm>` class.
+:class:`WindFarm<foxes.core.wind_farm.WindFarm>` class.
 
 Any of the above functions for adding turbines requires a parameter *turbine_models*,
 which expects a list of strings that represent the names of the
@@ -76,11 +76,11 @@ conditions (for example in the case of timeseries data).
 The full list of currently implemented ambient states can be found in the
 :doc:`foxes.input.states <_autoapi/foxes/input/states/index>` sub-package. Typical choices are:
 
-* :class:`Timeseries<foxes.input.states.Timeseries>`: Spatially homogeneous timeseries data,
-* :class:`MultiHeightTimeseries<foxes.input.states.MultiHeightTimeseries>`, :class:`MultiHeightNCTimeseries<foxes.input.states.MultiHeightNCTimeseries>`: Height dependent timeseries data,
-* :class:`FieldData<foxes.input.states.FieldData>`: Field data, (time, z, y, x) or (time, y, x) dependent.
-* :class:`NEWAStates<foxes.input.states.NEWAStates>`: WRF data files in `NEWA <https://map.neweuropeanwindatlas.eu/>`_ format,
-* :class:`StatesTable<foxes.input.states.StatesTable>`: Spatially homogeneous data with weights,
-* :class:`OnePointFlowTimeseries<foxes.input.states.OnePointFlowTimeseries>`: Horizontally homogeneous data translated into inhomogeneous flow,
-* :class:`WeibullSectors<foxes.input.states.WeibullSectors>`: Spatially homogeneous Weibull wind speed distributions organized in wind direction sectors.
-* :class:`WRGStates<foxes.input.states.WRGStates>`: Wind resource data, i.e., a regular grid of wind roses expressed via Weibull parameters
+* :class:`Timeseries<foxes.input.states.states_table.Timeseries>`: Spatially homogeneous timeseries data,
+* :class:`MultiHeightTimeseries<foxes.input.states.multi_height.MultiHeightTimeseries>`, :class:`MultiHeightNCTimeseries<foxes.input.states.multi_height.MultiHeightNCTimeseries>`: Height dependent timeseries data,
+* :class:`FieldData<foxes.input.states.field_data.FieldData>`: Field data, (time, z, y, x) or (time, y, x) dependent.
+* :class:`NEWAStates<foxes.input.states.newa_states.NEWAStates>`: WRF data files in `NEWA <https://map.neweuropeanwindatlas.eu/>`_ format,
+* :class:`StatesTable<foxes.input.states.states_table.StatesTable>`: Spatially homogeneous data with weights,
+* :class:`OnePointFlowTimeseries<foxes.input.states.one_point_flow.OnePointFlowTimeseries>`: Horizontally homogeneous data translated into inhomogeneous flow,
+* :class:`WeibullSectors<foxes.input.states.weibull_sectors.WeibullSectors>`: Spatially homogeneous Weibull wind speed distributions organized in wind direction sectors.
+* :class:`WRGStates<foxes.input.states.wrg_states.WRGStates>`: Wind resource data, i.e., a regular grid of wind roses expressed via Weibull parameters
