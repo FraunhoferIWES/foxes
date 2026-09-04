@@ -5,5 +5,3 @@ input or a calculation result.
 
 .. toctree::
     :maxdepth: 2
-
-    _autoapi/foxes/variables
