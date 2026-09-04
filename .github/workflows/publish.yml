@@ -112,6 +112,15 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Verify tag matches package version
+        run: |
+          package_version="$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -n 1)"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "$package_version" != "$tag_version" ]]; then
+            echo "::error::Git tag ${GITHUB_REF_NAME} does not match pyproject.toml version ${package_version}"
+            exit 1
+          fi
+
       - name: Install pypa/build
         run: >-
           python3 -m
