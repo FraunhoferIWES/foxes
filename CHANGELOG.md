@@ -1025,3 +1025,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Typo fixed in `JensenTurbOPark`, replacing `D` by `D/2`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.2](https://github.com/FraunhoferIWES/foxes/commits/v1.9.2)
+
+## v1.9.3
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.3](https://github.com/FraunhoferIWES/foxes/commits/v1.9.3)
