@@ -58,7 +58,7 @@ Evaluation Software"`
 
 ## Requirements
 
-The supported Python versions are `Python 3.9`...`3.13`.
+The supported Python versions are `Python 3.10`...`3.13`.
 
 ## Installation
 
@@ -122,4 +122,4 @@ pytest tests
 ## Acknowledgements
 
 The development of _foxes_ and its predecessors _flapFOAM_ and _flappy_ (internal - non public) has been supported through multiple publicly funded research projects. We acknowledge in particular the funding by the Federal Ministry of Economic Affairs and Climate Action (BMWK) through the projects _Smart Wind Farms_ (grant no. 0325851B), _GW-Wakes_ (0325397B) and _X-Wakes_ (03EE3008A), as well as the funding by the Federal Ministry of Education and Research (BMBF) in the framework of the project _H2Digital_ (03SF0635). We furthermore acknowledge funding by the Horizon Europe project FLOW (Atmospheric Flow, Loads and pOwer
-for Wind energy - grant id 101084205).
+for Wind energy - grant id 101084205) and _AIRE_ (EU Program Horizon Europe, grant agreement 101083716).

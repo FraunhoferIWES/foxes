@@ -1,4 +1,5 @@
 import pathlib
+import re
 import sys
 
 repository_root = pathlib.Path(__file__).resolve().parents[2]
@@ -73,9 +74,6 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "**.ipynb_checkpoints",
-    # "notebooks/dyn_wakes.ipynb",
-    # "notebooks/timelines.ipynb",
-    # "notebooks/sequential.ipynb",
 ]
 
 pygments_style = None
@@ -92,7 +90,6 @@ autosectionlabel_prefix_document = True
 # -- Options for autodoc ----------------------------------------------------
 autodoc_typehints = "signature"
 autodoc_class_signature = "separated"
-autoapi_python_class_content = "both"
 
 # -- HTML output -------------------------------------------------------------
 
@@ -136,9 +133,9 @@ autoapi_options = [
     "undoc-members",
     "show-inheritance",
     "show-module-summary",
-    "special-members",
     "inherited-members",
 ]
+autoapi_python_class_content = "both"
 autoapi_member_order = "groupwise"
 autoapi_python_use_implicit_namespaces = False
 autoapi_keep_files = False
@@ -173,8 +170,13 @@ nb_ipywidgets_js = {
 
 
 def remove_autoapi_submodule_heading(app, docname, source):
-    if docname.startswith("autoapi/") and docname.endswith("/index"):
-        source[0] = source[0].replace("Submodules\n----------\n\n", "")
+    if docname.startswith(f"{autoapi_root}/") and docname.endswith("/index"):
+        source[0] = re.sub(
+            r"(?m)^Submodules\s*\n-+\s*\n",
+            "",
+            source[0],
+            count=1,
+        )
 
 
 def setup(app):

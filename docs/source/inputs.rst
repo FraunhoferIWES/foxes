@@ -1,12 +1,17 @@
+.. _inputs:
+
 Inputs
 ======
 
 Every *foxes* case needs at least the following two inputs from the user in order
-to be able to run: :ref:`Wind farm layouts` and :ref:`Ambient inflow states`.
+to be able to run: :ref:`Wind farm layouts <inputs:wind-farm-layouts>` and
+:ref:`Ambient inflow states <inputs:ambient-inflow-states>`.
 
 Additionally, the applied models might need additional data, for example the power
-and thrust curves of the selected turbine types. See the :ref:`Models` Section for
+and thrust curves of the selected turbine types. See the :doc:`Models <models>` section for
 additional information on how to provide such inputs.
+
+.. _wind-farm-layouts:
 
 Wind farm layouts
 -----------------
@@ -24,16 +29,16 @@ wind turbine, such that this is no limitation of usage but merely a *foxes*
 code design choice.
 
 Wind turbines are to the wind farm, usually by calling one of the functions
-of the sub package :ref:`foxes.input.farm_layout`. Typical choices are:
+of the sub-package :doc:`foxes.input.farm_layout <_autoapi/foxes/input/farm_layout/index>`. Typical choices are:
 
-* :ref:`add_from_csv<foxes.input.farm_layout.add_from_csv>`: Reads a *csv* file, in which each row describes one turbine (also accepts a pandas *DataFrame* instead of the file),
-* :ref:`add_from_file<foxes.input.farm_layout.add_from_file>`: Similarly, additionally also accepting *json* inputs,
-* :ref:`add_from_wrf<foxes.input.farm_layout.add_from_wrf>`: Reads a WRF wind farm input folder, optionally with turbine files in TBL format,
-* :ref:`add_grid<foxes.input.farm_layout.add_grid>`: Adds a regular grid of turbines with identical properties,
-* :ref:`add_row<foxes.input.farm_layout.add_row>`: Adds a row of turbines with identical properties.
-* :ref:`add_random<foxes.input.farm_layout.add_random>`: Adds turbines at random positions with identical properties.
+* :func:`add_from_csv<foxes.input.farm_layout.add_from_csv>`: Reads a *csv* file, in which each row describes one turbine (also accepts a pandas *DataFrame* instead of the file),
+* :func:`add_from_file<foxes.input.farm_layout.add_from_file>`: Similarly, additionally also accepting *json* inputs,
+* :func:`add_from_wrf<foxes.input.farm_layout.add_from_wrf>`: Reads a WRF wind farm input folder, optionally with turbine files in TBL format,
+* :func:`add_grid<foxes.input.farm_layout.add_grid>`: Adds a regular grid of turbines with identical properties,
+* :func:`add_row<foxes.input.farm_layout.add_row>`: Adds a row of turbines with identical properties.
+* :func:`add_random<foxes.input.farm_layout.add_random>`: Adds turbines at random positions with identical properties.
 
-A typical example might look like this, see :ref:`Examples` for more examples:
+A typical example might look like this, see the :doc:`Examples <examples>` page for more examples:
 
     .. code-block:: python
 
@@ -47,13 +52,15 @@ A typical example might look like this, see :ref:`Examples` for more examples:
         )
 
 It is also possible to manually add a single turbine to the wind farm. For doing so,
-plug an object of the :ref:`Turbine<foxes.core.Turbine>` class into the
-:ref:`add_turbine<foxes.core.WindFarm.add_turbine>` function of the
-:ref:`WindFarm<foxes.core.WindFarm>` class.
+plug an object of the :class:`Turbine<foxes.core.Turbine>` class into the
+:meth:`add_turbine<foxes.core.WindFarm.add_turbine>` function of the
+:class:`WindFarm<foxes.core.WindFarm>` class.
 
 Any of the above functions for adding turbines requires a parameter *turbine_models*,
-which expects a list of strings that represent the names of the :ref:`Turbine models`
-as appearing in the :ref:`ModelBook object<The model book>`.
+which expects a list of strings that represent the names of the
+:ref:`Turbine models <turbine-models>` as appearing in the ModelBook object.
+
+.. _ambient-inflow-states:
 
 Ambient inflow states
 ---------------------
@@ -67,13 +74,13 @@ a wind rose), or they do not specify it, in which case they are interpreted as e
 conditions (for example in the case of timeseries data).
 
 The full list of currently implemented ambient states can be found in the
-:ref:`foxes.input.states` sub package. Typical choices are:
+:doc:`foxes.input.states <_autoapi/foxes/input/states/index>` sub-package. Typical choices are:
 
-* :ref:`Timeseries<foxes.input.states.Timeseries>`: Spatially homogeneous timeseries data, see :ref:`Timeseries data`,
-* :ref:`MultiHeightTimeseries<foxes.input.states.MultiHeightTimeseries>`, :ref:`MultiHeightNCTimeseries<foxes.input.states.MultiHeightNCTimeseries>`: Height dependent timeseries data, see :ref:`Multi-height wind data`,
-* :ref:`FieldData<foxes.input.states.FieldData>`: Field data, (time, z, y, x) or (time, y, x) dependent. See :ref:`Heterogeneous flow`,
-* :ref:`NEWAStates<foxes.input.states.NEWAStates>`: WRF data files in `NEWA <https://map.neweuropeanwindatlas.eu/>`_ format,
-* :ref:`StatesTable<foxes.input.states.StatesTable>`: Spatially homogeneous data with weights, see :ref:`Wind rose data`,
-* :ref:`OnePointFlowTimeseries<foxes.input.states.OnePointFlowTimeseries>`: Horizontally homogeneous data translated into inhomogeneous flow, see :ref:`Dynamic Wakes 1`,
-* :ref:`WeibullSectors<foxes.input.states.WeibullSectors>`: Spatially homogeneous Weibull wind speed distributions organized in wind direction sectors.
-* :ref:`WRGStates<foxes.input.states.WRGStates>`: Wind resource data, i.e., a regular grid of wind roses expressed via Weibull parameters
+* :class:`Timeseries<foxes.input.states.Timeseries>`: Spatially homogeneous timeseries data,
+* :class:`MultiHeightTimeseries<foxes.input.states.MultiHeightTimeseries>`, :class:`MultiHeightNCTimeseries<foxes.input.states.MultiHeightNCTimeseries>`: Height dependent timeseries data,
+* :class:`FieldData<foxes.input.states.FieldData>`: Field data, (time, z, y, x) or (time, y, x) dependent.
+* :class:`NEWAStates<foxes.input.states.NEWAStates>`: WRF data files in `NEWA <https://map.neweuropeanwindatlas.eu/>`_ format,
+* :class:`StatesTable<foxes.input.states.StatesTable>`: Spatially homogeneous data with weights,
+* :class:`OnePointFlowTimeseries<foxes.input.states.OnePointFlowTimeseries>`: Horizontally homogeneous data translated into inhomogeneous flow,
+* :class:`WeibullSectors<foxes.input.states.WeibullSectors>`: Spatially homogeneous Weibull wind speed distributions organized in wind direction sectors.
+* :class:`WRGStates<foxes.input.states.WRGStates>`: Wind resource data, i.e., a regular grid of wind roses expressed via Weibull parameters
