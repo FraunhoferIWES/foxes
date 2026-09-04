@@ -36,8 +36,6 @@ def _get_ray() -> Any:
 class RayEngineRunner(ProcessEngineRunner):
     """
     Engine runner for RayEngine.
-
-
     """
 
     def _recombine_mdata_with_shared(self, mdata: MData, handle: Any) -> MData:
@@ -75,8 +73,6 @@ class RayEngineRunner(ProcessEngineRunner):
 class RayEngine(PoolEngine):
     """
     The ray engine for foxes calculations.
-
-
     """
 
     def __init__(
@@ -85,7 +81,9 @@ class RayEngine(PoolEngine):
         supports_shared_data: bool = True,
         **kwargs: Any,
     ) -> None:
-        """Constructor."""
+        """
+        Constructor.
+        """
         super().__init__(*args, supports_shared_data=supports_shared_data, **kwargs)
 
     def new_runner(self) -> RayEngineRunner:

@@ -15,32 +15,18 @@ from .area_geometry import AreaGeometry
 class HalfPlane(AreaGeometry):
     """
     This class represents a half plane in 2d.
-
-    Attributes
-    ----------
-    centre
-        The centre point, shape: (2,)
-    n
-        The direction vector to the inside, shape: (2,)
-    n
-        The direction vector orthogonal to n, shape: (2,)
-
-
     """
 
     def __init__(
         self, centre: np.ndarray | Sequence[float], n: np.ndarray | Sequence[float]
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         centre
             The centre point, shape: (2,)
         n
             The direction vector to the inside, shape: (2,)
-
         """
         self.centre = np.array(centre, dtype=np.float64)
         self.n = np.array(n, dtype=np.float64)

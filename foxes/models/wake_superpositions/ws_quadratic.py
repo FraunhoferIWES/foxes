@@ -15,18 +15,6 @@ if TYPE_CHECKING:
 class WSQuadratic(WakeSuperposition):
     """
     Quadratic superposition of wind deficit results
-
-    Attributes
-    ----------
-    scale_amb
-        Flag for scaling wind deficit with ambient wind speed
-        instead of waked wind speed
-    lim_low
-        Lower limit of the final waked wind speed
-    lim_high
-        Upper limit of the final waked wind speed
-
-
     """
 
     def __init__(
@@ -36,8 +24,6 @@ class WSQuadratic(WakeSuperposition):
         lim_high: float | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         scale_amb
@@ -47,7 +33,6 @@ class WSQuadratic(WakeSuperposition):
             Lower limit of the final waked wind speed
         lim_high
             Upper limit of the final waked wind speed
-
         """
         super().__init__()
 
@@ -195,30 +180,18 @@ class WSQuadratic(WakeSuperposition):
 class WSQuadraticLocal(WakeSuperposition):
     """
     Local quadratic superposition of wind deficit results
-
-    Attributes
-    ----------
-    lim_low
-        Lower limit of the final waked wind speed
-    lim_high
-        Upper limit of the final waked wind speed
-
-
     """
 
     def __init__(
         self, lim_low: float | None = None, lim_high: float | None = None
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         lim_low
             Lower limit of the final waked wind speed
         lim_high
             Upper limit of the final waked wind speed
-
         """
         super().__init__()
         self.lim_low = lim_low

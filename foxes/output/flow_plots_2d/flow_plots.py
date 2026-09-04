@@ -20,8 +20,6 @@ if TYPE_CHECKING:
 class FlowPlots2D(SliceData):
     """
     Class for horizontal or vertical 2D flow plots
-
-
     """
 
     def get_mean_data_xy(  # type: ignore[override]

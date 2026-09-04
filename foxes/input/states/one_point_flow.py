@@ -16,20 +16,6 @@ class OnePointFlowStates(States):
     """
     Time-evolving states based on horizontally
     homogeneous timeseries data
-
-    Attributes
-    ----------
-    ref_xy
-        The [x, y] or [x, y, z] coordinates of the base states.
-        If [x, y, z] then z will serve as height.
-    tl_heights
-        The heights at which timelines will be calculated.
-    dt_min
-        The delta-t value in minutes, if not taken from timeseries data.
-    intp_pars
-        Parameters for height interpolation with scipy.interpolate.interpn.
-
-
     """
 
     def __init__(
@@ -42,8 +28,6 @@ class OnePointFlowStates(States):
         **base_states_kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         ref_xy
@@ -61,7 +45,6 @@ class OnePointFlowStates(States):
         base_states_kwargs
             Arguments for creating the base states from States.new(),
             if not given as base_states.
-
         """
         super().__init__()
         self.ref_xy: np.ndarray = np.array(ref_xy, dtype=config.dtype_double)
@@ -537,8 +520,6 @@ class OnePointFlowTimeseries(OnePointFlowStates):
     """
     Inhomogeneous inflow from homogeneous timeseries data
     at one point
-
-
     """
 
     def __init__(
@@ -549,8 +530,6 @@ class OnePointFlowTimeseries(OnePointFlowStates):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         ref_xy
@@ -562,7 +541,6 @@ class OnePointFlowTimeseries(OnePointFlowStates):
             The heights at which timelines will be calculated
         kwargs
             Parameters for the base class
-
         """
         if tl_heights is None and len(ref_xy) < 3:
             tl_heights = [100.0]
@@ -579,21 +557,16 @@ class OnePointFlowMultiHeightTimeseries(OnePointFlowStates):
     """
     Inhomogeneous inflow from height dependent homogeneous
     timeseries data at one point
-
-
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
             Parameters for the base class
         kwargs
             Parameters for the base class
-
         """
         super().__init__(*args, states_type="MultiHeightTimeseries", **kwargs)
 
@@ -602,20 +575,15 @@ class OnePointFlowMultiHeightNCTimeseries(OnePointFlowStates):
     """
     Inhomogeneous inflow from height dependent homogeneous
     timeseries data at one point based on NetCDF input
-
-
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
             Parameters for the base class
         kwargs
             Parameters for the base class
-
         """
         super().__init__(*args, states_type="MultiHeightNCTimeseries", **kwargs)

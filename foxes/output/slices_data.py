@@ -13,8 +13,6 @@ class SlicesData(Output):
     """
     Create data for horizontal or vertical 2D slices, all in a
     single Dataset
-
-
     """
 
     def __init__(
@@ -25,8 +23,6 @@ class SlicesData(Output):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         algo
@@ -37,7 +33,6 @@ class SlicesData(Output):
             Verbosity threshold for printing calculation info
         kwargs
             Additional parameters for the Output class
-
         """
         super().__init__(**kwargs)
         self._slice_data = SliceData(

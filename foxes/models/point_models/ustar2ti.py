@@ -15,26 +15,16 @@ if TYPE_CHECKING:
 class Ustar2TI(PointDataModel):
     """
     Calculates TI from Ustar, using TI = Ustar / (kappa*WS)
-
-    Attributes
-    ----------
-    max_ti
-        Upper limit of the computed TI values
-
-
     """
 
     def __init__(self, max_ti: float | None = None, **kwargs: Any) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         max_ti
             Upper limit of the computed TI values
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.max_ti = max_ti

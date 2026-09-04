@@ -20,15 +20,6 @@ if TYPE_CHECKING:
 class WindFarmsEval(FarmResultsEval):
     """
     Output class for aggregating and splitting multiple wind farms.
-
-     Attributes
-    ----------
-    farm
-        The wind farm object
-    results
-        The farm results
-
-
     """
 
     def __init__(
@@ -39,8 +30,6 @@ class WindFarmsEval(FarmResultsEval):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         farm
@@ -53,7 +42,6 @@ class WindFarmsEval(FarmResultsEval):
             The algorithm object, used to get the nominal power for the farms if available
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(farm_results=farm_results, **kwargs)
         self.farm = farm

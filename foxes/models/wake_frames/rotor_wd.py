@@ -19,26 +19,16 @@ class RotorWD(WakeFrame):
     """
     Align the first axis for each rotor with the
     local normalized wind direction.
-
-    Attributes
-    ----------
-    var_wd
-        The wind direction variable
-
-
     """
 
     def __init__(self, var_wd: str = FV.WD, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         var_wd
             The wind direction variable
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.var_wd = var_wd

@@ -28,21 +28,6 @@ class Streamlines2D(WakeFrame):
     and its consideration in engineering models"
     Anna von Brandis et. al, 2023
     https://wes.copernicus.org/articles/8/589/2023/
-
-    Attributes
-    ----------
-    step
-        The streamline step size in m
-    chunksize_steps
-        The number of steps per chunk for streamline
-    cl_ipars
-        Interpolation parameters for centre line
-        point interpolation
-    intersection_error
-        Whether to check for streamline
-        self-intersections
-
-
     """
 
     def __init__(
@@ -54,8 +39,6 @@ class Streamlines2D(WakeFrame):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         step
@@ -70,7 +53,6 @@ class Streamlines2D(WakeFrame):
             self-intersections
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.step = step

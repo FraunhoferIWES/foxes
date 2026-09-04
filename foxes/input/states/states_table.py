@@ -27,29 +27,6 @@ import foxes.constants as FC
 class StatesTable(States):
     """
     States from a `pandas.DataFrame` or a pandas readable file.
-
-    Attributes
-    ----------
-    data_source
-        Either a path to a file or the data itself.
-    ovars
-        The output variables.
-    var2col
-        Mapping from variable names to data column names.
-    fixed_vars
-        Fixed uniform variable values, instead of reading from data.
-    profdicts
-        Mapping from output variable names to profile definitions.
-    rpars
-        Pandas file reading parameters.
-    states_sel
-        State subset selection.
-    states_loc
-        State index selection via pandas loc.
-    RDICT
-        Default pandas file reading parameters.
-
-
     """
 
     RDICT = {"index_col": 0}
@@ -66,8 +43,6 @@ class StatesTable(States):
         states_loc: list[object] | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -86,7 +61,6 @@ class StatesTable(States):
             State subset selection.
         states_loc
             State index selection via pandas loc.
-
         """
         super().__init__()
 
@@ -495,8 +469,6 @@ class StatesTable(States):
 class Timeseries(StatesTable):
     """
     Timeseries states data.
-
-
     """
 
     RDICT: dict[str, Any] = {"index_col": 0, "parse_dates": [0]}
@@ -505,8 +477,6 @@ class Timeseries(StatesTable):
 class TabStates(StatesTable):
     """
     States created from a single tab file
-
-
     """
 
     def __init__(
@@ -522,8 +492,6 @@ class TabStates(StatesTable):
         normalize: bool = True,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -544,7 +512,6 @@ class TabStates(StatesTable):
             State index selection via pandas loc function
         normalize
             Normalize the tab file data
-
         """
         self._normalize = normalize
         self.__tab_data: Dataset | None

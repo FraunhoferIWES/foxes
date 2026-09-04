@@ -14,13 +14,6 @@ from .output import Output
 class ResultsWriter(Output):
     """
     Writes results farm data to file.
-
-    Attributes
-    ----------
-    data
-        The farm results
-
-
     """
 
     def __init__(
@@ -30,8 +23,6 @@ class ResultsWriter(Output):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         farm_results
@@ -40,7 +31,6 @@ class ResultsWriter(Output):
             The data, if farm_results is None
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
 

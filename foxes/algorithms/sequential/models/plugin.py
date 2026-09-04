@@ -16,8 +16,6 @@ class SequentialPlugin:
     ----------
     algo
         The sequential algorithm
-
-
     """
 
     def __init__(self) -> None:

@@ -18,26 +18,15 @@ if TYPE_CHECKING:
 class RotorCentreCalc(TurbineModel):
     """
     Calculates data at the rotor centre
-
-    Attributes
-    ----------
-    calc_vars
-        The variables that are calculated by the model,
-        keys: var names, values: rotor var names
-
-
     """
 
     def __init__(self, calc_vars: dict[str, str] | list[str]) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         calc_vars
             The variables that are calculated by the model,
             keys: var names, values: rotor var names
-
         """
         super().__init__()
 

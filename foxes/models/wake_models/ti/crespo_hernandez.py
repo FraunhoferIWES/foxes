@@ -28,31 +28,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     For the wake diameter we use Eqns. (17), (15), (4), (5) from
             doi:10.1088/1742-6596/625/1/012039
-
-    Attributes
-    ----------
-    a_near
-        Model parameter
-    a_far
-        Model parameter
-    e1
-        Model parameter
-    e2
-        Model parameter
-    e3
-        Model parameter
-    use_ambti
-        Flag for using ambient TI instead of local
-        wake corrected TI
-    sbeta_factor
-        Factor multiplying sbeta
-    near_wake_D
-        The near wake distance in units of D,
-        calculated from TI and ct if None
-    wake_k
-        Handler for the wake growth parameter k
-
-
     """
 
     def __init__(
@@ -70,8 +45,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         **wake_k: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -103,7 +76,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The induction model
         wake_k
             Parameters for the WakeK class
-
         """
         super().__init__(
             other_superpositions={FV.TI: superposition}, induction=induction

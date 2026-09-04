@@ -27,19 +27,6 @@ class IECTIWake(TopHatWakeModel):
 
     and the Frandsen wake TI model, from IEC-64100 (2019):
     http://orbit.dtu.dk/files/3750291/2009_31.pdf
-
-    Attributes
-    ----------
-    wake_k
-        Handler for the wake growth parameter k
-    c0
-        The c0 parameter for the wake decay
-    c1
-        The c1 parameter for the wake decay
-    c2
-        The c2 parameter for the wake decay
-
-
     """
 
     def __init__(
@@ -54,8 +41,6 @@ class IECTIWake(TopHatWakeModel):
         **wake_k: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -75,7 +60,6 @@ class IECTIWake(TopHatWakeModel):
             The c1 parameter for the wake decay
         c2
             The c2 parameter for the wake decay
-
         """
         super().__init__(
             other_superpositions={FV.TI: superposition}, induction=induction

@@ -22,17 +22,6 @@ if TYPE_CHECKING:
 class Iterative(Downwind):
     """
     Iterative calculation of farm data.
-
-    Attributes
-    ----------
-    max_it
-        The maximal number of iterations
-    conv_crit
-        The convergence criteria
-    prev_farm_results
-        Results from the previous iteration
-
-
     """
 
     @classmethod
@@ -65,8 +54,6 @@ class Iterative(Downwind):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -79,7 +66,6 @@ class Iterative(Downwind):
             Parameters for cutin modification
         kwargs
             Keyword arguments for Downwind
-
         """
         super().__init__(*args, **kwargs)
 

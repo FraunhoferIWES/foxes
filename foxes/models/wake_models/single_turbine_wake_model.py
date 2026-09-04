@@ -19,23 +19,6 @@ class SingleTurbineWakeModel(WakeModel):
     a single turbine wake
 
     Single turbine wake models depend on superposition models.
-
-    Attributes
-    ----------
-    wind_superposition
-        The wind superposition model name (vector or compenent model),
-        will be looked up in model book
-    other_superpositions
-        The superpositions for other than (ws, wd) variables.
-        Key: variable name str, value: The wake superposition
-        model name, will be looked up in model book
-    vec_superp
-        The wind vector wake superposition model
-    superp
-        The superposition dict, key: variable name str,
-        value: the corresponding wake superposition model
-
-
     """
 
     def __init__(
@@ -44,8 +27,6 @@ class SingleTurbineWakeModel(WakeModel):
         other_superpositions: dict[str, str] | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         wind_superposition
@@ -55,7 +36,6 @@ class SingleTurbineWakeModel(WakeModel):
             The superpositions for other than (ws, wd) variables.
             Key: variable name str, value: The wake superposition
             model name, will be looked up in model book
-
         """
         super().__init__()
         self.wind_superposition = wind_superposition
@@ -213,8 +193,6 @@ class SingleTurbineWakeModel(WakeModel):
 class TurbineInductionModel(SingleTurbineWakeModel):
     """
     Abstract base class for turbine induction models.
-
-
     """
 
     @property

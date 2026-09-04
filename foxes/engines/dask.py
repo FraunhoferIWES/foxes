@@ -111,7 +111,9 @@ def _recombine_mdata_with_shared(mdata: MData, shared: dict[str, Any] | None) ->
 
 
 class DaskProcessRunner(ProcessEngineRunner):
-    """Process runner variant that supports dask shared-token payloads."""
+    """
+    Process runner variant that supports dask shared-token payloads.
+    """
 
     @staticmethod
     def _resolve_shared_value(value: Any) -> Any:
@@ -235,8 +237,6 @@ class DaskProcessRunner(ProcessEngineRunner):
 class DaskEngine(ProcessEngine):
     """
     The dask engine for delayed foxes calculations.
-
-
     """
 
     def __init__(
@@ -249,8 +249,6 @@ class DaskEngine(ProcessEngine):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -259,7 +257,6 @@ class DaskEngine(ProcessEngine):
             Flag for showing progress bar
         kwargs
             Additional parameters for the base class
-
         """
         load_dask()
         super().__init__(
@@ -416,15 +413,6 @@ class DaskEngine(ProcessEngine):
 class LocalClusterEngine(ProcessEngine):
     """
     The dask engine for foxes calculations on a local cluster.
-
-    Attributes
-    ----------
-    cluster_pars
-        Parameters for the cluster
-    client_pars
-        Parameters for the client of the cluster
-
-
     """
 
     def __init__(
@@ -439,8 +427,6 @@ class LocalClusterEngine(ProcessEngine):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -454,7 +440,6 @@ class LocalClusterEngine(ProcessEngine):
             task submission. Values <= 0 disable this conversion.
         kwargs
             Additional parameters for the base class
-
         """
         load_dask()
         super().__init__(
@@ -724,8 +709,6 @@ class LocalClusterEngine(ProcessEngine):
 class SlurmClusterEngine(LocalClusterEngine):
     """
     The dask engine for foxes calculations on a SLURM cluster.
-
-
     """
 
     def __enter__(self) -> LocalClusterEngine:

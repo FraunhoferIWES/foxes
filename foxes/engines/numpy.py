@@ -8,8 +8,6 @@ from .threads import ThreadsEngine, ThreadsEngineRunner
 class NumpyEngine(ThreadsEngine):
     """
     The numpy engine for foxes calculations.
-
-
     """
 
     def submit(self, f: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:

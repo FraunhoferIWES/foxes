@@ -28,15 +28,6 @@ class Rathmann(TurbineInductionModel):
     "On the accuracy of predicting wind-farm blockage."
     Renewable Energy (2023).
     https://www.sciencedirect.com/science/article/pii/S0960148123007620
-
-    Attributes
-    ----------
-    pre_rotor_only
-        Calculate only the pre-rotor region
-    induction
-        The induction model
-
-
     """
 
     def __init__(
@@ -46,8 +37,6 @@ class Rathmann(TurbineInductionModel):
         pre_rotor_only: bool = False,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -56,7 +45,6 @@ class Rathmann(TurbineInductionModel):
             The induction model
         pre_rotor_only
             Calculate only the pre-rotor region
-
         """
         super().__init__(wind_superposition=superposition)
         self.induction = induction

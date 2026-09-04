@@ -21,8 +21,6 @@ class FarmDataModel(DataCalcModel):
     """
     Abstract base class for models that modify
     farm data.
-
-
     """
 
     @abstractmethod
@@ -180,24 +178,14 @@ class FarmDataModelList(FarmDataModel):
     By using the FarmDataModelList the models'
     `calculate` functions are called together
     under one common call of xarray's `apply_ufunc`.
-
-    Attributes
-    ----------
-    models
-        The model list
-
-
     """
 
     def __init__(self, models: list[FarmDataModel] | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         models
             The model list
-
         """
         super().__init__()
         self.models = [] if models is None else models

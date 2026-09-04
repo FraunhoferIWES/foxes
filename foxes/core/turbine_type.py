@@ -17,45 +17,6 @@ class TurbineType(TurbineModel):
 
     Rotor diameter and hub height can be overwritten
     by individual settings in the Turbine object.
-
-    Attributes
-    ----------
-    name
-        The model name
-    D
-        The rotor diameter
-    H
-        The hub height
-    P_nominal
-        The nominal power in kW
-    P_unit
-        The unit of power
-    rho_corr_P
-        The type of air density correction for the power curve, choices:
-        "rho": apply the air density ratio (rho / rho_ref) as a factor to the power curve
-        "rews": correct the rotor equivalent wind speed by the air density ratio (rho / rho_ref)^3
-        No air density correction applied to the power curve
-    rho_corr_ct
-        The type of air density correction for the ct curve, choices:
-        "rho": apply the air density ratio (rho / rho_ref) as a factor to the ct curve
-        "rews": correct the rotor equivalent wind speed by the air density ratio (rho / rho_ref)^2
-        No air density correction applied to the ct curve
-    yawm_corr_P
-        The type of yaw misalignment correction for the power curve, choices:
-        "factor": apply a correction factor to the power curve
-        "wind_speed": correct the rotor equivalent wind speed by a yaw misalignment factor
-        No yaw misalignment correction applied to the power curve
-    yawm_corr_ct
-        The type of yaw misalignment correction for the ct curve, choices:
-        "factor": apply a correction factor to the ct curve
-        "wind_speed": correct the rotor equivalent wind speed by a yaw misalignment factor
-        No yaw misalignment correction applied to the ct curve
-    yawm_corr_p_P
-        The exponent for yaw dependency of P
-    yawm_corr_p_ct
-        The exponent for yaw dependency of ct
-
-
     """
 
     def __init__(
@@ -73,8 +34,6 @@ class TurbineType(TurbineModel):
         yawm_corr_p_ct: float = 1.0,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         name
@@ -99,7 +58,6 @@ class TurbineType(TurbineModel):
             The exponent for yaw dependency of power.
         yawm_corr_p_ct
             The exponent for yaw dependency of thrust.
-
         """
         super().__init__()
 

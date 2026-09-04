@@ -17,21 +17,6 @@ class PointCloudData(DatasetStates):
     """
     Inflow data with point cloud support.
 
-    Attributes
-    ----------
-    states_coord
-        The states coordinate name in the data
-    point_coord
-        The point coordinate name in the data
-    x_ncvar
-        The x variable name in the data
-    y_ncvar
-        The y variable name in the data
-    h_ncvar
-        The height variable name in the data
-    weight_ncvar
-        The name of the weights variable in the data
-
     Examples
     --------
     Example of the NetCDF input files with point cloud data:
@@ -45,8 +30,6 @@ class PointCloudData(DatasetStates):
     >>>        wd       (state, point) float32 12kB ...
     >>>        ti       (point) float32 120B ...
     >>>        rho      (state) float32 400B ...
-
-
     """
 
     def __init__(
@@ -61,8 +44,6 @@ class PointCloudData(DatasetStates):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -81,7 +62,6 @@ class PointCloudData(DatasetStates):
             The name of the weights variable in the data
         kwargs
             Additional parameters for the base class
-
         """
         kwargs["bounds_extra_space"] = None
         super().__init__(*args, **kwargs)
@@ -388,17 +368,6 @@ class WeibullPointCloud(PointCloudData):
     """
     Weibull sectors at point cloud support, e.g., at turbine locations.
 
-    Attributes
-    ----------
-    wd_coord
-        The wind direction coordinate name
-    ws_coord
-        The wind speed coordinate name, if wind speed bin
-        centres are in data, else None
-    ws_bins
-        The wind speed bins, including
-        lower and upper bounds, shape: (n_ws_bins+1,)
-
     Examples
     --------
     Example of the NetCDF input files with point cloud data:
@@ -416,8 +385,6 @@ class WeibullPointCloud(PointCloudData):
     >>>        x                     (wind_turbine) float64 64B ...
     >>>        y                     (wind_turbine) float64 64B ...
     >>>        height                (wind_turbine) float64 64B ...
-
-
     """
 
     def __init__(
@@ -429,8 +396,6 @@ class WeibullPointCloud(PointCloudData):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -445,7 +410,6 @@ class WeibullPointCloud(PointCloudData):
             lower and upper bounds
         kwargs
             Keyword arguments for the base class
-
         """
         kwargs.pop("states_coord", None)
         kwargs.pop("time_format", None)
@@ -648,15 +612,6 @@ class WeibullPointCloud(PointCloudData):
 class TurbinePointCloud(DatasetStates):
     """
     Point cloud data at turbine locations, for wake calculations.
-
-    Attributes
-    ----------
-    states_coord
-        The coordinate name for the states dimension.
-    turbine_coord
-        The coordinate name for the turbine dimension.
-
-
     """
 
     def __init__(
@@ -668,8 +623,6 @@ class TurbinePointCloud(DatasetStates):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -682,7 +635,6 @@ class TurbinePointCloud(DatasetStates):
             The name of the weights variable in the data
         kwargs
             Keyword arguments for the base class
-
         """
         # Turbine-point-cloud data is indexed by turbine, not by global X/Y grids.
         # Disable XY-bound filtering from DatasetStates to avoid requiring X/Y cmap.

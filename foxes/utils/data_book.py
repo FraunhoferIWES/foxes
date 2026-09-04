@@ -15,25 +15,14 @@ class DataBook:
     ----------
     data_book
         A data book to start from
-
-    Attributes
-    ----------
-    dbase
-        The data base. Key: context str,
-        value
-
-
     """
 
     def __init__(self, data_book: DataBook | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_book: DataBook, optional
             A data book to start from
-
         """
         self.dbase: dict[str, dict[str, Path]] = {}
         if data_book is not None:

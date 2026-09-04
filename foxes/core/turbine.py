@@ -10,33 +10,6 @@ class Turbine:
 
     The turbine is merely a defined by basic data
     entries and a choice of turbine models.
-
-    Attributes
-    ----------
-    xy
-        The turbine ground position, shape: (2,)
-    models
-        The turbine model names, as they appear
-        in the model book
-    index
-        The index in the wind farm
-    name
-        The turbine name/label
-    mstates_sel
-        For each turbine model, the state selection
-        boolean array with shape (n_states,)
-    D
-        The rotor diameter. Overwrites turbine type
-        settings if given
-    H
-        The hub height. Overwrites turbine type
-        settings if given
-    wind_farm_name
-        The name of the wind farm the turbine belongs to
-    cluster_name
-        The name of the cluster the wind farm belongs to
-
-
     """
 
     def __init__(
@@ -52,8 +25,6 @@ class Turbine:
         cluster_name: str | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         xy
@@ -77,7 +48,6 @@ class Turbine:
             The name of the wind farm to which the turbine belongs.
         cluster_name
             The name of the cluster to which the wind farm belongs.
-
         """
         self.index = index
         self.name = name

@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 class CalculatorType(TurbineType):
     """
     Direct data infusion by a user function.
-
-
     """
 
     def __init__(
@@ -27,8 +25,6 @@ class CalculatorType(TurbineType):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         func
@@ -52,7 +48,6 @@ class CalculatorType(TurbineType):
             Flag for runs that require the REWS3 variable
         kwargs
             Additional parameters for TurbineType class
-
         """
         super().__init__(*args, **kwargs)
         self._func = func

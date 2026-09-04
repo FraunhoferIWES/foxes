@@ -24,13 +24,6 @@ class PartialTopHat(PartialCentre):
 
     The wake effect is weighted by the overlap of
     the wake circle and the rotor disc circle.
-
-    Attributes
-    ----------
-    rotor_model
-        The rotor model, default is the one from the algorithm
-
-
     """
 
     def check_wmodel(self, wmodel: WakeModel, error: bool = True) -> bool:
@@ -60,13 +53,10 @@ class PartialTopHat(PartialCentre):
 
     def __init__(self, rotor_model: RotorModel | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         rotor_model
             The rotor model, default is the one from the algorithm
-
         """
         super().__init__()
         self.rotor_model = rotor_model

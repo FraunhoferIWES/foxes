@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 class GaussianWakeModel(AxisymmetricWakeModel):
     """
     Abstract base class for Gaussian wake models.
-
-
     """
 
     @abstractmethod

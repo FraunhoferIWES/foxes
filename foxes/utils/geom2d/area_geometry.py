@@ -14,8 +14,6 @@ from matplotlib.axes import Axes
 class AreaGeometry(metaclass=ABCMeta):
     """
     Abstract base class for closed 2D geometries.
-
-
     """
 
     @abstractmethod
@@ -308,19 +306,14 @@ class AreaGeometry(metaclass=ABCMeta):
 class InvertedAreaGeometry(AreaGeometry):
     """
     Base class for inverted geometries.
-
-
     """
 
     def __init__(self, geometry: AreaGeometry) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         geometry: geom2d.AreaGeometry
             The original geometry
-
         """
         self._geometry = geometry
 
@@ -473,24 +466,14 @@ class InvertedAreaGeometry(AreaGeometry):
 class AreaUnion(AreaGeometry):
     """
     The union of area geometries.
-
-    Attributes
-    ----------
-    geometries
-        The geometries
-
-
     """
 
     def __init__(self, geometries: list[AreaGeometry]) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         geometries
             The geometries
-
         """
         self.geometries = geometries
 
@@ -701,19 +684,14 @@ class AreaUnion(AreaGeometry):
 class InvertedAreaUnion(InvertedAreaGeometry):
     """
     Inversion of a union of areas
-
-
     """
 
     def __init__(self, union: AreaUnion) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         union: geom2d.AreaUnion
             The original area union geometry
-
         """
         super().__init__(union)
 
@@ -779,19 +757,14 @@ class InvertedAreaUnion(InvertedAreaGeometry):
 class AreaIntersection(AreaGeometry):
     """
     The intersection of area geometries.
-
-
     """
 
     def __init__(self, geometries: list[AreaGeometry]) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         geometries
             The geometries
-
         """
         self.geometries = geometries
         self._geometry = AreaUnion([g.inverse() for g in geometries]).inverse()

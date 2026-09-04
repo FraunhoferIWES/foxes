@@ -22,8 +22,6 @@ class WakeSuperposition(Model):
     if superposition models are used, or if the
     wake model computes the total wake result by
     other means.
-
-
     """
 
     @abstractmethod
@@ -145,8 +143,6 @@ class WindVectorWakeSuperposition(Model):
     if superposition models are used, or if the
     wake model computes the total wake result by
     other means.
-
-
     """
 
     @abstractmethod

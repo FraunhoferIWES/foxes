@@ -24,16 +24,12 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     ----------
     induction
         The induction model
-
-
     """
 
     def __init__(
         self, *args: Any, induction: AxialInductionModel | str = "Betz", **kwargs: Any
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -42,7 +38,6 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The induction model
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(*args, **kwargs)
         self.induction = induction

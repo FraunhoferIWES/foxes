@@ -153,47 +153,6 @@ class DatasetStates(States):
     """
     Abstract base class for heterogeneous ambient states that
     are based on data from NetCDF files or an xarray Dataset.
-
-    Attributes
-    ----------
-    data_source
-        The data or the file search pattern, should end with
-        suffix '.nc'. One or many files.
-    ovars
-        The output variables
-    var2ncvar
-        Mapping from variable names to variable names
-        in the nc file
-    fixed_vars
-        Uniform values for output variables, instead
-        of reading from data
-    time_format
-        The datetime parsing format string
-    bounds_extra_space
-        The extra space, either float in m,
-        or str for units of D, e.g. '2.5D'
-    height_bounds
-        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-    sel
-        Subset selection via xr.Dataset.sel()
-    isel
-        Subset selection via xr.Dataset.isel()
-    weight_factor
-        The factor to multiply the weights with
-    sort
-        Whether to sort the data by the state coordinate, or selected coordinates
-    check_times
-        Whether to check the time coordinates for consistency
-    check_input_nans
-        Whether to check input data for NaNs
-    preprocess_nc
-        A function to preprocess the netcdf Dataset before use
-    force_keep_vars
-        Variables to remove from the drop_vars list when reading the nc files
-    interp_pars
-        Additional parameters the interpolation
-
-
     """
 
     def __init__(
@@ -218,8 +177,6 @@ class DatasetStates(States):
         **kwargs: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -268,7 +225,6 @@ class DatasetStates(States):
             Additional parameters the interpolation
         kwargs
             Additional arguments for the base class
-
         """
         super().__init__(load_mode=load_mode, **kwargs)
 

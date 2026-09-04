@@ -16,15 +16,6 @@ if TYPE_CHECKING:
 class SetAmbPointResults(PointDataModel):
     """
     This model copies point results to ambient results.
-
-    Attributes
-    ----------
-    pvars
-        The point variables to be treated
-    vars
-        The variables to be copied to output
-
-
     """
 
     def __init__(self) -> None:

@@ -24,15 +24,6 @@ class PartialWakesModel(Model):
 
     Partial wakes models compute wake effects
     for rotor effective quantities.
-
-    Attributes
-    ----------
-    wake_models
-        The wake model selection
-    wake_frame
-        The wake frame
-
-
     """
 
     def check_wmodel(self, wmodel: WakeModel, error: bool = True) -> bool:

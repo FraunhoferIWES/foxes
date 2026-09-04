@@ -24,7 +24,6 @@ __global_engine_data__: dict[str, Engine | None] = dict(engine=None)
 class EngineRunner(ABC):
     """
     Helper class for running calculations in engines
-
     """
 
     def _write_chunk_results(
@@ -176,27 +175,12 @@ class Engine(ABC):
     """
     Abstract base class for foxes calculation engines.
 
-    Attributes
-    ----------
-    chunk_size_states
-        The size of a state chunk.
-    chunk_size_points
-        The size of a point chunk.
-    progress_bar
-        Whether to use a progress bar instead of printing reached-percent
-        updates. If ``None``, neither a progress bar nor progress messages are
-        used.
-    verbosity
-        The verbosity level; ``0`` means silent.
-
     Notes
     -----
     Use engines via the context manager protocol:
     >>> engine = Engine.new(...)
     >>> with engine:
     >>>     ...
-
-
     """
 
     def __init__(
@@ -208,8 +192,6 @@ class Engine(ABC):
         verbosity: int = 1,
     ) -> None:
         """
-        Construct the engine.
-
         Parameters
         ----------
         chunk_size_states
@@ -224,7 +206,6 @@ class Engine(ABC):
             ``None``, neither the progress bar nor progress prints are used.
         verbosity
             The verbosity level, where ``0`` is silent.
-
         """
         self.chunk_size_states = chunk_size_states
         self.chunk_size_points = chunk_size_points
@@ -848,7 +829,9 @@ class Engine(ABC):
         return self.ChunkResultsManager(algo=algo, engine=self, **kwargs)
 
     class ChunkResultsManager:
-        """Helper class for results management during chunk calculations"""
+        """
+        Helper class for results management during chunk calculations
+        """
 
         def __init__(
             self,
@@ -865,8 +848,6 @@ class Engine(ABC):
             write_nc: dict[str, Any] | None,
         ) -> None:
             """
-            Construct the chunk results manager.
-
             Parameters
             ----------
             algo
@@ -891,7 +872,6 @@ class Engine(ABC):
                 Whether the calculation is iterative.
             write_nc
                 NetCDF output parameters, or ``None``.
-
             """
             self.algo = algo
             self.engine = engine

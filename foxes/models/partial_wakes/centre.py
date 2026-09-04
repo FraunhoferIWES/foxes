@@ -17,8 +17,6 @@ class PartialCentre(RotorPoints):
     """
     Partial wakes calculated only at the
     rotor centre point.
-
-
     """
 
     def get_wake_points(

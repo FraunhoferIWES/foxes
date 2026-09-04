@@ -16,24 +16,6 @@ import foxes.constants as FC
 class WRGStates(States):
     """
     Ambient states based on WRG data
-
-    Attributes
-    ----------
-    wrg_fname
-        Name of the WRG file
-    ws_bins
-        The wind speed bins, including
-        lower and upper bounds, shape: (n_ws_bins+1,)
-    fixed_vars
-        Fixed uniform variable values, instead of
-        reading from data
-    bounds_extra_space
-        The extra space, either float in m,
-        or str for units of D, e.g. '2.5D'
-    interp_pars
-        Additional parameters for scipy.interpolate.interpn
-
-
     """
 
     def __init__(
@@ -45,8 +27,6 @@ class WRGStates(States):
         **interp_pars: object,
     ) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         wrg_fname
@@ -62,7 +42,6 @@ class WRGStates(States):
             or str for units of D, e.g. '2.5D'
         interp_pars
             Additional parameters for scipy.interpolate.interpn
-
         """
         super().__init__()
         self.wrg_fname = wrg_fname

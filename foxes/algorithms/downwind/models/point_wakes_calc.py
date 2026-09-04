@@ -18,19 +18,6 @@ if TYPE_CHECKING:
 class PointWakesCalculation(PointDataModel):
     """
     This model calculates wake effects at points of interest.
-
-    Attributes
-    ----------
-    pvars
-        The variables of interest
-    emodels
-        The extra evaluation models
-    emodels_cpars
-        The calculation parameters for extra models
-    wake_models
-        The wake models to be used
-
-
     """
 
     def __init__(
@@ -40,8 +27,6 @@ class PointWakesCalculation(PointDataModel):
         wake_models: list[WakeModel] | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         emodels
@@ -50,7 +35,6 @@ class PointWakesCalculation(PointDataModel):
             The calculation parameters for extra models
         wake_models
             Specific wake models to be used
-
         """
         super().__init__()
         self.pvars: list[str] = []

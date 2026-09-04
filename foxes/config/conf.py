@@ -14,11 +14,12 @@ import foxes.constants as FC
 class Config(Dict):
     """
     Container for configurational data
-
     """
 
     def __init__(self) -> None:
-        """Constructor"""
+        """
+        Constructor
+        """
         super().__init__(
             {
                 FC.DTYPE: np.float64,

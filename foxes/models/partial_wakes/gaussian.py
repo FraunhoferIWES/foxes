@@ -27,15 +27,6 @@ if TYPE_CHECKING:
 class PartialGaussianLookup(PartialCentre):
     """
     Gaussian-only partial wake model using lookup-artifact rotor weights.
-
-    Attributes
-    ----------
-    lookup_data
-        Lookup dataset source, either loaded dataset or NetCDF file path.
-    bounds_policy
-        Out-of-range behavior for lookup queries. Default is ``"clip"``.
-    lookup_dataset_key
-        Model-data key for the loaded and validated lookup dataset.
     """
 
     def __init__(
@@ -44,8 +35,6 @@ class PartialGaussianLookup(PartialCentre):
         bounds_policy: Literal["clip", "nan", "raise"] = "clip",
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         lookup_data
@@ -356,18 +345,10 @@ class PartialGaussianLookup(PartialCentre):
 class PartialGaussian(PartialGaussianLookup):
     """
     Gaussian partial wakes using an analytical rotor-disc average.
-
-    Attributes
-    ----------
-    min_weight
-        Minimal retained rotor-disc weight. Lower values are zeroed.
-
     """
 
     def __init__(self, min_weight: float = 1.0e-8) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         min_weight

@@ -18,36 +18,6 @@ from .dataset_states import DatasetStates
 class SingleStateField(States):
     """
     Single state field, i.e. no state coordinate, just a regular grid.
-
-    Attributes
-    ----------
-    data_source
-        The NetCDF dataset to read from, or a path to it.
-    output_vars
-        Names of variables to read.
-    var2ncvar
-        Mapping from variable names to netCDF variable names.
-    fixed_vars
-        Mapping from variable names to fixed values.
-    x_coord
-        Name of the x coordinate.
-    y_coord
-        Name of the y coordinate.
-    h_coord
-        Name of the height coordinate.
-    sel
-        Subset selection via xr.Dataset.sel().
-    isel
-        Subset selection via xr.Dataset.isel().
-    interp_pars
-        Interpolation parameters passed to the interpolation function.
-    bounds_extra_space
-        The extra space, either a float in m or a string for units of D,
-        for example "2.5D".
-    height_bounds
-        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D.
-
-
     """
 
     def __init__(
@@ -67,8 +37,6 @@ class SingleStateField(States):
         **kwargs: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -98,7 +66,6 @@ class SingleStateField(States):
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D.
         kwargs
             Keyword arguments passed to the base class.
-
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
         self.data_source = data_source

@@ -19,19 +19,6 @@ if TYPE_CHECKING:
 class SetUniformData(PointDataModel):
     """
     Set uniform data (can be state dependent)
-
-    Attributes
-    ----------
-    data_source
-        Either a file name, or a data frame, both assuming
-        state dependent data. Or a dict for state independent
-        uniform data (i.e., scalars)
-    ovars
-        The variables to be written
-    var2col
-        Mapping from variable names to data column names
-
-
     """
 
     def __init__(
@@ -42,8 +29,6 @@ class SetUniformData(PointDataModel):
         pd_read_pars: dict[str, Any] = {},
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -56,7 +41,6 @@ class SetUniformData(PointDataModel):
             Mapping from variable names to data column names
         pd_read_pars
             pandas file reading parameters
-
         """
         super().__init__()
 

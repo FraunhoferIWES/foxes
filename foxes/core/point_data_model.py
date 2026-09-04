@@ -21,8 +21,6 @@ class PointDataModel(DataCalcModel):
     """
     Abstract base class for models that modify
     point based data.
-
-
     """
 
     @abstractmethod
@@ -173,24 +171,14 @@ class PointDataModelList(PointDataModel):
     By using the PointDataModelList the models'
     `calculate` functions are called together
     under one common call by the engine.
-
-    Attributes
-    ----------
-    models
-        The model list
-
-
     """
 
     def __init__(self, models: list[PointDataModel] | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         models
             The model list
-
         """
         super().__init__()
         self.models = [] if models is None else models

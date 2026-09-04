@@ -15,28 +15,16 @@ if TYPE_CHECKING:
 class Thrust2Ct(TurbineModel):
     """
     Calculates ct from thrust force data.
-
-    Attributes
-    ----------
-    thrust_var
-        Name of the thrust variable
-    WSCT
-        The wind speed variable for ct lookup
-
-
     """
 
     def __init__(self, thrust_var: str = FV.T, var_ws_ct: str = FV.REWS2) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         thrust_var
             Name of the thrust variable
         var_ws_ct
             The wind speed variable for ct lookup
-
         """
         super().__init__()
         self.thrust_var = thrust_var

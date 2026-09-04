@@ -17,8 +17,6 @@ if TYPE_CHECKING:
 class InitFarmData(FarmDataModel):
     """
     Sets basic turbine data and applies downwind order
-
-
     """
 
     def output_farm_vars(self, algo: Algorithm) -> list[str]:

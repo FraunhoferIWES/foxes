@@ -19,17 +19,6 @@ if TYPE_CHECKING:
 class SliceData(Output):
     """
     Create data for horizontal or vertical 2D slices
-
-    Attributes
-    ----------
-    algo
-        The algorithm for point calculation
-    farm_results
-        The farm results
-    verbosity_delta
-        Verbosity threshold for printing calculation info
-
-
     """
 
     def __init__(
@@ -40,8 +29,6 @@ class SliceData(Output):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         algo
@@ -52,7 +39,6 @@ class SliceData(Output):
             Verbosity threshold for printing calculation info
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.algo = algo

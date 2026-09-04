@@ -20,23 +20,6 @@ import foxes.constants as FC
 class SingleStateStates(States):
     """
     A single uniform state.
-
-    Attributes
-    ----------
-    ws
-        The wind speed.
-    wd
-        The wind direction.
-    ti
-        The TI value.
-    rho
-        The air density.
-    profdicts
-        Mapping from output variable names to profile definitions.
-    profdata
-        Additional data for profiles.
-
-
     """
 
     def __init__(
@@ -49,8 +32,6 @@ class SingleStateStates(States):
         **profdata: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         ws
@@ -65,7 +46,6 @@ class SingleStateStates(States):
             Mapping from output variable names to profile definitions.
         profdata
             Additional data for profiles.
-
         """
         super().__init__()
         self.ws = ws

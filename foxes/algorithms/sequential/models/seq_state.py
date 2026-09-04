@@ -20,8 +20,6 @@ class SeqState(States):
     ----------
     states
         The original states set
-
-
     """
 
     def __init__(self, states: States) -> None:
@@ -32,7 +30,6 @@ class SeqState(States):
         ----------
         states
             The original states set
-
         """
         super().__init__()
         self.states = states

@@ -18,8 +18,6 @@ if TYPE_CHECKING:
 class WakeModel(Model):
     """
     Abstract base class for wake models.
-
-
     """
 
     def __init__(self) -> None:
@@ -245,15 +243,6 @@ class WakeModel(Model):
 class WakeK(Model):
     """
     Handler for the wake growth parameter k
-
-    Attributes
-    ----------
-    k_var
-        The name of the k variable
-    ti_var
-        The name of the TI variable
-
-
     """
 
     def __init__(
@@ -265,8 +254,6 @@ class WakeK(Model):
         ti_var: str = FV.TI,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         k
@@ -279,7 +266,6 @@ class WakeK(Model):
             The name of the k variable
         ti_var
             The name of the TI variable
-
         """
         super().__init__()
         self._k = k

@@ -15,8 +15,6 @@ from .field_data import LatLonFieldData
 class ICONStates(LatLonFieldData):
     """
     Heterogeneous ambient states in DWD-ICON format.
-
-
     """
 
     def __init__(
@@ -33,8 +31,6 @@ class ICONStates(LatLonFieldData):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -66,7 +62,6 @@ class ICONStates(LatLonFieldData):
             the chunk calculations.
         kwargs
             Additional parameters for the base class
-
         """
         if output_vars is None:
             ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]

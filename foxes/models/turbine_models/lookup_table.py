@@ -21,20 +21,6 @@ class LookupTable(TurbineModel):
     """
     Calculates the data by interpolation of
     lookup-table data
-
-    Attributes
-    ----------
-    data_source
-        The lookup-table data
-    input_vars
-        The foxes input variables
-    output_vars
-        The foxes output variables
-    varmap
-        Mapping from foxes variable names
-        to column names in the data_source
-
-
     """
 
     def __init__(
@@ -49,8 +35,6 @@ class LookupTable(TurbineModel):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -71,7 +55,6 @@ class LookupTable(TurbineModel):
         kwargs
             Additional parameters, added as default
             values if not in data
-
         """
         super().__init__()
 

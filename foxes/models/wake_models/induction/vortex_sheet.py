@@ -23,15 +23,6 @@ class VortexSheet(TurbineInductionModel):
     Reference:
     Medici, D., et al. "The upstream flow of a wind turbine: blockage effect." Wind Energy 14.5 (2011): 691-697.
     https://doi.org/10.1002/we.451
-
-    Attributes
-    ----------
-    pre_rotor_only
-        Calculate only the pre-rotor region
-    induction
-        The induction model
-
-
     """
 
     def __init__(
@@ -41,8 +32,6 @@ class VortexSheet(TurbineInductionModel):
         pre_rotor_only: bool = False,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -51,7 +40,6 @@ class VortexSheet(TurbineInductionModel):
             The induction model
         pre_rotor_only
             Calculate only the pre-rotor region
-
         """
         super().__init__(wind_superposition=superposition)
         self.induction = induction

@@ -20,26 +20,14 @@ class PartialSegregated(PartialWakesModel):
     """
     Add the averaged wake effects to the separately
     averaged ambient rotor results
-
-    Attributes
-    ----------
-    rotor_model
-        The rotor model, default is the one from the algorithm
-    grotor
-        The grid rotor model
-
-
     """
 
     def __init__(self, rotor_model: RotorModel) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         rotor_model
             The rotor model for wake averaging
-
         """
         super().__init__()
 

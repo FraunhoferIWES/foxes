@@ -35,13 +35,6 @@ class Algorithm(Model):
     Algorithms collect required objects for running
     calculations, and contain the calculation functions
     which are meant to be called from top level code.
-
-    Attributes
-    ----------
-    verbosity
-        The verbosity level, 0 means silent
-
-
     """
 
     def __init__(
@@ -52,8 +45,6 @@ class Algorithm(Model):
         dbook: DataBook | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         mbook
@@ -64,7 +55,6 @@ class Algorithm(Model):
             The verbosity level; ``0`` means silent.
         dbook
             The data book, or ``None`` for the default data book.
-
         """
         super().__init__()
 

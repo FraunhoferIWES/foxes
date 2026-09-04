@@ -9,24 +9,14 @@ class Animator:
     """
     Creates an animation from generators
     that yield lists of artists.
-
-    Attributes
-    ----------
-    fig
-        The figure object
-
-
     """
 
     def __init__(self, fig: Figure | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         fig
             The figure object
-
         """
         self.fig = fig
         self._gens: list[Any] = []

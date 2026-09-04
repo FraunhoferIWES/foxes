@@ -11,8 +11,6 @@ from .pool import PoolEngine
 class MultiprocessEngine(PoolEngine):
     """
     The multiprocessing engine for foxes calculations.
-
-
     """
 
     def new_runner(self) -> ProcessEngineRunner:

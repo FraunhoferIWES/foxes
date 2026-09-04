@@ -27,19 +27,6 @@ class PowerMask(TurbineModel):
     The model updates the P and CT variables,
     so it is wise to use it after calling the
     turbine type model.
-
-    Attributes
-    ----------
-    var_ws_P
-        The wind speed variable for power lookup
-    factor_P
-        The power unit factor, e.g. 1000 for kW
-    P_lim
-        Threshold power delta for boosts
-    induction
-        The induction model
-
-
     """
 
     def __init__(
@@ -50,8 +37,6 @@ class PowerMask(TurbineModel):
         induction: str | AxialInductionModel = "Betz",
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         var_ws_P
@@ -62,7 +47,6 @@ class PowerMask(TurbineModel):
             Threshold power delta for boosts
         induction
             The induction model
-
         """
         super().__init__()
 

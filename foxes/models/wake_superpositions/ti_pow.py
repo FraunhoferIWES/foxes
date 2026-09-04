@@ -14,22 +14,10 @@ if TYPE_CHECKING:
 class TIPow(WakeSuperposition):
     """
     Power wake superposition for TI.
-
-    Attributes
-    ----------
-    pow
-        The power to which to take the wake results
-    superp_to_amb
-        The method for combining ambient with wake deltas:
-        linear or quadratic
-
-
     """
 
     def __init__(self, pow: float, superp_to_amb: str = "quadratic") -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         pow
@@ -37,7 +25,6 @@ class TIPow(WakeSuperposition):
         superp_to_amb
             The method for combining ambient with wake deltas:
             linear or quadratic
-
         """
         super().__init__()
         self.pow = pow

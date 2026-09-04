@@ -28,34 +28,6 @@ class MultiHeightStates(States):
     example for wind speed at heights 50, 60, 100 m:
 
     WS-50, WS-60, WS-100, ...
-
-    Attributes
-    ----------
-    data_source
-        Either path to a file or data
-    ovars
-        The output variables
-    heights
-        The heights at which to search data
-    var2col
-        Mapping from variable names to data column names
-    fixed_vars
-        Fixed uniform variable values, instead of
-        reading from data
-    read_pars
-        pandas file reading parameters
-    states_sel
-        States subset selection
-    states_loc
-        State index selection via pandas loc function
-    check_nans
-        Whether to check for NaN values in the data
-    interpolate_nans_pars
-        Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
-    RDICT
-        Default pandas file reading parameters
-
-
     """
 
     RDICT: dict[str, int | list[int]] = {"index_col": 0}
@@ -75,8 +47,6 @@ class MultiHeightStates(States):
         **ipars: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -102,7 +72,6 @@ class MultiHeightStates(States):
             Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
         ipars
             Parameters for scipy.interpolate.interp1d
-
         """
         super().__init__()
 
@@ -571,17 +540,6 @@ class MultiHeightNCStates(MultiHeightStates):
     """
     Multi-height states from xarray Dataset.
 
-    Attributes
-    ----------
-    data_source
-        Either path to a file or data
-    state_coord
-        Name of the state coordinate
-    h_coord
-        Name of the height coordinate
-    xr_read_pars
-        Parameters for reading the xarray dataset
-
     Examples
     --------
     Example of the NetCDF structure:
@@ -595,8 +553,6 @@ class MultiHeightNCStates(MultiHeightStates):
     >>>        wd       (Time, height) float32 96kB ...
     >>>        ti       (Time, height) float32 96kB ...
     >>>        rho      (Time) float32 12kB ...
-
-
     """
 
     def __init__(
@@ -611,8 +567,6 @@ class MultiHeightNCStates(MultiHeightStates):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -634,7 +588,6 @@ class MultiHeightNCStates(MultiHeightStates):
             Parameters for reading the xarray dataset
         kwargs
             Parameters for the base class
-
         """
         read_pars = kwargs.pop("read_pars", {})
         super().__init__(
@@ -798,8 +751,6 @@ class MultiHeightNCStates(MultiHeightStates):
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
-
-
     """
 
     RDICT = {"index_col": 0, "parse_dates": [0]}
@@ -811,8 +762,6 @@ class MultiHeightTimeseries(MultiHeightStates):
         **kwargs: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -821,7 +770,6 @@ class MultiHeightTimeseries(MultiHeightStates):
             Parameters for pandas.interpolate(), or None for no raising ValueError on NaN values
         kwargs
             Parameters for the base class
-
         """
         super().__init__(*args, interpolate_nans_pars=interpolate_nans_pars, **kwargs)  # type: ignore[arg-type, misc]
 
@@ -829,8 +777,6 @@ class MultiHeightTimeseries(MultiHeightStates):
 class MultiHeightNCTimeseries(MultiHeightNCStates):
     """
     Multi-height timeseries from xarray Dataset.
-
-
     """
 
     def __init__(
@@ -840,8 +786,6 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -850,6 +794,5 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
             Name of the state coordinate
         kwargs
             Parameters for the base class
-
         """
         super().__init__(*args, state_coord=time_coord, **kwargs)

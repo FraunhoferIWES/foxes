@@ -20,21 +20,6 @@ class NEWAStates(DatasetStates):
     """
     Heterogeneous ambient states in NEWA-WRF format.
 
-    Attributes
-    ----------
-    states_coord
-        The states coordinate name in the data
-    x_coord
-        The x coordinate name in the data
-    y_coord
-        The y coordinate name in the data
-    h_coord
-        The height coordinate name in the data
-    weight_ncvar
-        Name of the weight data variable in the nc file(s)
-    interpn_pars
-        Additional parameters for scipy.interpolate.interpn
-
     Examples
     --------
     Example of one of the NetCDF input files in NEWA format:
@@ -50,8 +35,6 @@ class NEWAStates(DatasetStates):
     >>>    Data variables: (12/24)
     >>>        WS           (time, height, south_north, west_east) float32 334MB ...
     >>>        ...
-
-
     """
 
     def __init__(
@@ -72,8 +55,6 @@ class NEWAStates(DatasetStates):
         **kwargs: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         input_files_nc
@@ -115,7 +96,6 @@ class NEWAStates(DatasetStates):
             selected WRF grid points and the layout of the farm.
         kwargs
             Additional parameters for the base class
-
         """
         if output_vars is None:
             ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]

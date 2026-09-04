@@ -12,8 +12,6 @@ if TYPE_CHECKING:
 class ThreadsEngineRunner(ProcessEngineRunner):
     """
     Engine runner for ThreadsEngine.
-
-
     """
 
     def run(
@@ -59,12 +57,12 @@ class ThreadsEngineRunner(ProcessEngineRunner):
 class ThreadsEngine(ProcessEngine):
     """
     The threads engine for foxes calculations.
-
-
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Constructor"""
+        """
+        Constructor
+        """
         super().__init__(*args, share_cstore=True, supports_shared_data=False, **kwargs)
 
     def _create_pool(self) -> None:

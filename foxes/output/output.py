@@ -14,17 +14,6 @@ class Output:
 
     The job of this class is to provide handy
     helper functions.
-
-    Attributes
-    ----------
-    out_dir
-        The output file directory
-    out_fname_fun
-        Modifies file names by f(fname)
-    nofig
-        Do not show figures
-
-
     """
 
     def __init__(
@@ -34,8 +23,6 @@ class Output:
         nofig: bool = False,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         out_dir
@@ -44,7 +31,6 @@ class Output:
             Modifies file names by f(fname)
         nofig
             Do not show figures
-
         """
         self.out_dir = (
             get_output_path(out_dir) if out_dir is not None else config.output_dir

@@ -31,60 +31,10 @@ if TYPE_CHECKING:
 class ModelBook:
     """
     Container for all kinds of models.
-
-    Attributes
-    ----------
-    point_models: foxes.utils.FDict
-        The point models. Keys: model name str,
-        values: foxes.core.PointDataModel
-    rotor_models: foxes.utils.FDict
-        The rotor models. Keys: model name str,
-        values: foxes.core.RotorModel
-    turbine_types: foxes.utils.FDict
-        The turbine type models. Keys: model name str,
-        values: foxes.core.TurbineType
-    turbine_models: foxes.utils.FDict
-        The turbine models. Keys: model name str,
-        values: foxes.core.TurbineModel
-    farm_models: foxes.utils.FDict
-        The farm models. Keys: model name str,
-        values: foxes.core.FarmModel
-    farm_controllers: foxes.utils.FDict
-        The farm controllers. Keys: model name str,
-        values: foxes.core.FarmController
-    partial_wakes: foxes.utils.FDict
-        The partial wakes. Keys: model name str,
-        values: foxes.core.PartialWakeModel
-    wake_frames: foxes.utils.FDict
-        The wake frames. Keys: model name str,
-        values: foxes.core.WakeFrame
-    wake_superpositions: foxes.utils.FDict
-        The wake superposition models. Keys: model name str,
-        values: foxes.core.WakeSuperposition
-    wake_models: foxes.utils.FDict
-        The wake models. Keys: model name str,
-        values: foxes.core.WakeModel
-    induction_models: foxes.utils.FDict
-        The induction models. Keys: model name str,
-        values: foxes.core.AxialInductionModel
-    ground_models: foxes.utils.FDict
-        The ground models. Keys: model name str,
-        values: foxes.core.GroundModel
-    wake_deflections: foxes.utils.FDict
-        The wake deflection models. Keys: model name str,
-        values: foxes.core.WakeDeflection
-    sources: foxes.utils.FDict
-        All sources dict
-    base_classes: foxes.utils.FDict
-        The base classes for all model types
-
-
     """
 
     def __init__(self, Pct_file: str | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         Pct_file: str, optional

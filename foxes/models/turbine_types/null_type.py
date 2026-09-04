@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 class NullType(TurbineType):
     """
     A turbine type that does not compute any data.
-
-
     """
 
     def __init__(
@@ -25,8 +23,6 @@ class NullType(TurbineType):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -37,7 +33,6 @@ class NullType(TurbineType):
             Flag for runs that require the REWS3 variable
         kwargs
             Additional parameters for TurbineType class
-
         """
         super().__init__(*args, **kwargs)
         self._rews2 = needs_rews2

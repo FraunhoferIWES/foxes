@@ -26,8 +26,6 @@ class StaticData(DataBook):
     """
     A DataBook filled with static data from
     this directory.
-
-
     """
 
     def __init__(self) -> None:

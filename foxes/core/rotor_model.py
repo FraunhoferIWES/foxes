@@ -26,26 +26,15 @@ class RotorModel(FarmDataModel):
     Rotor models calculate ambient farm data from
     states, and provide rotor points and weights
     for the calculation of rotor effective quantities.
-
-    Attributes
-    ----------
-    calc_vars
-        The variables that are calculated by the model
-        (Their ambients are added automatically)
-
-
     """
 
     def __init__(self, calc_vars: list[str] | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         calc_vars
             The variables calculated by the model. Their ambients are added
             automatically.
-
         """
         super().__init__()
         self.calc_vars = calc_vars

@@ -22,17 +22,6 @@ if TYPE_CHECKING:
 class WindFarm:
     """
     The wind farm.
-
-    Attributes
-    ----------
-    name
-        The wind farm name
-    turbines
-        The wind turbines
-    boundary
-        The wind farm boundary
-
-
     """
 
     def __init__(
@@ -43,8 +32,6 @@ class WindFarm:
         utm_zone: str | tuple[int, str] | tuple[float, float] | None = None,
     ) -> None:
         """
-        Construct the wind farm.
-
         Parameters
         ----------
         name
@@ -59,7 +46,6 @@ class WindFarm:
             Method for setting the UTM zone in the config if it is not already
             set. Supported options include values such as "from_turbine_X",
             "from_farm", "XA", a (lon, lat) tuple, or None.
-
         """
         self.name = name
         self.__turbines: list[Turbine] = []

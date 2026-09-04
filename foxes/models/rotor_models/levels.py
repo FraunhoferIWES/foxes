@@ -17,26 +17,12 @@ class LevelRotor(RotorModel):
     The weighted regular rotor level model, composed of
     of n points between lower and upper blade tip.
     Calculates a height-dependent REWS
-
-    Attributes
-    ----------
-    n
-        The number of points along the vertical direction
-    reduce
-        Flag for calculating the weight of every element according
-        to the rotor diameter at the respective height level
-    nint
-        Integration steps per element
-
-
     """
 
     def __init__(
         self, n: int, reduce: bool = True, nint: int = 200, **kwargs: Any
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         n
@@ -50,7 +36,6 @@ class LevelRotor(RotorModel):
             The model name
         kwargs
             Addition parameters for the base model
-
         """
         super().__init__(**kwargs)
 

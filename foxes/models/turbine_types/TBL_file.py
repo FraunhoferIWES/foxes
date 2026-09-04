@@ -34,8 +34,6 @@ class TBLFile(PCtFile):
     6.0 0.830 3904.7
     6.5 0.830 5061.7
     7.0 0.810 6379.0
-
-
     """
 
     def __init__(
@@ -45,8 +43,6 @@ class TBLFile(PCtFile):
         **parameters: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         tbl_file
@@ -55,7 +51,6 @@ class TBLFile(PCtFile):
             The air density for the curves
         paramerers
             Additional parameters for PCtFile class
-
         """
         fpath = get_input_path(tbl_file)
         assert fpath.suffix == ".tbl", f"Expecting *.tbl file, got '{tbl_file}'"

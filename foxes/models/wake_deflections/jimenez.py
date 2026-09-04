@@ -22,20 +22,6 @@ class JimenezDeflection(WakeDeflection):
     Reference:
     Jiménez, Á., Crespo, A. and Migoya, E. (2010), Application of a LES technique to characterize
     the wake deflection of a wind turbine in yaw. Wind Energ., 13: 559-572. doi:10.1002/we.380
-
-
-    Attributes
-    ----------
-    rotate
-        If True, rotate local wind vector at evaluation points.
-        If False, multiply wind speed with cos(angle) instead.
-        If None, do not modify the wind vector, only the path.
-    beta
-        The beta coefficient of the Jimenez model
-    step_x
-        The x step in m for integration
-
-
     """
 
     def __init__(
@@ -45,8 +31,6 @@ class JimenezDeflection(WakeDeflection):
         step_x: float = 10.0,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         rotate
@@ -57,7 +41,6 @@ class JimenezDeflection(WakeDeflection):
             The beta coefficient of the Jimenez model
         step_x
             The x step in m for integration
-
         """
         super().__init__()
         self.rotate = rotate

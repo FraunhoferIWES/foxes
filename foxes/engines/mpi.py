@@ -98,8 +98,6 @@ def _mpi_release_worker_shared_cache(token: str) -> str:
 class MPIEngineRunner(ProcessEngineRunner):
     """
     Engine runner for MPIEngine.
-
-
     """
 
     def _recombine_mdata_with_shared(
@@ -149,8 +147,6 @@ class MPIEngine(ProcessEngine):
     Run command, e.g. for 12 processors and a script run.py:
 
     >>> mpiexec -n 12 -m mpi4py.futures run.py
-
-
     """
 
     def new_runner(self) -> MPIEngineRunner:

@@ -92,8 +92,6 @@ atexit.register(_close_all_cached_shared_memory)
 class ProcessEngineRunner(EngineRunner):
     """
     Engine runner for ProcessEngine.
-
-
     """
 
     def _recombine_mdata_with_shared(self, mdata: MData, handle: Any) -> MData:
@@ -209,8 +207,6 @@ class ProcessEngineRunner(EngineRunner):
 class ProcessEngine(PoolEngine):
     """
     The processes engine for foxes calculations.
-
-
     """
 
     def new_runner(self) -> ProcessEngineRunner:

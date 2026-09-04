@@ -16,25 +16,12 @@ class MadsenAxialInduction(AxialInductionModel):
     Helge Aagaard Madsen, Torben Juul Larsen, Georg Raimund Pirrung, Ang Li, and Frederik Zahle
     "Implementation of the blade element momentum model on a polar grid and its aeroelastic load impact"
     https://doi.org/10.5194/wes-5-1-2020
-
-    Attributes
-    ----------
-    k1
-        Model coefficient
-    k2
-        Model coefficient
-    k3
-        Model coefficient
-
-
     """
 
     def __init__(
         self, k1: float = 0.2460, k2: float = 0.0586, k3: float = 0.0883
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         k1
@@ -43,7 +30,6 @@ class MadsenAxialInduction(AxialInductionModel):
             Model coefficient
         k3
             Model coefficient
-
         """
         super().__init__()
         self.k1 = k1

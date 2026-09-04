@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 class WakeDeflection(Model):
     """
     Abstract base class for wake deflection models.
-
-
     """
 
     @property

@@ -11,8 +11,6 @@ import foxes.variables as FV
 class ShearedProfile(VerticalProfile):
     """
     A wind shear profile, based on a shear exponent.
-
-
     """
 
     def input_vars(self) -> list[str]:

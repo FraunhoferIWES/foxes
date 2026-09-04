@@ -16,28 +16,12 @@ class GridRotor(RotorModel):
     """
     The weighted regular grid rotor model, composed maximally
     of n x n points, possibly kicking out the outside points.
-
-    Attributes
-    ----------
-    n
-        The number of points along one direction,
-        maximal number of points is N = n * n
-    reduce
-        Flag for reduction to points actually representing
-        an area with overlap with the circle, recalculating
-        the self.__weights accordingly
-    nint
-        Integration steps per element
-
-
     """
 
     def __init__(
         self, n: int, reduce: bool = True, nint: int = 200, **kwargs: Any
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         n
@@ -53,7 +37,6 @@ class GridRotor(RotorModel):
             The model name
         kwargs
             Addition parameters for the base model
-
         """
         super().__init__(**kwargs)
 

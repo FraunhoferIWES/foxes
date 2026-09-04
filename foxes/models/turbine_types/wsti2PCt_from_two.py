@@ -30,30 +30,6 @@ class WsTI2PCtFromTwo(TurbineType):
     The first column represents wind speed in m/s
     and the subsequent columns are TI values
     (not neccessarily in order).
-
-    Attributes
-    ----------
-    source_P
-        The file path for the power curve, static name, or data
-    source_ct
-        The file path for the ct curve, static name, or data
-    WSCT
-        The wind speed variable for ct lookup
-    WSP
-        The wind speed variable for power lookup
-    rpars_P
-        Parameters for pandas power file reading
-    rpars_ct
-        Parameters for pandas ct file reading
-    ipars_P
-        Parameters for scipy.interpolate.interpn
-    ipars_ct
-        Parameters for scipy.interpolate.interpn
-    rho
-        The air density for which the data is valid
-        or None for no correction
-
-
     """
 
     def __init__(
@@ -70,8 +46,6 @@ class WsTI2PCtFromTwo(TurbineType):
         **parameters: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source_P
@@ -95,7 +69,6 @@ class WsTI2PCtFromTwo(TurbineType):
             Parameters for scipy.interpolate.interpn
         parameters
             Additional parameters for TurbineType class
-
         """
         if not isinstance(data_source_P, pd.DataFrame) or not isinstance(
             data_source_ct, pd.DataFrame

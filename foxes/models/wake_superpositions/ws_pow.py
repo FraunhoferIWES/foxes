@@ -15,20 +15,6 @@ if TYPE_CHECKING:
 class WSPow(WakeSuperposition):
     """
     Power superposition of wind deficit results
-
-    Attributes
-    ----------
-    pow
-        The power to which to take the wake results
-    scale_amb
-        Flag for scaling wind deficit with ambient wind speed
-        instead of waked wind speed
-    lim_low
-        Lower limit of the final waked wind speed
-    lim_high
-        Upper limit of the final waked wind speed
-
-
     """
 
     def __init__(
@@ -39,8 +25,6 @@ class WSPow(WakeSuperposition):
         lim_high: float | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         pow
@@ -52,7 +36,6 @@ class WSPow(WakeSuperposition):
             Lower limit of the final waked wind speed
         lim_high
             Upper limit of the final waked wind speed
-
         """
         super().__init__()
 
@@ -201,25 +184,12 @@ class WSPow(WakeSuperposition):
 class WSPowLocal(WakeSuperposition):
     """
     Local power superposition of wind deficit results
-
-    Attributes
-    ----------
-    pow
-        The power to which to take the wake results
-    lim_low
-        Lower limit of the final waked wind speed
-    lim_high
-        Upper limit of the final waked wind speed
-
-
     """
 
     def __init__(
         self, pow: float, lim_low: float | None = None, lim_high: float | None = None
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         pow
@@ -228,7 +198,6 @@ class WSPowLocal(WakeSuperposition):
             Lower limit of the final waked wind speed
         lim_high
             Upper limit of the final waked wind speed
-
         """
         super().__init__()
 
