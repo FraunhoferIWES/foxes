@@ -1008,3 +1008,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed bug that prevented wake effects in the presence of pre-rotor turbine models
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
+
+## v1.9.1
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.1](https://github.com/FraunhoferIWES/foxes/commits/v1.9.1)
