@@ -12,8 +12,6 @@ if TYPE_CHECKING:
 class NoDeflection(WakeDeflection):
     """
     Switch of wake deflection
-
-
     """
 
     def calc_deflection(

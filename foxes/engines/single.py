@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 class SingleChunkEngineRunner(EngineRunner):
     """
     Engine runner for SingleChunkEngine.
-
-
     """
 
     def run(
@@ -70,8 +68,6 @@ class SingleChunkEngineRunner(EngineRunner):
 class SingleChunkEngine(Engine):
     """
     Runs computations in a single chunk.
-
-
     """
 
     def __init__(
@@ -83,8 +79,6 @@ class SingleChunkEngine(Engine):
         verbosity: int = 1,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         chunk_size_states
@@ -97,7 +91,6 @@ class SingleChunkEngine(Engine):
             Progress display mode
         verbosity
             Verbosity level
-
         """
         ignr = {
             "chunk_size_states": chunk_size_states,

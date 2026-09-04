@@ -21,7 +21,6 @@ class ScanStates(States):
         value: scan values
     fixed_vars
         A dictionary containing the fixed variables, with variable names as keys and corresponding float values as values.
-
     """
 
     def __init__(
@@ -31,8 +30,6 @@ class ScanStates(States):
         **kwargs: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         scans
@@ -42,7 +39,6 @@ class ScanStates(States):
             A dictionary containing the fixed variables, with variable names as keys and corresponding float values as values.
         kwargs
             Parameters for the base class
-
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
         self.fixed_vars = fixed_vars if fixed_vars is not None else {}

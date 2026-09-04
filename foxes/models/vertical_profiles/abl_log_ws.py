@@ -15,19 +15,10 @@ class ABLLogWsProfile(VerticalProfile):
 
     This profile picks the profile according to the mol value
     (neutral: mol = None or mol = 0)
-
-    Attributes
-    ----------
-    ustar_input
-        Flag for using ustar as an input
-
-
     """
 
     def __init__(self, *args: Any, ustar_input: bool = False, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -36,7 +27,6 @@ class ABLLogWsProfile(VerticalProfile):
             Flag for using ustar as an input
         kwargs
             Additional arguments for VerticalProfile
-
         """
         super().__init__(*args, **kwargs)
         self.ustar_input = ustar_input

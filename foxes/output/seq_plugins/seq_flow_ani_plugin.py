@@ -16,18 +16,6 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
     """
     Plugin for creating data for a 2D flow animation
     during sequential iterations
-
-    Attributes
-    ----------
-    orientation
-        The orientation, either "yx", "xz" or "yz"
-    title_fun
-        A function that takes the current iteration and state index
-        and returns a title string.
-    data_pars
-        Additional parameters for plot data calculation
-
-
     """
 
     def __init__(
@@ -37,8 +25,6 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         **data_pars: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         orientation
@@ -48,8 +34,6 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
             and returns a title string.
         data_pars
             Additional parameters for plot data calculation
-
-
         """
         super().__init__()
         self.orientation = orientation

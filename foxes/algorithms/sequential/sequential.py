@@ -25,23 +25,6 @@ class Sequential(Iterative):
     This is of use for the evaluation in simulation
     environments that do not support multi-state computations,
     like FMUs.
-
-    Attributes
-    ----------
-    ambient
-        Flag for ambient calculation
-    calc_pars
-        Parameters for model calculation.
-        Key: model name str, value: parameter dict
-    states0
-        The original states
-    points
-        The points of interest, shape: (n_states, n_points, 3)
-    plugins
-        The plugins, updated with every iteration
-    outputs
-        The output variables
-
     """
 
     @classmethod
@@ -78,8 +61,6 @@ class Sequential(Iterative):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         farm
@@ -101,7 +82,6 @@ class Sequential(Iterative):
             The output variables
         kwargs
             Additional arguments for Downwind
-
         """
         super().__init__(farm, mdls.SeqState(states), *args, **kwargs)
         self.ambient = ambient

@@ -20,8 +20,6 @@ if TYPE_CHECKING:
 class FarmWakesCalculation(FarmDataModel):
     """
     This model calculates wakes effects on farm data.
-
-
     """
 
     def output_farm_vars(self, algo: Algorithm) -> list[str]:

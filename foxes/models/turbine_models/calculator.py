@@ -14,25 +14,11 @@ class Calculator(TurbineModel):
     """
     Calculates variables based on given functions.
 
-    Attributes
-    ----------
-    in_vars
-        The input farm variables
-    out_vars
-        The output variables
-    func
-        The function: f(in0, in1, ..., algo, mdata, fdata, st_sel) -> (out0, out1, ...)
-        where inX and outY are arrays and
-        st_sel is the state-turbine selection slice or array.
-        All arrays have shape (n_states, n_turbines).
-
         Beware that the turbine ordering in fdata is in downwind order,
         hence external data X of shape (n_states, n_turbines) in farm order
         needs to be reordered by X[ssel, order] with
         ssel = fdata[FV.ORDER_SSEL], order = fdata[FV.ORDER]
         before using it in combination with fdata variables.
-
-
     """
 
     def __init__(
@@ -43,8 +29,6 @@ class Calculator(TurbineModel):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         in_vars
@@ -64,7 +48,6 @@ class Calculator(TurbineModel):
             before using it in combination with fdata variables.
         kwargs
             Additional arguments for TurbineModel
-
         """
         super().__init__(**kwargs)
         self.in_vars = in_vars

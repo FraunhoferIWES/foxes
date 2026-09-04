@@ -26,33 +26,6 @@ class MesoMicroField(States):
     """
     Combines field data representing micro scale wind direction sectors
     and meso scale results at multiple reference points into a timeseries of fields.
-
-    Attributes
-    ----------
-    micro_states
-        Micro-scale field data states. Their states must represent
-        different wind direction sectors and must be in "preload" mode.
-    meso_states
-        Meso-scale states evaluated at reference points. These define the final
-        states and state weights and are used to scale the micro states.
-    ref_points
-        The [x, y, h] reference point coordinates, shape (n_ref_points, 3),
-        or micro-state grid points with ref_height as height if None.
-    ref_points_are_lonlat
-        Whether the reference point coordinates are in longitude/latitude.
-    ref_height
-        The height of the reference points when ref_points is None.
-        Defaults to the highest reference point.
-    output_vars
-        The output variables. If None, all micro_states variables are used.
-    fixed_vars
-        Fixed variables, e.g. {"var_name": var_value}.
-    apply_blending
-        Whether to blend between wind direction sectors.
-    check_nans
-        Whether to check for NaN values.
-
-
     """
 
     def __init__(
@@ -70,8 +43,6 @@ class MesoMicroField(States):
         **kwargs: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         micro_states
@@ -99,7 +70,6 @@ class MesoMicroField(States):
             Whether to blend between wind direction sectors.
         check_nans
             Whether to check for NaN values.
-
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
         self.micro_states = micro_states

@@ -26,25 +26,6 @@ class SectorSimRefPointField(States):
     """
     Combines field data representing wind direction sectors and timeseries
     data at one reference point into a timeseries of fields.
-
-    Attributes
-    ----------
-    field_states
-        Field data states
-    ref_point_states
-        Reference point states
-    ref_point
-        The [x, y, h] reference point coordinates
-    output_vars
-        The output variables, if None, all field_states variables are used
-    fixed_vars
-        Fixed variables, e.g. {"var_name": var_value}
-    apply_blending
-        Whether to blend between wind direction sectors
-    check_nans
-        Whether to check for NaN values
-
-
     """
 
     def __init__(
@@ -61,8 +42,6 @@ class SectorSimRefPointField(States):
         **kwargs: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         field_states
@@ -85,7 +64,6 @@ class SectorSimRefPointField(States):
             Whether to blend between wind direction sectors
         check_nans
             Whether to check for NaN values
-
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
         self.field_states = field_states

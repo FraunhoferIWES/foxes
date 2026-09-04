@@ -16,8 +16,6 @@ class RotorPoints(PartialWakesModel):
     """
     Partial wakes calculation directly by the
     rotor model.
-
-
     """
 
     def get_wake_points(

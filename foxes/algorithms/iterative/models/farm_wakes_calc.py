@@ -21,24 +21,14 @@ if TYPE_CHECKING:
 class FarmWakesCalculation(FarmDataModel):
     """
     This model calculates wakes effects on farm data.
-
-    Attributes
-    ----------
-    urelax
-        The under-relaxation model
-
-
     """
 
     def __init__(self, urelax: URelax | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         urelax
             The under-relaxation model
-
         """
         super().__init__()
         self.urelax = urelax

@@ -18,26 +18,14 @@ if TYPE_CHECKING:
 class SetFarmVars(TurbineModel):
     """
     Set farm data variables to given data.
-
-    Attributes
-    ----------
-    vars
-        The variables to be set
-    once
-        Flag for running only once
-
-
     """
 
     def __init__(self, once: bool = False) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         once
             Flag for running only once
-
         """
         super().__init__()
         self.once = once

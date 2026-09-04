@@ -23,13 +23,6 @@ from .output import Output
 class RosePlotOutput(Output):
     """
     Class for rose plot creation
-
-    Attributes
-    ----------
-    results
-        The calculation results (farm or points)
-
-
     """
 
     def __init__(
@@ -40,8 +33,6 @@ class RosePlotOutput(Output):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         farm_results
@@ -53,7 +44,6 @@ class RosePlotOutput(Output):
             farm and point results are given
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         if use_points or (farm_results is None and point_results is not None):
@@ -375,8 +365,6 @@ class StatesRosePlotOutput(RosePlotOutput):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         states
@@ -389,7 +377,6 @@ class StatesRosePlotOutput(RosePlotOutput):
             The wind speed variable name
         kwargs
             Additional parameters for the base class
-
         """
         farm = WindFarm()
         farm.add_turbine(
@@ -412,26 +399,16 @@ class StatesRosePlotOutput(RosePlotOutput):
 class WindRoseBinPlot(Output):
     """
     Plots mean data in wind rose bins
-
-    Attributes
-    ----------
-    farm_results
-        The wind farm results
-
-
     """
 
     def __init__(self, farm_results: Dataset, **kwargs: Any) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         farm_results
             The wind farm results
         kwargs
             Parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.farm_results = farm_results

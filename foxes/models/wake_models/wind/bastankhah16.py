@@ -26,17 +26,6 @@ class Bastankhah2016Model(Model):
     "Experimental and theoretical study of wind turbine wakes in yawed conditions"
     Majid Bastankhah, Fernando Porté-Agel
     https://doi.org/10.1017/jfm.2016.595
-
-    Attributes
-    ----------
-    alpha
-        model parameter used to determine onset of far wake region
-    beta
-        model parameter used to determine onset of far wake region
-    induction
-        The induction model
-
-
     """
 
     MDATA_KEY = "Bastankhah2016Model"
@@ -58,8 +47,6 @@ class Bastankhah2016Model(Model):
 
     def __init__(self, alpha: float, beta: float, induction: str) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         alpha
@@ -68,7 +55,6 @@ class Bastankhah2016Model(Model):
             model parameter used to determine onset of far wake region
         induction
             The induction model
-
         """
         super().__init__()
         self.induction = induction
@@ -428,26 +414,6 @@ class Bastankhah2016(DistSlicedWakeModel):
     "Experimental and theoretical study of wind turbine wakes in yawed conditions"
     Majid Bastankhah, Fernando Porté-Agel
     https://doi.org/10.1017/jfm.2016.595
-
-    Attributes
-    ----------
-    model
-        The model for computing common data
-    model_pars
-        Model parameters
-    YAWM
-        The yaw misalignment YAWM. If not given here
-        it will be searched in the farm data.
-    alpha
-        model parameter used to determine onset of far wake region
-    beta
-        model parameter used to determine onset of far wake region
-    induction
-        The induction model
-    wake_k
-        Parameters for the WakeK class
-
-
     """
 
     def __init__(
@@ -459,8 +425,6 @@ class Bastankhah2016(DistSlicedWakeModel):
         **wake_k: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -476,7 +440,6 @@ class Bastankhah2016(DistSlicedWakeModel):
             The induction model
         wake_k
             Parameters for the WakeK class
-
         """
         super().__init__(wind_superposition=superposition)
 

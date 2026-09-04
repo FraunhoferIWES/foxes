@@ -13,19 +13,6 @@ from xarray import Dataset
 class SeqWakeDebugPlugin(SequentialPlugin):
     """
     Plugin for creating wake debug plots in animations
-
-    Attributes
-    ----------
-    show_p
-        Flag for showing wake points
-    show_v
-        Flag for showing wake vectors
-    vpars
-        Additional parameters for vector lines
-    ppars
-        Additional parameters for point scatter
-
-
     """
 
     def __init__(
@@ -36,8 +23,6 @@ class SeqWakeDebugPlugin(SequentialPlugin):
         **ppars: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         show_p
@@ -48,7 +33,6 @@ class SeqWakeDebugPlugin(SequentialPlugin):
             Additional parameters for vector lines
         ppars
             Additional parameters for point scatter
-
         """
         super().__init__()
         self.show_p = show_p

@@ -14,14 +14,10 @@ V = TypeVar("V")
 class Dict(dict[K, V]):
     """
     A slightly enhanced dictionary.
-
-
     """
 
     def __init__(self, *args: Any, _name: str | None = None, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         *args: tuple, optional
@@ -30,7 +26,6 @@ class Dict(dict[K, V]):
             The dictionary name
         **kwargs: dict, optional
             Arguments passed to `dict`
-
         """
         super().__init__()
         self._name = _name if _name is not None else type(self).__name__

@@ -22,15 +22,6 @@ class WSProduct(WakeSuperposition):
 
     Source: https://arxiv.org/pdf/2010.03873.pdf
             Equation (8)
-
-    Attributes
-    ----------
-    lim_low
-        Lower limit of the final waked wind speed
-    lim_high
-        Upper limit of the final waked wind speed
-
-
     """
 
     def __init__(
@@ -40,8 +31,6 @@ class WSProduct(WakeSuperposition):
         lim_high: float | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         scale_amb
@@ -51,7 +40,6 @@ class WSProduct(WakeSuperposition):
             Lower limit of the final waked wind speed
         lim_high
             Upper limit of the final waked wind speed
-
         """
         super().__init__()
 

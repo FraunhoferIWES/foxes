@@ -1008,3 +1008,20 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed bug that prevented wake effects in the presence of pre-rotor turbine models
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.0](https://github.com/FraunhoferIWES/foxes/commits/v1.9.0)
+
+## v1.9.1
+
+- Bug fixes:
+  - Made model smoke-test data paths resolve from the installed package, so conda-forge tests do not depend on the source checkout layout
+  - Fixing broken links in documentation
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.1](https://github.com/FraunhoferIWES/foxes/commits/v1.9.1)
+
+## v1.9.2
+
+- Documentation:
+  - Updating docstrings such that classes appear cleaner in API
+- Bug fixes:
+  - Typo fixed in `JensenTurbOPark`, replacing `D` by `D/2`
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.2](https://github.com/FraunhoferIWES/foxes/commits/v1.9.2)

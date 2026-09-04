@@ -22,32 +22,6 @@ class PCtFromTwo(TurbineType):
     """
     Calculate power and ct by interpolating
     from power curve and ct curve data files.
-
-    Attributes
-    ----------
-    source_P
-        The file path for the power curve, static name, or data
-    source_ct
-        The file path for the ct curve, static name, or data
-    col_ws
-        The wind speed column
-    col_P
-        The power column
-    col_ct
-        The ct column
-    rho
-        The air density for which the data is valid
-        or None for no correction
-    WSCT
-        The wind speed variable for ct lookup
-    WSP
-        The wind speed variable for power lookup
-    rpars_P
-        Parameters for pandas power file reading
-    rpars_ct
-        Parameters for pandas ct file reading
-
-
     """
 
     def __init__(
@@ -66,8 +40,6 @@ class PCtFromTwo(TurbineType):
         **parameters: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source_P
@@ -95,7 +67,6 @@ class PCtFromTwo(TurbineType):
             Parameters for pandas ct file reading
         parameters
             Additional parameters for TurbineType class
-
         """
         if not isinstance(data_source_P, pd.DataFrame) or not isinstance(
             data_source_ct, pd.DataFrame

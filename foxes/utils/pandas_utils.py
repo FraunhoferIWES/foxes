@@ -11,21 +11,6 @@ class PandasFileHelper:
     """
     This class helps reading and writing data
     to files via pandas.
-
-    Attributes
-    ----------
-    DEFAULT_READING_PARAMETERS
-        Default parameters for file reading
-        for the supported file formats
-    DEFAULT_WRITING_PARAMETERS
-        Default parameters for file writing
-        for the supported file formats
-    DATA_FILE_FORMAT
-        The supported file formats for data export
-    DEFAULT_FORMAT_DICT
-        Default column formatting
-
-
     """
 
     DEFAULT_READING_PARAMETERS: dict[str, dict[str, Any]] = {

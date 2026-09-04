@@ -18,15 +18,6 @@ class kTI(TurbineModel):
     """
     Calculates the wake model parameter `k`
     as a linear function of `TI`.
-
-    Attributes
-    ----------
-    ti_var
-        The `TI` variable name
-    k_var
-        The variable name for k
-
-
     """
 
     def __init__(
@@ -38,8 +29,6 @@ class kTI(TurbineModel):
         k_var: str = FV.K,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         kTI
@@ -55,7 +44,6 @@ class kTI(TurbineModel):
             will be searched in farm data
         k_var
             The variable name for k
-
         """
         super().__init__()
 

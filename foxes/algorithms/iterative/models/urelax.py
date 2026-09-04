@@ -15,26 +15,15 @@ class URelax(FarmDataModel):
     """
     Apply under-relaxation to selected variables
     during iterations.
-
-    Attributes
-    ----------
-    urel
-        The variables and their under-relaxation
-        factors between 0 and 1
-
-
     """
 
     def __init__(self, **urel: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         urel
             The variables and their under-relaxation
             factors between 0 and 1
-
         """
         super().__init__()
         self.urel = urel

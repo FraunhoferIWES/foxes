@@ -35,8 +35,6 @@ class PoolEngine(Engine):
         shared storage. Arrays with ``nbytes`` less than or equal to this
         threshold are transferred inline to workers. Supported top-level
         ``extra_data`` values use their complete payload size.
-
-
     """
 
     def __init__(
@@ -49,8 +47,6 @@ class PoolEngine(Engine):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -68,7 +64,6 @@ class PoolEngine(Engine):
             ``extra_data`` values use their complete payload size.
         kwargs
             Additional arguments for the base class
-
         """
         super().__init__(*args, **kwargs)
         self._pool: Any = None

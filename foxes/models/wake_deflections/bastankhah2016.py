@@ -31,23 +31,6 @@ class Bastankhah2016Deflection(WakeDeflection):
     "Experimental and theoretical study of wind turbine wakes in yawed conditions"
     Majid Bastankhah, Fernando Porté-Agel
     https://doi.org/10.1017/jfm.2016.595
-
-    Attributes
-    ----------
-    model
-        The model for computing common data
-    alpha
-        model parameter used to determine onset of far wake region,
-        if not found in wake model
-    beta
-        model parameter used to determine onset of far wake region,
-        if not found in wake model
-    wake_k
-        Parameters for the WakeK class, if not found in wake model
-    induction
-        The induction model, if not found in wake model
-
-
     """
 
     def __init__(
@@ -58,8 +41,6 @@ class Bastankhah2016Deflection(WakeDeflection):
         **wake_k: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         alpha
@@ -72,7 +53,6 @@ class Bastankhah2016Deflection(WakeDeflection):
             The induction model, if not found in wake model
         wake_k
             Parameters for the WakeK class, if not found in wake model
-
         """
         super().__init__()
 

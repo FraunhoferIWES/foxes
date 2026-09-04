@@ -19,24 +19,6 @@ class Data(Dict[str, np.ndarray]):
     """
     Container for numpy array data and
     the associated meta data.
-
-    Attributes
-    ----------
-    dims
-        The dimensions tuples, same or subset
-        of data keys
-    loop_dims
-        Loop dimensions used during xarray's `apply_ufunc` calculations
-    sizes
-        The dimension sizes
-    chunki_states
-        The index of the states chunk
-    chunki_points
-        The index of the points chunk
-    extra_data
-        Additional data that is not dimensioned
-
-
     """
 
     def __init__(
@@ -54,8 +36,6 @@ class Data(Dict[str, np.ndarray]):
         name: str = "data",
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data
@@ -80,7 +60,6 @@ class Data(Dict[str, np.ndarray]):
             If ``True``, skip the data checks and auto-update logic.
         name
             The data container name.
-
         """
         super().__init__(_name=name)
 
@@ -779,14 +758,10 @@ class Data(Dict[str, np.ndarray]):
 class MData(Data):
     """
     Container for foxes model data.
-
-
     """
 
     def __init__(self, *args: Any, name: str = "mdata", **kwargs: Any) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         args
@@ -795,7 +770,6 @@ class MData(Data):
             The data name
         kwargs
             Arguments for the base class
-
         """
         super().__init__(*args, name=name, **kwargs)  # type: ignore[misc]
 
@@ -806,14 +780,10 @@ class FData(Data):
 
     Each farm data entry has (n_states, n_turbines) shape,
     except the dimensions.
-
-
     """
 
     def __init__(self, *args: Any, name: str = "fdata", **kwargs: Any) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         args
@@ -822,7 +792,6 @@ class FData(Data):
             The data name
         kwargs
             Arguments for the base class
-
         """
         super().__init__(*args, loop_dims=[FC.STATE], name=name, **kwargs)  # type: ignore[misc]
 
@@ -985,14 +954,10 @@ class TData(Data):
 
     Each target consists of a fixed number of
     target points.
-
-
     """
 
     def __init__(self, *args: Any, name: str = "tdata", **kwargs: Any) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         args
@@ -1001,7 +966,6 @@ class TData(Data):
             The data name
         kwargs
             Arguments for the base class
-
         """
         super().__init__(*args, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs)  # type: ignore[misc]
 

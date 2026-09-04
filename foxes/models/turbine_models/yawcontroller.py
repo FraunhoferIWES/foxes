@@ -28,8 +28,6 @@ class YawController(TurbineModel):
         avg_time: float = 60,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         max_yaw_rate : float, optional

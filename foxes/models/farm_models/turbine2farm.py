@@ -18,24 +18,14 @@ class Turbine2FarmModel(FarmModel):
     Wrapper that promotes turbine models
     into farm models, simply by selecting
     all turbines.
-
-    Attributes
-    ----------
-    turbine_model
-        The turbine model
-
-
     """
 
     def __init__(self, turbine_model: TurbineModel) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         turbine_model
             The turbine model
-
         """
         super().__init__()
         self.turbine_model = turbine_model

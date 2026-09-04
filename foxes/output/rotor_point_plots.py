@@ -22,23 +22,12 @@ if TYPE_CHECKING:
 class RotorPointPlot(Output):
     """
     Visualizes rotor points and their weights.
-
-    Attributes
-    ----------
-    rotor_model
-        The rotor model
-    algo
-        The algorithm
-
-
     """
 
     def __init__(
         self, rotor_model: RotorModel, algo: Algorithm | None = None, **kwargs: Any
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         rotor_model
@@ -47,7 +36,6 @@ class RotorPointPlot(Output):
             The algorithm
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.rotor_model = rotor_model

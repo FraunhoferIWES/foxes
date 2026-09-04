@@ -27,21 +27,12 @@ class FarmResultsEval(Output):
 
     This sums over turbines and/or states,
     given the state-turbine farm_calc results.
-
-    Attributes
-    ----------
-    algo
-        The algorithm object
-
-
     """
 
     def __init__(
         self, farm_results: Dataset | None, algo: Algorithm | None = None, **kwargs: Any
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         farm_results
@@ -50,7 +41,6 @@ class FarmResultsEval(Output):
             The algorithm object
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.algo = algo

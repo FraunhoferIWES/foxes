@@ -16,8 +16,6 @@ class YAW2YAWM(TurbineModel):
     """
     Calculates delta yaw (i.e. YAWM) from absolute
     yaw (i.e. YAW)
-
-
     """
 
     def output_farm_vars(self, algo: Algorithm) -> list[str]:

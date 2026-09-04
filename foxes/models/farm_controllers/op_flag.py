@@ -29,8 +29,6 @@ class OpFlagController(FarmController):
     var2ncvar
         The mapping of variable names to NetCDF variable names,
         only needed if data_source is a path to a NetCDF file
-
-
     """
 
     def __init__(
@@ -41,8 +39,6 @@ class OpFlagController(FarmController):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -57,7 +53,6 @@ class OpFlagController(FarmController):
         kwargs
             Additional keyword arguments for the
             base class constructor
-
         """
         super().__init__(**kwargs)
         self.data_source = data_source

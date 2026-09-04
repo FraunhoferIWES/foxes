@@ -25,20 +25,6 @@ class Bastankhah2014(GaussianWakeModel):
     "A new analytical model for wind-turbine wakes"
     Majid Bastankhah, Fernando Porté-Agel
     https://doi.org/10.1016/j.renene.2014.01.002
-
-    Attributes
-    ----------
-    sbeta_factor
-        Factor multiplying sbeta, only relevant if sbeta is not set
-    sbeta
-        If set, sbeta is fixed to this value, otherwise it
-        is calculated from axial induction
-    induction
-        The axial induction model
-    wake_k
-        Handler for the wake growth parameter k
-
-
     """
 
     def __init__(
@@ -50,8 +36,6 @@ class Bastankhah2014(GaussianWakeModel):
         **wake_k: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -65,7 +49,6 @@ class Bastankhah2014(GaussianWakeModel):
             The axial induction model
         wake_k
             Parameters for the WakeK class
-
         """
         super().__init__(wind_superposition=superposition)
         self.sbeta_factor = sbeta_factor

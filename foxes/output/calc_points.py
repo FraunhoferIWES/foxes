@@ -18,21 +18,10 @@ if TYPE_CHECKING:
 class PointCalculator(Output):
     """
     Computes results at given points
-
-    Attributes
-    ----------
-    algo
-        The algorithm for point calculation
-    farm_results
-        The farm results
-
-
     """
 
     def __init__(self, algo: Algorithm, farm_results: Dataset, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         algo
@@ -41,7 +30,6 @@ class PointCalculator(Output):
             The farm results
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.algo = algo

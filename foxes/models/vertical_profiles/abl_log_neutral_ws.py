@@ -12,19 +12,10 @@ import foxes.constants as FC
 class ABLLogNeutralWsProfile(VerticalProfile):
     """
     The neutral ABL wind speed log profile.
-
-    Attributes
-    ----------
-    ustar_input
-        Flag for using ustar as an input
-
-
     """
 
     def __init__(self, *args: Any, ustar_input: bool = False, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -33,7 +24,6 @@ class ABLLogNeutralWsProfile(VerticalProfile):
             Flag for using ustar as an input
         kwargs
             Additional arguments for VerticalProfile
-
         """
         super().__init__(*args, **kwargs)
         self.ustar_input = ustar_input

@@ -23,19 +23,6 @@ if TYPE_CHECKING:
 class SeqDynamicWakes(FarmOrder):
     """
     Dynamic wakes for the sequential algorithm.
-
-    Attributes
-    ----------
-    cl_ipars
-        Interpolation parameters for centre line
-        point interpolation
-    dt_min
-        The delta t value in minutes,
-        if not from timeseries data
-    induction
-        The induction model
-
-
     """
 
     def __init__(
@@ -46,8 +33,6 @@ class SeqDynamicWakes(FarmOrder):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         cl_ipars
@@ -60,7 +45,6 @@ class SeqDynamicWakes(FarmOrder):
             The induction model
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.cl_ipars = {} if cl_ipars is None else cl_ipars

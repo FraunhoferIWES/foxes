@@ -19,22 +19,6 @@ class FieldData(DatasetStates):
     Heterogeneous ambient states on a regular
     horizontal grid in NetCDF format.
 
-    Attributes
-    ----------
-    states_coord
-        The states coordinate name in the data
-    x_coord
-        The x coordinate name in the data
-    y_coord
-        The y coordinate name in the data
-    h_coord
-        The height coordinate name in the data
-    weight_ncvar
-        Name of the weight data variable in the nc file(s)
-    grid_point_plot
-        Path to a plot file, e.g. grid_points.png, to visualize the
-        selected data grid points and the layout of the farm.
-
     Examples
     --------
     Simplistic example of the NetCDF structure:
@@ -48,8 +32,6 @@ class FieldData(DatasetStates):
     >>>    Data variables:
     >>>        ws       (state, h, y, x) float32 64B ...
     >>>        wd       (state, h, y, x) float32 64B ...
-
-
     """
 
     def __init__(
@@ -65,8 +47,6 @@ class FieldData(DatasetStates):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -88,7 +68,6 @@ class FieldData(DatasetStates):
             selected data grid points and the layout of the farm.
         kwargs
             Additional parameters for the base class
-
         """
         kwargs.pop("time_format", None)
         kwargs["time_format"] = time_format
@@ -208,22 +187,6 @@ class FieldData(DatasetStates):
 class LatLonFieldData(DatasetStates):
     """
     Heterogeneous ambient states based on regular lat-lon grid in NetCDF format.
-
-    Attributes
-    ----------
-    states_coord
-        The states coordinate name in the data
-    lat_coord
-        The latitude coordinate name in the data
-    lon_coord
-        The longitude coordinate name in the data
-    h_coord
-        The height coordinate name in the data
-    grid_point_plot
-        Path to a plot file, e.g. wrf_points.png, to visualize the
-        selected grid points and the layout of the farm.
-
-
     """
 
     def __init__(
@@ -239,8 +202,6 @@ class LatLonFieldData(DatasetStates):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -269,7 +230,6 @@ class LatLonFieldData(DatasetStates):
             typically during the wind farm creation.
         kwargs
             Additional parameters for the base class
-
         """
         kwargs.pop("time_format", None)
         super().__init__(
@@ -480,19 +440,6 @@ class LatLonFieldData(DatasetStates):
 class WeibullField(FieldData):
     """
     Weibull sectors at regular grid points
-
-    Attributes
-    ----------
-    wd_coord
-        The wind direction coordinate name
-    ws_coord
-        The wind speed coordinate name, if wind speed bin
-        centres are in data, else None
-    ws_bins
-        The wind speed bins, including
-        lower and upper bounds, shape: (n_ws_bins+1,)
-
-
     """
 
     def __init__(
@@ -504,8 +451,6 @@ class WeibullField(FieldData):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -520,7 +465,6 @@ class WeibullField(FieldData):
             lower and upper bounds
         kwargs
             Keyword arguments for the base class
-
         """
         kwargs.pop("states_coord", None)
         kwargs.pop("time_format", None)

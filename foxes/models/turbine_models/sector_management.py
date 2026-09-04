@@ -20,13 +20,6 @@ if TYPE_CHECKING:
 class SectorManagement(TurbineModel):
     """
     Changes variables based on variable range conditions.
-
-    Attributes
-    ----------
-    source
-        The file path or data
-
-
     """
 
     def __init__(
@@ -41,8 +34,6 @@ class SectorManagement(TurbineModel):
         pd_file_read_pars: dict[str, Any] = {},
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -64,7 +55,6 @@ class SectorManagement(TurbineModel):
             Periods for periodic variables
         pd_file_read_pars
             Parameters for pandas file reading
-
         """
         super().__init__()
 

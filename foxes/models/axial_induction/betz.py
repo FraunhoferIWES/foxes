@@ -9,24 +9,14 @@ class BetzAxialInduction(AxialInductionModel):
     """
     The classic axial induction from 1D
     momentum theory
-
-    Attributes
-    ----------
-    ct_max
-        The maximal ct value
-
-
     """
 
     def __init__(self, ct_max: float = 0.99999) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         ct_max
             The maximal ct value
-
         """
         super().__init__()
         self.ct_max = ct_max

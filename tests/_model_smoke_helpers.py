@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from importlib import import_module
 from pathlib import Path
+from shutil import copyfile
 
 import numpy as np
 import pandas as pd
@@ -13,8 +14,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 
 
-ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "foxes" / "data"
+DATA = Path(foxes.__file__).resolve().parent / "data"
 STATES_DATA = DATA / "states"
 POWER_DATA = DATA / "power_ct_curves"
 FARM_DATA = DATA / "farms"
@@ -333,7 +333,7 @@ def _point_cloud_states(cls):
     raise AssertionError(f"Unhandled point-cloud class {cls.__name__}")
 
 
-def _field_states(cls):
+def _field_states(cls, tmp_path: Path | None = None):
     if cls.__name__ == "SingleStateField":
         dataset = xr.open_dataset(WIND_ROTATION, engine=foxes.config.nc_engine).isel(
             state=0, drop=True
@@ -351,10 +351,19 @@ def _field_states(cls):
             interp_pars={"bounds_error": False},
         )
     if cls.__name__ == "FieldData":
-        example_dir = ROOT / "examples" / "field_data_nc" / "data" / "data_*.nc"
+        assert tmp_path is not None
+        field_data = tmp_path / "data_0.nc"
+        copyfile(WIND_ROTATION, field_data)
         return cls(
-            str(example_dir),
+            str(tmp_path / "data_*.nc"),
             output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+            states_coord="state",
+            x_coord="x",
+            y_coord="y",
+            h_coord="h",
+            time_format=None,
+            fixed_vars={FV.TI: 0.08, FV.RHO: 1.225},
+            var2ncvar={FV.WS: "ws", FV.WD: "wd"},
             load_mode="preload",
             bounds_extra_space=None,
             height_bounds=None,
@@ -513,7 +522,7 @@ def _run_state_smoke(cls, tmp_path):
     elif name in {"PointCloudData", "WeibullPointCloud", "TurbinePointCloud"}:
         states = _point_cloud_states(cls)
     elif name in {"SingleStateField", "FieldData", "LatLonFieldData", "WeibullField"}:
-        states = _field_states(cls)
+        states = _field_states(cls, tmp_path)
     else:
         states = _other_states(cls, tmp_path)
 

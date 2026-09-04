@@ -36,32 +36,6 @@ class Downwind(Algorithm):
     The turbines are evaluated once, in the order
     that is calculated by the provided `TurbineOrder`
     object.
-
-    Attributes
-    ----------
-    states
-        The ambient states
-    wake_models
-        The wake models. Key: wake model name,
-        value: the wake model
-    rotor_model
-        The rotor model, for all turbines
-    wake_frame
-        The wake frame
-    partial_wakes
-        The partial wakes mapping. Key: wake model name,
-        value: the partial wake model
-    deflection
-        The wake deflection model
-    ground_models
-        The ground models mapping. Key: wake model name,
-        value: the ground model
-    farm_controller
-        The farm controller
-    n_states
-        The number of states
-
-
     """
 
     DEFAULT_FARM_OUTPUTS = [
@@ -100,8 +74,6 @@ class Downwind(Algorithm):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         farm
@@ -137,7 +109,6 @@ class Downwind(Algorithm):
             used to create the population model.
         kwargs
             Additional parameters for the base class
-
         """
         if mbook is None:
             mbook = fm.ModelBook()

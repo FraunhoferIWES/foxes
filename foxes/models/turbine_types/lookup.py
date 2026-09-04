@@ -20,22 +20,6 @@ class FromLookupTable(TurbineType):
     """
     Calculate power and ct by interpolating
     by using a lookup-table
-
-    Attributes
-    ----------
-    source
-        The file path, static name, or data
-    rho
-        The air density for which the data is valid
-        or None for no correction
-    WSCT
-        The wind speed variable for ct lookup
-    WSP
-        The wind speed variable for power lookup
-    rpars
-        Parameters for pandas file reading
-
-
     """
 
     def __init__(
@@ -52,8 +36,6 @@ class FromLookupTable(TurbineType):
         **parameters: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -78,7 +60,6 @@ class FromLookupTable(TurbineType):
             Parameters for scipy intern or interp1d
         parameters
             Additional parameters for TurbineType class
-
         """
         if not isinstance(data_source, pd.DataFrame):
             pars = parse_Pct_file_name(data_source)

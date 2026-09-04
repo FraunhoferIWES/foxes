@@ -23,21 +23,10 @@ class PopulationStates(States):
     This is useful for parameter studies, where each
     inserted state corresponds to a different value of the
     associated variable.
-
-    Attributes
-    ----------
-    states
-        The original states
-    n_pop
-        The population size
-
-
     """
 
     def __init__(self, states: States, n_pop: int, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         states
@@ -46,7 +35,6 @@ class PopulationStates(States):
             The population size
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(load_mode=states.load_mode, **kwargs)
         self.states = states
@@ -361,21 +349,6 @@ class PopulationModel(TurbineModel):
     """
     This model manages parameter studies by introducing
     a population into the states
-
-    Attributes
-    ----------
-    index_coord
-        The name of the index coordinate, labeling individuals
-        within the population.
-    turbine_coord
-        The name of the turbine coordinate
-    var2ncvar
-        Mapping from variable names to NetCDF variable names
-    variables
-        The variables to be set. If None, all variables
-        fields from the dataset are used
-
-
     """
 
     def __init__(
@@ -389,8 +362,6 @@ class PopulationModel(TurbineModel):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         data_source
@@ -409,7 +380,6 @@ class PopulationModel(TurbineModel):
             The verbosity level, 0 = silent
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.index_coord = index_coord

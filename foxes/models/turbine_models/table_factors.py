@@ -23,20 +23,6 @@ class TableFactors(TurbineModel):
 
     The column names are expected to be numbers
     that represent the col_var variable.
-
-    Attributes
-    ----------
-    data_source
-        Either path to a file or data
-    row_var
-        The row-wise variable
-    col_var
-        The column-wise variable
-    ovars
-        The variables onto which the factors
-        are multiplied
-
-
     """
 
     def __init__(
@@ -49,8 +35,6 @@ class TableFactors(TurbineModel):
         **ipars: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -66,7 +50,6 @@ class TableFactors(TurbineModel):
             Parameters for pandas file reading
         ipars
             Parameters for scipy.interpolate.interpn
-
         """
         super().__init__()
 

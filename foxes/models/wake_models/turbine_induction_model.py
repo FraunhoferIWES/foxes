@@ -15,8 +15,6 @@ from .single_turbine_wake_model import SingleTurbineWakeModel
 class TurbineInductionModel(SingleTurbineWakeModel):
     """
     Abstract base class for turbine induction models.
-
-
     """
 
     @property

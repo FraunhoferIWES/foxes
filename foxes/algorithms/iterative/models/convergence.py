@@ -16,24 +16,14 @@ if TYPE_CHECKING:
 class ConvCrit(metaclass=ABCMeta):
     """
     Abstract base class for convergence criteria
-
-    Attributes
-    ----------
-    name
-        The convergence criteria name
-
-
     """
 
     def __init__(self, name: str | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         name
             The convergence criteria name
-
         """
         self.name = name if name is not None else type(self).__name__
 
@@ -131,26 +121,16 @@ class ConvCrit(metaclass=ABCMeta):
 class ConvCritList(ConvCrit):
     """
     Combines multiple convergence criteria.
-
-    Attributes
-    ----------
-    crits
-        The criteria
-
-
     """
 
     def __init__(self, crits: list[ConvCrit] = [], name: str | None = None) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         crits
             The criteria
         name
             The convergence criteria name
-
         """
         super().__init__(name)
         self.crits = crits
@@ -226,16 +206,6 @@ class ConvCritList(ConvCrit):
 class ConvVarDelta(ConvCrit):
     """
     Requires convergence of a selection of variables.
-
-    Attributes
-    ----------
-    limits
-        The convergence limits. Keys: variables str,
-        values are convergence thresholds
-    wd_vars
-        The wind direction type variables (unit deg)
-
-
     """
 
     def __init__(
@@ -245,8 +215,6 @@ class ConvVarDelta(ConvCrit):
         name: str | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         limits
@@ -256,7 +224,6 @@ class ConvVarDelta(ConvCrit):
             The wind direction type variables (unit deg)
         name
             The convergence criteria name
-
         """
         super().__init__(name)
         self.limits = limits
@@ -333,8 +300,6 @@ class ConvVarDelta(ConvCrit):
 class DefaultConv(ConvVarDelta):
     """
     Default convergence criteria.
-
-
     """
 
     def __init__(self) -> None:

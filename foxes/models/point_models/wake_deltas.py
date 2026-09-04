@@ -16,28 +16,16 @@ class WakeDeltas(PointDataModel):
     """
     This point model simply subtracts ambient results
     from waked results.
-
-    Attributes
-    ----------
-    vars
-        The variables
-    normalize
-        Divide resulting deltas by ambient values
-
-
     """
 
     def __init__(self, vars: list[str], normalize: bool = False) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         vars
             The variables
         normalize
             Divide resulting deltas by ambient values
-
         """
         super().__init__()
         self.vars = vars

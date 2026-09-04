@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 class DefaultEngine(Engine):
     """
     The case size dependent default engine.
-
-
     """
 
     _delegate_process_engine: Engine | None

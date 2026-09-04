@@ -16,24 +16,14 @@ if TYPE_CHECKING:
 class WakeMirror(GroundModel):
     """
     Wake reflection from ground and/or other horizontal planes.
-
-    Attributes
-    ----------
-    heights
-        The reflection heights
-
-
     """
 
     def __init__(self, heights: list[float]) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         heights
             The reflection heights
-
         """
         super().__init__()
         self.heights = heights
@@ -168,8 +158,6 @@ class WakeMirror(GroundModel):
 class GroundMirror(WakeMirror):
     """
     Wake reflection from the ground.
-
-
     """
 
     def __init__(self) -> None:

@@ -5,18 +5,10 @@ from pathlib import Path
 class ReaderWRG:
     """
     A reader for WRG files
-
-    Attributes
-    ----------
-    fpath
-        Path to the wrg file
-
     """
 
     def __init__(self, fpath: str | Path) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         fpath

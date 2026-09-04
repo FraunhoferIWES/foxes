@@ -11,21 +11,16 @@ from .farms_eval import WindFarmsEval
 class ClusterEval(WindFarmsEval):
     """
     Output class for cluster-aware aggregation and area mapping plots.
-
-
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
             Positional arguments for the base class
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(*args, **kwargs)
         if self.farm_results is not None:

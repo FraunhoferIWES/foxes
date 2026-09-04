@@ -20,17 +20,6 @@ if TYPE_CHECKING:
 class Timelines(WakeFrame):
     """
     Dynamic wakes for spatially uniform timeseries states.
-
-    Attributes
-    ----------
-    cl_ipars
-        Interpolation parameters for centre line
-        point interpolation
-    dt_min
-        The delta t value in minutes,
-        if not from timeseries data
-
-
     """
 
     def __init__(
@@ -40,8 +29,6 @@ class Timelines(WakeFrame):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         cl_ipars
@@ -52,7 +39,6 @@ class Timelines(WakeFrame):
             if not from timeseries data
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.cl_ipars = {} if cl_ipars is None else cl_ipars

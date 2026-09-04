@@ -22,26 +22,16 @@ class TurbineTypeCurves(Output):
     """
     Creates power and ct curves for turbine
     types, optionally including derating/boost.
-
-    Attributes
-    ----------
-    mbook
-        The model book
-
-
     """
 
     def __init__(self, mbook: ModelBook, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         mbook
             The model book
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.mbook = mbook

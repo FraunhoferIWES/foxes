@@ -22,26 +22,16 @@ class FarmOrder(WakeFrame):
     Warning: This is for testing purposes only, and in general
     only gives correct calculation results when used
     in an iterative algorithm.
-
-    Attributes
-    ----------
-    base_frame
-        The wake frame from which to start
-
-
     """
 
     def __init__(self, base_frame: WakeFrame | None = None, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         base_frame
             The wake frame from which to start
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.base_frame = base_frame

@@ -16,13 +16,6 @@ class DataCalcModel(Model):
     """
     Abstract base class for models
     that run calculations based on model data.
-
-    Attributes
-    ----------
-    load_mode
-        The data loading mode
-
-
     """
 
     def __init__(
@@ -32,8 +25,6 @@ class DataCalcModel(Model):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -42,7 +33,6 @@ class DataCalcModel(Model):
             The data loading mode, e.g. ``"preload"``.
         kwargs
             Additional keyword arguments for the constructor.
-
         """
         super().__init__(*args, **kwargs)
         self.load_mode = load_mode

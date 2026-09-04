@@ -26,21 +26,6 @@ class TurbOParkWake(GaussianWakeModel):
     "Turbulence Optimized Park model with Gaussian wake profile"
     J G Pedersen, E Svensson, L Poulsen and N G Nygaard
     https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf
-
-    Attributes
-    ----------
-    sbeta_factor
-        Factor multiplying sbeta
-    c1
-        Factor from Frandsen turbulence model
-    c2
-        Factor from Frandsen turbulence model
-    induction
-        The induction model
-    wake_k
-        Handler for the wake growth parameter k
-
-
     """
 
     def __init__(
@@ -53,8 +38,6 @@ class TurbOParkWake(GaussianWakeModel):
         **wake_k: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -69,7 +52,6 @@ class TurbOParkWake(GaussianWakeModel):
             The induction model
         wake_k
             Parameters for the WakeK class
-
         """
         super().__init__(wind_superposition=superposition)
 
@@ -303,23 +285,6 @@ class TurbOParkWakeIX(GaussianWakeModel):
     The generalized TurbOPark wake model, integrating TI over the streamline.
 
     https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf
-
-    Attributes
-    ----------
-    dx
-        The step size of the integral
-    sbeta_factor
-        Factor multiplying sbeta
-    self_wake
-        Flag for considering only own wake in ti integral
-    induction
-        The induction model
-    ipars
-        Additional parameters for centreline integration
-    wake_k
-        Handler for the wake growth parameter k
-
-
     """
 
     def __init__(
@@ -333,8 +298,6 @@ class TurbOParkWakeIX(GaussianWakeModel):
         **wake_k: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -351,7 +314,6 @@ class TurbOParkWakeIX(GaussianWakeModel):
             Additional parameters for centreline integration
         wake_k
             Parameters for the WakeK class
-
         """
         super().__init__(wind_superposition=superposition)
 

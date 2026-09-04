@@ -27,21 +27,6 @@ if TYPE_CHECKING:
 class FarmLayoutOutput(Output):
     """
     Plot the farm layout
-
-    Attributes
-    ----------
-    farm
-        The wind farm
-    fres
-        The wind farm calculation results
-    from_res
-        Flag for coordinates from results data
-    results_state
-        The state index, for from_res
-    D
-        The rotor diameter, if not from data
-
-
     """
 
     def __init__(
@@ -54,8 +39,6 @@ class FarmLayoutOutput(Output):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         farm
@@ -70,7 +53,6 @@ class FarmLayoutOutput(Output):
             The rotor diameter, if not from data
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.farm = farm

@@ -32,21 +32,6 @@ class SelfSimilar(TurbineInductionModel):
     "On the accuracy of predicting wind-farm blockage."
     Renewable Energy (2023).
     https://www.sciencedirect.com/science/article/pii/S0960148123007620
-
-    Attributes
-    ----------
-    alpha
-        The alpha parameter
-    beta
-        The beta parameter
-    gamma
-        The gamma parameter
-    pre_rotor_only
-        Calculate only the pre-rotor region
-    induction
-        The induction model
-
-
     """
 
     def __init__(
@@ -59,8 +44,6 @@ class SelfSimilar(TurbineInductionModel):
         pre_rotor_only: bool = False,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -75,7 +58,6 @@ class SelfSimilar(TurbineInductionModel):
             The gamma parameter
         pre_rotor_only
             Calculate only the pre-rotor region
-
         """
         super().__init__(wind_superposition=superposition)
         self.induction = induction
@@ -365,8 +347,6 @@ class SelfSimilar2020(SelfSimilar):
     "On the accuracy of predicting wind-farm blockage."
     Renewable Energy (2023).
     https://www.sciencedirect.com/science/article/pii/S0960148123007620
-
-
     """
 
     def _a0(self, ct: np.ndarray, x_R: np.ndarray) -> np.ndarray:

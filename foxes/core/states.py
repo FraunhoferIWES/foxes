@@ -20,8 +20,6 @@ class States(PointDataModel):
     States describe ambient meteorological data,
     typically wind speed, wind direction, turbulence
     intensity and air density.
-
-
     """
 
     @abstractmethod
@@ -141,15 +139,6 @@ class States(PointDataModel):
 class ExtendedStates(States):
     """
     States extended by point data models.
-
-    Attributes
-    ----------
-    states
-        The base states to start from
-    pmodels
-        The point models, including states as first model
-
-
     """
 
     def __init__(
@@ -158,15 +147,12 @@ class ExtendedStates(States):
         point_models: list[PointDataModel] | None = None,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         states
             The base states to start from.
         point_models
             The point models executed after states.
-
         """
         super().__init__()
         self.states = states

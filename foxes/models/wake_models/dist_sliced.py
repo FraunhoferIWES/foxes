@@ -22,8 +22,6 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
 
     The multi-yz ability is used by the `PartialDistSlicedWake`
     partial wakes model.
-
-
     """
 
     def new_wake_deltas(

@@ -14,13 +14,6 @@ if TYPE_CHECKING:
 class SetAmbFarmResults(FarmDataModel):
     """
     This model copies farm data results to ambient results.
-
-    Attributes
-    ----------
-    vars
-        The variables to be copied, or `None` for all
-
-
     """
 
     def __init__(self) -> None:

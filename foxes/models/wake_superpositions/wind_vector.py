@@ -16,26 +16,15 @@ if TYPE_CHECKING:
 class WindVectorLinear(WindVectorWakeSuperposition):
     """
     Linear superposition of wind deficit vector results
-
-    Attributes
-    ----------
-    scale_amb
-        Flag for scaling wind deficit with ambient wind speed
-        instead of waked wind speed
-
-
     """
 
     def __init__(self, scale_amb: bool = False) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         scale_amb
             Flag for scaling wind deficit with ambient wind speed
             instead of waked wind speed
-
         """
         super().__init__()
         self.scale_amb = scale_amb

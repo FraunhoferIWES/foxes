@@ -19,26 +19,16 @@ class StateTurbineMap(Output):
     """
     Creates heat maps with turbines on one axis
     and states on the other axis.
-
-    Attributes
-    ----------
-    results
-        The farm results
-
-
     """
 
     def __init__(self, farm_results: Dataset, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         farm_results
             The farm results
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.results = farm_results

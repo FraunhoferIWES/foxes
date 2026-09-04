@@ -21,36 +21,17 @@ if TYPE_CHECKING:
 class FarmController(FarmDataModel):
     """
     Analyses selected turbine models and handles their call.
-
-    Attributes
-    ----------
-    turbine_types
-        The turbine type of each turbine
-    turbine_model_names
-        Names of all turbine models found in the farm
-    pre_rotor_models
-        The turbine models with pre-rotor flag
-    post_rotor_models
-        The turbine models without pre-rotor flag
-    pars
-        Parameters for the turbine models, stored
-        under their respecitve name
-
-
     """
 
     def __init__(
         self, pars: dict[str, dict[str, dict[str, Any]]] | None = None
     ) -> None:
         """
-        Construct the farm controller.
-
         Parameters
         ----------
         pars
             Parameters for the turbine models, stored under their respective
             names.
-
         """
         super().__init__()
 

@@ -13,21 +13,12 @@ from foxes.core.data import FData, MData, TData
 class JensenWake(TopHatWakeModel):
     """
     The Jensen wake model.
-
-    Attributes
-    ----------
-    wake_k
-        Handler for the wake growth parameter k
-
-
     """
 
     def __init__(
         self, superposition: str, induction: str = "Betz", **wake_k: Any
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -36,7 +27,6 @@ class JensenWake(TopHatWakeModel):
             The induction model
         wake_k
             Parameters for the WakeK class
-
         """
         super().__init__(wind_superposition=superposition, induction=induction)
         self.wake_k = WakeK(**wake_k)
@@ -196,21 +186,7 @@ class JensenTurbOParkWake(TopHatWakeModel):
     centreline formulation, but uses the TurbOPark wake-growth
     expression for the effective wake radius.
 
-    Attributes
-    ----------
-    sbeta_factor
-        Factor multiplying sbeta
-    c1
-        Factor from Frandsen turbulence model
-    c2
-        Factor from Frandsen turbulence model
-    induction
-        The induction model
-    wake_k
-        Handler for the wake growth parameter k
-
     :group: models.wake_models.wind
-
     """
 
     def __init__(
@@ -223,8 +199,6 @@ class JensenTurbOParkWake(TopHatWakeModel):
         **wake_k: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
@@ -239,7 +213,6 @@ class JensenTurbOParkWake(TopHatWakeModel):
             The induction model
         wake_k
             Parameters for the WakeK class
-
         """
         super().__init__(wind_superposition=superposition, induction=induction)
         self.sbeta_factor = sbeta_factor
@@ -349,16 +322,23 @@ class JensenTurbOParkWake(TopHatWakeModel):
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct[st_sel])
 
-            sigma = D * (
-                k
-                / beta
+            sigma = (
+                D
+                / 2
                 * (
-                    np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1)
-                    - np.sqrt(1 + alpha**2)
-                    - np.log(
-                        (np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1) + 1)
-                        * alpha
-                        / ((np.sqrt(1 + alpha**2) + 1) * (alpha + beta * x[st_sel] / D))
+                    k
+                    / beta
+                    * (
+                        np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1)
+                        - np.sqrt(1 + alpha**2)
+                        - np.log(
+                            (np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1) + 1)
+                            * alpha
+                            / (
+                                (np.sqrt(1 + alpha**2) + 1)
+                                * (alpha + beta * x[st_sel] / D)
+                            )
+                        )
                     )
                 )
             )

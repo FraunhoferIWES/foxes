@@ -22,25 +22,6 @@ class CpCtFile(TurbineType):
     """
     Calculate power and ct by interpolating
     from cp-ct-curve data file (or pandas DataFrame).
-
-    Attributes
-    ----------
-    source
-        The file path, static name, or data
-    col_ws
-        The wind speed column
-    col_cp
-        The cp column
-    col_ct
-        The ct column
-    WSCT
-        The wind speed variable for ct lookup
-    WSP
-        The wind speed variable for power lookup
-    rpars
-        Parameters for pandas file reading
-
-
     """
 
     def __init__(
@@ -56,8 +37,6 @@ class CpCtFile(TurbineType):
         **parameters: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -77,7 +56,6 @@ class CpCtFile(TurbineType):
         pd_file_read_pars
         parameters
             Additional parameters for TurbineType class
-
         """
         if not isinstance(data_source, pd.DataFrame):
             pars = parse_Pct_file_name(data_source)

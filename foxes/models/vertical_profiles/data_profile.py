@@ -11,19 +11,6 @@ from foxes.core import VerticalProfile
 class DataProfile(VerticalProfile):
     """
     A profile based on numerical data.
-
-    Attributes
-    ----------
-    var
-        The value
-    data_z
-        The z values, shape: (n_z,)
-    data_v
-        The variable values, shape: (n_z,)
-    interp_pars
-        Additional parameters for interpolation
-
-
     """
 
     def __init__(
@@ -36,8 +23,6 @@ class DataProfile(VerticalProfile):
         **interp_pars: Any,
     ) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         data_source
@@ -52,7 +37,6 @@ class DataProfile(VerticalProfile):
             Additional parameters for pandas.read_csv()
         interp_pars
             Additional parameters for interpolation
-
         """
         super().__init__()
         self.variable = variable

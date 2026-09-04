@@ -9,24 +9,14 @@ from foxes.core import VerticalProfile
 class UniformProfile(VerticalProfile):
     """
     A profile with uniform values.
-
-    Attributes
-    ----------
-    var
-        The value
-
-
     """
 
     def __init__(self, variable: str) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         variable
             The value
-
         """
         super().__init__()
         self.variable = variable

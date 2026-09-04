@@ -25,28 +25,18 @@ class RankineHalfBody(TurbineInductionModel):
     "A potential flow model for wind turbine induction and wind farm blockage"
     Techincal Paper, Frazer-Nash Consultancy, 2019
     https://www.fnc.co.uk/media/o5eosxas/a-potential-flow-model-for-wind-turbine-induction-and-wind-farm-blockage.pdf
-
-    Attributes
-    ----------
-    induction
-        The induction model
-
-
     """
 
     def __init__(
         self, superposition: str = "vector", induction: str = "Madsen"
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superposition
             The wind speed deficit superposition.
         induction
             The induction model
-
         """
         super().__init__(wind_superposition=superposition, other_superpositions={})
         self.induction = induction

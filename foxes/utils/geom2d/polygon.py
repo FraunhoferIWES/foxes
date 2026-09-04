@@ -13,26 +13,14 @@ from .area_geometry import AreaGeometry
 class ClosedPolygon(AreaGeometry):
     """
     This class represents a closed 2D polygon.
-
-    Attributes
-    ----------
-    points
-        The polygon points
-    poly
-        The closed polygon geometry
-
-
     """
 
     def __init__(self, points: np.ndarray) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         points
             The polygon points, shape: (n_points, 2)
-
         """
         self.points = points
 

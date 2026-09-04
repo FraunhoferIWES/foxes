@@ -15,24 +15,14 @@ if TYPE_CHECKING:
 class ReorderFarmOutput(FarmDataModel):
     """
     Reorders final results to state-turbine dimensions
-
-    Attributes
-    ----------
-    outputs
-        The output variables, or None for defaults
-
-
     """
 
     def __init__(self, outputs: list[str] | None) -> None:
         """
-        Constructor
-
         Parameters
         ----------
         outputs
             The output variables, or None for defaults
-
         """
         super().__init__()
         self.outputs = outputs

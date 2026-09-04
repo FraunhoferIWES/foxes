@@ -18,20 +18,6 @@ if TYPE_CHECKING:
 class DirectMDataInfusion(CentreRotor):
     """
     Direct data infusion of data stored under mdata.
-
-    Attributes
-    ----------
-    svars2mdvars
-        A mapping of state variables to mdata variables.
-    mdata_vars
-        The mdata variables to be used for infusion. By default,
-        all mdata variables are searched.
-    turbine_coord
-        The mdata coordinate that represents turbine names. By default,
-        the second coordinate is used as a candidate if the mdata variable
-        has three dimensions.
-
-
     """
 
     def __init__(
@@ -42,8 +28,6 @@ class DirectMDataInfusion(CentreRotor):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         svars2mdvars
@@ -57,7 +41,6 @@ class DirectMDataInfusion(CentreRotor):
             has three dimensions.
         kwargs
             Additional parameters for RotorModel class
-
         """
         super().__init__(**kwargs)
         self.svars2mdvars = svars2mdvars

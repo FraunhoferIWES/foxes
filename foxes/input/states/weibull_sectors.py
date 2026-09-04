@@ -22,25 +22,6 @@ class WeibullSectors(StatesTable):
     """
     States with wind speed from Weibull parameters
     from a NetCDF file
-
-    Attributes
-    ----------
-    ws_bins
-        The wind speed bins, including
-        lower and upper bounds, shape: (n_ws_bins+1,)
-    var2ncvar
-        Mapping from variable names to variable names
-        in the nc file
-    sel
-        Subset selection via xr.Dataset.sel()
-    isel
-        Subset selection via xr.Dataset.isel()
-    rpars
-        Additional parameters for reading the file
-    RDICT
-        Default xarray file reading parameters
-
-
     """
 
     RDICT = {}
@@ -57,8 +38,6 @@ class WeibullSectors(StatesTable):
         **kwargs: object,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         data_source
@@ -79,7 +58,6 @@ class WeibullSectors(StatesTable):
             Additional parameters for reading the file
         kwargs
             Additional arguments for the base class
-
         """
         super().__init__(data_source, output_vars, var2col={}, **kwargs)  # type: ignore[arg-type]
         self.ws_bins = None if ws_bins is None else np.asarray(ws_bins)

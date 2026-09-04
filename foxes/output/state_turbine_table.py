@@ -13,26 +13,16 @@ from .output import Output
 class StateTurbineTable(Output):
     """
     Creates tables of state-turbine type data
-
-    Attributes
-    ----------
-    farm_results
-        The farm results
-
-
     """
 
     def __init__(self, farm_results: Dataset, **kwargs: Any) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         farm_results
             The farm results
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
         self.farm_results = farm_results

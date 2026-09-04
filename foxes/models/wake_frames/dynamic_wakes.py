@@ -20,19 +20,6 @@ if TYPE_CHECKING:
 class DynamicWakes(WakeFrame):
     """
     Dynamic wakes for any kind of timeseries states.
-
-    Attributes
-    ----------
-    max_age
-        The maximal number of wake steps
-    cl_ipars
-        Interpolation parameters for centre line
-        point interpolation
-    dt_min
-        The delta t value in minutes,
-        if not from timeseries data
-
-
     """
 
     def __init__(
@@ -44,8 +31,6 @@ class DynamicWakes(WakeFrame):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         max_age
@@ -61,7 +46,6 @@ class DynamicWakes(WakeFrame):
             if not from timeseries data
         kwargs
             Additional parameters for the base class
-
         """
         super().__init__(**kwargs)
 

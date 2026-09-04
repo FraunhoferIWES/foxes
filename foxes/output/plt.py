@@ -9,8 +9,6 @@ from .output import Output
 class plt(Output):
     """
     Class that runs plt commands
-
-
     """
 
     def __getattr__(self, name: str) -> Any:

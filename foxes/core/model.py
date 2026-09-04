@@ -29,13 +29,6 @@ class LoadedData(TypedDict):
 class Model(ABC):
     """
     Base class for all models.
-
-    Attributes
-    ----------
-    name
-        The model name
-
-
     """
 
     _ids: dict[str, Iterator[int]] = {}

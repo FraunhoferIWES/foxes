@@ -14,26 +14,15 @@ if TYPE_CHECKING:
 class TIMax(WakeSuperposition):
     """
     Max wake superposition for TI.
-
-    Attributes
-    ----------
-    superp_to_amb
-        The method for combining ambient with wake deltas:
-        linear or quadratic
-
-
     """
 
     def __init__(self, superp_to_amb: str = "quadratic") -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         superp_to_amb
             The method for combining ambient with wake deltas:
             linear or quadratic
-
         """
         super().__init__()
         self.superp_to_amb = superp_to_amb

@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 class VerticalProfile(Model):
     """
     Abstract base class for vertical profiles.
-
-
     """
 
     def load_chunk_data(

@@ -11,30 +11,6 @@ class Factory:
     """
     Constructs objects from a choice of allowed
     constructor parameters
-
-    Attributes
-    ----------
-    base
-        The class of which objects are to be created
-    name_template
-        The name template, e.g. 'name_<A>_<B>_<C>' for
-        variables A, B, C
-    args
-        Fixed arguments for the base class
-    kwargs
-        Fixed arguments for the base class
-    var2arg
-        Mapping from variable to constructor argument
-    hints
-        Hints for print_toc, only for variables for which the
-        options are functions or missing
-    example
-        An example name
-    options
-        For each variable, e.g. A, B or C, the list or dict
-        or function that maps a str to the actual value
-
-
     """
 
     def __init__(
@@ -49,8 +25,6 @@ class Factory:
         **options: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         base: class
@@ -72,7 +46,6 @@ class Factory:
         options
             For each variable, e.g. A, B or C, the list or dict
             or function that maps a str to the actual value
-
         """
         self.base = base
         self.name_template = name_template
@@ -350,13 +323,6 @@ class WakeKFactory:
     """
     A factory that automatically handles
     wake_k parameters
-
-    Attributes
-    ----------
-    factories
-        The individual factories
-
-
     """
 
     def __init__(
@@ -371,8 +337,6 @@ class WakeKFactory:
         **options: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         base: class
@@ -393,7 +357,6 @@ class WakeKFactory:
             Example values for variables
         options
             Additional arguments for Factory
-
         """
         self._base = base
         legacy_factory_kwargs = options.pop("kwargs", None)
@@ -553,15 +516,6 @@ class WakeKFactory:
 class FDict(Dict):
     """
     A dictionary with factory support
-
-    Attributes
-    ----------
-    store_created
-        Flag for storing created objects
-    factories
-        The factories
-
-
     """
 
     def __init__(
@@ -572,8 +526,6 @@ class FDict(Dict):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         args
@@ -582,7 +534,6 @@ class FDict(Dict):
             Flag for storing created objects
         kwargs
             Parameters for the base class
-
         """
         super().__init__(*args, _name=_name, **kwargs)
         self.store_created = store_created

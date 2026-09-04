@@ -10,28 +10,16 @@ from .area_geometry import AreaGeometry
 class Circle(AreaGeometry):
     """
     This class represents the area of a circle.
-
-    Attributes
-    ----------
-    centre
-        The centre point, shape: (2,)
-    radius
-        The radius
-
-
     """
 
     def __init__(self, centre: np.ndarray, radius: float) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         centre
             The centre point, shape: (2,)
         radius
             The radius
-
         """
         self.centre = np.array(centre, dtype=np.float64)
         self.radius = radius

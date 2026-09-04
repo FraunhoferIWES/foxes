@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 class TKE2TI(PointDataModel):
     """
     Calculates TI from TKE, using TI = sqrt( 3/2 * TKE) / WS
-
-
     """
 
     def output_point_vars(self, algo: Algorithm) -> list[str]:

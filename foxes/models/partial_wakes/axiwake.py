@@ -27,24 +27,14 @@ class PartialAxiwake(PartialCentre):
 
     The latter results are then weighted according to the overlap
     of radial wake circle area deltas and the target rotor disc area.
-
-    Attributes
-    ----------
-    n
-        The number of radial evaluation points
-
-
     """
 
     def __init__(self, n: int = 6) -> None:
         """
-        Constructor.
-
         Parameters
         ----------
         n
             The number of radial evaluation points
-
         """
         super().__init__()
         self.n = n
