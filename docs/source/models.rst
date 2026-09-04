@@ -99,10 +99,10 @@ list of model selections, the :doc:`Iterative algorithm <api_algorithms_iterativ
 All wake model classes are implemented according to their mathematical nature, i.e.,
 if applicable, they are derived from one of the following types:
 
-* :class:`DistSlicedWakeModel<foxes.models.wake_models.DistSlicedWakeModel>`: The wake delta depends on the wake frame coordinate `x` differently than on `(y, z)`, e.g., the `x` dependency can be factorized.
-* :class:`AxisymmetricWakeModel<foxes.models.wake_models.AxisymmetricWakeModel>`: Dist-sliced wake with axial symmetry, i.e., the wake can be described by `x` and a radial wake frame coordinate `r`.
-* :class:`GaussianWakeModel<foxes.models.wake_models.GaussianWakeModel>`: Axisymmetric wake that follows a Gaussian function, where the standard deviation `sigma(x)` depends on `x` only.
-* :class:`TopHatWakeModel<foxes.models.wake_models.TopHatWakeModel>`: Axisymmetric wake that is independent of `r` within the top-hat shape, and zero outside.
+* :class:`DistSlicedWakeModel<foxes.models.wake_models.dist_sliced.DistSlicedWakeModel>`: The wake delta depends on the wake frame coordinate `x` differently than on `(y, z)`, e.g., the `x` dependency can be factorized.
+* :class:`AxisymmetricWakeModel<foxes.models.wake_models.axisymmetric.AxisymmetricWakeModel>`: Dist-sliced wake with axial symmetry, i.e., the wake can be described by `x` and a radial wake frame coordinate `r`.
+* :class:`GaussianWakeModel<foxes.models.wake_models.gaussian.GaussianWakeModel>`: Axisymmetric wake that follows a Gaussian function, where the standard deviation `sigma(x)` depends on `x` only.
+* :class:`TopHatWakeModel<foxes.models.wake_models.top_hat.TopHatWakeModel>`: Axisymmetric wake that is independent of `r` within the top-hat shape, and zero outside.
 
 The reasoning behind this is that the partial wakes models can then
 build upon the underlying shape of the wake.
@@ -135,7 +135,7 @@ The `[wake_k]` part of the model name can be replaced by one of the following pa
 * `ambka<ka>`, where `<ka>` is to be replaced by the value for `ka` in `k = ka * AMB_TI`, with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
 * `ka<ka>_kb<kb>`, where `<ka>` and `<kb>` are to be replaced by the values for `ka` and `kb` in `k = ka * TI + kb`, both with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
 * `ambka<ka>_kb<kb>`, where `<ka>` and `<kb>` are to be replaced by the values for `ka` and `kb` in `k = ka * AMB_TI + kb`, both with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
-* nothing, e.g. `Bastankhah2014_linear`, which searches the value for `k` in the list of available farm data. This is intended to be used whenever a turbine model computes the `k` values, typically the the :class:`kTI<foxes.models.turbine_models.kTI>` turbine model, or an optimizer.
+* nothing, e.g. `Bastankhah2014_linear`, which searches the value for `k` in the list of available farm data. This is intended to be used whenever a turbine model computes the `k` values, typically the the :class:`kTI<foxes.models.turbine_models.kTI_model.kTI>` turbine model, or an optimizer.
 
 Examples for valid wake model choices are:
 
@@ -187,9 +187,9 @@ For rotors with yaw misalignment the wake is bent and follows a curved path. Thi
 
 Currently, these are the implemented wake deflection model classes:
 
-* :class:`NoDeflection<foxes.models.wake_deflections.NoDeflection>`: Ignores wake deflection effects (default). Should be used if no yaw misalignment is present.
-* :class:`Bastankhah2016Deflection<foxes.models.wake_deflections.Bastankhah2016Deflection>`: Extracted from the wake model paper by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_, recommended in combination with the corresponding wake model. Only the wake path is modified by this model.
-* :class:`JimenezDeflection<foxes.models.wake_deflections.JimenezDeflection>`: Bends any wake according to `Jimenez et al. <https://onlinelibrary.wiley.com/doi/epdf/10.1002/we.380>`_, and optionally also rotates the wind vector within the wake.
+* :class:`NoDeflection<foxes.models.wake_deflections.no_deflection.NoDeflection>`: Ignores wake deflection effects (default). Should be used if no yaw misalignment is present.
+* :class:`Bastankhah2016Deflection<foxes.models.wake_deflections.bastankhah2016.Bastankhah2016Deflection>`: Extracted from the wake model paper by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_, recommended in combination with the corresponding wake model. Only the wake path is modified by this model.
+* :class:`JimenezDeflection<foxes.models.wake_deflections.jimenez.JimenezDeflection>`: Bends any wake according to `Jimenez et al. <https://onlinelibrary.wiley.com/doi/epdf/10.1002/we.380>`_, and optionally also rotates the wind vector within the wake.
 
 The `JimenezDeflection` model has three pre-configured versions in the model book:
 
@@ -213,14 +213,14 @@ the partial wakes models calculate the rotor effective wake deltas.
 Some of the partial wakes models make use of the mathematical structure of
 the associated wake model:
 
-* :class:`PartialCentre<foxes.models.partial_wakes.PartialCentre>`: Only evaluate wakes at rotor centres. This is fast, but not accurate.
-* :class:`RotorPoints<foxes.models.partial_wakes.RotorPoints>`: Evaluate the wake model at exactly the rotor points, then take the average of the combined result. For large number of rotor points this is accurate, but potentially slow.
-* :class:`PartialTopHat<foxes.models.partial_wakes.PartialTopHat>`: Compute the overlap of the wake circle with the rotor disc. This is mathematically exact and fast, but limited to wakes with top-hat shapes.
-* :class:`PartialAxiwake<foxes.models.partial_wakes.PartialAxiwake>`: Compute the numerical integral of axi-symmetric wakes with the rotor disc. This needs less evaluation points than grid-type wake averaging.
-* :class:`PartialGaussian<foxes.models.partial_wakes.PartialGaussian>`: Gaussian-only partial wakes model using the exact analytical rotor-disc average.
-* :class:`PartialGaussianLookup<foxes.models.partial_wakes.PartialGaussianLookup>`: Gaussian-only partial wakes model using a precomputed lookup artifact for rotor-effective wake weighting at one rotor-centre target point.
-* :class:`PartialSegregated<foxes.models.partial_wakes.PartialSegregated>`: Abstract base class for segregated wake averaging, which means adding the averaged wake to the averaged background result (in contrast to `RotorPoints`).
-* :class:`PartialGrid<foxes.models.partial_wakes.PartialGrid>`: Segregated partial wakes evaluated at points of a :class:`grid-type rotor<GridRotor>` (which is usually not equal to the selected rotor model).
+* :class:`PartialCentre<foxes.models.partial_wakes.centre.PartialCentre>`: Only evaluate wakes at rotor centres. This is fast, but not accurate.
+* :class:`RotorPoints<foxes.models.partial_wakes.rotor_points.RotorPoints>`: Evaluate the wake model at exactly the rotor points, then take the average of the combined result. For large number of rotor points this is accurate, but potentially slow.
+* :class:`PartialTopHat<foxes.models.partial_wakes.top_hat.PartialTopHat>`: Compute the overlap of the wake circle with the rotor disc. This is mathematically exact and fast, but limited to wakes with top-hat shapes.
+* :class:`PartialAxiwake<foxes.models.partial_wakes.axiwake.PartialAxiwake>`: Compute the numerical integral of axi-symmetric wakes with the rotor disc. This needs less evaluation points than grid-type wake averaging.
+* :class:`PartialGaussian<foxes.models.partial_wakes.gaussian.PartialGaussian>`: Gaussian-only partial wakes model using the exact analytical rotor-disc average.
+* :class:`PartialGaussianLookup<foxes.models.partial_wakes.gaussian.PartialGaussianLookup>`: Gaussian-only partial wakes model using a precomputed lookup artifact for rotor-effective wake weighting at one rotor-centre target point.
+* :class:`PartialSegregated<foxes.models.partial_wakes.segregated.PartialSegregated>`: Abstract base class for segregated wake averaging, which means adding the averaged wake to the averaged background result (in contrast to `RotorPoints`).
+* :class:`PartialGrid<foxes.models.partial_wakes.grid.PartialGrid>`: Segregated partial wakes evaluated at points of a :class:`grid-type rotor<foxes.models.rotor_models.grid.GridRotor>` (which is usually not equal to the selected rotor model).
 
 In the default model book, concrete instances of the above partial wakes models
 can be found under the names
@@ -264,7 +264,7 @@ The default lookup-axis settings are tuned for typical
 ``r_over_sigma_max`` is provided. The upper ``sigma/D`` extent is derived to
 meet the selected large-sigma asymptote relative-error tolerance.
 
-By default, :class:`PartialGaussianLookup<foxes.models.partial_wakes.PartialGaussianLookup>`
+By default, :class:`PartialGaussianLookup<foxes.models.partial_wakes.gaussian.PartialGaussianLookup>`
 uses clipped radial out-of-bounds handling (``bounds_policy="clip"``). If
 clipped ``R/sigma`` points yield weights above ``min_weight``, an error is
 raised to indicate insufficient lookup-table coverage for a non-negligible
@@ -286,13 +286,13 @@ For each state and turbine, those compute data from currently existing data.
 The list of available turbine model classes can be found
 :doc:`here in the API <_autoapi/foxes/models/turbine_models/index>`. For example:
 
-* :class:`kTI<foxes.models.turbine_models.kTI>`: Computes the wake expansion coefficient `k` as a linear function of `TI`: `k = kb + kTI * TI`. All models that do not specify `k` explicitly (i.e, `k=None` in the constructor), will then use this result when computing wake deltas.
-* :class:`SetFarmVars<foxes.models.turbine_models.SetFarmVars>`: Set any farm variable to any state-turbine data array, or sub-array (nan values are ignored), either initially (`pre_rotor=True`) or after the wake calculation.
-* :class:`PowerMask<foxes.models.turbine_models.PowerMask>`: Curtail or boost the turbine by re-setting the maximal power of the turbine, see the Power mask example.
-* :class:`SectorManagement<foxes.models.turbine_models.SectorManagement>`: Modify farm variables if wind speed and/or wind direction values are within certain ranges, see the Wind sector management example.
-* :class:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and :class:`YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
-* :class:`Calculator<foxes.models.turbine_models.Calculator>`: Apply any user-written function that calculates values of farm variables.
-* :class:`LookupTable<foxes.models.turbine_models.LookupTable>`: Use a lookup-table for the computation of farm variables.
+* :class:`kTI<foxes.models.turbine_models.kTI_model.kTI>`: Computes the wake expansion coefficient `k` as a linear function of `TI`: `k = kb + kTI * TI`. All models that do not specify `k` explicitly (i.e, `k=None` in the constructor), will then use this result when computing wake deltas.
+* :class:`SetFarmVars<foxes.models.turbine_models.set_farm_vars.SetFarmVars>`: Set any farm variable to any state-turbine data array, or sub-array (nan values are ignored), either initially (`pre_rotor=True`) or after the wake calculation.
+* :class:`PowerMask<foxes.models.turbine_models.power_mask.PowerMask>`: Curtail or boost the turbine by re-setting the maximal power of the turbine, see the Power mask example.
+* :class:`SectorManagement<foxes.models.turbine_models.sector_management.SectorManagement>`: Modify farm variables if wind speed and/or wind direction values are within certain ranges, see the Wind sector management example.
+* :class:`YAW2YAWM<foxes.models.turbine_models.yaw2yawm.YAW2YAWM>` and :class:`YAWM2YAW<foxes.models.turbine_models.yawm2yaw.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
+* :class:`Calculator<foxes.models.turbine_models.calculator.Calculator>`: Apply any user-written function that calculates values of farm variables.
+* :class:`LookupTable<foxes.models.turbine_models.lookup_table.LookupTable>`: Use a lookup-table for the computation of farm variables.
 
 .. _farm-controllers:
 
@@ -305,8 +305,8 @@ conditions.
 The list of available farm controller classes can be found
 :doc:`here in the API <_autoapi/foxes/models/farm_controllers/index>`. For example:
 
-* :class:`BasicFarmController<foxes.models.farm_controllers.BasicFarmController>`: Calls turbine models based on their order of appearance, moving those with `pre_rotor` flag to the front.
-* :class:`OpFlagController<foxes.models.farm_controllers.OpFlagController>`: Requires an operation flag farm variable for each state and turbine, and only runs turbine models for switched-on turbines.
+* :class:`BasicFarmController<foxes.models.farm_controllers.basic.BasicFarmController>`: Calls turbine models based on their order of appearance, moving those with `pre_rotor` flag to the front.
+* :class:`OpFlagController<foxes.models.farm_controllers.op_flag.OpFlagController>`: Requires an operation flag farm variable for each state and turbine, and only runs turbine models for switched-on turbines.
 
 The controller is selected when constructing the algorithm object, via the parameter
 `farm_controller`. If ommited, this defaults to `basic_ctrl` which corresponds to
@@ -343,8 +343,8 @@ Point models can be added to ambient states objects, simply by the `+` operation
 The list of available point models can be found in the :doc:`API <_autoapi/foxes/models/point_models/index>`.
 For example:
 
-* :class:`WakeDeltas<foxes.models.point_models.WakeDeltas>`: Subtract backgrounds from waked results.
-* :class:`TKE2TI<foxes.models.point_models.TKE2TI>`: Compute `TI` from turbulent kinetic energy data, as for example provided by mesoscale simulations.
+* :class:`WakeDeltas<foxes.models.point_models.wake_deltas.WakeDeltas>`: Subtract backgrounds from waked results.
+* :class:`TKE2TI<foxes.models.point_models.tke2ti.TKE2TI>`: Compute `TI` from turbulent kinetic energy data, as for example provided by mesoscale simulations.
 
 .. _vertical-profiles:
 

@@ -44,11 +44,11 @@ extensions = [
     "sphinx_immaterial",
     "autoapi.extension",
     "sphinx.ext.autosectionlabel",
-    "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.doctest",
     "myst_nb",
+    "sphinx.ext.intersphinx",
 ]
 
 intersphinx_mapping = {
