@@ -322,16 +322,23 @@ class JensenTurbOParkWake(TopHatWakeModel):
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct[st_sel])
 
-            sigma = D * (
-                k
-                / beta
+            sigma = (
+                D
+                / 2
                 * (
-                    np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1)
-                    - np.sqrt(1 + alpha**2)
-                    - np.log(
-                        (np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1) + 1)
-                        * alpha
-                        / ((np.sqrt(1 + alpha**2) + 1) * (alpha + beta * x[st_sel] / D))
+                    k
+                    / beta
+                    * (
+                        np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1)
+                        - np.sqrt(1 + alpha**2)
+                        - np.log(
+                            (np.sqrt((alpha + beta * x[st_sel] / D) ** 2 + 1) + 1)
+                            * alpha
+                            / (
+                                (np.sqrt(1 + alpha**2) + 1)
+                                * (alpha + beta * x[st_sel] / D)
+                            )
+                        )
                     )
                 )
             )
