@@ -1011,5 +1011,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.1
 
+- Bug fixes:
+  - Made model smoke-test data paths resolve from the installed package, so conda-forge tests do not depend on the source checkout layout
+  - Fixing broken links in documentation
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.1](https://github.com/FraunhoferIWES/foxes/commits/v1.9.1)
