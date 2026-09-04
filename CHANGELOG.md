@@ -1019,6 +1019,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.2
 
-
+- Documentation:
+  - Updating docstrings such that classes appear cleaner in API
+- Bug fixes:
+  - Typo fixed in `JensenTurbOPark`, replacing `D` by `D/2`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.2](https://github.com/FraunhoferIWES/foxes/commits/v1.9.2)
