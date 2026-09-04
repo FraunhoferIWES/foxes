@@ -1016,3 +1016,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixing broken links in documentation
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.1](https://github.com/FraunhoferIWES/foxes/commits/v1.9.1)
+
+## v1.9.2
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.2](https://github.com/FraunhoferIWES/foxes/commits/v1.9.2)
