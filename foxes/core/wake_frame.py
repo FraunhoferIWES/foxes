@@ -134,8 +134,13 @@ class WakeFrame(Model):
 
         if target == FC.STATE_TARGET_TPOINT:
             out = fdata[variable][s, downwind_index, None, None]
+            out = np.broadcast_to(out, (out.shape[0], tdata.n_targets, tdata.n_tpoints))
         elif target in [FC.STATE_TURBINE, FC.STATE_TARGET]:
             out = fdata[variable][s, downwind_index, None]
+            n_second = (
+                fdata.n_turbines if target == FC.STATE_TURBINE else tdata.n_targets
+            )
+            out = np.broadcast_to(out, (out.shape[0], n_second))
         else:
             raise ValueError(
                 f"Unkown target '{target}', choices are {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"

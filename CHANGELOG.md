@@ -1028,5 +1028,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.3
 
+- Core:
+  - `Model.get_data` uses broadcasted views for boolean selections and `upcast=True`; upcast results may be read-only.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.3](https://github.com/FraunhoferIWES/foxes/commits/v1.9.3)

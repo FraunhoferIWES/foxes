@@ -425,8 +425,8 @@ class Model(ABC):
         algo
             The algorithm, needed for data from previous iterations.
         upcast
-            Ensure the target dimension is present; otherwise dimension 1 is
-            entered.
+            Ensure the target dimensions are present. If expansion is needed,
+            the result is a read-only broadcasted view.
         selection
             Apply this selection to the result, for state-turbine, state-target,
             or state-target-tpoint outputs.
@@ -660,6 +660,7 @@ class Model(ABC):
 
             def _upcast_sel(
                 sel_shape: tuple[int, ...],
+                broadcast: bool = False,
             ) -> tuple[np.ndarray[Any, Any], list[int]]:
                 chp: list[int] = []
                 for i, s in enumerate(selected_out.shape):
@@ -674,6 +675,8 @@ class Model(ABC):
                 chp_t = tuple(chp)
                 eshp: list[int] = list(shp[len(sel_shape) :])
                 if chp_t != selected_out.shape:
+                    if broadcast:
+                        return np.broadcast_to(selected_out, chp_t), eshp
                     nout = np.zeros(chp_t, dtype=selected_out.dtype)
                     nout[:] = selected_out
                     return nout, eshp
@@ -684,7 +687,7 @@ class Model(ABC):
                     raise ValueError(
                         f"Expecting selection of shape {out.shape}, got {selection.shape}"
                     )
-                out, eshp = _upcast_sel(selection.shape)
+                out, eshp = _upcast_sel(selection.shape, broadcast=True)
             elif isinstance(selection, (tuple, list)):
                 if len(selection) > len(out.shape):
                     raise ValueError(
@@ -700,9 +703,6 @@ class Model(ABC):
 
         # apply upcast:
         if upcast and out.shape != shp:
-            tmp = np.zeros(shp, dtype=out.dtype)
-            tmp[:] = out
-            out = tmp
-            del tmp
+            out = np.broadcast_to(out, shp)
 
         return out
