@@ -1363,8 +1363,7 @@ class DatasetStates(States):
             for dims0 in mvd:
                 vrs, d0 = data.pop(dims0)
                 dims = (FC.STATE,) + dims0
-                d = np.zeros((n_states,) + d0.shape, dtype=d0.dtype)
-                d[:] = d0[None, ...]
+                d = np.broadcast_to(d0[None, ...], (n_states,) + d0.shape)
                 d = d[ssel, order, ...]
                 del d0
 

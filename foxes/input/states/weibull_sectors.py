@@ -198,16 +198,20 @@ class WeibullSectors(StatesTable):
             dms = (self.BIN_WD, self.BIN_WS, self.POINT)
 
         # create binned data
+        def _broadcast(values: np.ndarray) -> np.ndarray:
+            return np.broadcast_to(
+                np.asarray(values, dtype=config.dtype_double),
+                shp,
+            )
+
         self._data = {
-            FV.WD: np.zeros(shp, dtype=config.dtype_double),
-            FV.WS: np.zeros(shp, dtype=config.dtype_double),
+            FV.WD: _broadcast(
+                data[cwd].to_numpy()[:, None]
+                if cpt is None
+                else data[cwd].to_numpy()[:, None, None]
+            ),
+            FV.WS: _broadcast(wss[None, :] if cpt is None else wss[None, :, None]),
         }
-        if cpt is None:
-            self._data[FV.WD][:] = data[cwd].to_numpy()[:, None]
-            self._data[FV.WS][:] = wss[None, :]
-        else:
-            self._data[FV.WD][:] = data[cwd].to_numpy()[:, None, None]
-            self._data[FV.WS][:] = wss[None, :, None]
         for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT] + self.ovars:
             if v not in [FV.WS, FV.WD] and v not in self.fixed_vars:
                 w = self.var2ncvar.get(v, v)
@@ -241,35 +245,33 @@ class WeibullSectors(StatesTable):
                     if cpt is None:
                         self._data[v] = np.moveaxis(d_array, [iwd, iws], [0, 1])
                     else:
-                        self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                        self._data[v][:] = np.moveaxis(d_array, [iwd, iws], [0, 1])[
-                            :, :, None
-                        ]
+                        self._data[v] = _broadcast(
+                            np.moveaxis(d_array, [iwd, iws], [0, 1])[:, :, None]
+                        )
                 elif iws >= 0 and iwd < 0 and ipt >= 0:
-                    self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                    self._data[v][:] = np.moveaxis(d_array, [iws, ipt], [0, 1])[
-                        None, :, :
-                    ]
+                    self._data[v] = _broadcast(
+                        np.moveaxis(d_array, [iws, ipt], [0, 1])[None, :, :]
+                    )
                 elif iws < 0 and iwd >= 0 and ipt >= 0:
-                    self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                    self._data[v][:] = np.moveaxis(d_array, [iwd, ipt], [0, 1])[
-                        :, None, :
-                    ]
+                    self._data[v] = _broadcast(
+                        np.moveaxis(d_array, [iwd, ipt], [0, 1])[:, None, :]
+                    )
                 elif iws >= 0 and iwd < 0 and ipt < 0:
-                    self._data[v] = np.zeros(shp, dtype=config.dtype_double)
                     if cpt is None:
-                        self._data[v][:] = d_array[None, :]
+                        values = d_array[None, :]
                     else:
-                        self._data[v][:] = d_array[None, :, None]
+                        values = d_array[None, :, None]
+                    self._data[v] = _broadcast(values)
                 elif iws < 0 and iwd >= 0 and ipt < 0:
-                    self._data[v] = np.zeros(shp, dtype=config.dtype_double)
                     if cpt is None:
-                        self._data[v][:] = d_array[:, None]
+                        values = d_array[:, None]
                     else:
-                        self._data[v][:] = d_array[:, None, None]
+                        values = d_array[:, None, None]
+                    self._data[v] = _broadcast(values)
                 elif iws < 0 and iwd < 0 and ipt >= 0:
-                    self._data[v] = np.zeros(shp, dtype=config.dtype_double)
-                    self._data[v][:] = d_array[None, None, :]
+                    self._data[v] = _broadcast(d_array[None, None, :])
+
+        self._data[FV.WEIGHT] = self._data[FV.WEIGHT].copy()
 
         # compute Weibull weights
         self._data[FV.WEIGHT] *= weibull_weights(
