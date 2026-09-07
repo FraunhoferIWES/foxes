@@ -82,3 +82,38 @@ def test_population_states_load_chunk_data_preload_is_noop():
 
     assert states.calls == []
     assert "mock_var" not in mdata
+
+
+def test_population_states_ignores_data_without_dimensions():
+    states = _FlyStatesMock(2)
+    pstates = PopulationStates(states, n_pop=2)
+    loaded_data = {"coords": {}, "data_vars": {}, "extra_data": {}}
+    pstates.load_data(None, loaded_data)
+
+    mdata = MData(
+        data={
+            FC.STATE: np.arange(2, dtype=np.int32),
+            pstates.SMAP: np.array([0, 1], dtype=np.int32),
+        },
+        dims={
+            FC.STATE: (FC.STATE,),
+            pstates.SMAP: (FC.STATE,),
+        },
+        states_i0=0,
+        name="mdata_test",
+    )
+    fdata = FData(
+        data={
+            FC.STATE: np.arange(2, dtype=np.int32),
+            FC.TURBINE: np.arange(1, dtype=np.int32),
+        },
+        dims={
+            FC.STATE: (FC.STATE,),
+            FC.TURBINE: (FC.TURBINE,),
+        },
+    )
+    fdata[("weight", 1)] = np.ones((2, 1))
+    tdata = TData.from_points(np.zeros((2, 1, 3)), mdata=mdata)
+    tdata.add("weight", np.ones((2, 1, 1)), (FC.STATE, FC.TARGET, FC.TPOINT))
+
+    pstates.calculate(None, mdata, fdata, tdata)
