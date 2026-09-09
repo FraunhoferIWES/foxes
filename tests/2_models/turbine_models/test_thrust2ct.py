@@ -26,14 +26,14 @@ def test_thrust2ct_formula():
             FV.T: np.array([[thrust]], dtype=float),
             FV.RHO: np.array([[rho]], dtype=float),
             FV.D: np.array([[d]], dtype=float),
-            FV.REWS2: np.array([[ws]], dtype=float),
+            FV.REWS: np.array([[ws]], dtype=float),
         },
         dims={
             FV.CT: (FC.STATE, FC.TURBINE),
             FV.T: (FC.STATE, FC.TURBINE),
             FV.RHO: (FC.STATE, FC.TURBINE),
             FV.D: (FC.STATE, FC.TURBINE),
-            FV.REWS2: (FC.STATE, FC.TURBINE),
+            FV.REWS: (FC.STATE, FC.TURBINE),
         },
     )
 

@@ -1030,7 +1030,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Core:
   - `Model.get_data` uses broadcasted views for boolean selections and `upcast=True`; upcast results may be read-only.
-- Memory:
-  - Reduced temporary allocations for dataset-state turbine expansion and Weibull-sector data expansion.
+- Models:
+  - Changing defaults for rotor effective wind speed variables for thrust and power by `FV.REWS`, previously was `FV.REWS2` and `FV.REWS3`. This affects all turbine types. This reduces memory and usually has small effects on results.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.3](https://github.com/FraunhoferIWES/foxes/commits/v1.9.3)

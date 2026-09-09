@@ -17,7 +17,11 @@ class Thrust2Ct(TurbineModel):
     Calculates ct from thrust force data.
     """
 
-    def __init__(self, thrust_var: str = FV.T, var_ws_ct: str = FV.REWS2) -> None:
+    def __init__(
+        self,
+        thrust_var: str = FV.T,
+        var_ws_ct: str = FV.REWS,
+    ) -> None:
         """
         Parameters
         ----------

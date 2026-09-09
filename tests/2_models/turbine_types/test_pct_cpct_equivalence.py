@@ -19,15 +19,13 @@ def _build_fdata(ws, rho):
     shape = (1, 1)
     return FData(
         data={
-            FV.REWS2: np.full(shape, ws, dtype=float),
-            FV.REWS3: np.full(shape, ws, dtype=float),
+            FV.REWS: np.full(shape, ws, dtype=float),
             FV.RHO: np.full(shape, rho, dtype=float),
             FV.P: np.zeros(shape, dtype=float),
             FV.CT: np.zeros(shape, dtype=float),
         },
         dims={
-            FV.REWS2: (FC.STATE, FC.TURBINE),
-            FV.REWS3: (FC.STATE, FC.TURBINE),
+            FV.REWS: (FC.STATE, FC.TURBINE),
             FV.RHO: (FC.STATE, FC.TURBINE),
             FV.P: (FC.STATE, FC.TURBINE),
             FV.CT: (FC.STATE, FC.TURBINE),

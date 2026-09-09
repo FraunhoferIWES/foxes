@@ -39,7 +39,7 @@ def test_power_mask_applies_limit():
         data={
             FV.P: np.array([[p0]], dtype=float),
             FV.MAX_P: np.array([[max_p0]], dtype=float),
-            FV.REWS3: np.array([[9.0]], dtype=float),
+            FV.REWS: np.array([[9.0]], dtype=float),
             FV.RHO: np.array([[1.225]], dtype=float),
             FV.D: np.array([[100.0]], dtype=float),
             FV.CT: np.array([[ct0]], dtype=float),
@@ -47,7 +47,7 @@ def test_power_mask_applies_limit():
         dims={
             FV.P: (FC.STATE, FC.TURBINE),
             FV.MAX_P: (FC.STATE, FC.TURBINE),
-            FV.REWS3: (FC.STATE, FC.TURBINE),
+            FV.REWS: (FC.STATE, FC.TURBINE),
             FV.RHO: (FC.STATE, FC.TURBINE),
             FV.D: (FC.STATE, FC.TURBINE),
             FV.CT: (FC.STATE, FC.TURBINE),
@@ -56,7 +56,7 @@ def test_power_mask_applies_limit():
 
     out = model.calculate(algo=algo, mdata={}, fdata=fdata, st_sel=st_sel)
 
-    ws = fdata[FV.REWS3][st_sel]
+    ws = fdata[FV.REWS][st_sel]
     rho = fdata[FV.RHO][st_sel]
     r = fdata[FV.D][st_sel] / 2
     denom = 0.5 * ws**3 * rho * np.pi * r**2
