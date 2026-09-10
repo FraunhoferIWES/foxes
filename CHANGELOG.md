@@ -1030,6 +1030,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Core:
   - `Model.get_data` uses broadcasted views for boolean selections and `upcast=True`; upcast results may be read-only.
+  - New `SubsetStates` wrapper for arbitrary ordered subsets of any states model.
 - Models:
   - Changing defaults for rotor effective wind speed variables for thrust and power by `FV.REWS`, previously was `FV.REWS2` and `FV.REWS3`. This affects all turbine types. This reduces memory and usually has small effects on results.
 

@@ -657,6 +657,18 @@ class FarmResultsEval(Output):
             else:
                 print("Capacity factor added to farm results")
 
+    def calc_farm_capacity(self) -> float:
+        """
+        Calculates the total farm capacity.
+
+        Returns
+        -------
+        capacity
+            The total farm capacity
+
+        """
+        return np.sum(self.get_capacity())
+
     def calc_farm_yield(
         self,
         turbine_yield: pd.DataFrame | None = None,
