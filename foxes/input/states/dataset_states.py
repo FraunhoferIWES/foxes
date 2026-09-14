@@ -620,23 +620,37 @@ class DatasetStates(States):
             return vars
 
         if not isinstance(self.data_source, xr.Dataset):
-            # check static data:
-            fpath = get_input_path(self.data_source)
-            if not _is_pattern(self.data_source):
-                if not fpath.is_file():
-                    static_path = StaticData().get_file_path(
-                        STATES, fpath.name, check_raw=False
-                    )
-                    assert static_path is not None
-                    fpath = static_path
+            if isinstance(self.data_source, (list, tuple)):
+                files = []
+                for pth in self.data_source:
+                    fpath = get_input_path(pth)
+                    if not _is_pattern(fpath):
+                        if not fpath.is_file():
+                            static_path = StaticData().get_file_path(
+                                STATES, fpath.name, check_raw=False
+                            )
+                            assert static_path is not None
+                            fpath = static_path
+                    files.append(fpath)
+                files = sorted(files)
+            else:
+                # check static data:
+                fpath = get_input_path(self.data_source)
+                if not _is_pattern(self.data_source):
+                    if not fpath.is_file():
+                        static_path = StaticData().get_file_path(
+                            STATES, fpath.name, check_raw=False
+                        )
+                        assert static_path is not None
+                        fpath = static_path
 
-            # find files:
-            prt = fpath.resolve().parent
-            glb = fpath.name
-            while _is_pattern(prt):
-                glb = prt.name + "/" + glb
-                prt = prt.parent
-            files = sorted(list(prt.glob(glb)))
+                # find files:
+                prt = fpath.resolve().parent
+                glb = fpath.name
+                while _is_pattern(prt):
+                    glb = prt.name + "/" + glb
+                    prt = prt.parent
+                files = sorted(list(prt.glob(glb)))
             coords = list(self._cmap.values())
             vars = {v: self.var2ncvar.get(v, v) for v in self.variables}
 
