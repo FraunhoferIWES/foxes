@@ -673,6 +673,7 @@ class FarmResultsEval(Output):
         self,
         turbine_yield: pd.DataFrame | None = None,
         power_uncert: float | None = None,
+        ambient: bool = False,
         **kwargs: Any,
     ) -> float | tuple[float, float, float]:
         """
@@ -685,6 +686,8 @@ class FarmResultsEval(Output):
         power_uncert
             Uncertainty in the power value. Triggers
             P75 and P90 outputs
+        ambient
+            Flag for calculating ambient yield, by default False
         kwargs
             Parameters for calc_yield(). Apply if
             turbine_yield is not given
@@ -702,15 +705,17 @@ class FarmResultsEval(Output):
         if turbine_yield is None:
             yargs: dict[str, Any] = dict(annual=True)
             yargs.update(kwargs)
-            turbine_yield = self.calc_yield(**yargs)
+            turbine_yield = self.calc_yield(ambient=ambient, **yargs)
+
         farm_yield = turbine_yield.sum()
+        YLD = FV.AMB_YLD if ambient else FV.YLD
 
         if power_uncert is not None:
             P75 = farm_yield * (1.0 - (0.675 * power_uncert))
             P90 = farm_yield * (1.0 - (1.282 * power_uncert))
-            return farm_yield["YLD"], P75["YLD"], P90["YLD"]
+            return farm_yield[YLD], P75[YLD], P90[YLD]
 
-        return farm_yield["YLD"]
+        return farm_yield[YLD]
 
     def add_efficiency(self, verbosity: int = 1) -> None:
         """
