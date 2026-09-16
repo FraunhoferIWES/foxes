@@ -39,10 +39,7 @@ def plot_wind_rose_bars(
     frequency = np.asarray(frequency)
     wd_edges = np.asarray(wd_edges)
     if frequency.ndim != 2 or frequency.shape[0] != len(wd_edges) - 1:
-        raise ValueError(
-            "Wind-rose frequencies must have shape "
-            "(n_wd_bins, n_ws_bins)"
-        )
+        raise ValueError("Wind-rose frequencies must have shape (n_wd_bins, n_ws_bins)")
 
     n_ws_bins = frequency.shape[1]
     wd_centers = 0.5 * (wd_edges[:-1] + wd_edges[1:])

@@ -108,7 +108,9 @@ class BinnedStates(States):
             if edges.ndim != 1 or len(edges) < 2 or not np.all(np.isfinite(edges)):
                 raise ValueError(f"BinnedStates: Invalid bin edges for '{var}'")
             if np.any(np.diff(edges) <= 0):
-                raise ValueError(f"BinnedStates: Bin edges for '{var}' must be increasing")
+                raise ValueError(
+                    f"BinnedStates: Bin edges for '{var}' must be increasing"
+                )
         if (self.support_points is None) == (self.support_grid is None):
             raise ValueError(
                 "BinnedStates: Require exactly one of support_points or support_grid"
@@ -286,9 +288,7 @@ class BinnedStates(States):
             flat_bin += np.where(valid, indices, 0) * multiplier
             multiplier *= nbin
 
-        weights = np.zeros(
-            (self._n_bins, support.shape[0]), dtype=config.dtype_double
-        )
+        weights = np.zeros((self._n_bins, support.shape[0]), dtype=config.dtype_double)
         for point_i in range(support.shape[0]):
             mask = valid[:, point_i]
             np.add.at(
@@ -302,9 +302,7 @@ class BinnedStates(States):
             values = source_results[var].to_numpy()
             if values.ndim == 3 and values.shape[-1] == 1:
                 values = values[..., 0]
-            out = np.zeros(
-                (self._n_bins, support.shape[0]), dtype=config.dtype_double
-            )
+            out = np.zeros((self._n_bins, support.shape[0]), dtype=config.dtype_double)
             if var == FV.WD:
                 sine = np.zeros_like(out)
                 cosine = np.zeros_like(out)

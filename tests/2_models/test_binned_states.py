@@ -48,8 +48,14 @@ def test_binned_states_reduces_into_loaded_data(monkeypatch):
 
     source_results = xr.Dataset(
         data_vars={
-            FV.WS: ((FC.STATE, FC.POINT), [[2.0, 7.0], [3.0, 8.0], [6.0, 9.0], [7.0, 4.0]]),
-            FV.WD: ((FC.STATE, FC.POINT), [[359.0, 1.0], [10.0, 20.0], [190.0, 200.0], [350.0, 170.0]]),
+            FV.WS: (
+                (FC.STATE, FC.POINT),
+                [[2.0, 7.0], [3.0, 8.0], [6.0, 9.0], [7.0, 4.0]],
+            ),
+            FV.WD: (
+                (FC.STATE, FC.POINT),
+                [[359.0, 1.0], [10.0, 20.0], [190.0, 200.0], [350.0, 170.0]],
+            ),
         }
     )
     monkeypatch.setattr(
