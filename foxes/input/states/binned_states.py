@@ -9,7 +9,7 @@ from scipy.interpolate import RegularGridInterpolator, griddata
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.config import config
-from foxes.core import FData, MData, States, TData, launch_parallel_calc
+from foxes.core import FData, MData, States, TData, run_with_engine
 from foxes.utils import plot_wind_rose_bars
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ class BinnedStates(States):
         self,
         states: States,
         *,
-        bin_vars: Mapping[str, Sequence[float]],
+        bin_vars: Mapping[str, Sequence[float] | int],
         support_points: np.ndarray | None = None,
         support_grid: Mapping[str, Sequence[float]] | None = None,
         interpolation: str = "linear",
@@ -50,8 +50,11 @@ class BinnedStates(States):
             The source states model to evaluate and bin.
         bin_vars
             Mapping from source variable names to monotonically increasing bin
-            edges. The output state count is the product of the number of bins
-            for all variables.
+            edges. For wind speed, an integer specifies the number of equal
+            subdivisions between 0 and 30 m/s. For wind direction, an integer
+            specifies the number of equal-width bins with the first bin
+            centered at 0 degrees. The output state count is the product of
+            the number of bins for all variables.
         support_points
             Scattered support coordinates with shape ``(n_points, 3)`` and
             columns ``x``, ``y``, and ``h``. Provide exactly one of
@@ -76,10 +79,22 @@ class BinnedStates(States):
         """
         super().__init__(**kwargs)
         self.states = states
-        self.bin_vars = {
-            v: np.asarray(edges, dtype=config.dtype_double)
-            for v, edges in bin_vars.items()
-        }
+        self.bin_vars = {}
+        for var, edges in bin_vars.items():
+            if isinstance(edges, (int, np.integer)) and not isinstance(edges, bool):
+                if edges < 1:
+                    raise ValueError("BinnedStates: Integer bin count must be positive")
+                if var == FV.WS:
+                    edges = np.linspace(0.0, 30.0, edges + 1, dtype=config.dtype_double)
+                elif var == FV.WD:
+                    width = 360.0 / edges
+                    edges = np.arange(edges + 1, dtype=config.dtype_double) * width
+                    edges -= width / 2.0
+                else:
+                    raise ValueError(
+                        f"BinnedStates: Integer bin definitions are only supported for '{FV.WS}' and '{FV.WD}'"
+                    )
+            self.bin_vars[var] = np.asarray(edges, dtype=config.dtype_double)
         self.support_points = (
             None
             if support_points is None
@@ -228,22 +243,30 @@ class BinnedStates(States):
 
         support, axes = self._materialize_support()
         n_states = self.states.size()
-        point_data = algo.new_point_data(support, n_states=n_states)
         source_data = self._source_dataset(loaded_data)
-        source_vars = self.states.output_point_vars(algo)
-        previous_n_states = getattr(algo, "n_states", None)
-        if previous_n_states is None:
-            algo.n_states = n_states
-        try:
-            source_results = launch_parallel_calc(
-                algo,
-                model=self.states,
-                model_data=source_data,
-                point_data=point_data,
-                out_vars=source_vars,
+        from foxes.algorithms import Downwind
+
+        halgo = Downwind(
+            farm=algo.farm,
+            states=self.states,
+            rotor_model="centre",
+            partial_wakes="centre",
+            wake_models=[],
+            verbosity=verbosity - 1,
+        )
+        halgo.initialize(force=True)
+
+        def _calc_source():
+            source_farm_results = halgo.calc_farm()
+            source_results = halgo.calc_points(
+                source_farm_results,
+                support,
+                outputs=self.states.output_point_vars(halgo),
             )
-        finally:
-            algo.n_states = previous_n_states
+            return source_results
+
+        source_results = run_with_engine(_calc_source)
+        del halgo
 
         if FV.WEIGHT in source_data:
             weight_dims = source_data[FV.WEIGHT].dims
@@ -357,7 +380,7 @@ class BinnedStates(States):
         loaded_data["extra_data"][self._support_key] = support
         loaded_data["extra_data"][self._grid_axes_key] = axes
 
-    def _get_interpolator(
+    def _get_state_interpolator(
         self,
         var: str,
         support: np.ndarray,
@@ -370,16 +393,16 @@ class BinnedStates(States):
         same_height = np.allclose(support[:, 2], support[0, 2])
         if axes is not None:
             grid_shape = tuple(len(axis) for axis in axes)
+            grid_values = values.reshape((values.shape[0],) + grid_shape)
+            grid_values = np.moveaxis(grid_values, 0, -1)
             if same_height:
-                grid_values = values.reshape(grid_shape)
                 interpolator = RegularGridInterpolator(
                     axes[:2],
-                    grid_values[:, :, 0],
+                    grid_values[:, :, 0, :],
                     bounds_error=False,
                     fill_value=self.fill_value,
                 )
             else:
-                grid_values = values.reshape(grid_shape)
                 interpolator = RegularGridInterpolator(
                     axes,
                     grid_values,
@@ -388,12 +411,13 @@ class BinnedStates(States):
                 )
         else:
             coordinates = support[:, :2] if same_height else support
+            interp_values = values.T
 
             def interpolator(points: np.ndarray) -> np.ndarray:
                 query = points[:, :2] if same_height else points
                 return griddata(
                     coordinates,
-                    values,
+                    interp_values,
                     query,
                     method=self.interpolation,
                     fill_value=self.fill_value,
@@ -401,6 +425,29 @@ class BinnedStates(States):
 
         self._cache[key] = interpolator
         return interpolator
+
+    def _interpolate_states(
+        self,
+        var: str,
+        support: np.ndarray,
+        values: np.ndarray,
+        axes: tuple[np.ndarray, ...] | None,
+        points: np.ndarray,
+        tdata: TData,
+    ) -> np.ndarray:
+        interpolator = self._get_state_interpolator(var, support, values, axes)
+        same_height = np.allclose(support[:, 2], support[0, 2])
+        query = points.reshape(-1, 3)
+        if axes is not None and same_height:
+            query = query[:, :2]
+        interpolated = interpolator(query)
+        state_indices = np.repeat(
+            np.arange(tdata.n_states, dtype=config.dtype_int),
+            tdata.n_targets * tdata.n_tpoints,
+        )
+        return interpolated[np.arange(interpolated.shape[0]), state_indices].reshape(
+            tdata.n_states, tdata.n_targets, tdata.n_tpoints
+        )
 
     def calculate(  # type: ignore[override]
         self,
@@ -440,46 +487,16 @@ class BinnedStates(States):
         support = np.asarray(mdata.extra_data[self._support_key])
         axes = mdata.extra_data[self._grid_axes_key]
         points = np.asarray(tdata[FC.TARGETS])
-        same_height = np.allclose(support[:, 2], support[0, 2])
         results = {}
         for var in self.bin_vars:
             values = mdata[self.var(var)]
-            interpolated = np.empty(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-                dtype=config.dtype_double,
+            results[var] = self._interpolate_states(
+                var, support, values, axes, points, tdata
             )
-            for state_i in range(tdata.n_states):
-                interpolator = self._get_interpolator(
-                    f"{var}:{state_i}",
-                    support,
-                    values[state_i],
-                    axes,
-                )
-                query = points[state_i].reshape(-1, 3)
-                if axes is not None and same_height:
-                    query = query[:, :2]
-                interpolated[state_i] = interpolator(query).reshape(
-                    tdata.n_targets, tdata.n_tpoints
-                )
-            results[var] = interpolated
         weights = mdata[self.var(FV.WEIGHT)]
-        interpolated_weights = np.empty(
-            (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-            dtype=config.dtype_double,
+        interpolated_weights = self._interpolate_states(
+            FV.WEIGHT, support, weights, axes, points, tdata
         )
-        for state_i in range(tdata.n_states):
-            interpolator = self._get_interpolator(
-                f"{FV.WEIGHT}:{state_i}",
-                support,
-                weights[state_i],
-                axes,
-            )
-            query = points[state_i].reshape(-1, 3)
-            if axes is not None and same_height:
-                query = query[:, :2]
-            interpolated_weights[state_i] = interpolator(query).reshape(
-                tdata.n_targets, tdata.n_tpoints
-            )
         tdata[FV.WEIGHT] = interpolated_weights
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
         return results
