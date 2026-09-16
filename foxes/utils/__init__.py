@@ -7,6 +7,7 @@ from .wind_dir import wd2wdvec as wd2wdvec
 from .wind_dir import wdvec2wd as wdvec2wd
 from .wind_dir import uv2wd as uv2wd
 from .wind_dir import delta_wd as delta_wd
+from .wind_rose import plot_wind_rose_bars as plot_wind_rose_bars
 
 from .subclasses import all_subclasses as all_subclasses
 from .subclasses import new_cls as new_cls

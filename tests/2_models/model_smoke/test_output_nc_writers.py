@@ -169,6 +169,47 @@ def test_farm_results_eval_calc_yield_smoke():
     assert np.all(np.isfinite(waked_yield[FV.YLD].to_numpy()))
 
 
+def test_farm_results_eval_calc_farm_mean():
+    rews = np.array([[1.0, 10.0], [3.0, 14.0]])
+    weight_cases = [
+        ((FC.STATE,), np.array([0.25, 0.75])),
+        (
+            (FC.STATE, FC.TURBINE),
+            np.array([[0.25, 0.75], [0.75, 0.25]]),
+        ),
+    ]
+
+    for weight_dims, weights in weight_cases:
+        farm_results = xr.Dataset(
+            data_vars={
+                FV.REWS: ((FC.STATE, FC.TURBINE), rews),
+                FV.WEIGHT: (weight_dims, weights),
+            },
+            coords={FC.STATE: np.arange(2), FC.TURBINE: np.arange(2)},
+        )
+        state_weights = weights[:, None] if weights.ndim == 1 else weights
+        expected = np.mean(np.sum(rews * state_weights, axis=0))
+
+        result = FarmResultsEval(farm_results).calc_farm_mean([FV.REWS])
+
+        assert np.isclose(result[FV.REWS], expected)
+
+        evaluator = FarmResultsEval(farm_results)
+        turbine_mean = evaluator.reduce_turbines({FV.REWS: "weights"})
+        turbine_sum = evaluator.reduce_turbines({FV.REWS: "weights_sum"})
+        expected_by_state = np.sum(rews * state_weights, axis=1)
+
+        assert np.allclose(turbine_mean[FV.REWS], expected_by_state / rews.shape[1])
+        assert np.allclose(turbine_sum[FV.REWS], expected_by_state)
+
+        farm_sum = evaluator.reduce_all(
+            states_op={FV.REWS: "weights"},
+            turbines_op={FV.REWS: "weights_sum"},
+        )
+
+        assert np.isclose(farm_sum[FV.REWS], expected * rews.shape[1])
+
+
 def test_point_calculator_write_nc_smoke_and_cleanup(tmp_path):
     algo, farm_results = _calc_farm_results()
     out = PointCalculator(algo=algo, farm_results=farm_results, out_dir=tmp_path)

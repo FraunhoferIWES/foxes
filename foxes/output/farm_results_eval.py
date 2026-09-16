@@ -159,8 +159,8 @@ class FarmResultsEval(Output):
         ----------
         vars_op
             The operation per variable. The mapping is from variable name
-            to reduction mode, with choices: weights, mean_no_weights,
-            sum, min, max.
+            to reduction mode, with choices: weights, weights_sum,
+            mean, sum, min, max.
 
         Returns
         -------
@@ -200,7 +200,7 @@ class FarmResultsEval(Output):
                 rdata[v] = vdata
             elif op == "weights":
                 rdata[v] = self.weinsum("t", vdata)
-            elif op == "mean_no_weights":
+            elif op == "mean":
                 rdata[v] = np.mean(vdata, axis=0)
             elif op == "sum":
                 rdata[v] = np.sum(vdata, axis=0)
@@ -212,7 +212,7 @@ class FarmResultsEval(Output):
                 rdata[v] = np.std(vdata, axis=0)
             else:
                 raise KeyError(
-                    f"Unknown operation '{op}' for variable '{v}'. Please choose: weights, mean_no_weights, sum, min, max"
+                    f"Unknown operation '{op}' for variable '{v}'. Please choose: weights, mean, sum, min, max"
                 )
 
         data = pd.DataFrame(index=self.results[self._LEVEL].values, data=rdata)
@@ -228,7 +228,7 @@ class FarmResultsEval(Output):
         ----------
         vars_op
             The operation per variable. The mapping is from variable name
-            to reduction mode, with choices: weights, mean_no_weights,
+            to reduction mode, with choices: weights, mean,
             sum, min, max.
 
         Returns
@@ -248,8 +248,10 @@ class FarmResultsEval(Output):
             )
 
             if op == "weights":
+                rdata[v] = self.weinsum("s", vdata) / vdata.shape[1]
+            elif op == "weights_sum":
                 rdata[v] = self.weinsum("s", vdata)
-            elif op == "mean_no_weights":
+            elif op == "mean":
                 rdata[v] = np.mean(vdata, axis=1)
             elif op == "sum":
                 rdata[v] = np.sum(vdata, axis=1)
@@ -259,7 +261,7 @@ class FarmResultsEval(Output):
                 rdata[v] = np.max(vdata, axis=1)
             else:
                 raise KeyError(
-                    f"Unknown operation '{op}' for variable '{v}'. Please choose: weights, mean_no_weights, sum, min, max"
+                    f"Unknown operation '{op}' for variable '{v}'. Please choose: weights, weights_sum, mean, sum, min, max"
                 )
 
         data = pd.DataFrame(index=states, data=rdata)
@@ -280,7 +282,8 @@ class FarmResultsEval(Output):
             name to reduction mode, with choices: sum, mean, min, max.
         turbines_op
             The turbines contraction operations. The mapping is from variable
-            name to reduction mode, with choices: sum, mean, min, max.
+            name to reduction mode, with choices: weights, weights_sum,
+            mean, sum, min, max.
 
         Returns
         -------
@@ -298,13 +301,15 @@ class FarmResultsEval(Output):
                 f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
             )
 
-            if op == "weights":
+            if op in {"weights", "weights_sum"}:
                 if states_op[v] == "weights":
                     rdata[v] = self.weinsum("", v)
                 else:
                     rdata[v] = self.weinsum("", vdata[None, :])
-            elif op == "mean_no_weights":
-                rdata[v] = np.sum(vdata)
+                if op == "weights":
+                    rdata[v] /= len(vdata)
+            elif op == "mean":
+                rdata[v] = np.mean(vdata)
             elif op == "sum":
                 rdata[v] = np.sum(vdata)
             elif op == "min":
@@ -313,7 +318,7 @@ class FarmResultsEval(Output):
                 rdata[v] = np.max(vdata)
             else:
                 raise KeyError(
-                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max, weights"
+                    f"Unknown operation '{op}' for variable '{v}'. Please choose: weights, weights_sum, mean, sum, min, max"
                 )
 
         return rdata
@@ -337,7 +342,7 @@ class FarmResultsEval(Output):
             The results per turbine
 
         """
-        r = "weights" if use_weights else "mean_no_weights"
+        r = "weights" if use_weights else "mean"
         if isinstance(vars, str):
             return self.reduce_states({vars: r})
         return self.reduce_states({v: r for v in vars})
@@ -386,7 +391,7 @@ class FarmResultsEval(Output):
             The results per state
 
         """
-        return self.reduce_turbines({v: "mean_no_weights" for v in vars})
+        return self.reduce_turbines({v: "mean" for v in vars})
 
     def calc_turbine_sum(self, vars: list[str]) -> pd.DataFrame:
         """

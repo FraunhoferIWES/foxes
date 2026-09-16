@@ -1031,6 +1031,13 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Core:
   - `Model.get_data` uses broadcasted views for boolean selections and `upcast=True`; upcast results may be read-only.
   - New `SubsetStates` wrapper for arbitrary ordered subsets of any states model.
+- Input:
+  - Added `BinnedStates`, which evaluates wrapped states on constructor-defined regular-grid or scattered support points and reduces them into weighted histogram states during initialization.
+  - Added support-point interpolation and single-height horizontal interpolation for `BinnedStates`.
+- Output:
+  - Added support-point wind-rose data and single-canvas figure generation for `BinnedStates`.
+- Examples:
+  - Added the `binned_states` example using `timeseries_8000.csv.gz`.
 - Models:
   - Changing defaults for rotor effective wind speed variables for thrust and power by `FV.REWS`, previously was `FV.REWS2` and `FV.REWS3`. This affects all turbine types. This reduces memory and usually has small effects on results.
 
