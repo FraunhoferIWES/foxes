@@ -138,7 +138,7 @@ class OpFlagController(FarmController):
         assert op_flags_data.ndim == 2, (
             f"OpFlagController data must be 2D representing (n_states, n_turbines), got shape {op_flags_data.shape}"
         )
-        if op_flags_data.shape == (algo.n_turbines, algo.n_states):
+        if op_flags_data.shape == (algo.n_states, algo.n_turbines):
             pass
         elif op_flags_data.shape in [(1, algo.n_turbines), (algo.n_states, 1)]:
             op_flags_data = (

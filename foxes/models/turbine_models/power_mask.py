@@ -31,7 +31,7 @@ class PowerMask(TurbineModel):
 
     def __init__(
         self,
-        var_ws_P: str = FV.REWS3,
+        var_ws_P: str = FV.REWS,
         factor_P: float = 1.0e3,
         P_lim: float = 100,
         induction: str | AxialInductionModel = "Betz",

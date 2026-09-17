@@ -298,6 +298,8 @@ class PopulationStates(States):
             hdata = {}
             hdims = {}
             for dname, data in in_data.items():
+                if dname not in in_data.dims:
+                    continue
                 dms = in_data.dims[dname]
                 if dname == self.SMAP or dname == self.STATE0:
                     pass
@@ -309,7 +311,9 @@ class PopulationStates(States):
                         f"States '{self.name}': Found states variable not at dimension 0 for mdata entry '{dname}': {dms}"
                     )
                 else:
-                    hdata[dname] = data
+                    shape = tuple(in_data.sizes[dim] for dim in dms)
+                    mapped = np.broadcast_to(data, shape)
+                    hdata[dname] = mapped.copy() if DClass is TData else mapped
                     hdims[dname] = dms
             return DClass.from_data(
                 in_data,

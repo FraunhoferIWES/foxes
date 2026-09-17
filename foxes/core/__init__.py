@@ -35,6 +35,7 @@ from .engine import launch_parallel_calc as launch_parallel_calc
 
 from .states import States as States
 from .states import ExtendedStates as ExtendedStates
+from .subset_states import SubsetStates as SubsetStates
 
 from .farm_data_model import FarmDataModel as FarmDataModel
 from .farm_data_model import FarmDataModelList as FarmDataModelList

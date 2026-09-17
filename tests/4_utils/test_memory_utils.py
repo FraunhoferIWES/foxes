@@ -4,6 +4,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
+import foxes.constants as FC
+from foxes.config import config, get_input_path
 from foxes.utils.memory_utils import (
     deep_split_by_nbytes,
     deep_update,
@@ -153,3 +155,23 @@ def test_deep_split_and_update_preserve_non_dict_mapping_payloads():
 
     assert isinstance(merged["dataset"], xr.Dataset)
     assert np.array_equal(merged["dataset"]["a"].to_numpy(), np.array([1.0, 2.0]))
+
+
+def test_get_input_path_accepts_sequence_of_paths(tmp_path):
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    a = input_dir / "a.nc"
+    b = input_dir / "b.nc"
+    a.touch()
+    b.touch()
+
+    old_input_dir = config[FC.INPUT_DIR]
+    config[FC.INPUT_DIR] = input_dir
+    try:
+        assert get_input_path([a, b]) == [a, b]
+        assert get_input_path(("a.nc", "b.nc")) == [
+            input_dir / "a.nc",
+            input_dir / "b.nc",
+        ]
+    finally:
+        config[FC.INPUT_DIR] = old_input_dir

@@ -718,6 +718,7 @@ class Downwind(Algorithm):
         outputs: list[str] | str | None = None,
         calc_parameters: dict[str, dict[str, Any]] = {},
         ambient: bool = False,
+        ambient_keep: bool = False,
         finalize: bool = True,
         clear_mem: bool = False,
         **kwargs: Any,
@@ -734,6 +735,8 @@ class Downwind(Algorithm):
             The output variables, or None for defaults
         ambient
             Flag for ambient instead of waked calculation
+        ambient_keep
+            Flag to keep non-ambient variables after an ambient calculation
         finalize
             Flag for finalization after calculation
         clear_mem
@@ -807,7 +810,7 @@ class Downwind(Algorithm):
             mlist.finalize(self, self.verbosity - 1)
             self.finalize(clear_mem=clear_mem)
 
-        if ambient and farm_results:
+        if ambient and farm_results and not ambient_keep:
             dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]
             farm_results = farm_results.drop_vars(dvars)
 

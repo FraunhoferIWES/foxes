@@ -31,11 +31,12 @@ class FarmLayoutOutput(Output):
 
     def __init__(
         self,
-        farm: WindFarm,
+        farm: WindFarm | None = None,
         farm_results: Dataset | None = None,
         from_results: bool = False,
         results_state: int | None = None,
         D: float | None = None,
+        algo: Algorithm | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -51,6 +52,8 @@ class FarmLayoutOutput(Output):
             The state index, for from_res
         D
             The rotor diameter, if not from data
+        algo
+            The algorithm, needed by some functions
         kwargs
             Additional parameters for the base class
         """
@@ -59,7 +62,13 @@ class FarmLayoutOutput(Output):
         self.fres = farm_results
         self.from_res = from_results
         self.rstate = results_state
+        self.algo = algo
         self.D = D
+
+        if self.farm is not None and self.algo is not None:
+            assert self.farm is self.algo.farm, "Mismatch between farm and algo.farm"
+        elif self.farm is None and self.algo is not None:
+            self.farm = self.algo.farm
 
         if from_results and farm_results is None:
             raise ValueError("Missing farm_results for switch from_results.")
@@ -432,16 +441,12 @@ class FarmLayoutOutput(Output):
         else:
             cols = ["name", "x", "y", "h", "D"]
 
-        if self.farm.wind_farm_names is not None:
+        wfnames = self.farm.wind_farm_names
+        if wfnames is not None and len(wfnames) > 1:
             cols.append(col_farm)
-            wfarms = [t.wind_farm_name for t in self.farm.turbines]
-        else:
-            wfarms = None
-        if self.farm.cluster_names is not None:
+        clnames = self.farm.cluster_names
+        if clnames is not None and len(clnames) > 1:
             cols.append(col_cluster)
-            clusters = [t.cluster_name for t in self.farm.turbines]
-        else:
-            clusters = None
 
         lyt = pd.DataFrame(index=range(self.farm.n_turbines), columns=cols)
         lyt.index.name = "index"
@@ -453,16 +458,24 @@ class FarmLayoutOutput(Output):
         data = self.get_layout_data(lonlat=False)
         lyt["x"] = np.round(data[:, 0], 4)
         lyt["y"] = np.round(data[:, 1], 4)
-        lyt["h"] = np.round(data[:, 2], 4)
-        lyt["D"] = [t.D for t in self.farm.turbines]
+        lyt["h"] = np.round(data[:, 2], 2)
+        if np.any(np.isnan(lyt["h"])):
+            if self.algo is not None:
+                lyt["h"] = np.round(self.farm.get_hub_heights(algo=self.algo), 2)
+            else:
+                lyt["h"] = [t.H for t in self.farm.turbines]
+        if self.algo is not None:
+            lyt["D"] = np.round(self.farm.get_rotor_diameters(algo=self.algo), 2)
+        else:
+            lyt["D"] = [t.D for t in self.farm.turbines]
 
         if type_col is not None:
             lyt[type_col] = [m.name for m in algo.farm_controller.turbine_types]
 
-        if wfarms is not None:
-            lyt[col_farm] = wfarms
-        if clusters is not None:
-            lyt[col_cluster] = clusters
+        if col_farm in cols:
+            lyt[col_farm] = self.farm.wind_farm_list
+        if col_cluster in cols:
+            lyt[col_cluster] = self.farm.cluster_list
 
         return lyt
 

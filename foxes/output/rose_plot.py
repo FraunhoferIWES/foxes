@@ -14,6 +14,7 @@ from typing import Any
 from foxes.algorithms import Downwind
 from foxes.core import States, Turbine, WindFarm
 from foxes.models import ModelBook
+from foxes.utils import plot_wind_rose_bars
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -255,10 +256,7 @@ class RosePlotOutput(Output):
         n_wsb = data.sizes[ws_var]
         n_wdb = data.sizes[wd_var]
         ws_bins = np.asarray(data.attrs[f"{ws_var}_bounds"])
-        wd_cent = np.mod(90 - data[wd_var].to_numpy(), 360)
-        wd_cent = np.radians(wd_cent)
         wd_delta = 360 / n_wdb
-        wd_width = np.radians(0.9 * wd_delta)
         freq = data["frequency"].to_numpy()
 
         if ax is not None:
@@ -269,19 +267,12 @@ class RosePlotOutput(Output):
         else:
             fig, ax = plt.subplots(figsize=figsize, subplot_kw={"projection": "polar"})
 
-        bcmap = plt.get_cmap(cmap, n_wsb)
-        color_list = bcmap(np.linspace(0, 1, n_wsb))
-
-        bottom = np.zeros(n_wdb)
-        for wsi in range(n_wsb):
-            ax.bar(
-                wd_cent,
-                freq[:, wsi],
-                bottom=bottom,
-                width=wd_width,
-                color=color_list[wsi],
-            )
-            bottom += freq[:, wsi]
+        color_list = plot_wind_rose_bars(
+            ax,
+            freq,
+            data.attrs[f"{wd_var}_bounds"],
+            cmap=cmap,
+        )
 
         fmax = np.max(np.sum(freq, axis=1))
         freq_delta = int(freq_delta)

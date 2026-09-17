@@ -30,11 +30,11 @@ class TurbOParkWake(GaussianWakeModel):
 
     def __init__(
         self,
-        superposition: str,
+        superposition: str = "ws_quadratic_amb_target",
         sbeta_factor: float = 0.25,
         c1: float = 1.5,
         c2: float = 0.8,
-        induction: str = "Madsen",
+        induction: str = "Betz",
         **wake_k: Any,
     ) -> None:
         """
@@ -235,7 +235,7 @@ class TurbOParkWake(GaussianWakeModel):
             # calculate sigma:
             # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
             a = self.induction.ct2a(ct)
-            beta = np.maximum((1 - a) / (1 - 2 * a), 0)
+            beta = np.clip((1 - a) / (1 - 2 * a), 0, 3)
             epsilon = self.sbeta_factor * np.sqrt(beta)
             del a, beta
 

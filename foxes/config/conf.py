@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 from pathlib import Path
 from sys import version_info
-from typing import Optional
+from typing import Optional, overload
 
 from foxes.utils.dict import Dict
 from foxes.utils.load import import_module
@@ -206,24 +206,27 @@ config = Config()
 """
 
 
-def get_path(pth: str | Path, base: Path) -> Path:
+@overload
+def get_path(pth: str | Path, base: Path) -> Path: ...
+
+
+@overload
+def get_path(
+    pth: list[str | Path] | tuple[str | Path, ...], base: Path
+) -> list[Path]: ...
+
+
+def get_path(
+    pth: str | Path | list[str | Path] | tuple[str | Path, ...], base: Path
+) -> Path | list[Path]:
     """
-    Gets path object, respecting the base directory
+    Gets path object, respecting the base directory.
 
-    Parameters
-    ----------
-    pth
-        The path, optionally relative to base
-    base
-        The base directory
-
-    Returns
-    -------
-    out
-        The path, absolute or relative to base directory
-
-
+    Single paths are resolved relative to ``base``; sequences are resolved elementwise.
     """
+    if isinstance(pth, (list, tuple)):
+        return [get_path(pp, base) for pp in pth]
+
     if not isinstance(pth, Path):
         pth = Path(pth)
     if pth.is_absolute():
@@ -232,7 +235,19 @@ def get_path(pth: str | Path, base: Path) -> Path:
         return (base / pth).expanduser()
 
 
-def get_input_path(pth: str | Path) -> Path:
+@overload
+def get_input_path(pth: str | Path) -> Path: ...
+
+
+@overload
+def get_input_path(
+    pth: list[str | Path] | tuple[str | Path, ...],
+) -> list[Path]: ...
+
+
+def get_input_path(
+    pth: str | Path | list[str | Path] | tuple[str | Path, ...],
+) -> Path | list[Path]:
     """
     Gets path object, respecting the configurations
     input directory
@@ -253,7 +268,19 @@ def get_input_path(pth: str | Path) -> Path:
     return get_path(pth, base=config.input_dir)
 
 
-def get_output_path(pth: str | Path) -> Path:
+@overload
+def get_output_path(pth: str | Path) -> Path: ...
+
+
+@overload
+def get_output_path(
+    pth: list[str | Path] | tuple[str | Path, ...],
+) -> list[Path]: ...
+
+
+def get_output_path(
+    pth: str | Path | list[str | Path] | tuple[str | Path, ...],
+) -> Path | list[Path]:
     """
     Gets path object, respecting the configurations
     output directory

@@ -31,8 +31,8 @@ class PCtFile(TurbineType):
         col_P: str = "P",
         col_ct: str = "ct",
         rho: float | None = None,
-        var_ws_ct: str = FV.REWS2,
-        var_ws_P: str = FV.REWS3,
+        var_ws_ct: str = FV.REWS,
+        var_ws_P: str = FV.REWS,
         pd_file_read_pars: dict[str, Any] = {},
         **parameters: Any,
     ) -> None:
