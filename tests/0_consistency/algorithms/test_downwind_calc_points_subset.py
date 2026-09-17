@@ -43,9 +43,19 @@ def test_downwind_calc_points_respects_states_sel_subset():
             points=points,
             states_sel=["2009-01-06 13:50:00"],
         )
+        plot_data = foxes.output.FlowPlots2D(algo, farm_results).get_states_data_xz(
+            FV.AMB_WS,
+            n_img_points=(2, 2),
+            xmin=0.0,
+            xmax=100.0,
+            zmin=50.0,
+            zmax=500.0,
+            states_sel=["2009-01-06 13:50:00"],
+        )
 
     assert point_results.sizes[FC.STATE] == 1
     assert point_results.sizes[FC.POINT] == 2
+    assert plot_data[2].shape[0] == 1
 
 
 if __name__ == "__main__":

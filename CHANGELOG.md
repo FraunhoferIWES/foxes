@@ -1045,5 +1045,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed `GroundMirror` to apply the selected partial-wake model to main as well as mirrored wakes.
   - Added `scale_target` to wind-speed and vector wake superpositions. `scale_amb` selects ambient instead of waked speed, while `scale_target` selects target instead of source turbine data.
   - Removed dedicated local wind-speed superposition classes; their `_loc` model-book aliases now select target ambient scaling.
+- Bug fixes:
+  - Fixed `FlowPlots2D` state selection for multi-height inputs
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.3](https://github.com/FraunhoferIWES/foxes/commits/v1.9.3)
