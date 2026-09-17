@@ -191,11 +191,11 @@ class JensenTurbOParkWake(TopHatWakeModel):
 
     def __init__(
         self,
-        superposition: str,
+        superposition: str = "ws_quadratic_amb_target",
         sbeta_factor: float = 0.25,
         c1: float = 1.5,
         c2: float = 0.8,
-        induction: str = "Madsen",
+        induction: str = "Betz",
         **wake_k: Any,
     ) -> None:
         """

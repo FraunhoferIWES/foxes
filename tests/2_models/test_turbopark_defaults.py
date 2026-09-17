@@ -3,7 +3,7 @@ from __future__ import annotations
 import foxes
 import foxes.variables as FV
 from foxes.input.yaml.windio.read_attributes import _read_wind_deficit
-from foxes.models.wake_models.wind import TurbOParkWake
+from foxes.models.wake_models.wind import JensenTurbOParkWake, TurbOParkWake
 from foxes.utils import Dict
 
 from _model_smoke_helpers import _assert_farm_results
@@ -38,6 +38,19 @@ def test_turbopark_defaults_match_original_model():
     with _engine():
         farm_results = algo.calc_farm()
     _assert_farm_results(farm_results)
+
+
+def test_jensen_turbopark_defaults():
+    mbook, _ = _mbook_with_ttype()
+    wake_model = mbook.wake_models["JensenTurbOPark"]
+
+    direct_wake_model = JensenTurbOParkWake()
+    assert direct_wake_model.induction == "Betz"
+    assert direct_wake_model.wind_superposition == "ws_quadratic_amb_target"
+    assert wake_model.induction == "Betz"
+    assert wake_model.wind_superposition == "ws_quadratic_amb_target"
+    assert wake_model.wake_k.repr() == f"k=0.6*{FV.AMB_TI}"
+    assert mbook.default_partial_wakes(wake_model) == "top_hat"
 
 
 def test_windio_turbopark_uses_original_model_structure():

@@ -521,10 +521,10 @@ class ModelBook:
         )
 
         self.wake_models["JensenTurbOPark"] = fm.wake_models.wind.JensenTurbOParkWake(
-            superposition="ws_quadratic",
+            superposition="ws_quadratic_amb_target",
             ka=0.6,
             ti_var=FV.AMB_TI,
-            induction="Madsen",
+            induction="Betz",
         )
 
         self.wake_models.add_k_factory(
