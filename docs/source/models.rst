@@ -117,7 +117,12 @@ For wind-speed superpositions, the base name scales deficits by the source turbi
 waked wind speed, while the `_amb` suffix selects the source ambient wind speed. The
 `_target` suffix selects the target turbine's waked wind speed, and `_amb_target`
 selects its ambient wind speed. The same choices are available through the
-`scale_amb` and `scale_target` constructor parameters.
+`scale_amb` and `scale_target` constructor parameters. The legacy `_loc` names
+remain available as aliases for `_amb_target`.
+
+`ws_product` is different: it combines dimensionless deficits and applies the
+result to the target ambient wind speed, so a separate `_amb_target` variant
+would be identical.
 
 The list of wake model name templates in the default model book is long,
 but that is mainly due to variations of various constructor argument choices. Typical examples are

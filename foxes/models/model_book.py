@@ -321,58 +321,6 @@ class ModelBook:
 
         self.wake_superpositions = FDict(
             _name="wake_superpositions",
-            ws_linear=fm.wake_superpositions.WSLinear(scale_amb=False),
-            ws_linear_lim=fm.wake_superpositions.WSLinear(
-                scale_amb=False, lim_low=1e-4
-            ),
-            ws_linear_amb=fm.wake_superpositions.WSLinear(scale_amb=True),
-            ws_linear_amb_lim=fm.wake_superpositions.WSLinear(
-                scale_amb=True, lim_low=1e-4
-            ),
-            ws_linear_target=fm.wake_superpositions.WSLinear(scale_target=True),
-            ws_linear_amb_target=fm.wake_superpositions.WSLinear(
-                scale_amb=True, scale_target=True
-            ),
-            ws_linear_loc=fm.wake_superpositions.WSLinearLocal(),
-            ws_linear_loc_lim=fm.wake_superpositions.WSLinearLocal(lim_low=1e-4),
-            ws_quadratic=fm.wake_superpositions.WSQuadratic(scale_amb=False),
-            ws_quadratic_lim=fm.wake_superpositions.WSQuadratic(
-                scale_amb=False, lim_low=1e-4
-            ),
-            ws_quadratic_amb=fm.wake_superpositions.WSQuadratic(scale_amb=True),
-            ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(
-                scale_amb=True, lim_low=1e-4
-            ),
-            ws_quadratic_target=fm.wake_superpositions.WSQuadratic(scale_target=True),
-            ws_quadratic_amb_target=fm.wake_superpositions.WSQuadratic(
-                scale_amb=True, scale_target=True
-            ),
-            ws_quadratic_loc=fm.wake_superpositions.WSQuadraticLocal(),
-            ws_quadratic_loc_lim=fm.wake_superpositions.WSQuadraticLocal(lim_low=1e-4),
-            ws_cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
-            ws_cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
-            ws_cubic_target=fm.wake_superpositions.WSPow(pow=3, scale_target=True),
-            ws_cubic_amb_target=fm.wake_superpositions.WSPow(
-                pow=3, scale_amb=True, scale_target=True
-            ),
-            ws_cubic_loc=fm.wake_superpositions.WSPowLocal(pow=3),
-            ws_cubic_loc_lim=fm.wake_superpositions.WSPowLocal(pow=3, lim_low=1e-4),
-            ws_quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
-            ws_quartic_amb=fm.wake_superpositions.WSPow(pow=4, scale_amb=True),
-            ws_quartic_target=fm.wake_superpositions.WSPow(pow=4, scale_target=True),
-            ws_quartic_amb_target=fm.wake_superpositions.WSPow(
-                pow=4, scale_amb=True, scale_target=True
-            ),
-            ws_quartic_loc=fm.wake_superpositions.WSPowLocal(pow=4),
-            ws_quartic_loc_lim=fm.wake_superpositions.WSPowLocal(pow=4, lim_low=1e-4),
-            ws_max=fm.wake_superpositions.WSMax(scale_amb=False),
-            ws_max_amb=fm.wake_superpositions.WSMax(scale_amb=True),
-            ws_max_target=fm.wake_superpositions.WSMax(scale_target=True),
-            ws_max_amb_target=fm.wake_superpositions.WSMax(
-                scale_amb=True, scale_target=True
-            ),
-            ws_max_loc=fm.wake_superpositions.WSMaxLocal(),
-            ws_max_loc_lim=fm.wake_superpositions.WSMaxLocal(lim_low=1e-4),
             ws_product=fm.wake_superpositions.WSProduct(),
             ws_product_lim=fm.wake_superpositions.WSProduct(lim_low=1e-4),
             ti_linear=fm.wake_superpositions.TILinear(superp_to_amb="quadratic"),
@@ -380,12 +328,55 @@ class ModelBook:
             ti_cubic=fm.wake_superpositions.TIPow(pow=3, superp_to_amb="quadratic"),
             ti_quartic=fm.wake_superpositions.TIPow(pow=4, superp_to_amb="quadratic"),
             ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
-            vector=fm.wake_superpositions.WindVectorLinear(scale_amb=False),
-            vector_amb=fm.wake_superpositions.WindVectorLinear(scale_amb=True),
-            vector_target=fm.wake_superpositions.WindVectorLinear(scale_target=True),
-            vector_amb_target=fm.wake_superpositions.WindVectorLinear(
-                scale_amb=True, scale_target=True
-            ),
+        )
+
+        def add_ws_superposition_factories(
+            name: str,
+            superposition: type,
+            kwargs: dict[str, Any] | None = None,
+            prefix: str = "ws",
+        ) -> None:
+            """Register source-target scaling variants of a superposition."""
+            base_kwargs = {} if kwargs is None else kwargs
+            variants = {
+                "": {},
+                "_amb": {"scale_amb": True},
+                "_target": {"scale_target": True},
+                "_amb_target": {"scale_amb": True, "scale_target": True},
+                "_loc": {"scale_amb": True, "scale_target": True},
+                "_lim": {"lim_low": 1e-4},
+                "_amb_lim": {"scale_amb": True, "lim_low": 1e-4},
+                "_target_lim": {"scale_target": True, "lim_low": 1e-4},
+                "_amb_target_lim": {
+                    "scale_amb": True,
+                    "scale_target": True,
+                    "lim_low": 1e-4,
+                },
+                "_loc_lim": {
+                    "scale_amb": True,
+                    "scale_target": True,
+                    "lim_low": 1e-4,
+                },
+            }
+            self.wake_superpositions.add_factory(
+                superposition,
+                f"{prefix}{'_' if name else ''}{name}<suffix>",
+                kwargs=base_kwargs,
+                suffix=variants,
+                var2arg={"suffix": None},
+            )
+
+        add_ws_superposition_factories("linear", fm.wake_superpositions.WSLinear)
+        add_ws_superposition_factories("quadratic", fm.wake_superpositions.WSQuadratic)
+        add_ws_superposition_factories(
+            "cubic", fm.wake_superpositions.WSPow, {"pow": 3}
+        )
+        add_ws_superposition_factories(
+            "quartic", fm.wake_superpositions.WSPow, {"pow": 4}
+        )
+        add_ws_superposition_factories("max", fm.wake_superpositions.WSMax)
+        add_ws_superposition_factories(
+            "", fm.wake_superpositions.WindVectorLinear, prefix="vector"
         )
 
         self.axial_induction = FDict(_name="induction_models")
