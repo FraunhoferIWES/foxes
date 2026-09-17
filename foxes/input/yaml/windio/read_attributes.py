@@ -58,7 +58,8 @@ def _read_wind_deficit(
         print("      Eff ws  :", eff_ws)
         print("      Contents:", [k for k in wind_deficit.keys()])
     wind_def_dict: Dict[str, Any] = Dict(
-        wmodel_type=wind_def_map[wname], induction=induction
+        wmodel_type=wind_def_map[wname],
+        induction="Betz" if wname == "TurbOPark" else induction,
     )
     kcoef: Dict[str, Any] = Dict(
         wind_deficit["wake_expansion_coefficient"], _name="kcoef"
@@ -83,14 +84,20 @@ def _read_wind_deficit(
         if verbosity > 2:
             print(f"      Using sbeta_factor = {sbf}")
         wind_def_dict["sbeta_factor"] = sbf
-    supd = ws_sup_dict if eff_ws else ws_sup_amb_dict
-    wind_def_dict["superposition"] = supd[superposition["ws_superposition"]]
+    if wname == "TurbOPark":
+        wind_def_dict["superposition"] = "ws_quadratic_amb_target"
+    else:
+        supd = ws_sup_dict if eff_ws else ws_sup_amb_dict
+        wind_def_dict["superposition"] = supd[superposition["ws_superposition"]]
 
     mbook.wake_models[wname] = WakeModel.new(**wind_def_dict)
     if verbosity > 2:
         print(f"      Created wake model '{wname}':")
         print("       ", mbook.wake_models[wname])
     algo_dict["wake_models"].append(wname)
+    if wname == "TurbOPark":
+        ground_models = algo_dict.setdefault("ground_models", {})
+        ground_models[wname] = "ground_mirror"
 
     return ka, kb, amb_ti
 

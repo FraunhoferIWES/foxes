@@ -4,8 +4,8 @@ import numpy as np
 from typing import TYPE_CHECKING
 
 from foxes.core import WakeSuperposition
+from foxes.core.wake_superposition import get_ws_scale
 import foxes.variables as FV
-import foxes.constants as FC
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
@@ -20,6 +20,7 @@ class WSLinear(WakeSuperposition):
     def __init__(
         self,
         scale_amb: bool = False,
+        scale_target: bool = False,
         lim_low: float | None = None,
         lim_high: float | None = None,
     ) -> None:
@@ -27,8 +28,9 @@ class WSLinear(WakeSuperposition):
         Parameters
         ----------
         scale_amb
-            Flag for scaling wind deficit with ambient wind speed
-            instead of waked wind speed
+            Flag for selecting ambient instead of waked wind speed.
+        scale_target
+            Flag for selecting target instead of source turbine wind speed.
         lim_low
             Lower limit of the final waked wind speed
         lim_high
@@ -37,11 +39,12 @@ class WSLinear(WakeSuperposition):
         super().__init__()
 
         self.scale_amb = scale_amb
+        self.scale_target = scale_target
         self.lim_low = lim_low
         self.lim_high = lim_high
 
     def __repr__(self) -> str:
-        a = f"scale_amb={self.scale_amb}, lim_low={self.lim_low}, lim_high={self.lim_high}"
+        a = f"scale_amb={self.scale_amb}, scale_target={self.scale_target}, lim_low={self.lim_low}, lim_high={self.lim_high}"
         return f"{type(self).__name__}({a})"
 
     def input_farm_vars(self, algo: Algorithm) -> list[str]:
@@ -115,16 +118,16 @@ class WSLinear(WakeSuperposition):
             )
 
         if np.any(st_sel):
-            scale = self.get_data(
-                FV.AMB_REWS if self.scale_amb else FV.REWS,
-                FC.STATE_TARGET_TPOINT,
-                lookup="w",
-                algo=algo,
-                fdata=fdata,
-                tdata=tdata,
-                downwind_index=downwind_index,
-                upcast=False,
-                selection=st_sel,
+            scale = get_ws_scale(
+                self,
+                self.scale_amb,
+                self.scale_target,
+                algo,
+                mdata,
+                fdata,
+                tdata,
+                downwind_index,
+                st_sel,
             )
 
             wake_delta[st_sel] += scale * wake_model_result

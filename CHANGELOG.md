@@ -1040,5 +1040,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Added the `binned_states` example using `timeseries_8000.csv.gz`.
 - Models:
   - Changing defaults for rotor effective wind speed variables for thrust and power by `FV.REWS`, previously was `FV.REWS2` and `FV.REWS3`. This affects all turbine types. This reduces memory and usually has small effects on results.
+  - Aligned `TurbOPark` with the original Orsted model: 1D momentum induction, capped wake-width factor, target ambient-speed quadratic superposition, and analytical Gaussian rotor averaging. WindIO `TurbOPark` inputs additionally enable ground-wake reflection.
+  - Fixed `GroundMirror` to apply the selected partial-wake model to main as well as mirrored wakes.
+  - Added `scale_target` to wind-speed and vector wake superpositions. `scale_amb` selects ambient instead of waked speed, while `scale_target` selects target instead of source turbine data.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.3](https://github.com/FraunhoferIWES/foxes/commits/v1.9.3)

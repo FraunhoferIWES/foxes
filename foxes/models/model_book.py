@@ -329,6 +329,10 @@ class ModelBook:
             ws_linear_amb_lim=fm.wake_superpositions.WSLinear(
                 scale_amb=True, lim_low=1e-4
             ),
+            ws_linear_target=fm.wake_superpositions.WSLinear(scale_target=True),
+            ws_linear_amb_target=fm.wake_superpositions.WSLinear(
+                scale_amb=True, scale_target=True
+            ),
             ws_linear_loc=fm.wake_superpositions.WSLinearLocal(),
             ws_linear_loc_lim=fm.wake_superpositions.WSLinearLocal(lim_low=1e-4),
             ws_quadratic=fm.wake_superpositions.WSQuadratic(scale_amb=False),
@@ -339,18 +343,34 @@ class ModelBook:
             ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(
                 scale_amb=True, lim_low=1e-4
             ),
+            ws_quadratic_target=fm.wake_superpositions.WSQuadratic(scale_target=True),
+            ws_quadratic_amb_target=fm.wake_superpositions.WSQuadratic(
+                scale_amb=True, scale_target=True
+            ),
             ws_quadratic_loc=fm.wake_superpositions.WSQuadraticLocal(),
             ws_quadratic_loc_lim=fm.wake_superpositions.WSQuadraticLocal(lim_low=1e-4),
             ws_cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
             ws_cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
+            ws_cubic_target=fm.wake_superpositions.WSPow(pow=3, scale_target=True),
+            ws_cubic_amb_target=fm.wake_superpositions.WSPow(
+                pow=3, scale_amb=True, scale_target=True
+            ),
             ws_cubic_loc=fm.wake_superpositions.WSPowLocal(pow=3),
             ws_cubic_loc_lim=fm.wake_superpositions.WSPowLocal(pow=3, lim_low=1e-4),
             ws_quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
             ws_quartic_amb=fm.wake_superpositions.WSPow(pow=4, scale_amb=True),
+            ws_quartic_target=fm.wake_superpositions.WSPow(pow=4, scale_target=True),
+            ws_quartic_amb_target=fm.wake_superpositions.WSPow(
+                pow=4, scale_amb=True, scale_target=True
+            ),
             ws_quartic_loc=fm.wake_superpositions.WSPowLocal(pow=4),
             ws_quartic_loc_lim=fm.wake_superpositions.WSPowLocal(pow=4, lim_low=1e-4),
             ws_max=fm.wake_superpositions.WSMax(scale_amb=False),
             ws_max_amb=fm.wake_superpositions.WSMax(scale_amb=True),
+            ws_max_target=fm.wake_superpositions.WSMax(scale_target=True),
+            ws_max_amb_target=fm.wake_superpositions.WSMax(
+                scale_amb=True, scale_target=True
+            ),
             ws_max_loc=fm.wake_superpositions.WSMaxLocal(),
             ws_max_loc_lim=fm.wake_superpositions.WSMaxLocal(lim_low=1e-4),
             ws_product=fm.wake_superpositions.WSProduct(),
@@ -362,6 +382,10 @@ class ModelBook:
             ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
             vector=fm.wake_superpositions.WindVectorLinear(scale_amb=False),
             vector_amb=fm.wake_superpositions.WindVectorLinear(scale_amb=True),
+            vector_target=fm.wake_superpositions.WindVectorLinear(scale_target=True),
+            vector_amb_target=fm.wake_superpositions.WindVectorLinear(
+                scale_amb=True, scale_target=True
+            ),
         )
 
         self.axial_induction = FDict(_name="induction_models")
@@ -499,10 +523,10 @@ class ModelBook:
         )
 
         self.wake_models["TurbOPark"] = fm.wake_models.wind.TurbOParkWake(
-            superposition="ws_quadratic",
+            superposition="ws_quadratic_amb_target",
             ka=0.04,
             ti_var=FV.AMB_TI,
-            induction="Madsen",
+            induction="Betz",
         )
 
         self.wake_models["JensenTurbOPark"] = fm.wake_models.wind.JensenTurbOParkWake(
@@ -515,7 +539,7 @@ class ModelBook:
         self.wake_models.add_k_factory(
             fm.wake_models.wind.TurbOParkWake,
             "TurbOPark_<superposition>_[wake_k]",
-            kwargs=dict(induction="Madsen"),
+            kwargs=dict(induction="Betz"),
             superposition=lambda s: (
                 f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
             ),
@@ -782,6 +806,8 @@ class ModelBook:
         """
         if isinstance(wake_model, TurbineInductionModel):
             return "grid9"
+        elif isinstance(wake_model, fm.wake_models.wind.TurbOParkWake):
+            return "gaussian"
         elif isinstance(wake_model, fm.wake_models.TopHatWakeModel):
             return "top_hat"
         elif isinstance(wake_model, fm.wake_models.GaussianWakeModel):

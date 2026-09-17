@@ -6,12 +6,42 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 
 from foxes.utils import new_instance
+import foxes.variables as FV
+import foxes.constants as FC
 
 from .model import Model
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData, TData
+
+
+def get_ws_scale(
+    model: Model,
+    scale_amb: bool,
+    scale_target: bool,
+    algo: Algorithm,
+    mdata: MData | None,
+    fdata: FData,
+    tdata: TData,
+    downwind_index: int,
+    st_sel: np.ndarray,
+) -> np.ndarray:
+    """Return source or target wind-speed scaling data."""
+    if scale_target:
+        variable = FV.AMB_WS if scale_amb else FV.WS
+        return tdata[variable][st_sel]
+    return model.get_data(
+        FV.AMB_REWS if scale_amb else FV.REWS,
+        FC.STATE_TARGET_TPOINT,
+        lookup="w",
+        algo=algo,
+        fdata=fdata,
+        tdata=tdata,
+        downwind_index=downwind_index,
+        upcast=False,
+        selection=st_sel,
+    )
 
 
 class WakeSuperposition(Model):
