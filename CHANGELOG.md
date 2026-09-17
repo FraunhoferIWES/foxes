@@ -1049,3 +1049,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed `FlowPlots2D` state selection for multi-height inputs
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.3](https://github.com/FraunhoferIWES/foxes/commits/v1.9.3)
+
+## v1.9.4
+
+- Issue with PyPI on release v1.9.3, same code base
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.4](https://github.com/FraunhoferIWES/foxes/commits/v1.9.4)
