@@ -498,7 +498,14 @@ class Engine(ABC):
             for data in subsets:
                 if data is not None:
                     s = {c: u for c, u in isel.items() if c in data.dims}
-                    new_datasets.append(data.isel(s) if len(s) > 0 else data)
+                    if len(s) > 0:
+                        already_subset = all(
+                            c in data.coords
+                            and np.array_equal(data[c].to_numpy(), np.asarray(u))
+                            for c, u in s.items()
+                        )
+                        data = data if already_subset else data.isel(s)
+                    new_datasets.append(data)
                 else:
                     new_datasets.append(data)
             subsets = new_datasets

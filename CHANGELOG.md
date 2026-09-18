@@ -319,10 +319,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.5
 
-- Models:
-  - New rotor model: `LevelRotor`, calculates the REWS from different height levels
-  - New turbine type: `WsTI2PCtFromTwo`, reads turbulence-dependent ct- and power curves
-
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4.5)
 
 ## v0.5
@@ -1058,5 +1054,10 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.5
 
+- Inputs:
+  - Updates for WindIOs
+- Bug fixes:
+  - Fixed state-subset calculations with point data that was already subset by
+    preserving selected state coordinates during engine input preparation
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.5](https://github.com/FraunhoferIWES/foxes/commits/v1.9.5)
