@@ -77,6 +77,9 @@ class PointCloudData(DatasetStates):
         self.variables += [v for v in self.ovars if v not in self.fixed_vars]
         self.var2ncvar[FV.X] = x_ncvar
         self.var2ncvar[FV.Y] = y_ncvar
+        if h_ncvar is not None:
+            self.var2ncvar[FV.H] = h_ncvar
+            self.variables.append(FV.H)
         if weight_ncvar is not None:
             self.var2ncvar[FV.WEIGHT] = weight_ncvar
             self.variables.append(FV.WEIGHT)

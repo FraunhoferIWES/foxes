@@ -16,3 +16,9 @@ is supported as well:
 ```text
 uv run --no-sync python run.py -e process
 ```
+
+Set `BinnedStates(..., output_file="binned_states.nc")` to persist the reduced
+support-point data as soon as it is available. Regular support grids are written
+in a `FieldData`-readable layout; scattered support points are written in a
+`PointCloudData`-readable layout. The NetCDF attributes include the compact UTM
+zone string, for example `33U`, when the foxes config has a UTM zone set.

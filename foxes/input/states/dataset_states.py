@@ -159,8 +159,8 @@ class DatasetStates(States):
         self,
         data_source: str | Path | xr.Dataset,
         output_vars: list[str],
-        var2ncvar: dict[str, str] = {},
-        fixed_vars: dict[str, float] = {},
+        var2ncvar: dict[str, str] | None = None,
+        fixed_vars: dict[str, float] | None = None,
         load_mode: str = "preload",
         time_format: str | None = None,
         bounds_extra_space: float | str | None = 100.0,
@@ -173,7 +173,7 @@ class DatasetStates(States):
         sort: bool | list[str] = False,
         preprocess_nc: Callable[[xr.Dataset], xr.Dataset] | None = None,
         force_keep_vars: list[str] | None = None,
-        interp_pars: dict[str, bool | float | str | None] = {},
+        interp_pars: dict[str, bool | float | str | None] | None = None,
         **kwargs: object,
     ) -> None:
         """
@@ -229,8 +229,8 @@ class DatasetStates(States):
         super().__init__(load_mode=load_mode, **kwargs)
 
         self.ovars = list(output_vars)
-        self.fixed_vars = fixed_vars
-        self.var2ncvar = var2ncvar
+        self.fixed_vars = {} if fixed_vars is None else dict(fixed_vars)
+        self.var2ncvar = {} if var2ncvar is None else dict(var2ncvar)
         self.time_format = time_format
         self.sel = sel
         self.isel = isel
@@ -241,7 +241,7 @@ class DatasetStates(States):
         self.check_times = check_times
         self.check_input_nans = check_input_nans
         self.preprocess_nc = preprocess_nc
-        self.interp_pars = interp_pars if interp_pars is not None else {}
+        self.interp_pars = {} if interp_pars is None else dict(interp_pars)
         self.variables = [v for v in self.ovars if v not in self.fixed_vars]
         self.force_keep_vars = force_keep_vars if force_keep_vars is not None else []
 
@@ -1709,6 +1709,11 @@ class DatasetStates(States):
                         )
                         pts.append(points_data["up"][..., 0])
                         pts.append(points_data["up"][..., 1])
+                        point_coord = self.var(FC.POINT)
+                        if point_coord in mdata:
+                            point_coordinates = np.asarray(mdata[point_coord])
+                            if point_coordinates.shape[-1] >= 3:
+                                pts.append(points_data["up"][..., 2])
                     elif c == FC.TURBINE:
                         points_data = _analyze_points(
                             has_p,

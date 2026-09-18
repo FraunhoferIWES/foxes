@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
 import numpy as np
@@ -10,7 +11,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 from foxes.config import config
 from foxes.core import FData, MData, States, TData, WindFarm, Turbine, run_with_engine
-from foxes.utils import plot_wind_rose_bars
+from foxes.utils import plot_wind_rose_bars, write_nc
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, LoadedData, Model
@@ -37,6 +38,7 @@ class BinnedStates(States):
         bin_vars: Mapping[str, Sequence[float] | int],
         support_points: np.ndarray | None = None,
         support_grid: Mapping[str, Sequence[float]] | None = None,
+        output_file: str | Path | None = None,
         interpolation: str = "linear",
         fill_value: float | None = np.nan,
         **kwargs: Any,
@@ -63,6 +65,12 @@ class BinnedStates(States):
             Regular support-grid axes as a mapping with keys ``x``, ``y``,
             and ``h``. Provide exactly one of ``support_points`` and
             ``support_grid``.
+        output_file
+            Optional NetCDF file path. When given, the reduced bin data is
+            written as soon as it is available. Regular support grids are
+            written in the format read by :class:`FieldData`; scattered
+            support points are written in the format read by
+            :class:`PointCloudData`.
         interpolation
             Interpolation method for scattered support points, passed to
             :func:`scipy.interpolate.griddata`.
@@ -110,6 +118,7 @@ class BinnedStates(States):
         )
         self.interpolation = interpolation
         self.fill_value = fill_value
+        self.output_file = None if output_file is None else Path(output_file)
         self._bin_shape = tuple(len(edges) - 1 for edges in self.bin_vars.values())
         self._n_bins = int(np.prod(self._bin_shape, dtype=np.int64))
         self._support_key = self.var("support")
@@ -200,6 +209,72 @@ class BinnedStates(States):
         }
         return xr.Dataset(data_vars=data_vars, coords=coords)
 
+    def _create_output_dataset(
+        self,
+        support: np.ndarray,
+        axes: tuple[np.ndarray, ...] | None,
+        reduced: dict[str, np.ndarray],
+        weights: np.ndarray,
+    ) -> xr.Dataset:
+        state_coord = np.arange(self._n_bins, dtype=config.dtype_int)
+        attrs = {
+            "foxes_state_class": "FieldData" if axes is not None else "PointCloudData",
+            "foxes_binned_states_bin_vars": ",".join(self.bin_vars),
+        }
+        if config.utm_zone_set:
+            utm_number, utm_letter = config.utm_zone
+            attrs["utm_zone"] = f"{utm_number}{utm_letter}"
+        attrs.update({f"{var}_bounds": edges for var, edges in self.bin_vars.items()})
+
+        if axes is not None:
+            x, y, h = axes
+            grid_shape = tuple(len(axis) for axis in axes)
+            grid_data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {
+                var: (
+                    ("Time", "height", "UTMY", "UTMX"),
+                    values.reshape((self._n_bins,) + grid_shape).transpose(0, 3, 2, 1),
+                )
+                for var, values in reduced.items()
+            }
+            grid_data_vars[FV.WEIGHT] = (
+                ("Time", "height", "UTMY", "UTMX"),
+                weights.reshape((self._n_bins,) + grid_shape).transpose(0, 3, 2, 1),
+            )
+            return xr.Dataset(
+                data_vars=grid_data_vars,
+                coords={"Time": state_coord, "height": h, "UTMY": y, "UTMX": x},
+                attrs=attrs,
+            )
+
+        point_data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {
+            var: (("Time", FC.POINT), values) for var, values in reduced.items()
+        }
+        point_data_vars[FV.WEIGHT] = (("Time", FC.POINT), weights)
+        point_data_vars["x"] = ((FC.POINT,), support[:, 0])
+        point_data_vars["y"] = ((FC.POINT,), support[:, 1])
+        point_data_vars["height"] = ((FC.POINT,), support[:, 2])
+        return xr.Dataset(
+            data_vars=point_data_vars,
+            coords={"Time": state_coord, FC.POINT: np.arange(support.shape[0])},
+            attrs=attrs,
+        )
+
+    def _write_output_file(
+        self,
+        support: np.ndarray,
+        axes: tuple[np.ndarray, ...] | None,
+        reduced: dict[str, np.ndarray],
+        weights: np.ndarray,
+        verbosity: int,
+    ) -> None:
+        if self.output_file is None:
+            return
+        write_nc(
+            self._create_output_dataset(support, axes, reduced, weights),
+            self.output_file,
+            verbosity=verbosity,
+        )
+
     @staticmethod
     def _circular_bin_values(values: np.ndarray, edges: np.ndarray) -> np.ndarray:
         return edges[0] + np.mod(values - edges[0], 360.0)
@@ -248,7 +323,8 @@ class BinnedStates(States):
 
         hfarm = WindFarm()
         hfarm.add_turbine(
-            Turbine(xy=algo.farm.turbines[0].xy, turbine_models=["null_type"])
+            Turbine(xy=algo.farm.turbines[0].xy, turbine_models=["null_type"]),
+            verbosity=0,
         )
         halgo = Downwind(
             farm=hfarm,
@@ -383,6 +459,7 @@ class BinnedStates(States):
         )
         loaded_data["extra_data"][self._support_key] = support
         loaded_data["extra_data"][self._grid_axes_key] = axes
+        self._write_output_file(support, axes, reduced, weights, verbosity)
 
     def _get_state_interpolator(
         self,
