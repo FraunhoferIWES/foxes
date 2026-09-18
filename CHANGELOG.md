@@ -1055,3 +1055,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Issue with PyPI on release v1.9.3, same code base
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.4](https://github.com/FraunhoferIWES/foxes/commits/v1.9.4)
+
+## v1.9.5
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.5](https://github.com/FraunhoferIWES/foxes/commits/v1.9.5)
