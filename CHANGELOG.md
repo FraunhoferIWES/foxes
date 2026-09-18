@@ -1061,3 +1061,8 @@ This major version introduces the concept of `Engines` which handle the chunking
     preserving selected state coordinates during engine input preparation
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.5](https://github.com/FraunhoferIWES/foxes/commits/v1.9.5)
+
+## v1.9.6
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)
