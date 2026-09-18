@@ -71,6 +71,16 @@ if __name__ == "__main__":
         help="Also run the full timeseries calculation and compare weighted means",
         action="store_true",
     )
+    parser.add_argument(
+        "--write-nc",
+        help="Write the reduced binned data to this NetCDF file",
+        default=None,
+    )
+    parser.add_argument(
+        "--read-nc",
+        help="Read reduced binned data from this NetCDF file instead of reducing the source states",
+        default=None,
+    )
     args = parser.parse_args()
 
     source_states = foxes.input.states.Timeseries(
@@ -79,7 +89,7 @@ if __name__ == "__main__":
         var2col={FV.WS: "ws", FV.WD: "wd"},
     )
 
-    binned_states = foxes.input.states.BinnedStates(
+    source_binned_states = foxes.input.states.BinnedStates(
         source_states,
         bin_vars={
             FV.WS: np.linspace(0.0, 30.0, args.ws_bins + 1),
@@ -91,6 +101,12 @@ if __name__ == "__main__":
             FV.H: np.array([90.0]),
         },
         interpolation="linear",
+        output_file=args.write_nc,
+    )
+    binned_states = (
+        foxes.input.states.BinnedStates(args.read_nc)
+        if args.read_nc is not None
+        else source_binned_states
     )
 
     farm = foxes.WindFarm()
@@ -112,6 +128,18 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         verbosity=1,
     )
+
+    source_algo = None
+    if args.write_nc is not None and args.read_nc is not None:
+        source_algo = foxes.algorithms.Downwind(
+            farm,
+            states=source_binned_states,
+            wake_models=args.wakes,
+            wake_frame=args.frame,
+            partial_wakes=args.pwakes,
+            rotor_model=args.rotor,
+            verbosity=1,
+        )
 
     engine = foxes.Engine.new(
         engine_type=args.engine,
@@ -137,17 +165,24 @@ if __name__ == "__main__":
         )
 
     with engine:
-        algo.initialize()
-        support_rose_data = binned_states.get_support_wind_rose_data(
-            algo._Algorithm__loaded_data
-        )
+        support_rose_data = None
+        if source_algo is not None:
+            source_algo.initialize()
+            support_rose_data = source_binned_states.get_support_wind_rose_data(
+                source_algo._Algorithm__loaded_data
+            )
+        elif args.read_nc is None:
+            algo.initialize()
+            support_rose_data = source_binned_states.get_support_wind_rose_data(
+                algo._Algorithm__loaded_data
+            )
         farm_results = algo.calc_farm()
         if full_algo is not None:
             print("\nRunning full timeseries calculation for comparison")
             full_farm_results = full_algo.calc_farm()
 
-    if not args.nofig:
-        fig = binned_states.get_support_wind_roses_figure(
+    if not args.nofig and support_rose_data is not None:
+        fig = source_binned_states.get_support_wind_roses_figure(
             support_rose_data,
             title="Timeseries wind roses at support points",
         )
@@ -156,6 +191,10 @@ if __name__ == "__main__":
 
     print(f"Input states: {source_states.size()}")
     print(f"Histogram states: {binned_states.size()}")
+    if args.write_nc is not None:
+        print(f"Written binned data file: {args.write_nc}")
+    if args.read_nc is not None:
+        print(f"Read binned data file: {args.read_nc}")
     print("Binned farm results:")
     print(farm_results[[FV.AMB_REWS, FV.REWS, FV.AMB_WD, FV.WD, FV.WEIGHT]])
 
