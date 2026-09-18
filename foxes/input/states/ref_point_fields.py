@@ -795,9 +795,13 @@ class SectorSimRefPointField(States):
                                 )
                                 del uv, w
                         else:
-                            raise KeyError(
-                                f"States '{self.name}': Field states variable '{v}' not found in speedups, got {list(speedups.keys())}"
+                            w = (
+                                weight[:, None, None]
+                                if isinstance(weight, np.ndarray)
+                                else weight
                             )
+                            out[v][:] += w * field_results[v][fs2s, :, :]
+                            del w
                     elif v in ref_results.keys():
                         out[v][:] = ref_results[v][:, None, None]
                     elif v == FV.TI and (
