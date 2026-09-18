@@ -256,7 +256,7 @@ class BinnedStates(States):
         )
         halgo.initialize(force=True)
 
-        def _calc_source():
+        def _calc_source(halgo: Algorithm = halgo) -> xr.Dataset:
             source_farm_results = halgo.calc_farm()
             source_results = halgo.calc_points(
                 source_farm_results,

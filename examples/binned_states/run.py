@@ -30,6 +30,9 @@ if __name__ == "__main__":
         type=int,
     )
     parser.add_argument(
+        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
+    )
+    parser.add_argument(
         "-d",
         "--wd_bins",
         help="The number of wind-direction bins",
@@ -112,6 +115,7 @@ if __name__ == "__main__":
 
     engine = foxes.Engine.new(
         engine_type=args.engine,
+        n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
     )
 
@@ -185,11 +189,6 @@ if __name__ == "__main__":
                         out=np.full_like(numerator, np.nan),
                         where=denominator > 0.0,
                     )
-
-        print("\nWeighted state means by turbine, binned states:")
-        print(binned_mean)
-        print("\nWeighted state means by turbine, full timeseries:")
-        print(full_mean)
 
         print("\nComparison, binned minus full timeseries:")
         for var in variables:
