@@ -508,12 +508,16 @@ class DatasetStates(States):
                 )
             self._heights = data[self._cmap[FV.H]].to_numpy()
             if (
-                np.min(self._heights) > height_bounds[0]
-                or np.max(self._heights) < height_bounds[1]
+                np.max(self._heights) < height_bounds[0]
+                or np.min(self._heights) > height_bounds[1]
             ):
                 raise ValueError(
                     f"States '{self.name}': Height bounds {height_bounds} m are outside of data height range {np.min(self._heights)} - {np.max(self._heights)} m"
                 )
+            height_bounds = (
+                max(height_bounds[0], np.min(self._heights)),
+                min(height_bounds[1], np.max(self._heights)),
+            )
             ch = self._cmap[FV.H]
             if self.isel is None or ch not in self.isel:
                 i0 = 0

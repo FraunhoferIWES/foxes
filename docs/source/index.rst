@@ -2,6 +2,15 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionadded:: 1.9.3
+    Wind-speed wake superpositions support target-turbine scaling via the
+    `scale_target` constructor parameter and corresponding model-book aliases,
+    e.g. `ws_quadratic_amb_target` for `WSQuadratic(scale_amb=True, scale_target=True)`.
+
+.. versionchanged:: 1.9.3
+    Dedicated local wind-speed superposition classes were removed. Legacy `_loc`
+    model-book aliases remain available and now select target ambient scaling.
+
 .. versionadded:: 1.9.0
     New efficient partial wakes treatment for Gaussian wake models by `PartialGaussianLookup`
     and `PartialGaussian` classes, reducing computational cost and improving accuracy. The

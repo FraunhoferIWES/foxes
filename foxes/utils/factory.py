@@ -19,7 +19,7 @@ class Factory:
         name_template: str,
         args: tuple[Any, ...] = (),
         kwargs: dict[str, Any] | None = None,
-        var2arg: dict[str, str] | None = None,
+        var2arg: dict[str, str | None] | None = None,
         hints: dict[str, Any] | None = None,
         example_vars: dict[str, Any] | None = None,
         **options: Any,
@@ -37,7 +37,8 @@ class Factory:
         kwargs
             Fixed arguments for the base class
         var2arg
-            Mapping from variable to constructor argument
+            Mapping from variable to constructor argument. Use ``None`` to
+            expand a mapping option value into multiple constructor arguments.
         hints
             Hints for print_toc, only for variables for which the
             options are functions or missing
@@ -282,16 +283,24 @@ class Factory:
         if ret_pars:
             kwargs: dict[str, Any] = {}
             for vi, v in enumerate(self.variables):
-                w = self.var2arg.get(v, v)
+                target_arg: str | None = self.var2arg.get(v, v)
                 data = wlist[vi]
                 if v in self.options:
                     o = self.options[v]
                     if hasattr(o, "__call__"):
-                        kwargs[w] = o(data)
+                        value = o(data)
                     else:
-                        kwargs[w] = self.options[v][data]
+                        value = self.options[v][data]
                 else:
-                    kwargs[w] = data
+                    value = data
+                if target_arg is None:
+                    if not isinstance(value, dict):
+                        raise TypeError(
+                            f"Factory '{self.name_template}': Variable '{v}' maps to multiple arguments but produced {type(value).__name__}, expecting dict"
+                        )
+                    kwargs.update(value)
+                else:
+                    kwargs[target_arg] = value
 
             kwargs.update(self.kwargs)
             return True, kwargs

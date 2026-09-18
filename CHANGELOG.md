@@ -319,10 +319,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.5
 
-- Models:
-  - New rotor model: `LevelRotor`, calculates the REWS from different height levels
-  - New turbine type: `WsTI2PCtFromTwo`, reads turbulence-dependent ct- and power curves
-
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4.5)
 
 ## v0.5
@@ -1040,5 +1036,33 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Added the `binned_states` example using `timeseries_8000.csv.gz`.
 - Models:
   - Changing defaults for rotor effective wind speed variables for thrust and power by `FV.REWS`, previously was `FV.REWS2` and `FV.REWS3`. This affects all turbine types. This reduces memory and usually has small effects on results.
+  - Aligned `TurbOPark` with the original Orsted model: 1D momentum induction, capped wake-width factor, target ambient-speed quadratic superposition, and analytical Gaussian rotor averaging. WindIO `TurbOPark` inputs additionally enable ground-wake reflection.
+  - Aligned `JensenTurbOPark` induction and superposition defaults with `TurbOPark`: Betz induction and target ambient-speed quadratic superposition.
+  - Fixed `GroundMirror` to apply the selected partial-wake model to main as well as mirrored wakes.
+  - Added `scale_target` to wind-speed and vector wake superpositions. `scale_amb` selects ambient instead of waked speed, while `scale_target` selects target instead of source turbine data.
+  - Removed dedicated local wind-speed superposition classes; their `_loc` model-book aliases now select target ambient scaling.
+- Bug fixes:
+  - Fixed `FlowPlots2D` state selection for multi-height inputs
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.3](https://github.com/FraunhoferIWES/foxes/commits/v1.9.3)
+
+## v1.9.4
+
+- Issue with PyPI on release v1.9.3, same code base
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.4](https://github.com/FraunhoferIWES/foxes/commits/v1.9.4)
+
+## v1.9.5
+
+- Inputs:
+  - Updates for WindIO/WIFA
+- Bug fixes:
+  - Fixed state-subset calculations with point data that was already subset by
+    preserving selected state coordinates during engine input preparation
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.5](https://github.com/FraunhoferIWES/foxes/commits/v1.9.5)
+
+## v1.9.6
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)

@@ -42,7 +42,6 @@ class WakeMirror(GroundModel):
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
-
         Parameters
         ----------
         algo
@@ -79,8 +78,7 @@ class WakeMirror(GroundModel):
             raise ValueError(
                 f"WakeMirror '{self.name}': algorithm '{algo.name}' has no wake_frame"
             )
-        wcoos = wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
-        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
+        pwake.contribute(algo, mdata, fdata, tdata, downwind_index, wake_deltas, wmodel)
 
         # contribution from mirrors:
         tdata[FC.TARGETS] = tdata[FC.TARGETS].copy()  # making sure this is no ref

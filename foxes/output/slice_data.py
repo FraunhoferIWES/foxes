@@ -139,6 +139,25 @@ class SliceData(Output):
         **kwargs: Any,
     ) -> Any:
         """Helper function for mean data calculation"""
+        states_sel = kwargs.pop("states_sel", None)
+        states_isel = kwargs.pop("states_isel", None)
+        farm_results = self.fres
+        if states_isel is not None:
+            farm_results = farm_results.isel({FC.STATE: states_isel})
+        if states_sel is not None:
+            farm_results = farm_results.sel({FC.STATE: states_sel})
+        if states_sel is not None or states_isel is not None:
+            all_states = self.fres[FC.STATE].to_numpy()
+            selected_states = farm_results[FC.STATE].to_numpy()
+            selected_indices = np.asarray(
+                [np.flatnonzero(all_states == state)[0] for state in selected_states]
+            )
+            full_g_pts = np.zeros(
+                (len(all_states), *g_pts.shape[1:]), dtype=g_pts.dtype
+            )
+            full_g_pts[selected_indices] = g_pts
+            g_pts = full_g_pts
+
         # calculate point results:
         point_results = grids.calc_point_results(
             algo=self.algo,
@@ -147,6 +166,10 @@ class SliceData(Output):
             verbosity=verbosity - self.verbosity_delta,
             **kwargs,
         )
+        if states_isel is not None:
+            point_results = point_results.isel({FC.STATE: states_isel})
+        if states_sel is not None:
+            point_results = point_results.sel({FC.STATE: states_sel})
         states = point_results[FC.STATE].to_numpy()
         if variables is None:
             variables = list(point_results.data_vars.keys())
@@ -657,12 +680,17 @@ class SliceData(Output):
         **kwargs: Any,
     ) -> Any:
         """Helper function for states data calculation"""
+        states_sel = kwargs.pop("states_sel", None)
+        states_isel = kwargs.pop("states_isel", None)
+
         # calculate point results:
         point_results = grids.calc_point_results(
             algo=self.algo,
             farm_results=self.fres,
             g_pts=g_pts,
             verbosity=verbosity - self.verbosity_delta,
+            states_sel=states_sel,
+            states_isel=states_isel,
             **kwargs,
         )
         states = point_results[FC.STATE].to_numpy()

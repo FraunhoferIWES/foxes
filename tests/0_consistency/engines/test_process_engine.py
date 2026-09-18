@@ -137,6 +137,24 @@ def test_process_engine_init_shared_memory_roundtrip_and_release():
     assert len(shared_memory) == 0
 
 
+def test_select_subsets_does_not_reapply_isel_to_selected_data():
+    from foxes.core.engine import Engine
+
+    selected_data = Dataset(coords={FC.STATE: np.array([0, 2, 5])})
+    full_data = Dataset(coords={FC.STATE: np.arange(10)})
+
+    subsets, n_states = Engine.select_subsets(
+        object(),
+        selected_data,
+        full_data,
+        isel={FC.STATE: [0, 2, 5]},
+    )
+
+    assert np.array_equal(subsets[0][FC.STATE], [0, 2, 5])
+    assert np.array_equal(subsets[1][FC.STATE], [0, 2, 5])
+    assert n_states == 3
+
+
 def test_mdata_pop_shared_respects_min_size_threshold():
     shared_small = np.arange(4, dtype=np.int32)
     shared_large = np.arange(32, dtype=np.float64)

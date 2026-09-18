@@ -4,9 +4,9 @@ import numpy as np
 from typing import TYPE_CHECKING
 
 from foxes.core import WindVectorWakeSuperposition
+from foxes.core.wake_superposition import get_ws_scale
 from foxes.utils import wd2uv, uv2wd, delta_wd
 import foxes.variables as FV
-import foxes.constants as FC
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
@@ -18,19 +18,21 @@ class WindVectorLinear(WindVectorWakeSuperposition):
     Linear superposition of wind deficit vector results
     """
 
-    def __init__(self, scale_amb: bool = False) -> None:
+    def __init__(self, scale_amb: bool = False, scale_target: bool = False) -> None:
         """
         Parameters
         ----------
         scale_amb
-            Flag for scaling wind deficit with ambient wind speed
-            instead of waked wind speed
+            Flag for selecting ambient instead of waked wind speed.
+        scale_target
+            Flag for selecting target instead of source turbine wind speed.
         """
         super().__init__()
         self.scale_amb = scale_amb
+        self.scale_target = scale_target
 
     def __repr__(self) -> str:
-        a = f"scale_amb={self.scale_amb}"
+        a = f"scale_amb={self.scale_amb}, scale_target={self.scale_target}"
         return f"{type(self).__name__}({a})"
 
     def input_farm_vars(self, algo: Algorithm) -> list[str]:
@@ -94,16 +96,16 @@ class WindVectorLinear(WindVectorWakeSuperposition):
             assert FV.WS in wdeltas, (
                 f"{self.name}: Expecting '{FV.WS}' in wdeltas, got {list(wdeltas.keys())}"
             )
-            scale = self.get_data(
-                FV.AMB_REWS if self.scale_amb else FV.REWS,
-                FC.STATE_TARGET_TPOINT,
-                lookup="w",
-                algo=algo,
-                fdata=fdata,
-                tdata=tdata,
-                downwind_index=downwind_index,
-                upcast=False,
-                selection=st_sel,
+            scale = get_ws_scale(
+                self,
+                self.scale_amb,
+                self.scale_target,
+                algo,
+                None,
+                fdata,
+                tdata,
+                downwind_index,
+                st_sel,
             )
             ws0 = tdata[FV.AMB_WS][st_sel]
             wd0 = tdata[FV.AMB_WD][st_sel]
@@ -151,16 +153,16 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
         """
         if FV.UV in wdeltas:
-            scale = self.get_data(
-                FV.AMB_REWS if self.scale_amb else FV.REWS,
-                FC.STATE_TARGET_TPOINT,
-                lookup="w",
-                algo=algo,
-                fdata=fdata,
-                tdata=tdata,
-                downwind_index=downwind_index,
-                upcast=False,
-                selection=st_sel,
+            scale = get_ws_scale(
+                self,
+                self.scale_amb,
+                self.scale_target,
+                algo,
+                None,
+                fdata,
+                tdata,
+                downwind_index,
+                st_sel,
             )
             ws0 = tdata[FV.AMB_WS][st_sel]
             wd0 = tdata[FV.AMB_WD][st_sel]
