@@ -1,7 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from typing import Any, cast
 
-from foxes.config import config
+from foxes.config import config, get_output_path
 from foxes.core import (
     Algorithm,
     LoadedData,
@@ -14,6 +15,7 @@ from foxes.core import (
     WindFarm,
     Turbine,
 )
+from foxes.output import FarmLayoutOutput
 from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv, uv2wd
 from foxes.algorithms import Downwind
 import foxes.constants as FC
@@ -40,6 +42,7 @@ class MesoMicroField(States):
         fixed_vars: dict[str, float] = {},
         check_nans: bool = True,
         apply_blending: bool = True,
+        support_point_plot: str | None = None,
         **kwargs: object,
     ) -> None:
         """
@@ -70,6 +73,9 @@ class MesoMicroField(States):
             Whether to blend between wind direction sectors.
         check_nans
             Whether to check for NaN values.
+        support_point_plot
+            Path to a plot file, e.g. support_points.png, to visualize the
+            selected micro_states support points, reference points, and farm layout.
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
         self.micro_states = micro_states
@@ -79,6 +85,7 @@ class MesoMicroField(States):
         self.check_nans = check_nans
         self.ref_height = ref_height
         self.apply_blending = apply_blending
+        self.support_point_plot = support_point_plot
 
         self.ref_points = None
         if ref_points is not None:
@@ -90,6 +97,132 @@ class MesoMicroField(States):
 
         self.__ref_points_are_lonlat = ref_points_are_lonlat
         self.__utm_zone = utm_zone
+
+    def get_support_point_figure(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        all_heights: bool = False,
+        height: float | None = None,
+        figsize: tuple[float, float] = (8, 8),
+        annotate: int | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Creates a figure showing farm layout, reference points, and support points.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm
+        loaded_data
+            The loaded data dictionary. If None, ``algo.loaded_data`` is used.
+        all_heights
+            If True, plot support points from all heights, otherwise only one height.
+        height
+            The support-point height to plot. If None and all_heights is False,
+            the highest available support-point height is used.
+        figsize
+            The figsize for plt.Figure
+        annotate
+            Farm annotation mode. If None, wind farm names are annotated for
+            multi-farm layouts, otherwise turbine labels are omitted.
+        kwargs
+            Parameters forwarded to :meth:`FarmLayoutOutput.get_figure`.
+
+        Returns
+        -------
+        ax
+            The axis object
+
+        """
+        self._lonlat_to_utm()
+        if self.ref_points is None:
+            raise ValueError(f"States '{self.name}': Reference points not available")
+        if loaded_data is None:
+            loaded_data = algo.loaded_data
+
+        support_points = self.micro_states.get_grid_points(
+            loaded_data=loaded_data,
+            all_heights=all_heights,
+            height=height,
+        )
+
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.plot(
+            support_points[:, 0],
+            support_points[:, 1],
+            c="blue",
+            alpha=0.25,
+            marker=".",
+            linestyle="None",
+            label=f"{self.micro_states.name} support points",
+        )
+        ax.scatter(
+            self.ref_points[:, 0],
+            self.ref_points[:, 1],
+            c="red",
+            marker="x",
+            s=80,
+            linewidths=2,
+            label="reference points",
+        )
+        wind_farm_names = algo.farm.wind_farm_names
+        assert wind_farm_names is not None
+        farm_annotate = 3 if annotate is None and len(wind_farm_names) > 1 else 0
+        if annotate is not None:
+            farm_annotate = annotate
+        FarmLayoutOutput(farm=algo.farm).get_figure(
+            fig=fig,
+            ax=ax,
+            annotate=farm_annotate,
+            fontsize=12,
+            **kwargs,
+        )
+        ax.set_xlabel(f"{FV.X} [m]")
+        ax.set_ylabel(f"{FV.Y} [m]")
+        ax.set_aspect("equal", adjustable="box")
+        ax.autoscale_view(tight=True)
+        ax.legend(loc="best")
+        return ax
+
+    def write_support_point_plot(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        file_name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Writes the support-point layout plot to file.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm
+        loaded_data
+            The loaded data dictionary. If None, ``algo.loaded_data`` is used.
+        file_name
+            Name of the file into which to plot. If None, ``support_point_plot``
+            from initialization is used.
+        kwargs
+            Additional arguments for :meth:`get_support_point_figure`
+
+        """
+        fname = file_name if file_name is not None else self.support_point_plot
+        if fname is None:
+            raise ValueError(
+                f"States '{self.name}': Missing file_name for support point plot"
+            )
+        fpath = get_output_path(fname)
+        ax = self.get_support_point_figure(
+            algo=algo,
+            loaded_data=loaded_data,
+            **kwargs,
+        )
+        fig = ax.get_figure()
+        fig.savefig(fpath, bbox_inches="tight")
+        plt.close(fig)
 
     def output_point_vars(self, algo: Algorithm) -> list[str]:
         """
@@ -273,6 +406,18 @@ class MesoMicroField(States):
                     )
                 else:
                     loaded_data_vars[k] = v
+
+            if self.support_point_plot is not None:
+                fpath = get_output_path(self.support_point_plot)
+                if verbosity > 0:
+                    print(
+                        f"States '{self.name}': Writing support point plot to '{fpath}'"
+                    )
+                self.write_support_point_plot(
+                    algo=algo,
+                    loaded_data=loaded_data,
+                    file_name=self.support_point_plot,
+                )
 
             # create mdata from ld data:
             mdict: dict[str, np.ndarray] = {}

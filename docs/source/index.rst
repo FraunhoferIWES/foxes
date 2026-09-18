@@ -7,6 +7,12 @@
     `scale_target` constructor parameter and corresponding model-book aliases,
     e.g. `ws_quadratic_amb_target` for `WSQuadratic(scale_amb=True, scale_target=True)`.
 
+.. versionchanged:: 1.9.6
+    `SectorSimRefPointField` and `MesoMicroField` accept `support_point_plot`
+    to write a figure of the wind farm layout, reference point or points, and
+    selected field-state support points as soon as those data are available
+    during loading.
+
 .. versionchanged:: 1.9.3
     Dedicated local wind-speed superposition classes were removed. Legacy `_loc`
     model-book aliases remain available and now select target ambient scaling.
