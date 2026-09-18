@@ -9,9 +9,9 @@ from scipy.interpolate import RegularGridInterpolator, griddata
 
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.config import config
+from foxes.config import config, get_input_path
 from foxes.core import FData, MData, States, TData, WindFarm, Turbine, run_with_engine
-from foxes.utils import plot_wind_rose_bars, write_nc
+from foxes.utils import plot_wind_rose_bars, uv2wd, wd2uv, write_nc
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, LoadedData, Model
@@ -33,9 +33,9 @@ class BinnedStates(States):
 
     def __init__(
         self,
-        states: States,
+        states: States | str | Path | xr.Dataset,
         *,
-        bin_vars: Mapping[str, Sequence[float] | int],
+        bin_vars: Mapping[str, Sequence[float] | int] | None = None,
         support_points: np.ndarray | None = None,
         support_grid: Mapping[str, Sequence[float]] | None = None,
         output_file: str | Path | None = None,
@@ -49,7 +49,8 @@ class BinnedStates(States):
         Parameters
         ----------
         states
-            The source states model to evaluate and bin.
+            The source states model to evaluate and bin, or a NetCDF file path
+            or Dataset previously written by ``BinnedStates``.
         bin_vars
             Mapping from source variable names to monotonically increasing bin
             edges. For wind speed, an integer specifies the number of equal
@@ -67,10 +68,9 @@ class BinnedStates(States):
             ``support_grid``.
         output_file
             Optional NetCDF file path. When given, the reduced bin data is
-            written as soon as it is available. Regular support grids are
-            written in the format read by :class:`FieldData`; scattered
-            support points are written in the format read by
-            :class:`PointCloudData`.
+            written as soon as it is available, using bin dimensions followed
+            by the regular-grid or scattered-point support topology. The file
+            can be passed to ``BinnedStates`` as ``states`` in a later run.
         interpolation
             Interpolation method for scattered support points, passed to
             :func:`scipy.interpolate.griddata`.
@@ -86,23 +86,15 @@ class BinnedStates(States):
             both support representations are provided.
         """
         super().__init__(**kwargs)
-        self.states = states
-        self.bin_vars = {}
-        for var, edges in bin_vars.items():
-            if isinstance(edges, (int, np.integer)) and not isinstance(edges, bool):
-                if edges < 1:
-                    raise ValueError("BinnedStates: Integer bin count must be positive")
-                if var == FV.WS:
-                    edges = np.linspace(0.0, 30.0, edges + 1, dtype=config.dtype_double)
-                elif var == FV.WD:
-                    width = 360.0 / edges
-                    edges = np.arange(edges + 1, dtype=config.dtype_double) * width
-                    edges -= width / 2.0
-                else:
-                    raise ValueError(
-                        f"BinnedStates: Integer bin definitions are only supported for '{FV.WS}' and '{FV.WD}'"
-                    )
-            self.bin_vars[var] = np.asarray(edges, dtype=config.dtype_double)
+        self.states = states if isinstance(states, States) else None
+        self.data_source = None if isinstance(states, States) else states
+        self.bin_vars: dict[str, np.ndarray] = {}
+        if bin_vars is None and self.states is not None:
+            raise ValueError(
+                "BinnedStates: Require bin_vars when source states are given"
+            )
+        if bin_vars is not None:
+            self._set_bin_vars(bin_vars)
         self.support_points = (
             None
             if support_points is None
@@ -124,18 +116,16 @@ class BinnedStates(States):
         self._support_key = self.var("support")
         self._grid_axes_key = self.var("grid_axes")
         self._source_state_key = self.var(FC.STATE + "0")
+        self._bin_centres_key = self.var("bin_centres")
+        self._bin_vars_key = self.var("bin_vars")
         self._cache: dict[str, Any] = {}
 
-        if not self.bin_vars:
-            raise ValueError("BinnedStates: Require at least one binned variable")
-        for var, edges in self.bin_vars.items():
-            if edges.ndim != 1 or len(edges) < 2 or not np.all(np.isfinite(edges)):
-                raise ValueError(f"BinnedStates: Invalid bin edges for '{var}'")
-            if np.any(np.diff(edges) <= 0):
+        if self.data_source is not None:
+            if self.support_points is not None or self.support_grid is not None:
                 raise ValueError(
-                    f"BinnedStates: Bin edges for '{var}' must be increasing"
+                    "BinnedStates: NetCDF or Dataset input provides its own support topology"
                 )
-        if (self.support_points is None) == (self.support_grid is None):
+        elif (self.support_points is None) == (self.support_grid is None):
             raise ValueError(
                 "BinnedStates: Require exactly one of support_points or support_grid"
             )
@@ -146,7 +136,7 @@ class BinnedStates(States):
                 )
             if len(self.support_points) == 0:
                 raise ValueError("BinnedStates: support_points must not be empty")
-        else:
+        elif self.support_grid is not None:
             assert self.support_grid is not None
             if set(self.support_grid) != {FV.X, FV.Y, FV.H}:
                 raise ValueError(
@@ -160,9 +150,41 @@ class BinnedStates(States):
                     "BinnedStates: Grid axes must be non-empty one-dimensional arrays"
                 )
 
+    def _set_bin_vars(
+        self,
+        bin_vars: Mapping[str, Sequence[float] | int],
+    ) -> None:
+        self.bin_vars = {}
+        for var, edges in bin_vars.items():
+            if isinstance(edges, (int, np.integer)) and not isinstance(edges, bool):
+                if edges < 1:
+                    raise ValueError("BinnedStates: Integer bin count must be positive")
+                if var == FV.WS:
+                    edges = np.linspace(0.0, 30.0, edges + 1, dtype=config.dtype_double)
+                elif var == FV.WD:
+                    width = 360.0 / edges
+                    edges = np.arange(edges + 1, dtype=config.dtype_double) * width
+                    edges -= width / 2.0
+                else:
+                    raise ValueError(
+                        f"BinnedStates: Integer bin definitions are only supported for '{FV.WS}' and '{FV.WD}'"
+                    )
+            self.bin_vars[var] = np.asarray(edges, dtype=config.dtype_double)
+        if not self.bin_vars:
+            raise ValueError("BinnedStates: Require at least one binned variable")
+        for var, edges in self.bin_vars.items():
+            if edges.ndim != 1 or len(edges) < 2 or not np.all(np.isfinite(edges)):
+                raise ValueError(f"BinnedStates: Invalid bin edges for '{var}'")
+            if np.any(np.diff(edges) <= 0):
+                raise ValueError(
+                    f"BinnedStates: Bin edges for '{var}' must be increasing"
+                )
+        self._bin_shape = tuple(len(edges) - 1 for edges in self.bin_vars.values())
+        self._n_bins = int(np.prod(self._bin_shape, dtype=np.int64))
+
     def sub_models(self) -> list[Model]:
         """Return the wrapped source states model."""
-        return [self.states]
+        return [] if self.states is None else [self.states]
 
     def size(self) -> int:
         """Return the number of Cartesian histogram bins."""
@@ -209,16 +231,58 @@ class BinnedStates(States):
         }
         return xr.Dataset(data_vars=data_vars, coords=coords)
 
+    def _read_input_dataset(self) -> xr.Dataset:
+        assert self.data_source is not None
+        if isinstance(self.data_source, xr.Dataset):
+            return self.data_source
+        with xr.open_dataset(
+            get_input_path(self.data_source), engine=config.nc_engine
+        ) as data:
+            return data.load()
+
+    @staticmethod
+    def _read_input_bin_vars(data: xr.Dataset) -> dict[str, np.ndarray]:
+        names = str(data.attrs["foxes_binned_states_bin_vars"]).split(",")
+        return {
+            name: np.asarray(data.attrs[f"{name}_bounds"], dtype=config.dtype_double)
+            for name in names
+        }
+
+    @staticmethod
+    def _stat_var(var: str, stat: str) -> str:
+        return f"{var}_{stat}"
+
+    def _bin_centres(self) -> np.ndarray:
+        centres = []
+        for var, edges in self.bin_vars.items():
+            values = 0.5 * (edges[:-1] + edges[1:])
+            if var == FV.WD:
+                values = np.mod(values, 360.0)
+            centres.append(values)
+        mesh = np.meshgrid(*centres, indexing="ij")
+        return np.stack([values.ravel() for values in mesh], axis=-1)
+
+    def _reshape_support_data(
+        self,
+        data: np.ndarray,
+        support_shape: tuple[int, ...],
+    ) -> np.ndarray:
+        return data.reshape(self._bin_shape + support_shape)
+
     def _create_output_dataset(
         self,
         support: np.ndarray,
         axes: tuple[np.ndarray, ...] | None,
-        reduced: dict[str, np.ndarray],
+        stats: dict[str, dict[str, np.ndarray]],
         weights: np.ndarray,
     ) -> xr.Dataset:
-        state_coord = np.arange(self._n_bins, dtype=config.dtype_int)
+        bin_coords = {
+            var: 0.5 * (edges[:-1] + edges[1:]) for var, edges in self.bin_vars.items()
+        }
+        if FV.WD in bin_coords:
+            bin_coords[FV.WD] = np.mod(bin_coords[FV.WD], 360.0)
         attrs = {
-            "foxes_state_class": "FieldData" if axes is not None else "PointCloudData",
+            "foxes_state_class": "BinnedStates",
             "foxes_binned_states_bin_vars": ",".join(self.bin_vars),
         }
         if config.utm_zone_set:
@@ -226,51 +290,115 @@ class BinnedStates(States):
             attrs["utm_zone"] = f"{utm_number}{utm_letter}"
         attrs.update({f"{var}_bounds": edges for var, edges in self.bin_vars.items()})
 
+        bin_dims = tuple(self.bin_vars)
+
         if axes is not None:
             x, y, h = axes
-            grid_shape = tuple(len(axis) for axis in axes)
+            support_dims: tuple[str, ...] = (FV.X, FV.Y, FV.H)
+            support_shape = tuple(len(axis) for axis in axes)
             grid_data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {
-                var: (
-                    ("Time", "height", "UTMY", "UTMX"),
-                    values.reshape((self._n_bins,) + grid_shape).transpose(0, 3, 2, 1),
+                self._stat_var(var, stat): (
+                    bin_dims + support_dims,
+                    self._reshape_support_data(values, support_shape),
                 )
-                for var, values in reduced.items()
+                for var, values_by_stat in stats.items()
+                for stat, values in values_by_stat.items()
             }
             grid_data_vars[FV.WEIGHT] = (
-                ("Time", "height", "UTMY", "UTMX"),
-                weights.reshape((self._n_bins,) + grid_shape).transpose(0, 3, 2, 1),
+                bin_dims + support_dims,
+                self._reshape_support_data(weights, support_shape),
             )
             return xr.Dataset(
                 data_vars=grid_data_vars,
-                coords={"Time": state_coord, "height": h, "UTMY": y, "UTMX": x},
+                coords={**bin_coords, FV.X: x, FV.Y: y, FV.H: h},
                 attrs=attrs,
             )
 
         point_data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {
-            var: (("Time", FC.POINT), values) for var, values in reduced.items()
+            self._stat_var(var, stat): (
+                bin_dims + (FC.POINT,),
+                self._reshape_support_data(values, (support.shape[0],)),
+            )
+            for var, values_by_stat in stats.items()
+            for stat, values in values_by_stat.items()
         }
-        point_data_vars[FV.WEIGHT] = (("Time", FC.POINT), weights)
-        point_data_vars["x"] = ((FC.POINT,), support[:, 0])
-        point_data_vars["y"] = ((FC.POINT,), support[:, 1])
-        point_data_vars["height"] = ((FC.POINT,), support[:, 2])
+        point_data_vars[FV.WEIGHT] = (
+            bin_dims + (FC.POINT,),
+            self._reshape_support_data(weights, (support.shape[0],)),
+        )
         return xr.Dataset(
             data_vars=point_data_vars,
-            coords={"Time": state_coord, FC.POINT: np.arange(support.shape[0])},
+            coords={
+                **bin_coords,
+                FC.POINT: np.arange(support.shape[0], dtype=config.dtype_int),
+                FC.XYH: (FC.XYH, np.asarray([FV.X, FV.Y, FV.H])),
+                "support": ((FC.POINT, FC.XYH), support),
+            },
             attrs=attrs,
         )
+
+    def _load_output_dataset(
+        self,
+        data: xr.Dataset,
+        loaded_data: LoadedData,
+    ) -> None:
+        bin_dims = tuple(self.bin_vars)
+        support_dims: tuple[str, ...]
+        if all(var in data.coords for var in (FV.X, FV.Y, FV.H)):
+            axes = tuple(np.asarray(data[var].to_numpy()) for var in (FV.X, FV.Y, FV.H))
+            support_shape = tuple(len(axis) for axis in axes)
+            support_dims = (FV.X, FV.Y, FV.H)
+            mesh = np.meshgrid(*axes, indexing="ij")
+            support = np.stack([values.ravel() for values in mesh], axis=-1)
+        elif "support" in data.coords:
+            axes = None
+            support = np.asarray(data["support"].to_numpy(), dtype=config.dtype_double)
+            support_shape = (support.shape[0],)
+            support_dims = (FC.POINT,)
+        else:
+            raise KeyError("BinnedStates: Missing support coordinates in input data")
+
+        full_dims = bin_dims + support_dims
+        loaded_data["coords"][FC.STATE] = np.arange(
+            self._n_bins, dtype=config.dtype_int
+        )
+        loaded_data["coords"][self._bin_vars_key] = np.asarray(list(self.bin_vars))
+        loaded_data["data_vars"][self._bin_centres_key] = (
+            (FC.STATE, self._bin_vars_key),
+            self._bin_centres(),
+        )
+        for var in self.bin_vars:
+            for stat in ["min", "mean", "max"]:
+                name = self._stat_var(var, stat)
+                if name not in data:
+                    raise KeyError(f"BinnedStates: Missing data variable '{name}'")
+                values = data[name].transpose(*full_dims).to_numpy()
+                loaded_data["data_vars"][self.var(name)] = (
+                    (FC.STATE, FC.POINT),
+                    values.reshape(self._n_bins, int(np.prod(support_shape))),
+                )
+        if FV.WEIGHT not in data:
+            raise KeyError(f"BinnedStates: Missing data variable '{FV.WEIGHT}'")
+        weights = data[FV.WEIGHT].transpose(*full_dims).to_numpy()
+        loaded_data["data_vars"][self.var(FV.WEIGHT)] = (
+            (FC.STATE, FC.POINT),
+            weights.reshape(self._n_bins, int(np.prod(support_shape))),
+        )
+        loaded_data["extra_data"][self._support_key] = support
+        loaded_data["extra_data"][self._grid_axes_key] = axes
 
     def _write_output_file(
         self,
         support: np.ndarray,
         axes: tuple[np.ndarray, ...] | None,
-        reduced: dict[str, np.ndarray],
+        stats: dict[str, dict[str, np.ndarray]],
         weights: np.ndarray,
         verbosity: int,
     ) -> None:
         if self.output_file is None:
             return
         write_nc(
-            self._create_output_dataset(support, axes, reduced, weights),
+            self._create_output_dataset(support, axes, stats, weights),
             self.output_file,
             verbosity=verbosity,
         )
@@ -316,7 +444,19 @@ class BinnedStates(States):
         if not force and self._support_key in loaded_data["extra_data"]:
             return
 
+        if self.data_source is not None:
+            data = self._read_input_dataset()
+            try:
+                self._set_bin_vars(self._read_input_bin_vars(data))
+                self._load_output_dataset(data, loaded_data)
+            finally:
+                if data is not self.data_source:
+                    data.close()
+            return
+
         support, axes = self._materialize_support()
+        assert self.states is not None
+        source_states = self.states
         n_states = self.states.size()
         source_data = self._source_dataset(loaded_data)
         from foxes.algorithms import Downwind
@@ -341,7 +481,7 @@ class BinnedStates(States):
             source_results = halgo.calc_points(
                 source_farm_results,
                 support,
-                outputs=self.states.output_point_vars(halgo),
+                outputs=source_states.output_point_vars(halgo),
             )
             return source_results
 
@@ -400,38 +540,57 @@ class BinnedStates(States):
                 source_weights[mask],
             )
 
-        reduced: dict[str, np.ndarray] = {}
+        stats: dict[str, dict[str, np.ndarray]] = {}
         for var in self.bin_vars:
             values = source_results[var].to_numpy()
             if values.ndim == 3 and values.shape[-1] == 1:
                 values = values[..., 0]
-            out = np.zeros((self._n_bins, support.shape[0]), dtype=config.dtype_double)
+            mean = np.zeros((self._n_bins, support.shape[0]), dtype=config.dtype_double)
+            vmin = np.full(
+                (self._n_bins, support.shape[0]), np.inf, dtype=config.dtype_double
+            )
+            vmax = np.full(
+                (self._n_bins, support.shape[0]), -np.inf, dtype=config.dtype_double
+            )
             if var == FV.WD:
-                sine = np.zeros_like(out)
-                cosine = np.zeros_like(out)
+                wind_vectors = np.zeros(
+                    (self._n_bins, support.shape[0], 2), dtype=config.dtype_double
+                )
                 for point_i in range(support.shape[0]):
                     mask = valid[:, point_i]
-                    angles = np.deg2rad(values[mask, point_i])
                     bins = flat_bin[mask, point_i]
                     weights_i = source_weights[mask]
-                    np.add.at(sine[:, point_i], bins, weights_i * np.sin(angles))
-                    np.add.at(cosine[:, point_i], bins, weights_i * np.cos(angles))
-                out[:] = np.mod(np.rad2deg(np.arctan2(sine, cosine)), 360.0)
-                out[np.isclose(out, 360.0)] = 0.0
+                    np.add.at(
+                        wind_vectors[:, point_i],
+                        bins,
+                        wd2uv(values[mask, point_i], weights_i),
+                    )
+                    circular_values = self._circular_bin_values(
+                        values[mask, point_i], self.bin_vars[var]
+                    )
+                    np.minimum.at(vmin[:, point_i], bins, circular_values)
+                    np.maximum.at(vmax[:, point_i], bins, circular_values)
+                mean[:] = uv2wd(wind_vectors)
+                mean[np.isclose(mean, 360.0)] = 0.0
             else:
                 for point_i in range(support.shape[0]):
                     mask = valid[:, point_i]
+                    bins = flat_bin[mask, point_i]
                     np.add.at(
-                        out[:, point_i],
-                        flat_bin[mask, point_i],
+                        mean[:, point_i],
+                        bins,
                         source_weights[mask] * values[mask, point_i],
                     )
+                    np.minimum.at(vmin[:, point_i], bins, values[mask, point_i])
+                    np.maximum.at(vmax[:, point_i], bins, values[mask, point_i])
             if var != FV.WD:
-                np.divide(out, weights, out=out, where=weights > 0)
-                out[weights <= 0] = np.nan
+                np.divide(mean, weights, out=mean, where=weights > 0)
+                mean[weights <= 0] = np.nan
             else:
-                out[weights <= 0] = np.nan
-            reduced[var] = out
+                mean[weights <= 0] = np.nan
+            vmin[weights <= 0] = np.nan
+            vmax[weights <= 0] = np.nan
+            stats[var] = {"min": vmin, "mean": mean, "max": vmax}
 
         if self._source_state_key not in loaded_data["coords"]:
             source_state = loaded_data["coords"].pop(FC.STATE, None)
@@ -451,15 +610,24 @@ class BinnedStates(States):
         loaded_data["coords"][FC.STATE] = np.arange(
             self._n_bins, dtype=config.dtype_int
         )
-        for var, data in reduced.items():
-            loaded_data["data_vars"][self.var(var)] = ((FC.STATE, FC.POINT), data)
+        loaded_data["coords"][self._bin_vars_key] = np.asarray(list(self.bin_vars))
+        loaded_data["data_vars"][self._bin_centres_key] = (
+            (FC.STATE, self._bin_vars_key),
+            self._bin_centres(),
+        )
+        for var, values_by_stat in stats.items():
+            for stat, data in values_by_stat.items():
+                loaded_data["data_vars"][self.var(self._stat_var(var, stat))] = (
+                    (FC.STATE, FC.POINT),
+                    data,
+                )
         loaded_data["data_vars"][self.var(FV.WEIGHT)] = (
             (FC.STATE, FC.POINT),
             weights,
         )
         loaded_data["extra_data"][self._support_key] = support
         loaded_data["extra_data"][self._grid_axes_key] = axes
-        self._write_output_file(support, axes, reduced, weights, verbosity)
+        self._write_output_file(support, axes, stats, weights, verbosity)
 
     def _get_state_interpolator(
         self,
@@ -569,11 +737,17 @@ class BinnedStates(States):
         axes = mdata.extra_data[self._grid_axes_key]
         points = np.asarray(tdata[FC.TARGETS])
         results = {}
+        bin_vars = mdata[self._bin_vars_key].tolist()
+        bin_centres = mdata[self._bin_centres_key]
         for var in self.bin_vars:
-            values = mdata[self.var(var)]
-            results[var] = self._interpolate_states(
-                var, support, values, axes, points, tdata
-            )
+            if var == FV.WD:
+                results[var] = tdata[var]
+                results[var][:] = bin_centres[:, bin_vars.index(var), None, None]
+            else:
+                values = mdata[self.var(self._stat_var(var, "mean"))]
+                results[var] = self._interpolate_states(
+                    var, support, values, axes, points, tdata
+                )
         weights = mdata[self.var(FV.WEIGHT)]
         interpolated_weights = self._interpolate_states(
             FV.WEIGHT, support, weights, axes, points, tdata

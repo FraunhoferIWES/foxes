@@ -18,7 +18,9 @@ uv run --no-sync python run.py -e process
 ```
 
 Set `BinnedStates(..., output_file="binned_states.nc")` to persist the reduced
-support-point data as soon as it is available. Regular support grids are written
-in a `FieldData`-readable layout; scattered support points are written in a
-`PointCloudData`-readable layout. The NetCDF attributes include the compact UTM
-zone string, for example `33U`, when the foxes config has a UTM zone set.
+support-point data as soon as it is available. The file uses bin dimensions
+followed by either the regular-grid or scattered-point support topology, with
+`*_min`, `*_mean`, `*_max`, and `weight` data variables. Pass the file to
+`BinnedStates("binned_states.nc")` to re-use the binned data in a later run.
+The NetCDF attributes include the compact UTM zone string, for example `33U`,
+when the foxes config has a UTM zone set.
