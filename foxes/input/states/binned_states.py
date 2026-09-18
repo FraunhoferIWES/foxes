@@ -9,7 +9,7 @@ from scipy.interpolate import RegularGridInterpolator, griddata
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.config import config
-from foxes.core import FData, MData, States, TData, run_with_engine
+from foxes.core import FData, MData, States, TData, WindFarm, Turbine, run_with_engine
 from foxes.utils import plot_wind_rose_bars
 
 if TYPE_CHECKING:
@@ -246,8 +246,12 @@ class BinnedStates(States):
         source_data = self._source_dataset(loaded_data)
         from foxes.algorithms import Downwind
 
+        hfarm = WindFarm()
+        hfarm.add_turbine(
+            Turbine(xy=algo.farm.turbines[0].xy, turbine_models=["null_type"])
+        )
         halgo = Downwind(
-            farm=algo.farm,
+            farm=hfarm,
             states=self.states,
             rotor_model="centre",
             partial_wakes="centre",
@@ -266,7 +270,7 @@ class BinnedStates(States):
             return source_results
 
         source_results = run_with_engine(_calc_source)
-        del halgo
+        del halgo, hfarm
 
         if FV.WEIGHT in source_data:
             weight_dims = source_data[FV.WEIGHT].dims

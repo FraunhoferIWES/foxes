@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 import xarray as xr
@@ -33,8 +35,19 @@ class _SourceStates(States):
 class _Algorithm:
     n_states = None
 
+    def __init__(self):
+        self.farm = SimpleNamespace(turbines=[SimpleNamespace(xy=np.array([0.0, 0.0]))])
+
     def new_point_data(self, points, n_states):
         return None
+
+
+class _Downwind:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def initialize(self, force=False):
+        pass
 
 
 def test_binned_states_reduces_into_loaded_data(monkeypatch):
@@ -59,9 +72,10 @@ def test_binned_states_reduces_into_loaded_data(monkeypatch):
         }
     )
     monkeypatch.setattr(
-        "foxes.input.states.binned_states.launch_parallel_calc",
+        "foxes.input.states.binned_states.run_with_engine",
         lambda *args, **kwargs: source_results,
     )
+    monkeypatch.setattr("foxes.algorithms.Downwind", _Downwind)
 
     states.load_data(_Algorithm(), loaded_data)
 
@@ -95,9 +109,10 @@ def test_binned_states_ignores_height_for_single_height_support(monkeypatch):
         }
     )
     monkeypatch.setattr(
-        "foxes.input.states.binned_states.launch_parallel_calc",
+        "foxes.input.states.binned_states.run_with_engine",
         lambda *args, **kwargs: source_results,
     )
+    monkeypatch.setattr("foxes.algorithms.Downwind", _Downwind)
     states.load_data(_Algorithm(), loaded_data)
 
     mdata = MData(
@@ -139,9 +154,10 @@ def test_binned_states_wraps_wind_direction_at_north(monkeypatch):
         }
     )
     monkeypatch.setattr(
-        "foxes.input.states.binned_states.launch_parallel_calc",
+        "foxes.input.states.binned_states.run_with_engine",
         lambda *args, **kwargs: source_results,
     )
+    monkeypatch.setattr("foxes.algorithms.Downwind", _Downwind)
     states.load_data(_Algorithm(), loaded_data)
 
     weights = loaded_data["data_vars"][states.var(FV.WEIGHT)][1]
@@ -163,13 +179,14 @@ def test_binned_states_rejects_point_dependent_weights(monkeypatch):
         np.ones((4, 1)),
     )
     monkeypatch.setattr(
-        "foxes.input.states.binned_states.launch_parallel_calc",
+        "foxes.input.states.binned_states.run_with_engine",
         lambda *args, **kwargs: xr.Dataset(
             data_vars={
                 FV.WS: ((FC.STATE, FC.POINT), np.ones((4, 1))),
             }
         ),
     )
+    monkeypatch.setattr("foxes.algorithms.Downwind", _Downwind)
 
     with pytest.raises(ValueError, match="state-dependent only"):
         states.load_data(_Algorithm(), loaded_data)
