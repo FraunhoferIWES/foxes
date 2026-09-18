@@ -1055,7 +1055,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.9.5
 
 - Inputs:
-  - Updates for WindIOs
+  - Updates for WindIO/WIFA
 - Bug fixes:
   - Fixed state-subset calculations with point data that was already subset by
     preserving selected state coordinates during engine input preparation

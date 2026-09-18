@@ -517,6 +517,10 @@ class Downwind(Algorithm):
             for i, (wake_name, pwake) in enumerate(self.partial_wakes.items()):
                 print(f"    {i}) {wake_name}: {pwake.name}, {pwake}")
             print(deco)
+            print("  ground models:")
+            for i, (wake_name, gmodel) in enumerate(self.ground_models.items()):
+                print(f"    {i}) {wake_name}: {gmodel.name}, {gmodel}")
+            print(deco)
             print("  turbine models:")
             assert self.farm_controller.pre_rotor_models is not None
             assert self.farm_controller.post_rotor_models is not None
