@@ -169,19 +169,20 @@ class FieldData(DatasetStates):
                     alpha=0.2,
                     marker=".",
                     linestyle="None",
+                    zorder=5,
                 )
                 wind_farm_names = algo.farm.wind_farm_names
                 assert wind_farm_names is not None
                 anno = 3 if len(wind_farm_names) > 1 else 0
                 FarmLayoutOutput(farm=algo.farm).get_figure(
-                    fig=fig, ax=ax, annotate=anno, fontsize=12
+                    fig=fig, ax=ax, annotate=anno, fontsize=12, zorder=10
                 )
                 ax.set_xlabel(f"{FV.X} [m]")
                 ax.set_ylabel(f"{FV.Y} [m]")
                 ax.set_aspect("equal", adjustable="box")
                 ax.autoscale_view(tight=True)
                 fig.savefig(fpath, bbox_inches="tight")
-                plt.close()
+                plt.close(fig)
 
 
 class LatLonFieldData(DatasetStates):

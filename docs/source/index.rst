@@ -2,34 +2,9 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionadded:: 1.9.3
-    Wind-speed wake superpositions support target-turbine scaling via the
-    `scale_target` constructor parameter and corresponding model-book aliases,
-    e.g. `ws_quadratic_amb_target` for `WSQuadratic(scale_amb=True, scale_target=True)`.
-
-.. versionchanged:: 1.9.6
-    `SectorSimRefPointField` and `MesoMicroField` accept `support_point_plot`
-    to write a figure of the wind farm layout, reference point or points, and
-    selected field-state support points as soon as those data are available
-    during loading.
-
-.. versionchanged:: 1.9.3
-    Dedicated local wind-speed superposition classes were removed. Legacy `_loc`
-    model-book aliases remain available and now select target ambient scaling.
-
-.. versionadded:: 1.9.0
-    New efficient partial wakes treatment for Gaussian wake models by `PartialGaussianLookup`
-    and `PartialGaussian` classes, reducing computational cost and improving accuracy. The
-    gaussian lookup approach is now also selected as default for such models.
-
-.. versionadded:: 1.9.0
-    New input states `SectorSimRefPointField` and `MesoMicroField`, combining timeseries
-    data, e.g. from a local measurement or a mesoscale model,
-    with wind rose field results, typically from CFD.
-
-.. versionadded:: 1.9.0
-    New wake model `JensenTurbOParkWake`, combining Jensen top-hat wake deficits with
-    TurbOPark-style wake-radius growth
+.. versionadded:: 1.9.6
+    New input states class `BinnedStates`, reducing any states into binned data for
+    stochastic evaluation, also reading/writing NetCDF files for that purpose.
 
 
 Welcome to FOXES

@@ -1064,5 +1064,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.6
 
+- Inputs:
+  - New states class `BinnedStates`, reducing source states into bins and
+    interpolating the reduced data
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)

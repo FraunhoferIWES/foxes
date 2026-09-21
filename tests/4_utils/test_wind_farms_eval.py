@@ -77,6 +77,25 @@ def test_aggregate_rejects_zero_sum_turbine_weights(eval_case):
         out._aggregate(mapping=None)
 
 
+def test_aggregate_ignores_only_zero_weight_nans():
+    farm = _build_two_farm()
+    weights = np.array([[0.5, 0.0], [0.5, 1.0]], dtype=np.float64)
+    farm_results = _build_results(weights)
+    farm_results[FV.REWS] = (
+        (FC.STATE, FC.TURBINE),
+        np.array([[1.0, np.nan], [3.0, 4.0]], dtype=np.float64),
+    )
+
+    out = foxes.output.WindFarmsEval(farm, farm_results=farm_results)
+    state_mean = out.calc_states_mean(FV.REWS)
+    np.testing.assert_allclose(state_mean[FV.REWS], [4.0, 2.0])
+
+    farm_results[FV.WEIGHT].data[0, 1] = 0.5
+    out = foxes.output.WindFarmsEval(farm, farm_results=farm_results)
+    with pytest.raises(AssertionError, match="nonzero weights"):
+        out.calc_states_mean(FV.REWS)
+
+
 def test_farm_eval_allows_missing_farm_results():
     farm = _build_two_farm()
     out = foxes.output.WindFarmsEval(farm=farm, farm_results=None)

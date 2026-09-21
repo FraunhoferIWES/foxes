@@ -60,6 +60,43 @@ class FarmResultsEval(Output):
         """
         return self._results
 
+    def _get_data(self, var: str) -> tuple[np.ndarray, np.ndarray]:
+        """Return result data and its allowed zero-weight NaN mask."""
+        vdata = self.results[var].to_numpy()
+        try:
+            nan_mask = np.isnan(vdata)
+        except TypeError:
+            return vdata, np.zeros(vdata.shape, dtype=bool)
+
+        if not np.any(nan_mask):
+            return vdata, nan_mask
+
+        data = self.results[var]
+        assert FC.STATE in data.dims and FV.WEIGHT in self.results, (
+            f"Found {np.sum(nan_mask)} nan values for variable '{var}' of shape "
+            f"{vdata.shape} without state weights"
+        )
+        weights = self.results[FV.WEIGHT]
+        try:
+            weight_data = weights.broadcast_like(data).to_numpy()
+        except ValueError as exc:
+            raise ValueError(
+                f"Cannot align '{FV.WEIGHT}' with variable '{var}' for NaN validation"
+            ) from exc
+
+        invalid = nan_mask & (weight_data != 0.0)
+        n_invalid = np.sum(invalid)
+        assert n_invalid == 0, (
+            f"Found {n_invalid} nan values for variable '{var}' of shape "
+            f"{vdata.shape} with nonzero weights"
+        )
+        return vdata, nan_mask
+
+    def _validate_nan_results(self) -> None:
+        """Validate that every NaN result is associated with zero weight."""
+        for var in self.results.data_vars:
+            self._get_data(var)
+
     def weinsum(self, rhs: str, *vars: str | np.ndarray) -> np.ndarray:
         """
         Calculates Einstein sum, adding weights
@@ -86,13 +123,11 @@ class FarmResultsEval(Output):
         fields: list[np.ndarray] = []
         for v in vars:
             if isinstance(v, str):
-                vdata = self.results[v].to_numpy()
-                nns = np.sum(np.isnan(vdata))
-                assert nns == 0, (
-                    f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
-                )
-                fields.append(vdata)
+                vdata, nan_mask = self._get_data(v)
+                fields.append(np.where(nan_mask, 0.0, vdata))
             elif isinstance(v, np.ndarray):
+                nns = np.sum(np.isnan(v))
+                assert nns == 0, f"Found {nns} nan values in an array argument"
                 fields.append(v)
             else:
                 raise TypeError(
@@ -102,44 +137,14 @@ class FarmResultsEval(Output):
         if not fields:
             raise ValueError("No data fields supplied for einsum reduction.")
 
-        nan_mask = np.zeros_like(fields[0], dtype=bool)
-        for field in fields:
-            nan_mask = nan_mask | np.isnan(field)
-
         inds = ["st" for __ in fields]
         if self.results[FV.WEIGHT].dims == (FC.STATE,):
             inds += ["s"]
-
-            if np.any(nan_mask):
-                sel = ~np.any(nan_mask, axis=1)
-                fields = [f[sel] for f in fields]
-
-                weights0 = self.results[FV.WEIGHT].to_numpy()
-                w0 = np.sum(weights0)
-                weights = weights0[sel]
-                w1 = np.sum(weights)
-                weights *= w0 / w1
-                fields.append(weights)
-
-            else:
-                fields.append(self.results[FV.WEIGHT].to_numpy())
+            fields.append(self.results[FV.WEIGHT].to_numpy())
 
         elif self.results[FV.WEIGHT].dims == (FC.STATE, self._LEVEL):
             inds += ["st"]
-
-            if np.any(nan_mask):
-                sel = ~np.any(nan_mask, axis=1)
-                fields = [f[sel] for f in fields]
-
-                weights0 = self.results[FV.WEIGHT].to_numpy()
-                w0 = np.sum(weights0, axis=0)[None, :]
-                weights = weights0[sel]
-                w1 = np.sum(weights, axis=0)[None, :]
-                weights *= w0 / w1
-                fields.append(weights)
-
-            else:
-                fields.append(self.results[FV.WEIGHT].to_numpy())
+            fields.append(self.results[FV.WEIGHT].to_numpy())
 
         else:
             raise ValueError(
@@ -186,30 +191,22 @@ class FarmResultsEval(Output):
 
         rdata = {}
         for v, op in vars_op.items():
-            vdata = self.results[v].to_numpy()
-
-            try:
-                nns = np.sum(np.isnan(vdata))
-                assert nns == 0, (
-                    f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
-                )
-            except TypeError:
-                pass
+            vdata, _ = self._get_data(v)
 
             if op is None:
                 rdata[v] = vdata
             elif op == "weights":
-                rdata[v] = self.weinsum("t", vdata)
+                rdata[v] = self.weinsum("t", v)
             elif op == "mean":
-                rdata[v] = np.mean(vdata, axis=0)
+                rdata[v] = np.nanmean(vdata, axis=0)
             elif op == "sum":
-                rdata[v] = np.sum(vdata, axis=0)
+                rdata[v] = np.nansum(vdata, axis=0)
             elif op == "min":
-                rdata[v] = np.min(vdata, axis=0)
+                rdata[v] = np.nanmin(vdata, axis=0)
             elif op == "max":
-                rdata[v] = np.max(vdata, axis=0)
+                rdata[v] = np.nanmax(vdata, axis=0)
             elif op == "std":
-                rdata[v] = np.std(vdata, axis=0)
+                rdata[v] = np.nanstd(vdata, axis=0)
             else:
                 raise KeyError(
                     f"Unknown operation '{op}' for variable '{v}'. Please choose: weights, mean, sum, min, max"
@@ -241,24 +238,20 @@ class FarmResultsEval(Output):
 
         rdata = {}
         for v, op in vars_op.items():
-            vdata = self.results[v].to_numpy()
-            nns = np.sum(np.isnan(vdata))
-            assert nns == 0, (
-                f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
-            )
+            vdata, _ = self._get_data(v)
 
             if op == "weights":
-                rdata[v] = self.weinsum("s", vdata) / vdata.shape[1]
+                rdata[v] = self.weinsum("s", v) / vdata.shape[1]
             elif op == "weights_sum":
-                rdata[v] = self.weinsum("s", vdata)
+                rdata[v] = self.weinsum("s", v)
             elif op == "mean":
-                rdata[v] = np.mean(vdata, axis=1)
+                rdata[v] = np.nanmean(vdata, axis=1)
             elif op == "sum":
-                rdata[v] = np.sum(vdata, axis=1)
+                rdata[v] = np.nansum(vdata, axis=1)
             elif op == "min":
-                rdata[v] = np.min(vdata, axis=1)
+                rdata[v] = np.nanmin(vdata, axis=1)
             elif op == "max":
-                rdata[v] = np.max(vdata, axis=1)
+                rdata[v] = np.nanmax(vdata, axis=1)
             else:
                 raise KeyError(
                     f"Unknown operation '{op}' for variable '{v}'. Please choose: weights, weights_sum, mean, sum, min, max"
@@ -296,26 +289,22 @@ class FarmResultsEval(Output):
         rdata = {}
         for v, op in turbines_op.items():
             vdata = sdata[v].to_numpy()
-            nns = np.sum(np.isnan(vdata))
-            assert nns == 0, (
-                f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
-            )
 
             if op in {"weights", "weights_sum"}:
                 if states_op[v] == "weights":
                     rdata[v] = self.weinsum("", v)
                 else:
-                    rdata[v] = self.weinsum("", vdata[None, :])
+                    rdata[v] = np.nansum(vdata)
                 if op == "weights":
                     rdata[v] /= len(vdata)
             elif op == "mean":
-                rdata[v] = np.mean(vdata)
+                rdata[v] = np.nanmean(vdata)
             elif op == "sum":
-                rdata[v] = np.sum(vdata)
+                rdata[v] = np.nansum(vdata)
             elif op == "min":
-                rdata[v] = np.min(vdata)
+                rdata[v] = np.nanmin(vdata)
             elif op == "max":
-                rdata[v] = np.max(vdata)
+                rdata[v] = np.nanmax(vdata)
             else:
                 raise KeyError(
                     f"Unknown operation '{op}' for variable '{v}'. Please choose: weights, weights_sum, mean, sum, min, max"

@@ -6,29 +6,36 @@ from typing import TYPE_CHECKING, Any, Mapping, Sequence
 import numpy as np
 import xarray as xr
 from scipy.interpolate import RegularGridInterpolator, griddata
+from scipy.spatial import Delaunay, QhullError
 
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.config import config, get_input_path
 from foxes.core import FData, MData, States, TData, WindFarm, Turbine, run_with_engine
+from foxes.input.states.dataset_states import DatasetStates
 from foxes.utils import plot_wind_rose_bars, uv2wd, wd2uv, write_nc
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, LoadedData, Model
 
 
-class BinnedStates(States):
+class BinnedStates(DatasetStates):
     """
-    States created by binning another states model at support points.
+    Ambient states obtained by binning a source states model on support points.
 
-    The wrapped states are evaluated at the support points during
-    initialization. The source states are then reduced into the Cartesian
-    product of the configured bins and stored as point-dependent state data.
-    During an algorithm calculation, the precomputed bin data is interpolated
-    from the support points to the requested target points.
+    The wrapped source state model is evaluated at a set of support points
+    during initialization. Its values are then reduced into the Cartesian
+    product of the configured bins and stored as point-dependent per-bin
+    statistics. During a calculation, the precomputed bin statistics and
+    weights are interpolated from the support topology to the target points.
+    Only the variables configured in ``bin_vars`` are retained from the
+    source calculations, which run in ambient mode.
 
-    Source weights must be state-dependent only, as for timeseries input. If
-    the source does not provide weights, equal weights are used.
+    This class follows the DatasetStates API and reuses its interpolation
+    contract while keeping the custom histogram reduction logic specific to
+    binned state data. Source weights must be state-dependent only, as for
+    time-series input. If the source does not provide weights, equal weights
+    are assumed.
     """
 
     def __init__(
@@ -41,6 +48,7 @@ class BinnedStates(States):
         output_file: str | Path | None = None,
         interpolation: str = "linear",
         fill_value: float | None = np.nan,
+        bounds_error: bool = True,
         **kwargs: Any,
     ) -> None:
         """
@@ -76,8 +84,11 @@ class BinnedStates(States):
             :func:`scipy.interpolate.griddata`.
         fill_value
             Value used for target points outside the support domain.
+        bounds_error
+            Whether to raise an error when target points are outside the
+            support domain. When ``False``, ``fill_value`` is used instead.
         kwargs
-            Additional arguments for :class:`foxes.core.States`.
+            Additional arguments forwarded to :class:`foxes.input.states.dataset_states.DatasetStates`.
 
         Raises
         ------
@@ -85,9 +96,13 @@ class BinnedStates(States):
             If the bin definitions or support geometry are invalid, or if
             both support representations are provided.
         """
-        super().__init__(**kwargs)
         self.states = states if isinstance(states, States) else None
-        self.data_source = None if isinstance(states, States) else states
+        super().__init__(
+            data_source=None if self.states is not None else states,
+            output_vars=[],
+            interp_pars={"method": interpolation, "fill_value": fill_value},
+            **kwargs,
+        )
         self.bin_vars: dict[str, np.ndarray] = {}
         if bin_vars is None and self.states is not None:
             raise ValueError(
@@ -110,6 +125,7 @@ class BinnedStates(States):
         )
         self.interpolation = interpolation
         self.fill_value = fill_value
+        self.bounds_error = bounds_error
         self.output_file = None if output_file is None else Path(output_file)
         self._bin_shape = tuple(len(edges) - 1 for edges in self.bin_vars.values())
         self._n_bins = int(np.prod(self._bin_shape, dtype=np.int64))
@@ -117,6 +133,7 @@ class BinnedStates(States):
         self._grid_axes_key = self.var("grid_axes")
         self._source_state_key = self.var(FC.STATE + "0")
         self._bin_centres_key = self.var("bin_centres")
+        self._bin_indices_key = self.var("bin_indices")
         self._bin_vars_key = self.var("bin_vars")
         self._cache: dict[str, Any] = {}
 
@@ -183,15 +200,15 @@ class BinnedStates(States):
         self._n_bins = int(np.prod(self._bin_shape, dtype=np.int64))
 
     def sub_models(self) -> list[Model]:
-        """Return the wrapped source states model."""
+        """Return the wrapped source states model if one was provided."""
         return [] if self.states is None else [self.states]
 
     def size(self) -> int:
-        """Return the number of Cartesian histogram bins."""
+        """Return the total number of Cartesian histogram bins."""
         return self._n_bins
 
     def index(self) -> list[int]:
-        """Return positional indices for the histogram bins."""
+        """Return the positional index labels of the histogram bins."""
         return list(range(self._n_bins))
 
     def output_point_vars(self, algo: Algorithm) -> list[str]:
@@ -269,6 +286,13 @@ class BinnedStates(States):
     ) -> np.ndarray:
         return data.reshape(self._bin_shape + support_shape)
 
+    def _bin_indices(self, bin_centres: np.ndarray) -> np.ndarray:
+        indices = []
+        for i, edges in enumerate(self.bin_vars.values()):
+            index = np.searchsorted(edges, bin_centres[:, i], side="right") - 1
+            indices.append(np.clip(index, 0, len(edges) - 2))
+        return np.ravel_multi_index(tuple(indices), self._bin_shape)
+
     def _create_output_dataset(
         self,
         support: np.ndarray,
@@ -290,49 +314,45 @@ class BinnedStates(States):
             attrs["utm_zone"] = f"{utm_number}{utm_letter}"
         attrs.update({f"{var}_bounds": edges for var, edges in self.bin_vars.items()})
 
-        bin_dims = tuple(self.bin_vars)
+        active = np.any(weights != 0.0, axis=1)
+        bin_indices = np.flatnonzero(active)
+        bin_centres = self._bin_centres()[active]
+        state_dims = (FC.STATE, "binned_state_var")
 
         if axes is not None:
             x, y, h = axes
             support_dims: tuple[str, ...] = (FV.X, FV.Y, FV.H)
             support_shape = tuple(len(axis) for axis in axes)
-            grid_data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {
-                self._stat_var(var, stat): (
-                    bin_dims + support_dims,
-                    self._reshape_support_data(values, support_shape),
-                )
-                for var, values_by_stat in stats.items()
-                for stat, values in values_by_stat.items()
+            support_coords = {FV.X: x, FV.Y: y, FV.H: h}
+        else:
+            support_dims = (FC.POINT,)
+            support_shape = (support.shape[0],)
+            support_coords = {
+                FC.POINT: np.arange(support.shape[0], dtype=config.dtype_int),
+                FC.XYH: (FC.XYH, np.asarray([FV.X, FV.Y, FV.H])),
+                "support": ((FC.POINT, FC.XYH), support),
             }
-            grid_data_vars[FV.WEIGHT] = (
-                bin_dims + support_dims,
-                self._reshape_support_data(weights, support_shape),
-            )
-            return xr.Dataset(
-                data_vars=grid_data_vars,
-                coords={**bin_coords, FV.X: x, FV.Y: y, FV.H: h},
-                attrs=attrs,
-            )
 
-        point_data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {
+        data_vars = {
             self._stat_var(var, stat): (
-                bin_dims + (FC.POINT,),
-                self._reshape_support_data(values, (support.shape[0],)),
+                (FC.STATE,) + support_dims,
+                values[active].reshape((len(bin_indices),) + support_shape),
             )
             for var, values_by_stat in stats.items()
             for stat, values in values_by_stat.items()
         }
-        point_data_vars[FV.WEIGHT] = (
-            bin_dims + (FC.POINT,),
-            self._reshape_support_data(weights, (support.shape[0],)),
+        data_vars[FV.WEIGHT] = (
+            (FC.STATE,) + support_dims,
+            weights[active].reshape((len(bin_indices),) + support_shape),
         )
         return xr.Dataset(
-            data_vars=point_data_vars,
+            data_vars=data_vars,
             coords={
-                **bin_coords,
-                FC.POINT: np.arange(support.shape[0], dtype=config.dtype_int),
-                FC.XYH: (FC.XYH, np.asarray([FV.X, FV.Y, FV.H])),
-                "support": ((FC.POINT, FC.XYH), support),
+                FC.STATE: np.arange(len(bin_indices), dtype=config.dtype_int),
+                "bin_index": ((FC.STATE,), bin_indices),
+                "binned_state_var": list(self.bin_vars),
+                "bin_centres": (state_dims, bin_centres),
+                **support_coords,
             },
             attrs=attrs,
         )
@@ -342,7 +362,6 @@ class BinnedStates(States):
         data: xr.Dataset,
         loaded_data: LoadedData,
     ) -> None:
-        bin_dims = tuple(self.bin_vars)
         support_dims: tuple[str, ...]
         if all(var in data.coords for var in (FV.X, FV.Y, FV.H)):
             axes = tuple(np.asarray(data[var].to_numpy()) for var in (FV.X, FV.Y, FV.H))
@@ -358,14 +377,24 @@ class BinnedStates(States):
         else:
             raise KeyError("BinnedStates: Missing support coordinates in input data")
 
-        full_dims = bin_dims + support_dims
+        if "bin_centres" not in data or "bin_index" not in data:
+            raise KeyError(
+                "BinnedStates: Input requires sparse 'bin_centres' and 'bin_index' coordinates"
+            )
+        bin_centres = data["bin_centres"].to_numpy()
+        if bin_centres.shape != (data.sizes[FC.STATE], len(self.bin_vars)):
+            raise ValueError("BinnedStates: Invalid sparse bin-centre data")
+        self._n_bins = data.sizes[FC.STATE]
+        bin_indices = data["bin_index"].to_numpy()
+        full_dims = (FC.STATE,) + support_dims
+
         loaded_data["coords"][FC.STATE] = np.arange(
             self._n_bins, dtype=config.dtype_int
         )
         loaded_data["coords"][self._bin_vars_key] = np.asarray(list(self.bin_vars))
         loaded_data["data_vars"][self._bin_centres_key] = (
             (FC.STATE, self._bin_vars_key),
-            self._bin_centres(),
+            bin_centres,
         )
         for var in self.bin_vars:
             for stat in ["min", "mean", "max"]:
@@ -386,6 +415,7 @@ class BinnedStates(States):
         )
         loaded_data["extra_data"][self._support_key] = support
         loaded_data["extra_data"][self._grid_axes_key] = axes
+        loaded_data["extra_data"][self._bin_indices_key] = bin_indices
 
     def _write_output_file(
         self,
@@ -394,12 +424,14 @@ class BinnedStates(States):
         stats: dict[str, dict[str, np.ndarray]],
         weights: np.ndarray,
         verbosity: int,
+        pack: bool = True,
     ) -> None:
         if self.output_file is None:
             return
         write_nc(
             self._create_output_dataset(support, axes, stats, weights),
             self.output_file,
+            pack=pack,
             verbosity=verbosity,
         )
 
@@ -407,11 +439,13 @@ class BinnedStates(States):
     def _circular_bin_values(values: np.ndarray, edges: np.ndarray) -> np.ndarray:
         return edges[0] + np.mod(values - edges[0], 360.0)
 
-    def load_data(
+    def load_data(  # type: ignore[override]
         self,
         algo: Algorithm,
         loaded_data: LoadedData,
         force: bool = False,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -431,6 +465,10 @@ class BinnedStates(States):
             Shared model data populated during initialization.
         force
             Rebuild the source and histogram data when ``True``.
+        bounds_extra_space
+            Reserved for compatibility with ``DatasetStates``; ignored here.
+        height_bounds
+            Reserved for compatibility with ``DatasetStates``; ignored here.
         verbosity
             Initialization verbosity level.
 
@@ -440,7 +478,7 @@ class BinnedStates(States):
             If source weights are not state-dependent only, or if source
             output data has an unsupported shape.
         """
-        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+        States.load_data(self, algo, loaded_data, force=force, verbosity=verbosity)
         if not force and self._support_key in loaded_data["extra_data"]:
             return
 
@@ -456,14 +494,19 @@ class BinnedStates(States):
 
         support, axes = self._materialize_support()
         assert self.states is not None
-        source_states = self.states
         n_states = self.states.size()
+        n_bins = int(np.prod(self._bin_shape, dtype=np.int64))
+        self._n_bins = n_bins
         source_data = self._source_dataset(loaded_data)
         from foxes.algorithms import Downwind
 
         hfarm = WindFarm()
         hfarm.add_turbine(
-            Turbine(xy=algo.farm.turbines[0].xy, turbine_models=["null_type"]),
+            Turbine(
+                xy=algo.farm.turbines[0].xy,
+                turbine_models=["null_type"],
+                H=support[0, 2],
+            ),
             verbosity=0,
         )
         halgo = Downwind(
@@ -477,13 +520,16 @@ class BinnedStates(States):
         halgo.initialize(force=True)
 
         def _calc_source(halgo: Algorithm = halgo) -> xr.Dataset:
-            source_farm_results = halgo.calc_farm()
+            source_farm_results = halgo.calc_farm(ambient=True)
             source_results = halgo.calc_points(
                 source_farm_results,
                 support,
-                outputs=source_states.output_point_vars(halgo),
+                outputs=[FV.var2amb.get(var, var) for var in self.bin_vars],
+                ambient=True,
             )
-            return source_results
+            return source_results.rename(
+                {v: FV.amb2var[v] for v in source_results.data_vars if v in FV.amb2var}
+            )
 
         source_results = run_with_engine(_calc_source)
         del halgo, hfarm
@@ -607,96 +653,217 @@ class BinnedStates(States):
                         data,
                     )
 
+        active = np.any(weights != 0.0, axis=1)
+        bin_indices = np.flatnonzero(active).astype(config.dtype_int)
+        self._n_bins = len(bin_indices)
         loaded_data["coords"][FC.STATE] = np.arange(
             self._n_bins, dtype=config.dtype_int
         )
         loaded_data["coords"][self._bin_vars_key] = np.asarray(list(self.bin_vars))
         loaded_data["data_vars"][self._bin_centres_key] = (
             (FC.STATE, self._bin_vars_key),
-            self._bin_centres(),
+            self._bin_centres()[active],
         )
         for var, values_by_stat in stats.items():
             for stat, data in values_by_stat.items():
                 loaded_data["data_vars"][self.var(self._stat_var(var, stat))] = (
                     (FC.STATE, FC.POINT),
-                    data,
+                    data[active],
                 )
         loaded_data["data_vars"][self.var(FV.WEIGHT)] = (
             (FC.STATE, FC.POINT),
-            weights,
+            weights[active],
         )
         loaded_data["extra_data"][self._support_key] = support
         loaded_data["extra_data"][self._grid_axes_key] = axes
+        loaded_data["extra_data"][self._bin_indices_key] = bin_indices
         self._write_output_file(support, axes, stats, weights, verbosity)
 
-    def _get_state_interpolator(
-        self,
-        var: str,
-        support: np.ndarray,
-        values: np.ndarray,
-        axes: tuple[np.ndarray, ...] | None,
-    ) -> Any:
-        key = f"{var}:{id(values)}"
-        if key in self._cache:
-            return self._cache[key]
-        same_height = np.allclose(support[:, 2], support[0, 2])
+    def get_interpolation_grid_data(
+        self, mdata: MData, idims: list[str]
+    ) -> tuple[np.ndarray, ...] | np.ndarray:
+        """
+        Return the support coordinates used by the bin interpolation.
+
+        Parameters
+        ----------
+        mdata
+            Chunk model data containing the stored support grid or support
+            points.
+        idims
+            Requested interpolation dimensions. Kept for API compatibility
+            with the DatasetStates contract.
+
+        Returns
+        -------
+        tuple[np.ndarray, ...] | np.ndarray
+            Regular-grid axes for structured support or the scattered support
+            coordinates otherwise.
+        """
+        axes = mdata.extra_data[self._grid_axes_key]
         if axes is not None:
-            grid_shape = tuple(len(axis) for axis in axes)
-            grid_values = values.reshape((values.shape[0],) + grid_shape)
-            grid_values = np.moveaxis(grid_values, 0, -1)
-            if same_height:
-                interpolator = RegularGridInterpolator(
-                    axes[:2],
-                    grid_values[:, :, 0, :],
-                    bounds_error=False,
-                    fill_value=self.fill_value,
-                )
-            else:
-                interpolator = RegularGridInterpolator(
-                    axes,
-                    grid_values,
-                    bounds_error=False,
-                    fill_value=self.fill_value,
-                )
+            return tuple(np.asarray(axis) for axis in axes)
+        return np.asarray(mdata.extra_data[self._support_key])
+
+    def interpolate_data(
+        self,
+        mdata: MData,
+        idims: list[str],
+        d: np.ndarray,
+        pts: np.ndarray,
+        vrs: list[str],
+        state_indices: np.ndarray | None = None,
+        gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
+    ) -> np.ndarray:
+        """
+        Interpolate binned support values to the requested target points.
+
+        Parameters
+        ----------
+        mdata
+            Chunk model data containing the support topology and the per-bin
+            statistics to interpolate.
+        idims
+            Interpolation dimensions. Present for compatibility with the
+            DatasetStates API.
+        d
+            Data array of shape ``(n_states, ...)`` holding the binned values.
+        pts
+            Query points with shape ``(n_points, 3)``.
+        vrs
+            Variable names associated with the last axis of ``d``.
+        state_indices
+            Optional per-row state indices used to align the interpolation
+            result with the current state chunk.
+        gpts
+            Optional explicit grid points. If omitted, the stored support grid
+            or support points are used.
+
+        Returns
+        -------
+        np.ndarray
+            Interpolated values with the state-alignment expected by the
+            surrounding DatasetStates calculation flow.
+        """
+        if gpts is None:
+            gpts = self.get_interpolation_grid_data(mdata, idims)
+
+        support = np.asarray(mdata.extra_data[self._support_key])
+        axes = mdata.extra_data[self._grid_axes_key]
+        same_height = np.allclose(support[:, 2], support[0, 2])
+        query = np.asarray(pts).reshape(-1, 3)
+        if same_height:
+            query = query[:, :2]
+
+        if axes is not None:
+            try:
+                if same_height:
+                    grid_values = np.asarray(d).reshape(
+                        (d.shape[0],) + tuple(len(axis) for axis in axes)
+                    )
+                    grid_values = np.moveaxis(grid_values, 0, -1)
+                    interp = RegularGridInterpolator(
+                        axes[:2],
+                        grid_values[:, :, 0, :],
+                        bounds_error=self.bounds_error,
+                        fill_value=self.fill_value,
+                    )
+                else:
+                    grid_shape = tuple(len(axis) for axis in axes)
+                    grid_values = np.asarray(d).reshape((d.shape[0],) + grid_shape)
+                    grid_values = np.moveaxis(grid_values, 0, -1)
+                    interp = RegularGridInterpolator(
+                        axes,
+                        grid_values,
+                        bounds_error=self.bounds_error,
+                        fill_value=self.fill_value,
+                    )
+                interpolated = interp(query)
+            except ValueError as exc:
+                self._raise_out_of_bounds_error(query, axes, idims)
+                raise exc
         else:
             coordinates = support[:, :2] if same_height else support
-            interp_values = values.T
+            interp_values = np.asarray(d).T
 
-            def interpolator(points: np.ndarray) -> np.ndarray:
-                query = points[:, :2] if same_height else points
+            if self.bounds_error:
+                try:
+                    outside = Delaunay(coordinates).find_simplex(query) < 0
+                except QhullError:
+                    qmin = np.min(coordinates, axis=0)
+                    qmax = np.max(coordinates, axis=0)
+                    outside = np.any((query < qmin) | (query > qmax), axis=1)
+                if np.any(outside):
+                    self._raise_out_of_bounds_error(query[outside], coordinates, idims)
+
+            def _interpolator(points: np.ndarray) -> np.ndarray:
+                query_points = points[:, :2] if same_height else points
                 return griddata(
                     coordinates,
                     interp_values,
-                    query,
+                    query_points,
                     method=self.interpolation,
                     fill_value=self.fill_value,
                 )
 
-        self._cache[key] = interpolator
-        return interpolator
+            interpolated = _interpolator(query)
 
-    def _interpolate_states(
+        if state_indices is None:
+            if interpolated.ndim == 1:
+                return interpolated
+            state_indices = np.arange(interpolated.shape[1], dtype=config.dtype_int)
+
+        state_indices = np.asarray(state_indices, dtype=config.dtype_int)
+        self._check_interpolated_data(
+            interpolated, query, np.asarray(d), vrs, state_indices
+        )
+        if interpolated.ndim == 2:
+            return interpolated[np.arange(interpolated.shape[0]), state_indices]
+        if interpolated.ndim == 3:
+            return interpolated[np.arange(interpolated.shape[0]), state_indices, :]
+        return interpolated
+
+    def _raise_out_of_bounds_error(
         self,
-        var: str,
-        support: np.ndarray,
-        values: np.ndarray,
-        axes: tuple[np.ndarray, ...] | None,
         points: np.ndarray,
-        tdata: TData,
-    ) -> np.ndarray:
-        interpolator = self._get_state_interpolator(var, support, values, axes)
-        same_height = np.allclose(support[:, 2], support[0, 2])
-        query = points.reshape(-1, 3)
-        if axes is not None and same_height:
-            query = query[:, :2]
-        interpolated = interpolator(query)
-        state_indices = np.repeat(
-            np.arange(tdata.n_states, dtype=config.dtype_int),
-            tdata.n_targets * tdata.n_tpoints,
+        support: tuple[np.ndarray, ...] | np.ndarray,
+        idims: list[str],
+    ) -> None:
+        if isinstance(support, tuple):
+            qmin = np.array([np.min(values) for values in support])
+            qmax = np.array([np.max(values) for values in support])
+        else:
+            qmin = np.min(support, axis=0)
+            qmax = np.max(support, axis=0)
+        point = points[0]
+        raise ValueError(
+            f"BinnedStates '{self.name}': Interpolation failed for target {point}, "
+            f"outside support bounds {qmin} - {qmax} in dimensions {idims}. "
+            "Set bounds_error=False to use fill_value outside the support domain."
         )
-        return interpolated[np.arange(interpolated.shape[0]), state_indices].reshape(
-            tdata.n_states, tdata.n_targets, tdata.n_tpoints
-        )
+
+    def _check_interpolated_data(
+        self,
+        interpolated: np.ndarray,
+        query: np.ndarray,
+        data: np.ndarray,
+        variables: list[str],
+        state_indices: np.ndarray,
+    ) -> None:
+        if interpolated.ndim < 2:
+            return
+        selected = interpolated[np.arange(len(query)), state_indices]
+        invalid = np.isnan(selected)
+        if not np.any(invalid):
+            return
+        state_index = state_indices[np.flatnonzero(invalid)[0]]
+        if np.any(np.isnan(data[state_index])):
+            variable = variables[0] if variables else "unknown"
+            raise ValueError(
+                f"BinnedStates '{self.name}': Interpolation produced NaN for "
+                f"variable '{variable}' at target {query[np.flatnonzero(invalid)[0]]}; "
+                "the selected bin contains NaN support data."
+            )
 
     def calculate(  # type: ignore[override]
         self,
@@ -706,19 +873,19 @@ class BinnedStates(States):
         tdata: TData,
     ) -> dict[str, np.ndarray]:
         """
-        Interpolate precomputed bins to the current target points.
+        Interpolate the stored per-bin statistics to the calculation points.
 
-        Histogram reduction is performed during :meth:`load_data`; this
-        method only consumes the histogram-bin chunks supplied through
-        ``mdata`` and returns arrays with shape
-        ``(n_states, n_targets, n_tpoints)``.
+        Histogram reduction is performed during :meth:`load_data`; this method
+        consumes the precomputed support-point data stored in ``mdata`` and
+        returns the interpolated values for the active targets in the usual
+        ``(n_states, n_targets, n_tpoints)`` layout.
 
         Parameters
         ----------
         algo
             The algorithm using this states model.
         mdata
-            Model data containing the current histogram-bin chunk.
+            Chunk data containing the support topology and the binned statistics.
         fdata
             Farm data for the current calculation.
         tdata
@@ -733,26 +900,44 @@ class BinnedStates(States):
         assert tdata.n_states is not None
         assert tdata.n_targets is not None
         assert tdata.n_tpoints is not None
-        support = np.asarray(mdata.extra_data[self._support_key])
-        axes = mdata.extra_data[self._grid_axes_key]
         points = np.asarray(tdata[FC.TARGETS])
         results = {}
         bin_vars = mdata[self._bin_vars_key].tolist()
         bin_centres = mdata[self._bin_centres_key]
+        state_indices = np.repeat(
+            np.arange(tdata.n_states, dtype=config.dtype_int),
+            tdata.n_targets * tdata.n_tpoints,
+        )
+        query_points = points.reshape(-1, 3)
         for var in self.bin_vars:
             if var == FV.WD:
                 results[var] = tdata[var]
                 results[var][:] = bin_centres[:, bin_vars.index(var), None, None]
             else:
                 values = mdata[self.var(self._stat_var(var, "mean"))]
-                results[var] = self._interpolate_states(
-                    var, support, values, axes, points, tdata
+                interpolated = self.interpolate_data(
+                    mdata,
+                    [FV.X, FV.Y, FV.H],
+                    values,
+                    query_points,
+                    [var],
+                    state_indices=state_indices,
+                )
+                results[var] = interpolated.reshape(
+                    tdata.n_states, tdata.n_targets, tdata.n_tpoints
                 )
         weights = mdata[self.var(FV.WEIGHT)]
-        interpolated_weights = self._interpolate_states(
-            FV.WEIGHT, support, weights, axes, points, tdata
+        interpolated_weights = self.interpolate_data(
+            mdata,
+            [FV.X, FV.Y, FV.H],
+            weights,
+            query_points,
+            [FV.WEIGHT],
+            state_indices=state_indices,
         )
-        tdata[FV.WEIGHT] = interpolated_weights
+        tdata[FV.WEIGHT] = interpolated_weights.reshape(
+            tdata.n_states, tdata.n_targets, tdata.n_tpoints
+        )
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
         return results
 
@@ -791,7 +976,15 @@ class BinnedStates(States):
         weights = loaded_data["data_vars"][self.var(FV.WEIGHT)][1]
         ws_axis = list(self.bin_vars).index(FV.WS)
         wd_axis = list(self.bin_vars).index(FV.WD)
-        point_weights = weights.reshape((self._bin_shape) + (support.shape[0],))
+        point_weights = np.zeros(
+            (int(np.prod(self._bin_shape)), support.shape[0]), dtype=weights.dtype
+        )
+        bin_indices = loaded_data["extra_data"].get(self._bin_indices_key)
+        if bin_indices is None:
+            bin_centres = loaded_data["data_vars"][self._bin_centres_key][1]
+            bin_indices = self._bin_indices(bin_centres)
+        point_weights[np.asarray(bin_indices, dtype=config.dtype_int)] = weights
+        point_weights = point_weights.reshape(self._bin_shape + (support.shape[0],))
         point_weights = np.moveaxis(point_weights, (ws_axis, wd_axis), (0, 1))
         point_weights = np.transpose(point_weights, (2, 1, 0))
         wd_edges = self.bin_vars[FV.WD]

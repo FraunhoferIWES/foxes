@@ -157,6 +157,7 @@ class MesoMicroField(States):
             marker=".",
             linestyle="None",
             label=f"{self.micro_states.name} support points",
+            zorder=5,
         )
         ax.scatter(
             self.ref_points[:, 0],
@@ -166,6 +167,7 @@ class MesoMicroField(States):
             s=80,
             linewidths=2,
             label="reference points",
+            zorder=10,
         )
         wind_farm_names = algo.farm.wind_farm_names
         assert wind_farm_names is not None
@@ -627,6 +629,48 @@ class MesoMicroField(States):
             data = data_stash[self.name]
             self.ref_points = cast(np.ndarray, data.pop("ref_points"))
 
+    def _interpolate_ref_weights(
+        self,
+        mdata: MData,
+        tdata: TData,
+        ref_points: np.ndarray,
+        n_states: int,
+        n_tpts: int,
+    ) -> np.ndarray:
+        n_points = len(ref_points)
+        refw = np.zeros((n_points, n_points), dtype=config.dtype_double)
+        np.fill_diagonal(refw, 1.0)
+        refv = [f"ref_point_{pi}" for pi in range(n_points)]
+
+        points = tdata[FC.TARGETS][..., :2].reshape((n_states, n_tpts, 2))
+        pmin = np.min(points, axis=0)
+        pmax = np.max(points, axis=0)
+        if np.any(pmax - pmin > 1e-4):
+            points, up2p = np.unique(
+                points.reshape(n_states * n_tpts, 2), axis=0, return_inverse=True
+            )
+        else:
+            points = points[0, :, :]
+            up2p = None
+
+        refw = self.meso_states.interpolate_data(
+            mdata=mdata,
+            idims=[FV.X, FV.Y],
+            d=refw,
+            pts=points,
+            vrs=refv,
+            state_indices=mdata.get(FC.STATE, None),
+            gpts=ref_points[:, :2],
+        )
+        if up2p is not None:
+            refw = refw[up2p, :].reshape(n_states, n_tpts, n_points)
+            sinds = np.arange(n_states)
+            refw = refw[sinds, ...]
+            del sinds
+        else:
+            refw = refw[None, ...]
+        return refw
+
     def calculate(
         self, algo: Algorithm, *data: Any, **parameters: Any
     ) -> dict[str, np.ndarray]:
@@ -894,40 +938,13 @@ class MesoMicroField(States):
         micro_results = mires  # now with dims (n_states, n_tpts, n_points, n_vrs)
         del mires
 
-        # prepare ref point selection:
-        refw: np.ndarray = np.zeros((n_points, n_points), dtype=config.dtype_double)
-        np.fill_diagonal(refw, 1.0)
-        refv = [f"ref_point_{pi}" for pi in range(n_points)]
-
-        # prepare target points for interpolation:
-        assert n_states is not None
-        points = tdata[FC.TARGETS][..., :2].reshape((n_states, n_tpts, 2))
-        pmin = np.min(points, axis=0)
-        pmax = np.max(points, axis=0)
-        if np.any(pmax - pmin > 1e-4):
-            points, up2p = np.unique(
-                points.reshape(n_states * n_tpts, 2), axis=0, return_inverse=True
-            )
-        else:
-            points = points[0, :, :]
-            up2p = None
-
-        # interpolate to target points:
-        refw = self.meso_states.interpolate_data(
+        refw = self._interpolate_ref_weights(
             mdata=mdata,
-            idims=[FV.X, FV.Y],
-            d=refw,
-            pts=points,
-            vrs=refv,
-            state_indices=mdata.get(FC.STATE, None),
+            tdata=tdata,
+            ref_points=ref_points,
+            n_states=n_states,
+            n_tpts=n_tpts,
         )
-        if up2p is not None:
-            refw = refw[up2p, :].reshape(n_states, n_tpts, n_points)
-            sinds = np.arange(n_states)
-            refw = refw[sinds, ...]
-            del sinds, up2p
-        else:
-            refw = refw[None, ...]
 
         # apply mixing weights:
         micro_results = np.einsum("sprv,spr->spv", micro_results, refw)

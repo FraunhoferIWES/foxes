@@ -203,3 +203,43 @@ def test_meso_micro_field_load_data_triggers_support_point_plot(monkeypatch):
 
     with pytest.raises(_PlotTriggered):
         states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
+
+
+def test_meso_micro_field_ref_weight_interpolation_uses_ref_points_as_grid():
+    states, _, _ = _make_meso_micro_field()
+    ref_points = np.array([[200.0, 50.0, 100.0], [600.0, 200.0, 100.0]], dtype=float)
+    targets = np.array(
+        [
+            [[[250.0, 100.0, 90.0], [500.0, 150.0, 90.0]]],
+            [[[250.0, 100.0, 90.0], [500.0, 150.0, 90.0]]],
+        ],
+        dtype=float,
+    )
+    captured = {}
+
+    class _MesoStates:
+        def interpolate_data(self, **kwargs):
+            captured.update(kwargs)
+            return kwargs["d"]
+
+    class _TData:
+        n_targets = 1
+        n_tpoints = 2
+
+        def __getitem__(self, key):
+            if key == FC.TARGETS:
+                return targets
+            raise KeyError(key)
+
+    states.meso_states = _MesoStates()
+
+    refw = states._interpolate_ref_weights(
+        mdata={FC.STATE: np.array([0, 1])},
+        tdata=_TData(),
+        ref_points=ref_points,
+        n_states=2,
+        n_tpts=2,
+    )
+
+    np.testing.assert_allclose(captured["gpts"], ref_points[:, :2])
+    np.testing.assert_allclose(refw, np.eye(2)[None, :, :])

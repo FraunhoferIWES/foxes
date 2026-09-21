@@ -101,6 +101,13 @@ class WindFarmsEval(FarmResultsEval):
             "farm_results are required for aggregation"
         )
 
+        original_results = self._results
+        self._results = self.farm_results
+        try:
+            self._validate_nan_results()
+        finally:
+            self._results = original_results
+
         needs_mapping = self.algo is not None
         if (
             not needs_mapping

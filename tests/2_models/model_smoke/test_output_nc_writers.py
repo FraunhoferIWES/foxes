@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import xarray as xr
 import matplotlib.pyplot as plt
 
@@ -208,6 +209,30 @@ def test_farm_results_eval_calc_farm_mean():
         )
 
         assert np.isclose(farm_sum[FV.REWS], expected * rews.shape[1])
+
+
+def test_farm_results_eval_ignores_only_zero_weight_nans():
+    rews = np.array([[1.0, np.nan], [3.0, 4.0]])
+    weights = np.array([[0.5, 0.0], [0.5, 1.0]])
+    farm_results = xr.Dataset(
+        data_vars={
+            FV.REWS: ((FC.STATE, FC.TURBINE), rews),
+            FV.WEIGHT: ((FC.STATE, FC.TURBINE), weights),
+        },
+        coords={FC.STATE: np.arange(2), FC.TURBINE: np.arange(2)},
+    )
+
+    evaluator = FarmResultsEval(farm_results)
+    state_mean = evaluator.calc_states_mean(FV.REWS)
+    turbine_mean = evaluator.calc_turbine_mean([FV.REWS])
+
+    np.testing.assert_allclose(state_mean[FV.REWS], [2.0, 4.0])
+    np.testing.assert_allclose(turbine_mean[FV.REWS], [1.0, 3.5])
+    assert np.isclose(evaluator.calc_farm_mean([FV.REWS])[FV.REWS], 3.0)
+
+    farm_results[FV.WEIGHT].data[0, 1] = 0.5
+    with pytest.raises(AssertionError, match="nonzero weights"):
+        FarmResultsEval(farm_results).calc_states_mean(FV.REWS)
 
 
 def test_point_calculator_write_nc_smoke_and_cleanup(tmp_path):
