@@ -148,6 +148,7 @@ submodules/
 results/
 result*.*
 area.png
+binned_data.nc
 
 # AI
 Agents.md
