@@ -244,19 +244,19 @@ class BinnedStates(States):
         support, axes = self._materialize_support()
         n_states = self.states.size()
         source_data = self._source_dataset(loaded_data)
-        from foxes.algorithms import Downwind
 
-        halgo = Downwind(
-            farm=algo.farm,
-            states=self.states,
-            rotor_model="centre",
-            partial_wakes="centre",
-            wake_models=[],
-            verbosity=verbosity - 1,
-        )
-        halgo.initialize(force=True)
+        def _calc_source() -> xr.Dataset:
+            from foxes.algorithms import Downwind
 
-        def _calc_source(halgo: Algorithm = halgo) -> xr.Dataset:
+            halgo = Downwind(
+                farm=algo.farm,
+                states=self.states,
+                rotor_model="centre",
+                partial_wakes="centre",
+                wake_models=[],
+                verbosity=verbosity - 1,
+            )
+            halgo.initialize(force=True)
             source_farm_results = halgo.calc_farm()
             source_results = halgo.calc_points(
                 source_farm_results,
@@ -266,7 +266,6 @@ class BinnedStates(States):
             return source_results
 
         source_results = run_with_engine(_calc_source)
-        del halgo
 
         if FV.WEIGHT in source_data:
             weight_dims = source_data[FV.WEIGHT].dims

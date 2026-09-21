@@ -1064,5 +1064,10 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.6
 
+- Bug fixes:
+  - Applied NetCDF compression and precision-preserving packing to output data
+- Models:
+  - Updated Gaussian lookup defaults to logarithmic sigma spacing, 1% asymptote
+    tolerance, and 2048-point radial quadrature
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)

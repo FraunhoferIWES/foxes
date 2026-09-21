@@ -1,8 +1,17 @@
 from foxes.utils.create_gaussian_lookup import create_gaussian_lookup_artifact
+from foxes.utils.create_gaussian_lookup import _build_parser
 from foxes.utils.create_gaussian_lookup import main
 from foxes.utils.gaussian_pwakes_utils import AXIS_R_OVER_SIGMA
 from foxes.utils.gaussian_pwakes_utils import AXIS_SIGMA_OVER_D
 from foxes.utils.gaussian_pwakes_utils import load_lookup_dataset
+
+
+def test_cli_uses_default_gaussian_lookup_generation_settings():
+    args = _build_parser().parse_args(["lookup.nc"])
+
+    assert args.sigma_spacing == "log"
+    assert args.asymptote_rel_tol == 1.0e-2
+    assert args.n_rho == 2048
 
 
 def test_create_gaussian_lookup_artifact_writes_expected_dataset(tmp_path):
@@ -16,6 +25,7 @@ def test_create_gaussian_lookup_artifact_writes_expected_dataset(tmp_path):
         sigma_spacing="linear",
         n_rho=96,
         version_tag="cli-test-v1",
+        pack=False,
         verbosity=0,
     )
 
@@ -52,6 +62,7 @@ def test_main_parses_args_and_writes_artifact(tmp_path):
             "main-test-v1",
             "--complevel",
             "1",
+            "--no-pack",
             "-v",
             "0",
         ]

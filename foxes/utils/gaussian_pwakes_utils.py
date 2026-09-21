@@ -17,9 +17,10 @@ AXIS_SIGMA_OVER_D = "sigma_over_d"
 DATA_WEIGHT = "weight"
 LOOKUP_VERSION = "v1"
 _MAX_EXPANSION_STEPS = 256
-_ASYMPTOTE_REL_TOL = 1.0e-3
+_ASYMPTOTE_REL_TOL = 1.0e-2
 _ASYMPTOTE_MIN_WEIGHT = 1.0e-8
 _ASYMPTOTE_EXPAND_FACTOR = 1.2
+_DEFAULT_N_RHO = 2048
 
 
 def create_lookup_axes(
@@ -29,7 +30,7 @@ def create_lookup_axes(
     sigma_resolution: float = 0.05,
     sigma_spacing: Literal["linear", "log"] = "log",
     min_weight: float = _ASYMPTOTE_MIN_WEIGHT,
-    n_rho: int = 512,
+    n_rho: int = _DEFAULT_N_RHO,
     asymptote_rel_tol: float = _ASYMPTOTE_REL_TOL,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -136,7 +137,7 @@ def _find_asymptote_sigma_over_d_upper(
 def gaussian_disc_weight(
     r_over_sigma: np.ndarray,
     sigma_over_d: np.ndarray,
-    n_rho: int = 512,
+    n_rho: int = _DEFAULT_N_RHO,
 ) -> np.ndarray:
     r"""
     Compute rotor-disc averaged Gaussian weights on normalized axes.
@@ -278,7 +279,7 @@ def gaussian_disc_weight_analytical(
 def build_lookup_dataset(
     r_over_sigma: np.ndarray,
     sigma_over_d: np.ndarray,
-    n_rho: int = 512,
+    n_rho: int = _DEFAULT_N_RHO,
     *,
     version_tag: str = LOOKUP_VERSION,
     sigma_spacing: Literal["linear", "log"] | None = None,
@@ -345,7 +346,7 @@ def generate_lookup_dataset(
     radial_resolution: float = 0.1,
     sigma_resolution: float = 0.05,
     sigma_spacing: Literal["linear", "log"] = "log",
-    n_rho: int = 512,
+    n_rho: int = _DEFAULT_N_RHO,
     version_tag: str = LOOKUP_VERSION,
     radial_expand_factor: float = 1.2,
     asymptote_rel_tol: float = _ASYMPTOTE_REL_TOL,
@@ -469,6 +470,7 @@ def save_lookup_dataset(
     *,
     complevel: int = 5,
     nc_engine: str | None = None,
+    pack: bool = True,
 ) -> None:
     """
     Persist a Gaussian lookup dataset to NetCDF.
@@ -483,6 +485,8 @@ def save_lookup_dataset(
         Compression level passed to NetCDF encoding.
     nc_engine
         NetCDF backend engine.
+    pack
+        Whether to pack lookup weights using scale and offset metadata.
     """
     validate_lookup_dataset(ds)
     write_nc(
@@ -490,7 +494,7 @@ def save_lookup_dataset(
         fpath,
         complevel=complevel,
         nc_engine=nc_engine,
-        pack=True,
+        pack=pack,
         verbosity=0,
     )
 

@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import xarray as xr
 
 from foxes.config import config
 from foxes.utils.gaussian_pwakes_utils import (
@@ -30,6 +31,17 @@ def test_create_lookup_axes_defaults_are_monotonic_and_positive():
     assert np.all(s_axis > 0.0)
     assert r_axis[-1] == pytest.approx(28.0)
     assert s_axis[-1] > s_axis[0]
+
+
+def test_generate_lookup_dataset_uses_default_generation_settings():
+    ds = generate_lookup_dataset(
+        radial_resolution=2.0,
+        sigma_resolution=2.0,
+    )
+
+    assert ds.attrs["sigma_spacing"] == "log"
+    assert ds.attrs["n_rho"] == 2048
+    assert ds.attrs["asymptote_rel_tol"] == pytest.approx(1.0e-2)
 
 
 def test_gaussian_disc_weight_large_sigma_approaches_one():
@@ -128,7 +140,7 @@ def test_generate_lookup_dataset_has_expected_metadata_and_is_deterministic():
     assert ds0.attrs["min_weight"] == pytest.approx(1.0e-8)
     assert ds0.attrs["radial_resolution"] == pytest.approx(0.1)
     assert ds0.attrs["sigma_resolution"] == pytest.approx(2.0)
-    assert ds0.attrs["asymptote_rel_tol"] == pytest.approx(1.0e-3)
+    assert ds0.attrs["asymptote_rel_tol"] == pytest.approx(1.0e-2)
     assert np.array_equal(ds0[DATA_WEIGHT].to_numpy(), ds1[DATA_WEIGHT].to_numpy())
 
 
@@ -147,6 +159,8 @@ def test_save_lookup_dataset_uses_configured_nc_engine(tmp_path):
         fpath = tmp_path / "gaussian_lookup_cfg_engine.nc"
         save_lookup_dataset(ds, fpath)
         assert fpath.exists()
+        with xr.open_dataset(fpath, engine="h5netcdf", decode_cf=False) as saved:
+            assert saved[DATA_WEIGHT].dtype == np.dtype("float64")
     finally:
         config["nc_engine"] = old_engine
 
@@ -170,7 +184,7 @@ def test_lookup_dataset_netcdf_roundtrip(tmp_path):
     )
     fpath = tmp_path / "gaussian_lookup_roundtrip.nc"
 
-    save_lookup_dataset(ds, fpath)
+    save_lookup_dataset(ds, fpath, pack=False)
     loaded = load_lookup_dataset(fpath)
     validate_lookup_dataset(loaded)
 

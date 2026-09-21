@@ -137,7 +137,10 @@ def unpack_value(
 
 
 def get_encoding(
-    data: np.ndarray, complevel: int = 5, pack: bool = True
+    data: np.ndarray,
+    complevel: int = 5,
+    pack: bool = True,
+    digits: int | None = None,
 ) -> dict[str, Any]:
     """
     Get the encoding parameters for a numpy array.
@@ -150,6 +153,8 @@ def get_encoding(
         The compression level (1-9)
     pack
         Whether to pack data using scale_factor and add_offset
+    digits
+        Decimal precision that packed floating-point values must retain.
 
     Returns
     -------
@@ -164,10 +169,14 @@ def get_encoding(
             for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32]:
                 if np.all(data == data.astype(t)):
                     enc["dtype"] = t.__name__
+                    break
         elif np.issubdtype(data.dtype, np.floating):
-            min = np.min(data)
-            max = np.max(data)
             hasnan = bool(np.any(np.isnan(data)))
+            valid = data[~np.isnan(data)] if hasnan else data
+            if not valid.size or not np.all(np.isfinite(valid)):
+                return enc
+            min = np.min(valid)
+            max = np.max(valid)
             for t, n in zip([np.int8, np.int16], [8, 16]):
                 scale_factor, add_offset, fill_value = compute_scale_and_offset(
                     min, max, n, hasnan
@@ -175,7 +184,10 @@ def get_encoding(
                 packed = pack_value(data, scale_factor, add_offset, t, fill_value)
                 unpacked = unpack_value(packed, scale_factor, add_offset, fill_value)
                 try:
-                    np.testing.assert_allclose(data, unpacked, atol=scale_factor)
+                    if digits is None:
+                        np.testing.assert_equal(unpacked, data)
+                    else:
+                        np.testing.assert_equal(np.round(unpacked, digits), data)
                     enc["dtype"] = t.__name__
                     enc["scale_factor"] = scale_factor
                     enc["add_offset"] = add_offset
@@ -204,14 +216,17 @@ def write_nc(
     fpath
         Path to the output file, should be nc
     round
-        The rounding digits, falling back to defaults
-        if variable not found. If int, applies to all variables.
+        The rounding digits. If ``None``, use default output digits for each
+        variable. If int, applies to all variables. If a mapping, missing
+        variables fall back to their default output digits.
     complevel
-        The compression level
+        The compression level from 1 to 9, where 9 is maximum compression.
+        Applied to all non-scalar variables, independently of rounding.
     nc_engine
         The NetCDF engine to use
     pack
-        Whether to pack data using scale_factor and add_offset
+        Whether to pack data using scale_factor and add_offset,
+        retaining the selected decimal precision
     verbosity
         The verbosity level, 0 = silent
     kwargs
@@ -251,32 +266,37 @@ def write_nc(
         """
         return {k: val for k, val in x.attrs.items() if k not in encoding}
 
-    enc: dict[Hashable, dict[str, Any]] = {}
-    if round is not None:
-        crds: dict[Hashable, tuple[Any, np.ndarray, dict[Hashable, Any]]] = {}
-        for v, x in ds.coords.items():
-            v = str(v)
-            if isinstance(round, int):
-                d = round
-            else:
-                d = round.get(v, FV.get_default_digits(v))
-            data = _round(x.to_numpy(), v, d)
-            enc[v] = get_encoding(data, complevel=complevel, pack=pack)
-            crds[v] = (x.dims, data, _keep_attrs(x, enc[v]))
-        dvrs: dict[Hashable, tuple[Any, np.ndarray, dict[Hashable, Any]]] = {}
-        for v, x in ds.data_vars.items():
-            v = str(v)
-            if isinstance(round, int):
-                d = round
-            else:
-                d = round.get(v, FV.get_default_digits(v))
-            if v != FV.WEIGHT:
-                data = _round(x.to_numpy(), v, d)
-            else:
-                data = x.to_numpy()
-            enc[v] = get_encoding(data, complevel=complevel, pack=pack)
-            dvrs[v] = (x.dims, data, _keep_attrs(x, enc[v]))
-        ds = Dataset(coords=crds, data_vars=dvrs, attrs=ds.attrs)
+    enc: dict[Hashable, dict[str, Any]] = {
+        str(v): get_encoding(x.to_numpy(), complevel=complevel, pack=False)
+        for v, x in ds.variables.items()
+    }
+    crds: dict[Hashable, tuple[Any, np.ndarray, dict[Hashable, Any]]] = {}
+    for v, x in ds.coords.items():
+        v = str(v)
+        d = (
+            round
+            if isinstance(round, int)
+            else None
+            if round is None
+            else round.get(v, FV.get_default_digits(v))
+        )
+        data = _round(x.to_numpy(), v, d)
+        enc[v] = get_encoding(data, complevel=complevel, pack=False)
+        crds[v] = (x.dims, data, _keep_attrs(x, enc[v]))
+    dvrs: dict[Hashable, tuple[Any, np.ndarray, dict[Hashable, Any]]] = {}
+    for v, x in ds.data_vars.items():
+        v = str(v)
+        d = (
+            round
+            if isinstance(round, int)
+            else FV.get_default_digits(v)
+            if round is None
+            else round.get(v, FV.get_default_digits(v))
+        )
+        data = _round(x.to_numpy(), v, d) if v != FV.WEIGHT else x.to_numpy()
+        enc[v] = get_encoding(data, complevel=complevel, pack=pack, digits=d)
+        dvrs[v] = (x.dims, data, _keep_attrs(x, enc[v]))
+    ds = Dataset(coords=crds, data_vars=dvrs, attrs=ds.attrs)
 
     if verbosity > 1:
         print(

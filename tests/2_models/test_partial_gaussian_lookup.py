@@ -54,7 +54,7 @@ def test_partial_gaussian_lookup_loads_dataset_from_path(tmp_path: Path) -> None
         version_tag="lookup-test-v1",
     )
     fpath = tmp_path / "gaussian_lookup.nc"
-    save_lookup_dataset(ds, fpath)
+    save_lookup_dataset(ds, fpath, pack=False)
 
     model = PartialGaussianLookup(lookup_data=fpath)
     algo = _algo_with_partial(model, "Bastankhah2014_linear_k004")
@@ -200,7 +200,7 @@ def test_partial_gaussian_lookup_min_weight_zeros_small_weights() -> None:
     ds = generate_lookup_dataset(
         radial_resolution=0.1,
         sigma_over_d_min=0.02,
-        sigma_resolution=2.0,
+        sigma_resolution=0.05,
         n_rho=96,
         version_tag="lookup-min-weight-v1",
     )

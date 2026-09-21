@@ -263,14 +263,15 @@ can be generated offline via:
 
 .. code-block:: console
 
-    foxes_create_gaussian_lookup ./gaussian_lookup.nc --radial-resolution 0.1 --sigma-resolution 0.05 --sigma-spacing log
+    foxes_create_gaussian_lookup ./gaussian_lookup.nc --radial-resolution 0.1 --sigma-resolution 0.05 --sigma-spacing log --asymptote-rel-tol 0.01 --n-rho 2048
 
 The resulting NetCDF artifact stores rotor-disc averaged Gaussian factors on
 the normalized geometry axes ``R/sigma`` and ``sigma/D``, along with its
 ``min_weight`` cutoff.
 
-The default lookup-axis settings are tuned for typical
-``Bastankhah2014_linear_k004`` use cases. During artifact generation,
+The default lookup-axis settings use logarithmic ``sigma/D`` spacing, a 1%
+large-sigma asymptote tolerance, and 2048 radial quadrature points. During
+artifact generation,
 ``min_weight`` derives the ``R/sigma`` extent when no explicit
 ``r_over_sigma_max`` is provided. The upper ``sigma/D`` extent is derived to
 meet the selected large-sigma asymptote relative-error tolerance.

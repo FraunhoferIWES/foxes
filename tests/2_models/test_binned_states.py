@@ -59,7 +59,7 @@ def test_binned_states_reduces_into_loaded_data(monkeypatch):
         }
     )
     monkeypatch.setattr(
-        "foxes.input.states.binned_states.launch_parallel_calc",
+        "foxes.input.states.binned_states.run_with_engine",
         lambda *args, **kwargs: source_results,
     )
 
@@ -95,7 +95,7 @@ def test_binned_states_ignores_height_for_single_height_support(monkeypatch):
         }
     )
     monkeypatch.setattr(
-        "foxes.input.states.binned_states.launch_parallel_calc",
+        "foxes.input.states.binned_states.run_with_engine",
         lambda *args, **kwargs: source_results,
     )
     states.load_data(_Algorithm(), loaded_data)
@@ -139,7 +139,7 @@ def test_binned_states_wraps_wind_direction_at_north(monkeypatch):
         }
     )
     monkeypatch.setattr(
-        "foxes.input.states.binned_states.launch_parallel_calc",
+        "foxes.input.states.binned_states.run_with_engine",
         lambda *args, **kwargs: source_results,
     )
     states.load_data(_Algorithm(), loaded_data)
@@ -163,7 +163,7 @@ def test_binned_states_rejects_point_dependent_weights(monkeypatch):
         np.ones((4, 1)),
     )
     monkeypatch.setattr(
-        "foxes.input.states.binned_states.launch_parallel_calc",
+        "foxes.input.states.binned_states.run_with_engine",
         lambda *args, **kwargs: xr.Dataset(
             data_vars={
                 FV.WS: ((FC.STATE, FC.POINT), np.ones((4, 1))),

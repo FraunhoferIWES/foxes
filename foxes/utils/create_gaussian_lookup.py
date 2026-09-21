@@ -17,12 +17,13 @@ def create_gaussian_lookup_artifact(
     radial_resolution: float = 0.1,
     sigma_resolution: float = 0.05,
     sigma_spacing: Literal["linear", "log"] = "log",
-    n_rho: int = 512,
+    n_rho: int = 2048,
     version_tag: str = LOOKUP_VERSION,
     radial_expand_factor: float = 1.2,
-    asymptote_rel_tol: float = 1.0e-3,
+    asymptote_rel_tol: float = 1.0e-2,
     complevel: int = 5,
     nc_engine: str | None = None,
+    pack: bool = True,
     verbosity: int = 1,
 ) -> Path:
     """
@@ -37,7 +38,7 @@ def create_gaussian_lookup_artifact(
     sigma_resolution
         Approximate spacing between interpolation samples on the ``sigma/D`` axis.
     sigma_spacing
-        Axis spacing mode for ``sigma/D``, either ``"linear"`` or ``"log"``.
+        Axis spacing mode for ``sigma/D``.
     n_rho
         Radial quadrature resolution used for weight integration.
     version_tag
@@ -57,6 +58,8 @@ def create_gaussian_lookup_artifact(
         NetCDF compression level.
     nc_engine
         NetCDF engine used for writing.
+    pack
+        Whether to pack lookup weights using scale and offset metadata.
     verbosity
         Verbosity level, 0 disables progress messages.
 
@@ -88,6 +91,7 @@ def create_gaussian_lookup_artifact(
         out_path,
         complevel=complevel,
         nc_engine=nc_engine,
+        pack=pack,
     )
     return out_path
 
@@ -123,7 +127,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--n-rho",
         dest="n_rho",
         type=int,
-        default=512,
+        default=2048,
         help="Radial quadrature resolution",
     )
     parser.add_argument(
@@ -158,7 +162,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--asymptote-rel-tol",
         dest="asymptote_rel_tol",
         type=float,
-        default=1.0e-3,
+        default=1.0e-2,
         help="Maximum relative error for the large-sigma asymptote",
     )
     parser.add_argument(
@@ -181,6 +185,12 @@ def _build_parser() -> argparse.ArgumentParser:
         type=str,
         default="netcdf4",
         help="NetCDF backend engine",
+    )
+    parser.add_argument(
+        "--no-pack",
+        dest="pack",
+        action="store_false",
+        help="Disable NetCDF scale-and-offset packing of lookup weights",
     )
     parser.add_argument(
         "-v",
@@ -217,6 +227,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         asymptote_rel_tol=args.asymptote_rel_tol,
         complevel=args.complevel,
         nc_engine=args.nc_engine,
+        pack=args.pack,
         verbosity=args.verbosity,
     )
 
