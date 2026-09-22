@@ -129,6 +129,7 @@ but that is mainly due to variations of various constructor argument choices. Ty
 
 * `Jensen_<superposition>_[wake_k]`: The classic Jensen wind deficit model,
 * `Bastankhah2014_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Bastankhah and Porté-Agel from 2014 <https://doi.org/10.1016/j.renene.2014.01.002>`_,
+* `Niayifar`: A Bastankhah2014 model-book preset using the local-TI wake-growth relation from `Niayifar and Porté-Agel <https://doi.org/10.3390/en9090741>`_,
 * `Bastankhah2016_<superposition>_[wake_k]`: The wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_,
 * `TurbOPark_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Pedersen et al. from 2022 <https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf>`_,
 * `CrespoHernandez_<superposition>_[wake_k]`: The top-hat TI addition wake model by `Crespo and Hernandez from 1996 <https://doi.org/10.1016/0167-6105(95)00033-X>`_,
@@ -156,6 +157,7 @@ Examples for valid wake model choices are:
 * `TurbOPark_quadratic_loc_k004`
 * `CrespoHernandez_max_ka0213_kb003`
 * `Bastankhah2014_linear`
+* `Niayifar`
 
 .. _wake-frames:
 

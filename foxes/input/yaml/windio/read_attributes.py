@@ -21,6 +21,7 @@ def _read_wind_deficit(
         {
             "Jensen": "JensenWake",
             "Bastankhah2014": "Bastankhah2014",
+            "Niayifar": "Bastankhah2014",
             "Bastankhah2016": "Bastankhah2016",
             "TurbOPark": "TurbOParkWake",
         },
@@ -61,9 +62,17 @@ def _read_wind_deficit(
         wmodel_type=wind_def_map[wname],
         induction="Betz" if wname == "TurbOPark" else induction,
     )
-    kcoef: Dict[str, Any] = Dict(
-        wind_deficit["wake_expansion_coefficient"], _name="kcoef"
-    )
+    kcoef: Dict[Any, Any]
+    if wname == "Niayifar":
+        kcoef = Dict(
+            wind_deficit.get_item(
+                "wake_expansion_coefficient",
+                {"k_a": 0.003678, "k_b": 0.3837},
+            ),
+            _name="kcoef",
+        )
+    else:
+        kcoef = Dict(wind_deficit["wake_expansion_coefficient"], _name="kcoef")
     ka = kcoef.get_item("k_a", 0.0)
     kb = kcoef.get_item("k_b", 0.0)
     amb_ti = kcoef.get_item("free_stream_ti", False)
@@ -76,8 +85,9 @@ def _read_wind_deficit(
         if verbosity > 2:
             print(f"      Using k = {ka} + {kb} * {ti_var}")
         wind_def_dict["k"] = None
-        wind_def_dict["ka"] = kb  # Note: Definition in foxes is k = ka * ti + kb
-        wind_def_dict["kb"] = ka  # Note: Definition in foxes is k = ka * ti + kb
+        # WindIO uses k = k_a + k_b * TI; foxes uses k = ka * TI + kb.
+        wind_def_dict["ka"] = kb
+        wind_def_dict["kb"] = ka
         wind_def_dict["ti_var"] = ti_var
     if "ceps" in wind_deficit:
         sbf = wind_deficit["ceps"]
@@ -174,8 +184,9 @@ def _read_turbulence(
             if verbosity > 2:
                 print(f"      Using k = {ka} + {kb} * {ti_var}")
             tiwake_dict["k"] = None
-            tiwake_dict["ka"] = kb  # Note: Definition in foxes is k = ka * ti + kb
-            tiwake_dict["kb"] = ka  # Note: Definition in foxes is k = ka * ti + kb
+            # WindIO uses k = k_a + k_b * TI; foxes uses k = ka * TI + kb.
+            tiwake_dict["ka"] = kb
+            tiwake_dict["kb"] = ka
             tiwake_dict["ti_var"] = ti_var
         tiwake_dict["superposition"] = ti_sup_dict[superposition["ti_superposition"]]
 
