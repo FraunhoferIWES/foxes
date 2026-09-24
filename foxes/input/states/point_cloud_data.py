@@ -92,14 +92,6 @@ class PointCloudData(DatasetStates):
         self._n_wd = None
         self._n_ws = None
 
-        if FV.WS not in self.ovars:
-            raise ValueError(
-                f"States '{self.name}': Expecting output variable '{FV.WS}', got {self.ovars}"
-            )
-        if FV.WD not in self.ovars:
-            raise ValueError(
-                f"States '{self.name}': Expecting output variable '{FV.WD}', got {self.ovars}"
-            )
         for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT]:
             if v in self.ovars:
                 raise ValueError(
@@ -131,10 +123,10 @@ class PointCloudData(DatasetStates):
             mdata
             The model data.
             all_heights
-            Must be True because point-cloud states do not expose a separate
-            height axis.
+            If True, return all points. Otherwise select points at ``height``,
+            or at the highest available height when ``height`` is None.
             height
-            Must be None because point-cloud states contain explicit points.
+            Height to select when ``all_heights`` is False.
 
         Returns
         -------
@@ -148,19 +140,47 @@ class PointCloudData(DatasetStates):
         assert loaded_data is None or mdata is None, (
             f"States '{self.name}': Either loaded_data or mdata must be provided, not both"
         )
-        assert all_heights and height is None, (
-            f"States '{self.name}': Point-cloud states do not support height selection"
-        )
+        if all_heights and height is not None:
+            raise ValueError(
+                f"States '{self.name}': Cannot specify both all_heights and height, "
+                f"got all_heights={all_heights}, height={height}"
+            )
 
-        source = cast(dict[str, Any], mdata if mdata is not None else loaded_data)
+        source = cast(
+            dict[str, Any],
+            mdata if mdata is not None else cast(LoadedData, loaded_data)["coords"],
+        )
         point_coord = self.var(FC.POINT)
         if point_coord not in source and FC.POINT in source:
             point_coord = FC.POINT
         assert point_coord in source, (
             f"States '{self.name}': Missing point coordinates '{point_coord}'"
         )
-        points = np.asarray(source[point_coord])
-        return points.reshape(-1, points.shape[-1])
+        point_data = source[point_coord]
+        points = np.asarray(
+            point_data[1] if isinstance(point_data, tuple) else point_data
+        )
+        points = points.reshape(-1, points.shape[-1])
+        if all_heights:
+            return points
+        if points.shape[1] < 3:
+            if height is None:
+                raise ValueError(
+                    f"States '{self.name}': Cannot select a reference height from "
+                    f"point-cloud coordinates with shape {points.shape}; provide height"
+                )
+            return np.column_stack(
+                (points, np.full(len(points), height, dtype=config.dtype_double))
+            )
+
+        selected_height = np.max(points[:, 2]) if height is None else height
+        selected = points[np.isclose(points[:, 2], selected_height)]
+        if len(selected) == 0:
+            raise ValueError(
+                f"States '{self.name}': No point-cloud support points found at "
+                f"height {selected_height} m"
+            )
+        return selected
 
     def _read_ds(
         self,
@@ -283,7 +303,7 @@ class PointCloudData(DatasetStates):
         d: np.ndarray,
         pts: np.ndarray,
         vrs: list[str],
-        state_indices: np.ndarray | None = None,
+        state_labels: np.ndarray | None = None,
         gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
     ) -> np.ndarray:
         """
@@ -301,8 +321,8 @@ class PointCloudData(DatasetStates):
             The points to interpolate to, shape ``(n_pts, n_idims)``.
         vrs
             Variable names.
-        state_indices
-            State indices, unused here.
+        state_labels
+            Optional state labels for interpolation diagnostics, unused here.
         gpts
             Explicit grid points.
 
@@ -343,6 +363,11 @@ class PointCloudData(DatasetStates):
             gpts_array = gpts_array[:, None]
         if pts.ndim == 1:
             pts = pts[None, :]
+
+        varying_axes = np.ptp(gpts_array, axis=0) > 1.0e-10
+        if 1 < np.count_nonzero(varying_axes) < gpts_array.shape[1]:
+            gpts_array = gpts_array[:, varying_axes]
+            pts = pts[:, varying_axes]
 
         # remove NaN data points:
         if not self.check_input_nans:
@@ -827,7 +852,7 @@ class TurbinePointCloud(DatasetStates):
         d: np.ndarray,
         pts: np.ndarray,
         vrs: list[str],
-        state_indices: np.ndarray | None = None,
+        state_labels: np.ndarray | None = None,
         gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
     ) -> np.ndarray:
         """
@@ -845,8 +870,8 @@ class TurbinePointCloud(DatasetStates):
             The evaluation points, shape ``(n_pts, n_idims)``.
         vrs
             Variable names.
-        state_indices
-            State indices, unused here.
+        state_labels
+            Optional state labels for interpolation diagnostics, unused here.
         gpts
             Explicit grid points.
 

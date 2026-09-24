@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
+from scipy.spatial import QhullError
 from typing import Any, cast
 
 from foxes.config import config, get_output_path
@@ -54,14 +56,17 @@ class MesoMicroField(States):
         meso_states
             Meso-scale states evaluated at reference points. These define the final
             states and state weights and are used to scale the micro states.
+            Supported spatial models include FieldData, NEWAStates,
+            PointCloudData, ICONStates, and their binned variants.
         ref_points
             The [x, y, h] reference point coordinates, shape (n_ref_points, 3),
-            or micro-state grid points with ref_height as height if None.
+            or meso-state support points at ref_height if None.
         ref_points_are_lonlat
             Whether the reference point coordinates are in longitude/latitude.
         ref_height
             The height of the reference points when ref_points is None.
-            Defaults to the highest reference point.
+            Defaults to the highest reference point. Required for point-cloud
+            data without height coordinates.
         utm_zone
             The UTM zone for the reference point coordinates, if applicable.
             Either a string like "32N" or None to infer it automatically.
@@ -292,6 +297,29 @@ class MesoMicroField(States):
                 f"States '{self.name}': ref_points_are_lonlat is False, but utm_zone is given: {self.__utm_zone}. This is not allowed."
             )
 
+    def _get_default_ref_points(self, loaded_data: LoadedData) -> np.ndarray:
+        """Select reference points from any meso-state support topology."""
+        points = np.asarray(
+            self.meso_states.get_grid_points(
+                loaded_data=loaded_data,
+                all_heights=False,
+                height=self.ref_height,
+            )
+        )
+        if points.ndim != 2 or points.shape[1] != 3:
+            raise ValueError(
+                f"States '{self.name}': Meso states '{self.meso_states.name}' "
+                f"must provide grid points with shape (N, 3), got {points.shape}"
+            )
+        if len(points) == 0:
+            raise ValueError(
+                f"States '{self.name}': Meso states '{self.meso_states.name}' "
+                "provide no reference points"
+            )
+
+        self.ref_height = float(points[0, 2])
+        return points
+
     def load_data(
         self,
         algo: Algorithm,
@@ -336,13 +364,10 @@ class MesoMicroField(States):
 
             # update ref points:
             if self.ref_points is None:
-                self.ref_points = self.meso_states.get_grid_points(
-                    loaded_data=loaded_data, all_heights=False, height=self.ref_height
-                )
-                self.ref_height = self.ref_points[0, 2]
+                self.ref_points = self._get_default_ref_points(loaded_data)
                 if verbosity > 0:
                     print(
-                        f"States '{self.name}': Using micro states grid point locations as reference points, shape: {self.ref_points.shape}, ref_height: {self.ref_height} m"
+                        f"States '{self.name}': Using meso states grid point locations as reference points, shape: {self.ref_points.shape}, ref_height: {self.ref_height} m"
                     )
             self._lonlat_to_utm(verbosity=verbosity)
             n_points = len(self.ref_points)
@@ -629,47 +654,93 @@ class MesoMicroField(States):
             data = data_stash[self.name]
             self.ref_points = cast(np.ndarray, data.pop("ref_points"))
 
+    def _calculate_meso_data(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        ref_points: np.ndarray,
+    ) -> dict[str, np.ndarray]:
+        """Evaluate meso data at reference and final target points."""
+        n_states = mdata.n_states
+        assert n_states is not None
+        n_points = len(ref_points)
+        target_points = tdata[FC.TARGETS].reshape(n_states, -1, 3)
+        points = np.concatenate(
+            (
+                np.broadcast_to(ref_points[None, :, :], (n_states, n_points, 3)),
+                target_points,
+            ),
+            axis=1,
+        )
+        htdata = TData.from_points(points=points, mdata=mdata)
+        raw_results = cast(
+            dict[str, np.ndarray],
+            self.meso_states.calculate(algo, mdata, fdata, htdata),
+        )
+
+        weights = htdata[FV.WEIGHT]
+        if weights.shape[1:] == (1, 1):
+            target_weights = weights
+        else:
+            target_weights = weights[:, n_points:, 0].reshape(
+                n_states, tdata.n_targets, tdata.n_tpoints
+            )
+        tdata[FV.WEIGHT] = target_weights
+        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
+
+        return {str(k): values[:, :n_points, 0] for k, values in raw_results.items()}
+
     def _interpolate_ref_weights(
         self,
-        mdata: MData,
         tdata: TData,
         ref_points: np.ndarray,
         n_states: int,
         n_tpts: int,
     ) -> np.ndarray:
+        """Interpolate one-hot reference-point influence to target points."""
         n_points = len(ref_points)
-        refw = np.zeros((n_points, n_points), dtype=config.dtype_double)
-        np.fill_diagonal(refw, 1.0)
-        refv = [f"ref_point_{pi}" for pi in range(n_points)]
+        points = tdata[FC.TARGETS][..., :2].reshape(n_states * n_tpts, 2)
+        ref_xy = np.asarray(ref_points[:, :2], dtype=config.dtype_double)
 
-        points = tdata[FC.TARGETS][..., :2].reshape((n_states, n_tpts, 2))
-        pmin = np.min(points, axis=0)
-        pmax = np.max(points, axis=0)
-        if np.any(pmax - pmin > 1e-4):
-            points, up2p = np.unique(
-                points.reshape(n_states * n_tpts, 2), axis=0, return_inverse=True
+        if n_points == 1:
+            return np.ones((n_states, n_tpts, 1), dtype=config.dtype_double)
+
+        if len(np.unique(ref_xy, axis=0)) != n_points:
+            raise ValueError(
+                f"States '{self.name}': Reference points must have unique x/y coordinates"
+            )
+
+        centre = np.mean(ref_xy, axis=0)
+        _, singular_values, axes = np.linalg.svd(ref_xy - centre, full_matrices=False)
+        tolerance = np.max(ref_xy.shape) * np.finfo(ref_xy.dtype).eps
+        rank = int(np.sum(singular_values > tolerance * singular_values[0]))
+        support = (ref_xy - centre) @ axes[:rank].T
+        eval_points = (points - centre) @ axes[:rank].T
+        identity = np.eye(n_points, dtype=config.dtype_double)
+
+        if rank == 1:
+            order = np.argsort(support[:, 0])
+            refw = np.stack(
+                [
+                    np.interp(eval_points[:, 0], support[order, 0], identity[order, i])
+                    for i in range(n_points)
+                ],
+                axis=-1,
             )
         else:
-            points = points[0, :, :]
-            up2p = None
+            try:
+                refw = griddata(support, identity, eval_points, method="linear")
+            except (QhullError, ValueError):
+                refw = griddata(support, identity, eval_points, method="nearest")
+            missing = ~np.all(np.isfinite(refw), axis=-1)
+            if np.any(missing):
+                refw[missing] = griddata(
+                    support, identity, eval_points[missing], method="nearest"
+                )
 
-        refw = self.meso_states.interpolate_data(
-            mdata=mdata,
-            idims=[FV.X, FV.Y],
-            d=refw,
-            pts=points,
-            vrs=refv,
-            state_indices=mdata.get(FC.STATE, None),
-            gpts=ref_points[:, :2],
-        )
-        if up2p is not None:
-            refw = refw[up2p, :].reshape(n_states, n_tpts, n_points)
-            sinds = np.arange(n_states)
-            refw = refw[sinds, ...]
-            del sinds
-        else:
-            refw = refw[None, ...]
-        return refw
+        return refw.reshape(n_states, n_tpts, n_points)
 
     def calculate(
         self, algo: Algorithm, *data: Any, **parameters: Any
@@ -729,20 +800,14 @@ class MesoMicroField(States):
             f"States '{self.name}': Output variables must include either '{FV.WD}' and '{FV.WS}' or '{FV.U}' and '{FV.V}', and must not include '{FV.UV}', got {ovars}"
         )
 
-        # evaluate reference point:
-        points = np.zeros((n_states, n_points, 3), dtype=ref_points.dtype)
-        points[:] = ref_points[None, :, :]
-        htdata = TData.from_points(points=points, mdata=mdata)
-        raw_ref_results: dict[str, np.ndarray] = cast(
-            dict[str, np.ndarray],
-            self.meso_states.calculate(algo, mdata, fdata, htdata),
+        # evaluate meso data at reference and final target points:
+        ref_results = self._calculate_meso_data(
+            algo=algo,
+            mdata=mdata,
+            fdata=fdata,
+            tdata=tdata,
+            ref_points=ref_points,
         )
-        ref_results: dict[str, np.ndarray] = {
-            str(k): d[:, :, 0] for k, d in raw_ref_results.items()
-        }
-        tdata[FV.WEIGHT] = htdata[FV.WEIGHT]
-        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        del points, htdata
 
         if self.check_nans:
             for result_name, result_data in ref_results.items():
@@ -939,7 +1004,6 @@ class MesoMicroField(States):
         del mires
 
         refw = self._interpolate_ref_weights(
-            mdata=mdata,
             tdata=tdata,
             ref_points=ref_points,
             n_states=n_states,

@@ -663,6 +663,37 @@ class FarmResultsEval(Output):
         """
         return np.sum(self.get_capacity())
 
+    def calc_farm_capacity_factor(self, ambient: bool = False) -> float:
+        """
+        Calculates the state-weighted farm capacity factor.
+
+        Parameters
+        ----------
+        ambient
+            Flag for ambient power
+
+        Returns
+        -------
+        capacity_factor
+            The mean total farm power divided by total farm capacity
+
+        Raises
+        ------
+        ValueError
+            If the total farm capacity is not positive
+
+        """
+        if FV.CAP in self.results:
+            capacity_data = self.results[FV.CAP]
+            if FC.STATE in capacity_data.dims:
+                capacity_data = capacity_data.isel({FC.STATE: 0})
+            capacity = np.sum(capacity_data.to_numpy())
+        else:
+            capacity = self.calc_farm_capacity()
+        if capacity <= 0.0:
+            raise ValueError("Farm capacity must be positive")
+        return self.calc_mean_farm_power(ambient=ambient) / capacity
+
     def calc_farm_yield(
         self,
         turbine_yield: pd.DataFrame | None = None,

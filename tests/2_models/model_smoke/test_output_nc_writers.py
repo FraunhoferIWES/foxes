@@ -211,6 +211,58 @@ def test_farm_results_eval_calc_farm_mean():
         assert np.isclose(farm_sum[FV.REWS], expected * rews.shape[1])
 
 
+@pytest.mark.parametrize(
+    ("ambient", "expected"),
+    [
+        (False, 0.45),
+        (True, 0.7),
+    ],
+)
+def test_farm_results_eval_calc_farm_capacity_factor(ambient, expected):
+    farm_results = xr.Dataset(
+        data_vars={
+            FV.P: ((FC.STATE, FC.TURBINE), [[20.0, 40.0], [60.0, 100.0]]),
+            FV.AMB_P: ((FC.STATE, FC.TURBINE), [[40.0, 80.0], [80.0, 160.0]]),
+            FV.CAP: ((FC.TURBINE,), [100.0, 200.0]),
+            FV.WEIGHT: ((FC.STATE,), [0.25, 0.75]),
+        },
+        coords={FC.STATE: np.arange(2), FC.TURBINE: np.arange(2)},
+    )
+
+    result = FarmResultsEval(farm_results).calc_farm_capacity_factor(ambient=ambient)
+
+    assert np.isclose(result, expected)
+
+
+def test_farm_results_eval_calc_farm_capacity_factor_with_state_capacity():
+    farm_results = xr.Dataset(
+        data_vars={
+            FV.P: ((FC.STATE, FC.TURBINE), [[20.0, 40.0], [60.0, 100.0]]),
+            FV.CAP: ((FC.STATE, FC.TURBINE), [[100.0, 200.0], [100.0, 200.0]]),
+            FV.WEIGHT: ((FC.STATE,), [0.25, 0.75]),
+        },
+        coords={FC.STATE: np.arange(2), FC.TURBINE: np.arange(2)},
+    )
+
+    result = FarmResultsEval(farm_results).calc_farm_capacity_factor()
+
+    assert np.isclose(result, 0.45)
+
+
+def test_farm_results_eval_calc_farm_capacity_factor_rejects_zero_capacity():
+    farm_results = xr.Dataset(
+        data_vars={
+            FV.P: ((FC.STATE, FC.TURBINE), [[10.0]]),
+            FV.CAP: ((FC.TURBINE,), [0.0]),
+            FV.WEIGHT: ((FC.STATE,), [1.0]),
+        },
+        coords={FC.STATE: np.arange(1), FC.TURBINE: np.arange(1)},
+    )
+
+    with pytest.raises(ValueError, match="Farm capacity must be positive"):
+        FarmResultsEval(farm_results).calc_farm_capacity_factor()
+
+
 def test_farm_results_eval_ignores_only_zero_weight_nans():
     rews = np.array([[1.0, np.nan], [3.0, 4.0]])
     weights = np.array([[0.5, 0.0], [0.5, 1.0]])

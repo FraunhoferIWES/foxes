@@ -456,7 +456,7 @@ class NEWAStates(DatasetStates):
         d: np.ndarray,
         pts: np.ndarray,
         vrs: list[str],
-        state_indices: np.ndarray | None = None,
+        state_labels: np.ndarray | None = None,
         gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
     ) -> np.ndarray:
         """
@@ -476,8 +476,9 @@ class NEWAStates(DatasetStates):
             The points to interpolate to, with shape (n_pts, n_idims)
         vrs
             The variable names, length nv
-        state_indices
-            The indices of the states, with shape (n_states,)
+        state_labels
+            Optional state labels for interpolation error diagnostics,
+            with shape (n_states,)
         gpts
             A 2D array with shape (n_points, n_dims), or None to extract the
             grid points from mdata.
@@ -537,13 +538,18 @@ class NEWAStates(DatasetStates):
             """Checks for NaN results and raises errors."""
             fill_value = ipars.get("fill_value", np.nan)
             if isinstance(fill_value, (int, float)) and np.isnan(fill_value):
-                assert state_indices is not None, (
-                    f"States '{self.name}': state_indices must be provided for NaN check, got None"
-                )
                 sel = np.isnan(results)
                 if np.any(sel):
                     i = [j[0] for j in np.where(sel)]
-                    t = state_indices[i.pop(-2)] if len(results.shape) == 3 else None
+                    if results.ndim == 3:
+                        state_position = i.pop(-2)
+                        t = (
+                            state_labels[state_position]
+                            if state_labels is not None
+                            else None
+                        )
+                    else:
+                        t = None
                     p = pts[tuple(i[:-1])]
                     qmin = np.min(gpts, axis=0)
                     qmax = np.max(gpts, axis=0)

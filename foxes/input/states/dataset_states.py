@@ -280,6 +280,14 @@ class DatasetStates(States):
             )
         return self.__data_source
 
+    def _set_data_source(self, data_source: str | Path | xr.Dataset) -> None:
+        """Replace the data source before model initialization."""
+        if self.initialized or self.running:
+            raise ValueError(
+                f"States '{self.name}': Cannot replace data source after initialization"
+            )
+        self.__data_source = data_source
+
     def _read_ds(
         self,
         ds: xr.Dataset,
@@ -983,6 +991,10 @@ class DatasetStates(States):
         # load sub model chunk data:
         super().load_chunk_data(algo, mdata, fdata, tdata)
 
+        # preloading already done:
+        if self.load_mode == "preload":
+            return
+
         # prepare:
         assert FC.STATE in self._cmap, (
             f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {self._cmap}"
@@ -992,12 +1004,8 @@ class DatasetStates(States):
         assert n_states is not None
         edata = mdata.extra_data
 
-        # preloading already done:
-        if self.load_mode == "preload":
-            return
-
         # lazy loading:
-        elif self.load_mode == "lazy":
+        if self.load_mode == "lazy":
             i0 = mdata.states_i0(counter=True)
             assert i0 is not None
             s = slice(i0, i0 + n_states)
@@ -1431,7 +1439,7 @@ class DatasetStates(States):
         d: np.ndarray,
         pts: np.ndarray,
         vrs: list[str],
-        state_indices: np.ndarray | None = None,
+        state_labels: np.ndarray | None = None,
         gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
     ) -> np.ndarray:
         """
@@ -1451,8 +1459,9 @@ class DatasetStates(States):
             The points to interpolate to, with shape (n_pts, n_idims)
         vrs
             The variable names, length nv
-        state_indices
-            The indices of the states, with shape (n_states,)
+        state_labels
+            Optional state labels for interpolation diagnostics, with shape
+            ``(n_states,)``
         gpts
             One 1D array per dimension, or a 2D array with shape
             (n_points, n_dims), or None to extract the grid points from mdata.
@@ -1641,16 +1650,25 @@ class DatasetStates(States):
         for dims, (vrs, d) in data.items():
             # replace (WD, WS) by (U, V):
             iwd = None
-            if FV.WD in vrs or FV.WS in vrs:
-                assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
-                    f"States '{self.name}': Missing '{FV.WD}' or '{FV.WS}' in data variables {vrs} for dimensions {dims}"
-                )
+            synthetic_ws = False
+            if FV.WD in vrs:
                 assert FV.U not in vrs and FV.U not in vrs, (
                     f"States '{self.name}': Cannot have '{FV.WD}', '{FV.WS}' and  '{FV.U}', '{FV.V}' in data variables {vrs} for dimensions {dims}"
                 )
+                if FV.WS not in vrs:
+                    synthetic_ws = True
+                    ws = self.fixed_vars.get(FV.WS, 1.0)
+                    d = np.concatenate(
+                        (
+                            d,
+                            np.full(d.shape[:-1] + (1,), ws, dtype=d.dtype),
+                        ),
+                        axis=-1,
+                    )
+                    vrs = [*vrs, FV.WS]
                 iwd = vrs.index(FV.WD)
                 iws = vrs.index(FV.WS)
-                ws = d[..., iws] if FV.WS in vrs else self.fixed_vars[FV.WS]
+                ws = d[..., iws]
                 d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
                 del ws
             elif FV.U in vrs or FV.V in vrs:
@@ -1784,6 +1802,10 @@ class DatasetStates(States):
                 d[..., iwd] = uv2wd(uv)
                 d[..., iws] = np.linalg.norm(uv, axis=-1)
                 del uv
+                if synthetic_ws:
+                    d = np.delete(d, iws, axis=-1)
+                    vrs.pop(iws)
+                    n_vrs -= 1
 
             # broadcast if needed:
             if d.shape != (n_states, n_pts, n_vrs):

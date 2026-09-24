@@ -263,6 +263,23 @@ class LatLonFieldData(DatasetStates):
             extra_space=bounds_extra_space, algo=algo, lonlat=True
         )
 
+    def get_grid_points(
+        self,
+        loaded_data: LoadedData | None = None,
+        mdata: MData | None = None,
+        all_heights: bool = True,
+        height: float | None = None,
+    ) -> np.ndarray:
+        """Return regular longitude/latitude support as projected x/y points."""
+        points = super().get_grid_points(
+            loaded_data=loaded_data,
+            mdata=mdata,
+            all_heights=all_heights,
+            height=height,
+        )
+        points[:, :2] = from_lonlat(points[:, :2])
+        return points
+
     def preproc_first(
         self,
         algo: Algorithm,
@@ -392,7 +409,7 @@ class LatLonFieldData(DatasetStates):
         d: np.ndarray,
         pts: np.ndarray,
         vrs: list[str],
-        state_indices: np.ndarray | None = None,
+        state_labels: np.ndarray | None = None,
         gpts: tuple[np.ndarray, ...] | np.ndarray | None = None,
     ) -> np.ndarray:
         """
@@ -412,8 +429,9 @@ class LatLonFieldData(DatasetStates):
             The points to interpolate to, with shape (n_pts, n_idims)
         vrs
             The variable names, length nv
-        state_indices
-            The indices of the states, with shape (n_states,)
+        state_labels
+            Optional state labels for interpolation diagnostics, with shape
+            ``(n_states,)``
         gpts
             Either one-dimensional arrays for each dimension, or a single array
             with shape (n_points, n_dims). If None, the grid points are extracted
@@ -434,7 +452,7 @@ class LatLonFieldData(DatasetStates):
             pts[:, ix : ix + 2] = to_lonlat(pts[:, ix : ix + 2])
 
         return super().interpolate_data(
-            mdata, idims, d, pts, vrs, state_indices=state_indices, gpts=gpts
+            mdata, idims, d, pts, vrs, state_labels=state_labels, gpts=gpts
         )
 
 

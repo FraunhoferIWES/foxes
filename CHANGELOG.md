@@ -1028,10 +1028,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - `Model.get_data` uses broadcasted views for boolean selections and `upcast=True`; upcast results may be read-only.
   - New `SubsetStates` wrapper for arbitrary ordered subsets of any states model.
 - Input:
-  - Added `BinnedStates`, which evaluates wrapped states on constructor-defined regular-grid or scattered support points and reduces them into weighted histogram states during initialization.
-  - Added support-point interpolation and single-height horizontal interpolation for `BinnedStates`.
+  - Added `BinnedFieldData` and `BinnedPointCloudData`, which evaluate wrapped states on constructor-defined regular-grid or scattered support points and reduce them into weighted histogram states during initialization.
+  - Added native field and point-cloud interpolation for binned states.
 - Output:
-  - Added support-point wind-rose data and single-canvas figure generation for `BinnedStates`.
+  - Added support-point wind-rose data and single-canvas figure generation for binned field and point-cloud states.
 - Examples:
   - Added the `binned_states` example using `timeseries_8000.csv.gz`.
 - Models:
@@ -1065,7 +1065,16 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.9.6
 
 - Inputs:
-  - New states class `BinnedStates`, reducing source states into bins and
-    interpolating the reduced data
+  - New states classes `BinnedFieldData` and `BinnedPointCloudData`, reducing
+    source states into topology-native bins and interpolating the reduced data
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)
+
+## Unreleased
+
+- Inputs:
+  - Added `read_binned_data`, selecting `BinnedFieldData` or
+    `BinnedPointCloudData` from an artifact's `foxes_state_class` attribute
+- Bug fixes:
+  - Fixed `NEWAStates` spatial interpolation without state labels, as used by
+    `MesoMicroField`

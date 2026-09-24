@@ -67,6 +67,44 @@ def test_point_cloud_preload_builds_multidimensional_coords():
     assert list(mdata.coords[axis_coord].to_numpy()) == [FV.X, FV.Y]
 
 
+def test_point_cloud_get_grid_points_selects_reference_height():
+    states = PointCloudData(
+        data_source=xr.Dataset(),
+        output_vars=[FV.WS, FV.WD],
+    )
+    point_coord = states.var(FC.POINT)
+    points = np.array([[0.0, 0.0, 80.0], [0.0, 0.0, 100.0], [100.0, 0.0, 100.0]])
+    loaded_data = {
+        "coords": {point_coord: ((FC.POINT, FC.XYH), points)},
+        "data_vars": {},
+        "extra_data": {},
+    }
+
+    highest = states.get_grid_points(loaded_data=loaded_data, all_heights=False)
+    at_80m = states.get_grid_points(
+        loaded_data=loaded_data,
+        all_heights=False,
+        height=80.0,
+    )
+
+    np.testing.assert_allclose(highest, points[1:])
+    np.testing.assert_allclose(at_80m, points[:1])
+
+    loaded_data["coords"][point_coord] = (
+        (FC.POINT, FC.XY),
+        points[:, :2].astype(int),
+    )
+    at_90_5m = states.get_grid_points(
+        loaded_data=loaded_data,
+        all_heights=False,
+        height=90.5,
+    )
+    np.testing.assert_allclose(
+        at_90_5m,
+        np.column_stack((points[:, :2], np.full(len(points), 90.5))),
+    )
+
+
 def test_point_cloud_interpolate_falls_back_to_nearest_on_qhull_error():
     states = PointCloudData(
         data_source=xr.Dataset(),
@@ -89,6 +127,33 @@ def test_point_cloud_interpolate_falls_back_to_nearest_on_qhull_error():
     assert out.shape == (2, 2)
     assert np.allclose(out[0], np.array([8.0, 270.0]))
     assert np.allclose(out[1], np.array([8.0, 270.0]))
+
+
+def test_point_cloud_interpolate_removes_invariant_axis_for_planar_support():
+    states = PointCloudData(
+        data_source=xr.Dataset(),
+        output_vars=[FV.WS],
+    )
+    support_points = np.array(
+        [
+            [0.0, 0.0, 90.0],
+            [1.0, 0.0, 90.0],
+            [0.0, 1.0, 90.0],
+            [1.0, 1.0, 90.0],
+        ]
+    )
+    data = support_points[:, :1].copy()
+
+    out = states.interpolate_data(
+        mdata={},
+        idims=[FC.POINT],
+        d=data,
+        pts=np.array([[0.5, 0.5, 90.0]]),
+        vrs=[FV.WS],
+        gpts=support_points,
+    )
+
+    np.testing.assert_allclose(out, [[0.5]])
 
 
 def test_turbine_point_cloud_does_not_require_xy_cmap_for_preproc():

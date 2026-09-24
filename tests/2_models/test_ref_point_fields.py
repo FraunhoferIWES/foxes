@@ -6,11 +6,16 @@ import pytest
 import foxes
 import foxes.constants as FC
 import foxes.variables as FV
+import foxes.input.states.field_data as field_data_module
 import foxes.input.states.meso_micro_field as meso_micro_field_module
 import foxes.input.states.ref_point_fields as ref_point_fields_module
+from foxes.core import MData, TData
 from foxes.input.states import (
     FieldData,
+    ICONStates,
     MesoMicroField,
+    NEWAStates,
+    PointCloudData,
     SectorSimRefPointField,
     SingleStateStates,
 )
@@ -205,22 +210,141 @@ def test_meso_micro_field_load_data_triggers_support_point_plot(monkeypatch):
         states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
 
 
-def test_meso_micro_field_ref_weight_interpolation_uses_ref_points_as_grid():
+@pytest.mark.parametrize(
+    ("ref_height", "expected"),
+    [
+        (None, [[0.0, 0.0, 100.0], [100.0, 0.0, 100.0]]),
+        (80.0, [[0.0, 0.0, 80.0]]),
+    ],
+)
+def test_meso_micro_field_selects_point_cloud_reference_height(ref_height, expected):
     states, _, _ = _make_meso_micro_field()
-    ref_points = np.array([[200.0, 50.0, 100.0], [600.0, 200.0, 100.0]], dtype=float)
+    meso_states = PointCloudData(
+        "unused.nc",
+        output_vars=[FV.WS, FV.WD],
+        states_coord=FC.STATE,
+        point_coord=FC.POINT,
+        x_ncvar=FV.X,
+        y_ncvar=FV.Y,
+        h_ncvar=FV.H,
+    )
+    support = np.array([[0.0, 0.0, 80.0], [0.0, 0.0, 100.0], [100.0, 0.0, 100.0]])
+    states.meso_states = meso_states
+    states.ref_height = ref_height
+    loaded_data = {
+        "coords": {
+            meso_states.var(FC.POINT): ((FC.POINT, FC.XYH), support),
+        },
+        "data_vars": {},
+        "extra_data": {},
+    }
+
+    ref_points = states._get_default_ref_points(loaded_data)
+
+    np.testing.assert_allclose(ref_points, expected)
+    assert states.ref_height == (100.0 if ref_height is None else ref_height)
+
+
+def test_meso_micro_field_gets_field_data_reference_points():
+    states, _, _ = _make_meso_micro_field()
+    meso_states = FieldData(
+        "unused.nc",
+        output_vars=[FV.WS, FV.WD],
+        states_coord=FC.STATE,
+        x_coord=FV.X,
+        y_coord=FV.Y,
+        h_coord=FV.H,
+        time_format=None,
+    )
+    states.meso_states = meso_states
+    states.ref_height = 80.0
+    loaded_data = {
+        "coords": {
+            meso_states.var(FV.X): np.array([0.0, 100.0]),
+            meso_states.var(FV.Y): np.array([0.0, 50.0]),
+            meso_states.var(FV.H): np.array([80.0, 100.0]),
+        },
+        "data_vars": {},
+        "extra_data": {},
+    }
+
+    ref_points = states._get_default_ref_points(loaded_data)
+
+    np.testing.assert_allclose(
+        ref_points,
+        [[0.0, 0.0, 80.0], [0.0, 50.0, 80.0], [100.0, 0.0, 80.0], [100.0, 50.0, 80.0]],
+    )
+
+
+def test_meso_micro_field_gets_newa_reference_points():
+    states, _, _ = _make_meso_micro_field()
+    meso_states = NEWAStates("unused.nc", output_vars=[FV.WS, FV.WD])
+    meso_states.XY = meso_states.var(f"{FV.X}{FV.Y}")
+    meso_states.H = meso_states.var(FV.H)
+    states.meso_states = meso_states
+    states.ref_height = 90.0
+    xy = np.array(
+        [
+            [[0.0, 0.0], [0.0, 50.0]],
+            [[100.0, 0.0], [100.0, 50.0]],
+        ]
+    )
+    loaded_data = {
+        "coords": {meso_states.H: np.array([80.0, 100.0])},
+        "data_vars": {meso_states.XY: ((FV.X, FV.Y, FC.XY), xy)},
+        "extra_data": {},
+    }
+
+    ref_points = states._get_default_ref_points(loaded_data)
+
+    np.testing.assert_allclose(
+        ref_points,
+        [[0.0, 0.0, 90.0], [0.0, 50.0, 90.0], [100.0, 0.0, 90.0], [100.0, 50.0, 90.0]],
+    )
+
+
+def test_meso_micro_field_gets_projected_icon_reference_points(monkeypatch):
+    states, _, _ = _make_meso_micro_field()
+    meso_states = ICONStates(
+        "unused.nc",
+        output_vars=[FV.WS, FV.WD],
+        height_coord_tke=None,
+    )
+    states.meso_states = meso_states
+    states.ref_height = 100.0
+    loaded_data = {
+        "coords": {
+            meso_states.var(FV.X): np.array([8.0, 8.1]),
+            meso_states.var(FV.Y): np.array([53.0]),
+            meso_states.var(FV.H): np.array([80.0, 100.0]),
+        },
+        "data_vars": {},
+        "extra_data": {},
+    }
+    monkeypatch.setattr(
+        field_data_module,
+        "from_lonlat",
+        lambda points: points + np.array([1000.0, 2000.0]),
+    )
+
+    ref_points = states._get_default_ref_points(loaded_data)
+
+    np.testing.assert_allclose(
+        ref_points,
+        [[1008.0, 2053.0, 100.0], [1008.1, 2053.0, 100.0]],
+    )
+
+
+def test_meso_micro_field_interpolates_ref_weights_independently_of_meso_model():
+    states, _, _ = _make_meso_micro_field()
+    ref_points = np.array([[0.0, 0.0, 100.0], [100.0, 0.0, 100.0]], dtype=float)
     targets = np.array(
         [
-            [[[250.0, 100.0, 90.0], [500.0, 150.0, 90.0]]],
-            [[[250.0, 100.0, 90.0], [500.0, 150.0, 90.0]]],
+            [[[0.0, 25.0, 90.0], [25.0, -10.0, 90.0]]],
+            [[[75.0, 10.0, 90.0], [100.0, -25.0, 90.0]]],
         ],
         dtype=float,
     )
-    captured = {}
-
-    class _MesoStates:
-        def interpolate_data(self, **kwargs):
-            captured.update(kwargs)
-            return kwargs["d"]
 
     class _TData:
         n_targets = 1
@@ -231,15 +355,105 @@ def test_meso_micro_field_ref_weight_interpolation_uses_ref_points_as_grid():
                 return targets
             raise KeyError(key)
 
-    states.meso_states = _MesoStates()
-
     refw = states._interpolate_ref_weights(
-        mdata={FC.STATE: np.array([0, 1])},
         tdata=_TData(),
         ref_points=ref_points,
         n_states=2,
         n_tpts=2,
     )
 
-    np.testing.assert_allclose(captured["gpts"], ref_points[:, :2])
-    np.testing.assert_allclose(refw, np.eye(2)[None, :, :])
+    np.testing.assert_allclose(
+        refw,
+        [
+            [[1.0, 0.0], [0.75, 0.25]],
+            [[0.25, 0.75], [0.0, 1.0]],
+        ],
+    )
+
+
+def test_meso_micro_field_uses_meso_weights_at_final_targets():
+    states, _, _ = _make_meso_micro_field()
+    ref_points = np.array([[0.0, 0.0, 100.0], [100.0, 0.0, 100.0]])
+    targets = np.array(
+        [
+            [[[25.0, 0.0, 90.0], [75.0, 0.0, 90.0]]],
+            [[[30.0, 0.0, 90.0], [80.0, 0.0, 90.0]]],
+        ]
+    )
+    mdata = MData(
+        data={FC.STATE: np.array([0, 1])},
+        dims={FC.STATE: (FC.STATE,)},
+    )
+    tdata = TData.from_tpoints(
+        tpoints=targets,
+        tweights=np.array([0.5, 0.5]),
+        mdata=mdata,
+    )
+
+    class _MesoStates:
+        def calculate(self, algo, mdata, fdata, tdata):
+            x = tdata[FC.TARGETS][..., 0]
+            tdata[FV.WEIGHT] = x / 100.0
+            tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
+            return {
+                FV.WS: np.full_like(x, 8.0),
+                FV.WD: np.full_like(x, 270.0),
+            }
+
+    states.meso_states = _MesoStates()
+    results = states._calculate_meso_data(
+        algo=None,
+        mdata=mdata,
+        fdata=None,
+        tdata=tdata,
+        ref_points=ref_points,
+    )
+
+    np.testing.assert_allclose(results[FV.WS], 8.0)
+    np.testing.assert_allclose(results[FV.WD], 270.0)
+    np.testing.assert_allclose(
+        tdata[FV.WEIGHT],
+        [[[0.25, 0.75]], [[0.3, 0.8]]],
+    )
+
+
+def test_meso_micro_field_preserves_state_only_meso_weights():
+    states, _, _ = _make_meso_micro_field()
+    ref_points = np.array([[0.0, 0.0, 100.0], [100.0, 0.0, 100.0]])
+    targets = np.array(
+        [
+            [[[25.0, 0.0, 90.0], [75.0, 0.0, 90.0]]],
+            [[[30.0, 0.0, 90.0], [80.0, 0.0, 90.0]]],
+        ]
+    )
+    mdata = MData(
+        data={FC.STATE: np.array([0, 1])},
+        dims={FC.STATE: (FC.STATE,)},
+    )
+    tdata = TData.from_tpoints(
+        tpoints=targets,
+        tweights=np.array([0.5, 0.5]),
+        mdata=mdata,
+    )
+
+    class _MesoStates:
+        def calculate(self, algo, mdata, fdata, tdata):
+            shape = tdata[FC.TARGETS].shape[:-1]
+            tdata[FV.WEIGHT] = np.array([0.25, 0.75])[:, None, None]
+            tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
+            return {
+                FV.WS: np.full(shape, 8.0),
+                FV.WD: np.full(shape, 270.0),
+            }
+
+    states.meso_states = _MesoStates()
+    states._calculate_meso_data(
+        algo=None,
+        mdata=mdata,
+        fdata=None,
+        tdata=tdata,
+        ref_points=ref_points,
+    )
+
+    assert tdata[FV.WEIGHT].shape == (2, 1, 1)
+    np.testing.assert_allclose(tdata[FV.WEIGHT][:, 0, 0], [0.25, 0.75])
