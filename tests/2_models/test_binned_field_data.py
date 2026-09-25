@@ -70,8 +70,8 @@ def _binned_field_artifact():
         np.array([20.0, 200.0, 40.0, 220.0])[:, None], weights.shape
     ).copy()
     stats = {
-        FV.WS: {name: ws_mean.copy() for name in ("min", "mean", "max")},
-        FV.WD: {name: wd_mean.copy() for name in ("min", "mean", "max")},
+        FV.WS: {name: ws_mean.copy() for name in ("mean", "std")},
+        FV.WD: {name: wd_mean.copy() for name in ("mean", "std")},
     }
     return writer._binned._create_output_dataset(
         support,
@@ -86,8 +86,12 @@ def test_binned_field_data_chunks_target_dependent_weights():
 
     loaded_states = BinnedFieldData(artifact)
     loaded_data = loaded_states.initialize(None)
-    data_key = loaded_data["extra_data"][loaded_states.META]["data_keys"][0]
-    dims, values = loaded_data["data_vars"][data_key]
+    data_keys = loaded_data["extra_data"][loaded_states.META]["data_keys"]
+    dims, values = next(
+        loaded_data["data_vars"][data_key]
+        for data_key in data_keys
+        if FV.WEIGHT in loaded_data["coords"][loaded_data["data_vars"][data_key][0][-1]]
+    )
     variable_names = loaded_data["coords"][dims[-1]].tolist()
 
     assert dims[0] == FC.STATE

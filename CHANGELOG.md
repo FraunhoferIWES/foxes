@@ -1075,6 +1075,13 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Inputs:
   - Added `read_binned_data`, selecting `BinnedFieldData` or
     `BinnedPointCloudData` from an artifact's `foxes_state_class` attribute
+  - Changed binned-state artifacts to reconstruct histogram centers from bin
+    bounds, store non-histogram variables as state-only global weighted means,
+    and write spatial mean/standard-deviation diagnostics only when
+    `write_mean_std=True`
+  - Reduced binned-state worker memory by transferring source support to loaded
+    data and releasing duplicate artifact and support references during
+    `set_running`, then restoring them during `unset_running`
 - Bug fixes:
   - Fixed `NEWAStates` spatial interpolation without state labels, as used by
     `MesoMicroField`

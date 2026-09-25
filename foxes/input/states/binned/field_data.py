@@ -27,16 +27,24 @@ class BinnedFieldData(FieldData):
     When initialized from a source :class:`~foxes.core.States` model, the
     source is evaluated at every configured support point and reduced into the
     Cartesian product of ``bin_vars``. Empty bins are discarded. Each retained
-    flat bin index becomes an ``FC.STATE`` label. Binned wind direction is
-    represented by its bin center; all other outputs contain conditional,
-    source-weighted means.
+    flat bin index becomes an ``FC.STATE`` label. All histogram variables are
+    represented by bin centers reconstructed from their bounds. Other outputs
+    are weighted conditional means over source states and support points.
 
-    The reduced variables and weights have native dimensions
-    ``(state, x, y, height)``. Runtime calculations are inherited from
+    Artifacts store non-histogram variables with dimension ``(state,)`` and
+    weights with dimensions ``(state, x, y, height)``. Optional spatial
+    conditional means and population standard deviations use the weight
+    dimensions. Runtime calculations are inherited from
     :class:`~foxes.input.states.field_data.FieldData`: FOXES state chunking is
     applied first, then values and weights are interpolated to target points.
     Consequently, calculated weights have dimensions
     ``(state, target, tpoint)``.
+
+    Source support is transferred to model-scoped loaded data during
+    initialization. Before worker dispatch, the canonical runtime dataset is
+    moved to the standard model stash and duplicate constructor data is
+    released from this object. :meth:`unset_running` restores the controller's
+    original references after execution.
     """
 
     def __init__(
@@ -47,6 +55,7 @@ class BinnedFieldData(FieldData):
         mean_vars: Sequence[str] | None = None,
         support_grid: Mapping[str, Sequence[float]] | None = None,
         output_file: str | Path | None = None,
+        write_mean_std: bool = False,
         interpolation: str = "linear",
         fill_value: float | None = np.nan,
         bounds_error: bool = True,
@@ -68,9 +77,10 @@ class BinnedFieldData(FieldData):
             standard bins. Required for source states and optional for an
             artifact, which stores its bin definitions.
         mean_vars
-            Additional variables retained as conditional weighted means. If
-            ``None`` for source states, use every source output not listed in
-            ``bin_vars``. Artifact inputs obtain the default from metadata.
+            Additional variables retained as weighted means over source states
+            and support points. If ``None`` for source states, use every source
+            output not listed in ``bin_vars``. Artifact inputs obtain the
+            default from metadata.
         support_grid
             Mapping containing non-empty, strictly increasing ``x``, ``y``,
             and ``height`` axes. Required for source states and forbidden for
@@ -78,6 +88,11 @@ class BinnedFieldData(FieldData):
         output_file
             Optional path for writing the reduced native NetCDF artifact
             during :meth:`load_data`.
+        write_mean_std
+            Whether written artifacts include spatial conditional
+            ``<variable>_mean`` and ``<variable>_std`` diagnostics for every
+            output variable. Defaults to ``False``. Wind-direction deviations
+            use circular statistics.
         interpolation
             Regular-grid interpolation method passed to SciPy through
             :class:`FieldData`.
@@ -108,6 +123,7 @@ class BinnedFieldData(FieldData):
             support_points=None,
             support_grid=support_grid,
             output_file=output_file,
+            write_mean_std=write_mean_std,
             interpolation=interpolation,
             nan_policy=nan_policy,
             nan_threshold=nan_threshold,
@@ -164,7 +180,9 @@ class BinnedFieldData(FieldData):
         dict[str, numpy.ndarray] or None
             The configured ``x``, ``y``, and ``height`` axes. Artifact-backed
             objects return ``None`` because their support is owned by the
-            loaded native dataset.
+            loaded native dataset. Source-backed objects return ``None`` while
+            running and recover their original support after
+            :meth:`unset_running`.
         """
         return self._binned.support_grid
 
@@ -280,6 +298,36 @@ class BinnedFieldData(FieldData):
             verbosity=verbosity,
         )
         self._binned.install_metadata(self, loaded_data, data)
+        self._binned.adopt_runtime_dataset(data)
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Stash native data and release duplicate initialization inputs."""
+        super().set_running(algo, data_stash, sel, isel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name]["binned"] = self._binned.stash_worker_data()
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, object]] | None,
+        sel: dict[str, object] | None = None,
+        isel: dict[str, object] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore native and binned initialization data after execution."""
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        if data_stash is not None:
+            data = data_stash[self.name].pop("binned")
+            if not isinstance(data, dict):
+                raise TypeError(f"States '{self.name}': Invalid binned data stash")
+            self._binned.restore_worker_data(data)
 
     def get_support_wind_rose_data(self, loaded_data: Any) -> xr.Dataset:
         """

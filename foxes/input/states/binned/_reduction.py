@@ -8,8 +8,8 @@ Reduction happens during ``load_data``. Source states are evaluated on the
 configured support, grouped into Cartesian histogram bins independently at
 each support point, and stored as a canonical :class:`xarray.Dataset`. Its
 leading ``state`` coordinate contains retained flat histogram-bin indices.
-Statistics and weights remain spatially resolved so the owning native states
-class can apply ordinary FOXES chunking and interpolation.
+Weights remain spatially resolved, while non-histogram variables are reduced
+over support points. Optional diagnostics retain the native support topology.
 """
 
 from __future__ import annotations
@@ -45,10 +45,10 @@ class _BinnedStateReduction:
     artifact output. The public owner remains solely responsible for loading
     the resulting dataset through ``FieldData`` or ``PointCloudData``.
 
-    Canonical field variables have dimensions ``(state, x, y, height)``;
-    point-cloud variables have dimensions ``(state, point)``. In both cases,
-    ``state`` labels are flat Cartesian-bin indices and ``weight`` gives the
-    source-state mass assigned to each bin and support location.
+    Non-histogram artifact variables have dimensions ``(state,)``. Field
+    weights and optional diagnostics use ``(state, x, y, height)``;
+    point-cloud weights and diagnostics use ``(state, point)``. In both cases,
+    ``state`` labels are flat Cartesian-bin indices.
     """
 
     def __init__(
@@ -61,6 +61,7 @@ class _BinnedStateReduction:
         support_points: np.ndarray | None,
         support_grid: Mapping[str, Sequence[float]] | None,
         output_file: str | Path | None,
+        write_mean_std: bool,
         interpolation: str,
         nan_policy: Literal["raise", "interpolate", "remove"],
         nan_threshold: float,
@@ -86,6 +87,9 @@ class _BinnedStateReduction:
             Regular ``x``, ``y``, and ``height`` axes for field output.
         output_file
             Optional destination for the canonical NetCDF artifact.
+        write_mean_std
+            Whether to include spatial conditional means and standard
+            deviations in written artifacts.
         interpolation
             Spatial interpolation method used to fill missing statistics.
         nan_policy
@@ -120,6 +124,7 @@ class _BinnedStateReduction:
             }
         )
         self.output_file = None if output_file is None else Path(output_file)
+        self.write_mean_std = write_mean_std
         self.interpolation = interpolation
         if nan_policy not in {"raise", "interpolate", "remove"}:
             raise ValueError(
@@ -370,6 +375,39 @@ class _BinnedStateReduction:
         mesh = np.meshgrid(*axes, indexing="ij")
         return np.stack([values.ravel() for values in mesh], axis=-1), axes
 
+    def adopt_runtime_dataset(self, data: xr.Dataset) -> None:
+        """Replace an in-memory artifact input with the canonical runtime data."""
+        if isinstance(self.input_source, xr.Dataset):
+            self.input_source = data
+
+    def stash_worker_data(self) -> dict[str, object]:
+        """Remove preparation inputs from the worker-bound model object."""
+        data: dict[str, object] = {
+            "input_source": self.input_source,
+            "support_points": self.support_points,
+            "support_grid": self.support_grid,
+        }
+        self.input_source = None
+        self.support_points = None
+        self.support_grid = None
+        return data
+
+    def restore_worker_data(self, data: dict[str, object]) -> None:
+        """Restore preparation inputs removed by :meth:`stash_worker_data`."""
+        self.input_source = cast(
+            str | Path | xr.Dataset | None,
+            data.pop("input_source"),
+        )
+        self.support_points = cast(
+            np.ndarray | None,
+            data.pop("support_points"),
+        )
+        self.support_grid = cast(
+            dict[str, np.ndarray] | None,
+            data.pop("support_grid"),
+        )
+        self._validate_support()
+
     @staticmethod
     def _source_dataset(loaded_data: LoadedData) -> xr.Dataset:
         """
@@ -492,7 +530,7 @@ class _BinnedStateReduction:
         var
             FOXES variable name.
         stat
-            Statistic suffix such as ``"min"``, ``"mean"``, or ``"max"``.
+            Statistic suffix, either ``"mean"`` or ``"std"``.
 
         Returns
         -------
@@ -517,6 +555,105 @@ class _BinnedStateReduction:
             centres.append(np.mod(values, 360.0) if var == FV.WD else values)
         mesh = np.meshgrid(*centres, indexing="ij")
         return np.stack([values.ravel() for values in mesh], axis=-1)
+
+    def _centres_for_indices(self, bin_indices: np.ndarray) -> np.ndarray:
+        """Return bin centers reconstructed from sparse flat indices."""
+        indices = np.asarray(bin_indices)
+        if indices.ndim != 1 or not np.issubdtype(indices.dtype, np.integer):
+            raise ValueError(
+                f"{self.class_name}: State labels must be one-dimensional integer bin indices"
+            )
+        if len(indices) and (
+            np.any(indices < 0)
+            or np.any(indices >= int(np.prod(self._bin_shape, dtype=np.int64)))
+            or len(np.unique(indices)) != len(indices)
+        ):
+            raise ValueError(f"{self.class_name}: Invalid sparse bin indices")
+        return self._bin_centres()[indices]
+
+    @staticmethod
+    def _point_statistics(
+        var: str,
+        values: np.ndarray,
+        valid: np.ndarray,
+        flat_bin: np.ndarray,
+        source_weights: np.ndarray,
+        weights: np.ndarray,
+    ) -> dict[str, np.ndarray]:
+        """Calculate weighted conditional means and population deviations."""
+        if var == FV.WD:
+            # Accumulate directions as weighted vectors to preserve north crossings.
+            vectors = np.zeros(weights.shape + (2,), dtype=config.dtype_double)
+            for point_i in range(weights.shape[1]):
+                mask = valid[:, point_i]
+                np.add.at(
+                    vectors[:, point_i],
+                    flat_bin[mask, point_i],
+                    wd2uv(values[mask, point_i], source_weights[mask]),
+                )
+
+            # Vector concentration gives the circular population deviation.
+            mean = uv2wd(vectors)
+            mean[np.isclose(mean, 360.0)] = 0.0
+            resultant = np.linalg.norm(vectors, axis=-1)
+            np.divide(resultant, weights, out=resultant, where=weights > 0.0)
+            np.clip(resultant, np.finfo(resultant.dtype).tiny, 1.0, out=resultant)
+            std = np.rad2deg(np.sqrt(-2.0 * np.log(resultant)))
+        else:
+            # First and second weighted moments define scalar mean and deviation.
+            numerator = np.zeros_like(weights)
+            second = np.zeros_like(weights)
+            for point_i in range(weights.shape[1]):
+                mask = valid[:, point_i]
+                bins = flat_bin[mask, point_i]
+                point_values = values[mask, point_i]
+                point_weights = source_weights[mask]
+                np.add.at(numerator[:, point_i], bins, point_weights * point_values)
+                np.add.at(second[:, point_i], bins, point_weights * point_values**2)
+
+            mean = np.zeros_like(weights)
+            np.divide(numerator, weights, out=mean, where=weights > 0.0)
+            np.divide(second, weights, out=second, where=weights > 0.0)
+            std = np.sqrt(np.maximum(second - mean**2, 0.0))
+
+        mean[weights <= 0.0] = np.nan
+        std[weights <= 0.0] = np.nan
+        return {"mean": mean, "std": std}
+
+    def _global_mean_values(
+        self,
+        stats: dict[str, dict[str, np.ndarray]],
+        weights: np.ndarray,
+    ) -> dict[str, np.ndarray]:
+        """Average non-histogram variables over bins and support points."""
+        totals = np.sum(weights, axis=1)
+        active = np.any(weights != 0.0, axis=1)
+        output: dict[str, np.ndarray] = {}
+        for var in self.mean_vars or []:
+            point_means = stats[var]["mean"]
+            populated = weights != 0.0
+            if var == FV.WD:
+                # Restore vector magnitude so point means combine like raw samples.
+                point_std = np.deg2rad(stats[var]["std"])
+                resultant = np.exp(-0.5 * point_std**2)
+                vector_weights = np.where(populated, weights * resultant, 0.0)
+                directions = np.where(populated, point_means, 0.0)
+                values = uv2wd(np.sum(wd2uv(directions, vector_weights), axis=1))
+                values[np.isclose(values, 360.0)] = 0.0
+            else:
+                numerator = np.sum(
+                    np.where(populated, weights * point_means, 0.0), axis=1
+                )
+                values = np.zeros(len(weights), dtype=config.dtype_double)
+                np.divide(numerator, totals, out=values, where=totals > 0.0)
+
+            values[totals <= 0.0] = np.nan
+            if np.any(active & ~np.isfinite(values)):
+                raise ValueError(f"{self.class_name}: Non-finite global mean for {var}")
+
+            output[var] = values
+
+        return output
 
     @staticmethod
     def _circular_bin_values(values: np.ndarray, edges: np.ndarray) -> np.ndarray:
@@ -828,15 +965,15 @@ class _BinnedStateReduction:
         axes: tuple[np.ndarray, ...] | None,
         stats: dict[str, dict[str, np.ndarray]],
         weights: np.ndarray,
+        state_values: Mapping[str, np.ndarray] | None = None,
         bin_indices: np.ndarray | None = None,
-        bin_centres: np.ndarray | None = None,
     ) -> xr.Dataset:
         """
         Create a canonical topology-native sparse dataset.
 
         Empty bins are discarded. Retained flat Cartesian bin indices become
-        the ``FC.STATE`` coordinate. Runtime variables contain conditional
-        means, except binned wind direction, which contains its bin center.
+        the ``FC.STATE`` coordinate. Histogram centers are reconstructed at
+        runtime and are not stored in the artifact.
 
         Parameters
         ----------
@@ -848,22 +985,23 @@ class _BinnedStateReduction:
             Nested statistic arrays with shape ``(n_bins, n_support)``.
         weights
             Bin weights with shape ``(n_bins, n_support)``.
+        state_values
+            Global conditional means for non-histogram variables, each with
+            shape ``(n_bins,)``. Derived from ``stats`` when omitted.
         bin_indices
             Optional flat Cartesian labels for the input rows.
-        bin_centres
-            Optional centers corresponding to the input rows.
 
         Returns
         -------
         xarray.Dataset
-            Canonical field or point-cloud artifact containing statistics,
-            runtime variables, spatial weights, and sparse state metadata.
+            Canonical field or point-cloud artifact containing state-only
+            means, optional spatial diagnostics, weights, and sparse labels.
 
         Raises
         ------
         ValueError
-            If support coordinates, weights, retained bin centres, or active
-            statistics are non-finite.
+            If support coordinates, weights, state values, or active
+            diagnostics are non-finite.
         """
         if not np.all(np.isfinite(support)):
             raise ValueError(f"{self.class_name}: Non-finite support coordinates")
@@ -871,16 +1009,39 @@ class _BinnedStateReduction:
             raise ValueError(f"{self.class_name}: Non-finite weights")
         self._fill_zero_weight_stats(stats, weights, support)
         self._raise_invalid_stats(stats, weights, support)
+
+        # Retain only bins carrying probability anywhere on the support.
         active = np.any(weights != 0.0, axis=1)
         if bin_indices is None:
             bin_indices = np.arange(len(weights), dtype=config.dtype_int)
-        bin_indices = np.asarray(bin_indices)[active]
-        if bin_centres is None:
-            bin_centres = self._bin_centres()[bin_indices]
-        else:
-            bin_centres = np.asarray(bin_centres)[active]
-        if not np.all(np.isfinite(bin_centres)):
-            raise ValueError(f"{self.class_name}: Non-finite bin centres")
+        bin_indices = np.asarray(bin_indices)
+        if bin_indices.shape != (len(weights),):
+            raise ValueError(f"{self.class_name}: Invalid sparse bin-index shape")
+        self._centres_for_indices(bin_indices)
+        if state_values is None:
+            state_values = self._global_mean_values(stats, weights)
+
+        # Persist non-histogram means as state-only values.
+        checked_state_values: dict[str, np.ndarray] = {}
+        for var in self.mean_vars or []:
+            if var not in state_values:
+                raise KeyError(f"{self.class_name}: Missing global mean for '{var}'")
+            values = np.asarray(state_values[var])
+            if values.shape != (len(weights),):
+                raise ValueError(
+                    f"{self.class_name}: Global mean '{var}' requires shape {(len(weights),)}"
+                )
+            if np.any(active & ~np.isfinite(values)):
+                raise ValueError(f"{self.class_name}: Non-finite global mean for {var}")
+            checked_state_values[var] = values[active]
+        if self.write_mean_std:
+            for var in self._calculation_vars or []:
+                missing = {"mean", "std"}.difference(stats.get(var, {}))
+                if missing:
+                    raise KeyError(
+                        f"{self.class_name}: Missing spatial diagnostics for '{var}': {sorted(missing)}"
+                    )
+        bin_indices = bin_indices[active]
         weights = weights[active]
         filtered_stats = {
             var: {stat: values[active] for stat, values in values_by_stat.items()}
@@ -893,12 +1054,12 @@ class _BinnedStateReduction:
             "foxes_binned_bin_vars": ",".join(self.bin_vars),
             "foxes_binned_mean_vars": ",".join(self.mean_vars or []),
             "foxes_binned_calculation_vars": ",".join(self._calculation_vars or []),
+            "foxes_binned_write_mean_std": int(self.write_mean_std),
         }
         attrs.update({f"{var}_bounds": edges for var, edges in self.bin_vars.items()})
         if config.utm_zone_set:
             number, letter = config.utm_zone
             attrs["utm_zone"] = f"{number}{letter}"
-        state_dims = (FC.STATE, "binned_state_var")
         support_dims: tuple[str, ...]
         if self.topology == "field":
             assert axes is not None
@@ -923,26 +1084,23 @@ class _BinnedStateReduction:
                 FV.Y: ((FC.POINT,), support[:, 1]),
                 FV.H: ((FC.POINT,), support[:, 2]),
             }
-        data_vars = {
-            self._stat_var(var, stat): (
-                (FC.STATE,) + support_dims,
-                values.reshape((self._n_bins,) + support_shape),
-            )
-            for var, values_by_stat in filtered_stats.items()
-            for stat, values in values_by_stat.items()
+        data_vars: dict[str, Any] = {
+            var: ((FC.STATE,), values) for var, values in checked_state_values.items()
         }
-        for var in self._calculation_vars or []:
-            if var == FV.WD and var in self.bin_vars:
-                var_i = list(self.bin_vars).index(var)
-                values = np.broadcast_to(
-                    bin_centres[:, var_i, None],
-                    (self._n_bins, len(support)),
-                )
-            else:
-                values = filtered_stats[var]["mean"]
-            data_vars[var] = (
-                (FC.STATE,) + support_dims,
-                values.reshape((self._n_bins,) + support_shape),
+
+        # Spatial diagnostics are optional; weights always retain native support.
+        if self.write_mean_std:
+            data_vars.update(
+                {
+                    self._stat_var(var, stat): (
+                        (FC.STATE,) + support_dims,
+                        filtered_stats[var][stat].reshape(
+                            (self._n_bins,) + support_shape
+                        ),
+                    )
+                    for var in self._calculation_vars or []
+                    for stat in ("mean", "std")
+                }
             )
         data_vars[FV.WEIGHT] = (
             (FC.STATE,) + support_dims,
@@ -953,8 +1111,6 @@ class _BinnedStateReduction:
             data_vars=data_vars,
             coords={
                 FC.STATE: self._state_indices,
-                "binned_state_var": list(self.bin_vars),
-                "bin_centres": (state_dims, bin_centres),
                 **coords,
             },
             attrs=attrs,
@@ -964,9 +1120,9 @@ class _BinnedStateReduction:
         """
         Validate and normalize the configured input artifact.
 
-        Stored topology, bins, variables, coordinates, weights, statistics,
-        sparse state labels, and bin centers are checked before the configured
-        missing-value policy is applied.
+        Stored topology, bins, variables, coordinates, weights, diagnostics,
+        and sparse state labels are checked before the configured missing-value
+        policy is applied.
 
         Returns
         -------
@@ -993,25 +1149,49 @@ class _BinnedStateReduction:
         weights = weights.reshape(n_states, n_support)
         if not np.all(np.isfinite(weights)):
             raise ValueError(f"{self.class_name}: Non-finite artifact weights")
+        state_values: dict[str, np.ndarray] = {}
+        for var in self.mean_vars or []:
+            if var not in data:
+                raise KeyError(f"{self.class_name}: Missing '{var}'")
+            if data[var].dims != (FC.STATE,):
+                raise ValueError(
+                    f"{self.class_name}: Artifact variable '{var}' requires dimensions {(FC.STATE,)}"
+                )
+            values = data[var].to_numpy()
+            if not np.all(np.isfinite(values)):
+                raise ValueError(
+                    f"{self.class_name}: Non-finite artifact values for '{var}'"
+                )
+            state_values[var] = values
         stats: dict[str, dict[str, np.ndarray]] = {}
-        for var in self._calculation_vars or []:
-            stat_names = ("min", "mean", "max") if var in self.bin_vars else ("mean",)
-            stats[var] = {}
-            for stat in stat_names:
-                name = self._stat_var(var, stat)
-                if name not in data:
-                    raise KeyError(f"{self.class_name}: Missing '{name}'")
-                values = data[name].transpose(*full_dims).to_numpy()
-                stats[var][stat] = values.reshape(n_states, n_support)
+        if self.write_mean_std:
+            for var in self._calculation_vars or []:
+                stats[var] = {}
+                for stat in ("mean", "std"):
+                    name = self._stat_var(var, stat)
+                    if name not in data:
+                        raise KeyError(f"{self.class_name}: Missing '{name}'")
+                    values = data[name].transpose(*full_dims).to_numpy()
+                    stats[var][stat] = values.reshape(n_states, n_support)
         support, axes, weights = self._apply_nan_policy(support, axes, stats, weights)
         return self._create_output_dataset(
             support,
             axes,
             stats,
             weights,
+            state_values=state_values,
             bin_indices=np.asarray(data[FC.STATE]),
-            bin_centres=np.asarray(data["bin_centres"]),
         )
+
+    def _runtime_dataset(self, artifact: xr.Dataset) -> xr.Dataset:
+        """Add reconstructed histogram centers for native calculations."""
+        data = artifact.copy(deep=False)
+
+        # Histogram centers are runtime fields, not persisted artifact data.
+        centres = self._centres_for_indices(np.asarray(data[FC.STATE]))
+        for var_i, var in enumerate(self.bin_vars):
+            data[var] = ((FC.STATE,), centres[:, var_i])
+        return data
 
     def _reduce_source(
         self,
@@ -1130,6 +1310,7 @@ class _BinnedStateReduction:
                 values = self._circular_bin_values(values, edges)
             bin_indices.append(np.searchsorted(edges, values, side="right") - 1)
 
+        # Flatten Cartesian bin coordinates in C order and reject outside samples.
         valid = np.ones((n_source_states, len(support)), dtype=bool)
         flat_bin = np.zeros_like(valid, dtype=config.dtype_int)
         multiplier = 1
@@ -1138,6 +1319,7 @@ class _BinnedStateReduction:
             flat_bin += np.where(valid, indices, 0) * multiplier
             multiplier *= n_bins
 
+        # Build one probability histogram per support point.
         weights = np.zeros((self._n_bins, len(support)), dtype=config.dtype_double)
         for point_i in range(len(support)):
             mask = valid[:, point_i]
@@ -1147,59 +1329,30 @@ class _BinnedStateReduction:
                 source_weights[mask],
             )
 
-        stats: dict[str, dict[str, np.ndarray]] = {}
-        for var in calculation_vars:
-            values = source_values[var]
-            is_bin_var = var in self.bin_vars
-            mean = np.zeros_like(weights)
-            if is_bin_var:
-                minimum = np.full_like(weights, np.inf)
-                maximum = np.full_like(weights, -np.inf)
-            if var == FV.WD:
-                vectors = np.zeros(weights.shape + (2,), dtype=config.dtype_double)
-                for point_i in range(len(support)):
-                    mask = valid[:, point_i]
-                    bins = flat_bin[mask, point_i]
-                    point_weights = source_weights[mask]
-                    np.add.at(
-                        vectors[:, point_i],
-                        bins,
-                        wd2uv(values[mask, point_i], point_weights),
-                    )
-                    if is_bin_var:
-                        circular = self._circular_bin_values(
-                            values[mask, point_i], self.bin_vars[var]
-                        )
-                        np.minimum.at(minimum[:, point_i], bins, circular)
-                        np.maximum.at(maximum[:, point_i], bins, circular)
-                mean[:] = uv2wd(vectors)
-                mean[np.isclose(mean, 360.0)] = 0.0
-            else:
-                for point_i in range(len(support)):
-                    mask = valid[:, point_i]
-                    bins = flat_bin[mask, point_i]
-                    np.add.at(
-                        mean[:, point_i],
-                        bins,
-                        source_weights[mask] * values[mask, point_i],
-                    )
-                    if is_bin_var:
-                        np.minimum.at(minimum[:, point_i], bins, values[mask, point_i])
-                        np.maximum.at(maximum[:, point_i], bins, values[mask, point_i])
-                np.divide(mean, weights, out=mean, where=weights > 0.0)
-            mean[weights <= 0.0] = np.nan
-            stats[var] = {"mean": mean}
-            if is_bin_var:
-                minimum[weights <= 0.0] = np.nan
-                maximum[weights <= 0.0] = np.nan
-                stats[var] = {
-                    "min": minimum,
-                    "mean": mean,
-                    "max": maximum,
-                }
-
+        # Full diagnostics cover every output; state means need requested variables only.
+        statistics_vars = (
+            calculation_vars if self.write_mean_std else list(self.mean_vars or [])
+        )
+        stats = {
+            var: self._point_statistics(
+                var,
+                source_values[var],
+                valid,
+                flat_bin,
+                source_weights,
+                weights,
+            )
+            for var in statistics_vars
+        }
         support, axes, weights = self._apply_nan_policy(support, axes, stats, weights)
-        return self._create_output_dataset(support, axes, stats, weights)
+        state_values = self._global_mean_values(stats, weights)
+        return self._create_output_dataset(
+            support,
+            axes,
+            stats,
+            weights,
+            state_values=state_values,
+        )
 
     def prepare_dataset(
         self,
@@ -1223,16 +1376,16 @@ class _BinnedStateReduction:
         Returns
         -------
         xarray.Dataset
-            Validated artifact from either source reduction or artifact input.
+            Native runtime dataset with reconstructed histogram centers.
         """
-        data = (
+        artifact = (
             self._prepare_artifact()
             if self.input_source is not None
             else self._reduce_source(algo, loaded_data, verbosity)
         )
         if self.output_file is not None:
-            write_nc(data, self.output_file, pack=True, verbosity=verbosity)
-        return data
+            write_nc(artifact, self.output_file, pack=True, verbosity=verbosity)
+        return self._runtime_dataset(artifact)
 
     def preserve_source_data(
         self,
@@ -1284,18 +1437,23 @@ class _BinnedStateReduction:
         loaded_data
             Shared model data modified in place.
         data
-            Canonical artifact containing retained state labels and centers.
+            Runtime dataset containing retained sparse state labels.
         """
         bin_vars_key = owner.var("bin_vars")
         bin_centres_key = owner.var("bin_centres")
         loaded_data["coords"][bin_vars_key] = np.asarray(list(self.bin_vars))
         loaded_data["data_vars"][bin_centres_key] = (
             (FC.STATE, bin_vars_key),
-            np.asarray(data["bin_centres"]),
+            self._centres_for_indices(np.asarray(data[FC.STATE])),
         )
         loaded_data["extra_data"][owner.var("bin_indices")] = np.asarray(
             data[FC.STATE], dtype=config.dtype_int
         )
+        if self.states is not None:
+            support = (
+                self.support_grid if self.topology == "field" else self.support_points
+            )
+            loaded_data["extra_data"][owner.var("source_support")] = support
 
     @staticmethod
     def _loaded_variable(

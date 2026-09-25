@@ -248,21 +248,21 @@ def test_binned_data_reduces_and_round_trips_artifact(
 
     with xr.open_dataset(output_file, engine=config.nc_engine) as data:
         assert data.attrs["foxes_state_class"] == states_class.__name__
-        assert data[FV.WS].dims == (FC.STATE, *support_dims)
+        assert FV.WS not in data
+        assert FV.WD not in data
+        assert "bin_centres" not in data
+        assert "binned_state_var" not in data
+        assert data[FV.RHO].dims == (FC.STATE,)
         assert data[FV.WEIGHT].dims == (FC.STATE, *support_dims)
         np.testing.assert_array_equal(data[FC.STATE], [0, 1, 2, 3])
         np.testing.assert_allclose(
             data[FV.WEIGHT].to_numpy().reshape(4, -1),
             np.broadcast_to([1.0, 2.0, 1.0, 2.0], (4, 4)).T,
         )
-        np.testing.assert_allclose(
-            data[FV.WD].to_numpy().reshape(4, -1)[:, 0],
-            [90.0, 270.0, 90.0, 270.0],
-        )
-        np.testing.assert_allclose(
-            data[f"{FV.RHO}_mean"].to_numpy().reshape(4, -1)[:, 0],
-            [1.0, 1.2, 1.4, 1.6],
-        )
+        np.testing.assert_allclose(data[FV.RHO], [1.0, 1.2, 1.4, 1.6])
+        for variable in (FV.WS, FV.WD, FV.RHO):
+            assert f"{variable}_mean" not in data
+            assert f"{variable}_std" not in data
         if states_class is BinnedFieldData:
             for coordinate, values in _SUPPORT_GRID.items():
                 np.testing.assert_allclose(data[coordinate], values)
@@ -311,10 +311,103 @@ def test_binned_data_reduces_and_round_trips_artifact(
 
     np.testing.assert_array_equal(farm_results[FC.STATE], [0, 1, 2, 3])
     np.testing.assert_allclose(farm_results[FV.WEIGHT][:, 0], [1.0, 2.0, 1.0, 2.0])
-    np.testing.assert_allclose(farm_results[FV.AMB_REWS][:, 0], [2.0, 3.0, 7.0, 8.0])
+    np.testing.assert_allclose(farm_results[FV.AMB_REWS][:, 0], [2.5, 2.5, 7.5, 7.5])
     np.testing.assert_allclose(
         farm_results[FV.AMB_WD][:, 0], [90.0, 270.0, 90.0, 270.0]
     )
+
+
+@pytest.mark.parametrize(
+    "states_class",
+    [BinnedFieldData, BinnedPointCloudData],
+    ids=["field", "point-cloud"],
+)
+def test_binned_data_stashes_dataset_without_worker_copy(states_class):
+    artifact = _meso_binned_artifact(states_class)
+    states = states_class(artifact)
+    loaded_data = states.initialize(None)
+    runtime_data = states.data_source
+    data_stash = {}
+
+    assert states._binned.input_source is runtime_data
+    states.set_running(None, data_stash)
+
+    assert data_stash[states.name]["data_source"] is runtime_data
+    assert data_stash[states.name]["binned"]["input_source"] is runtime_data
+    assert "_DatasetStates__data_source" not in vars(states)
+    assert states._binned.input_source is None
+    assert not any(
+        isinstance(value, xr.Dataset) for value in vars(states._binned).values()
+    )
+    assert loaded_data["extra_data"][states.META]["data_keys"]
+    with pytest.raises(ValueError, match="Cannot call set_running while running"):
+        states.set_running(None, data_stash)
+
+    states.unset_running(None, data_stash)
+
+    assert states._binned.input_source is runtime_data
+    assert "binned" not in data_stash[states.name]
+    with pytest.raises(ValueError, match="Cannot call unset_running when not running"):
+        states.unset_running(None, data_stash)
+    states.initialize(None, loaded_data=loaded_data, force=True)
+
+    assert states._binned.input_source is states.data_source
+
+
+@pytest.mark.parametrize(
+    "states_class",
+    [BinnedFieldData, BinnedPointCloudData],
+    ids=["field", "point-cloud"],
+)
+def test_binned_data_moves_source_support_to_loaded_data(
+    monkeypatch,
+    states_class,
+):
+    source = _SourceStates()
+    states = _source_binned(
+        states_class,
+        source,
+        bin_vars={FV.WS: [0.0, 5.0, 10.0]},
+        mean_vars=[],
+    )
+    loaded_data = source.initialize(None)
+    _patch_source_evaluation(
+        monkeypatch,
+        _source_results(len(_SUPPORT_POINTS), variables=(FV.WS,)),
+    )
+    states.load_data(_Algorithm(), loaded_data)
+    support_key = states.var("source_support")
+    source_support = (
+        states.support_grid
+        if states_class is BinnedFieldData
+        else states.support_points
+    )
+
+    assert loaded_data["extra_data"][support_key] is source_support
+    data_stash = {}
+    states.set_running(_Algorithm(), data_stash)
+
+    assert states._binned.support_grid is None
+    assert states._binned.support_points is None
+    assert support_key in loaded_data["extra_data"]
+    support_name = (
+        "support_grid" if states_class is BinnedFieldData else "support_points"
+    )
+    assert data_stash[states.name]["binned"][support_name] is source_support
+
+    states.unset_running(_Algorithm(), data_stash)
+
+    restored_support = (
+        states.support_grid
+        if states_class is BinnedFieldData
+        else states.support_points
+    )
+    if states_class is BinnedFieldData:
+        for variable in (FV.X, FV.Y, FV.H):
+            assert restored_support[variable] is source_support[variable]
+    else:
+        assert restored_support is source_support
+    assert "binned" not in data_stash[states.name]
 
 
 @pytest.mark.parametrize("class_name", [None, "UnsupportedBinnedData"])
@@ -393,12 +486,13 @@ def _point_cloud_nan_artifact():
         bin_vars={FV.WS: [0.0, 5.0, 10.0, 15.0, 20.0]},
         mean_vars=[],
         support_points=_SUPPORT_POINTS[:3],
+        write_mean_std=True,
     )
     writer._binned.calculation_vars(None)
     support = writer.support_points
     values = np.ones((4, 3))
     stats = {
-        FV.WS: {name: values.copy() for name in ("min", "mean", "max")},
+        FV.WS: {name: values.copy() for name in ("mean", "std")},
     }
     data = writer._binned._create_output_dataset(
         support,
@@ -414,7 +508,7 @@ def _point_cloud_nan_artifact():
             [np.nan, np.nan, 4.0],
         ]
     )
-    for stat in ("min", "mean", "max"):
+    for stat in ("mean", "std"):
         data[f"{FV.WS}_{stat}"][:] = invalid_values
     return data
 
@@ -425,12 +519,13 @@ def _single_bin_artifact(states_class):
         _SourceStates(),
         bin_vars={FV.WS: [0.0, 10.0]},
         mean_vars=[],
+        write_mean_std=True,
     )
     writer._binned.calculation_vars(None)
     support, axes = writer._binned._materialize_support()
     values = np.ones((1, len(support)))
     stats = {
-        FV.WS: {name: values.copy() for name in ("min", "mean", "max")},
+        FV.WS: {name: values.copy() for name in ("mean", "std")},
     }
     data = writer._binned._create_output_dataset(
         support,
@@ -442,13 +537,16 @@ def _single_bin_artifact(states_class):
 
 
 def test_binned_point_cloud_nan_policy_raises_for_active_statistics():
-    with pytest.raises(ValueError, match="Non-finite WS_min for active bin"):
-        BinnedPointCloudData(_point_cloud_nan_artifact()).initialize(None)
+    with pytest.raises(ValueError, match="Non-finite WS_mean for active bin"):
+        BinnedPointCloudData(
+            _point_cloud_nan_artifact(), write_mean_std=True
+        ).initialize(None)
 
 
 def test_binned_point_cloud_nan_policy_removes_and_interpolates():
     states = BinnedPointCloudData(
         _point_cloud_nan_artifact(),
+        write_mean_std=True,
         nan_policy="remove",
         nan_threshold=0.5,
     )
@@ -471,10 +569,10 @@ def test_binned_point_cloud_nan_policy_removes_and_interpolates():
 )
 def test_binned_data_nan_policy_interpolates_active_statistics(states_class):
     _, _, _, _, data = _single_bin_artifact(states_class)
-    for stat in ("min", "mean", "max"):
+    for stat in ("mean", "std"):
         values = data[f"{FV.WS}_{stat}"].values
         values.reshape(1, -1)[0, 0] = np.nan
-    states = states_class(data, nan_policy="interpolate")
+    states = states_class(data, write_mean_std=True, nan_policy="interpolate")
 
     loaded_data = states.initialize(None)
 
@@ -506,16 +604,16 @@ def test_binned_data_writer_rejects_non_finite_weights(states_class):
     [
         (BinnedFieldData, "weight", "Non-finite artifact weights"),
         (BinnedPointCloudData, "weight", "Non-finite artifact weights"),
-        (BinnedFieldData, "bin-centre", "Non-finite bin centres"),
-        (BinnedPointCloudData, "bin-centre", "Non-finite bin centres"),
+        (BinnedFieldData, "bin-index", "Invalid sparse bin indices"),
+        (BinnedPointCloudData, "bin-index", "Invalid sparse bin indices"),
         (BinnedFieldData, "support", "Artifact grid axes must be finite"),
         (BinnedPointCloudData, "support", "Artifact support must contain only finite"),
     ],
     ids=[
         "field-weight",
         "point-cloud-weight",
-        "field-bin-centre",
-        "point-cloud-bin-centre",
+        "field-bin-index",
+        "point-cloud-bin-index",
         "field-support",
         "point-cloud-support",
     ],
@@ -528,15 +626,15 @@ def test_binned_data_reader_rejects_non_finite_artifact_values(
     _, _, _, _, data = _single_bin_artifact(states_class)
     if invalid == "weight":
         data[FV.WEIGHT].values.reshape(1, -1)[0, 0] = np.nan
-    elif invalid == "bin-centre":
-        data["bin_centres"].values[0, 0] = np.nan
+    elif invalid == "bin-index":
+        data = data.assign_coords({FC.STATE: [1]})
     elif states_class is BinnedFieldData:
         data = data.assign_coords({FV.X: [np.nan, 500.0]})
     else:
         data[FV.X].values[0] = np.nan
 
     with pytest.raises(ValueError, match=message):
-        states_class(data).initialize(None)
+        states_class(data, write_mean_std=True).initialize(None)
 
 
 def test_binned_data_preserves_sparse_flat_bin_indices():
@@ -553,7 +651,7 @@ def test_binned_data_preserves_sparse_flat_bin_indices():
     weights = np.array([[0.0, 0.0], [0.2, 0.8], [0.8, 0.2], [0.0, 0.0]])
     values = np.where(weights != 0.0, 1.0, np.nan)
     stats = {
-        variable: {stat: values.copy() for stat in ("min", "mean", "max")}
+        variable: {stat: values.copy() for stat in ("mean", "std")}
         for variable in (FV.WS, FV.WD)
     }
 
@@ -564,11 +662,20 @@ def test_binned_data_preserves_sparse_flat_bin_indices():
         weights,
     )
     states = BinnedPointCloudData(data)
-    states.initialize(None)
+    loaded_data = states.initialize(None)
 
     np.testing.assert_array_equal(data[FC.STATE], [1, 2])
-    assert np.all(np.isfinite(data[FV.WS]))
+    assert FV.WS not in data
+    assert "bin_centres" not in data
     assert states.index() == [1, 2]
+    np.testing.assert_allclose(
+        states._binned._loaded_variable(states, loaded_data, FV.WS),
+        [2.5, 7.5],
+    )
+    np.testing.assert_allclose(
+        states._binned._loaded_variable(states, loaded_data, FV.WD),
+        [270.0, 90.0],
+    )
 
 
 def test_binned_wind_direction_wraps_at_north(monkeypatch, tmp_path):
@@ -581,6 +688,7 @@ def test_binned_wind_direction_wraps_at_north(monkeypatch, tmp_path):
         support_points=_SUPPORT_POINTS[:1],
         interpolation="nearest",
         output_file=output_file,
+        write_mean_std=True,
     )
     loaded_data = source.initialize(None)
     source_results = xr.Dataset(
@@ -593,10 +701,13 @@ def test_binned_wind_direction_wraps_at_north(monkeypatch, tmp_path):
     with xr.open_dataset(output_file, engine=config.nc_engine) as data:
         np.testing.assert_array_equal(data[FC.STATE], [0])
         np.testing.assert_allclose(data[FV.WEIGHT][:, 0], [4.0])
-        np.testing.assert_allclose(data[f"{FV.WD}_min"][:, 0], [359.0])
         np.testing.assert_allclose(data[f"{FV.WD}_mean"][:, 0], [0.0], atol=1e-12)
-        np.testing.assert_allclose(data[f"{FV.WD}_max"][:, 0], [361.0])
-        np.testing.assert_allclose(data[FV.WD][:, 0], [0.0])
+        resultant = 0.5 * (1.0 + np.cos(np.deg2rad(1.0)))
+        expected_std = np.rad2deg(np.sqrt(-2.0 * np.log(resultant)))
+        np.testing.assert_allclose(data[f"{FV.WD}_std"][:, 0], [expected_std])
+        assert FV.WD not in data
+        assert f"{FV.WD}_min" not in data
+        assert f"{FV.WD}_max" not in data
 
 
 @pytest.mark.parametrize(
@@ -604,7 +715,7 @@ def test_binned_wind_direction_wraps_at_north(monkeypatch, tmp_path):
     [BinnedFieldData, BinnedPointCloudData],
     ids=["field", "point-cloud"],
 )
-def test_binned_data_interpolates_wind_vectors_across_north(states_class):
+def test_binned_data_averages_non_histogram_wd_across_points(states_class):
     writer = _source_binned(
         states_class,
         _SourceStates(),
@@ -619,8 +730,8 @@ def test_binned_data_interpolates_wind_vectors_across_north(states_class):
         support,
         axes,
         {
-            FV.WS: {stat: speeds.copy() for stat in ("min", "mean", "max")},
-            FV.WD: {"mean": directions},
+            FV.WS: {"mean": speeds.copy(), "std": np.zeros_like(speeds)},
+            FV.WD: {"mean": directions, "std": np.zeros_like(directions)},
         },
         np.ones_like(speeds),
     )
@@ -651,8 +762,121 @@ def test_binned_data_interpolates_wind_vectors_across_north(states_class):
     assert angular_error < 1e-12
     np.testing.assert_allclose(
         farm_results[FV.AMB_REWS].item(),
-        10.0 * np.cos(np.deg2rad(1.0)),
+        10.0,
     )
+
+
+@pytest.mark.parametrize(
+    ("states_class", "support_dims"),
+    [
+        (BinnedFieldData, (FV.X, FV.Y, FV.H)),
+        (BinnedPointCloudData, (FC.POINT,)),
+    ],
+    ids=["field", "point-cloud"],
+)
+def test_binned_data_writes_global_means_and_optional_point_statistics(
+    monkeypatch,
+    tmp_path,
+    states_class,
+    support_dims,
+):
+    source = _SourceStates()
+    output_file = tmp_path / f"{states_class.__name__}.nc"
+    states = _source_binned(
+        states_class,
+        source,
+        bin_vars={FV.WS: [0.0, 5.0, 10.0]},
+        mean_vars=[FV.RHO],
+        output_file=output_file,
+        write_mean_std=True,
+    )
+    source_weights = np.array([1.0, 2.0, 1.0, 2.0])
+    ws = np.array(
+        [
+            [2.0, 2.0, 2.0, 2.0],
+            [8.0, 2.0, 8.0, 2.0],
+            [8.0, 8.0, 2.0, 2.0],
+            [8.0, 8.0, 8.0, 2.0],
+        ]
+    )
+    rho = np.array(
+        [
+            [1.0, 2.0, 3.0, 4.0],
+            [10.0, 20.0, 30.0, 40.0],
+            [100.0, 200.0, 300.0, 400.0],
+            [1000.0, 2000.0, 3000.0, 4000.0],
+        ]
+    )
+    _patch_source_evaluation(
+        monkeypatch,
+        xr.Dataset(
+            data_vars={
+                FV.WS: ((FC.STATE, FC.POINT), ws),
+                FV.RHO: ((FC.STATE, FC.POINT), rho),
+            }
+        ),
+    )
+
+    states.load_data(_Algorithm(), source.initialize(None))
+
+    expected_weights = []
+    expected_ws_mean = []
+    expected_ws_std = []
+    expected_rho_mean = []
+    expected_rho_std = []
+    expected_rho = []
+    for lower, upper in zip([0.0, 5.0], [5.0, 10.0]):
+        membership = (ws >= lower) & (ws < upper)
+        sample_weights = source_weights[:, None] * membership
+        point_weights = np.sum(sample_weights, axis=0)
+        expected_weights.append(point_weights)
+        for values, means, deviations in (
+            (ws, expected_ws_mean, expected_ws_std),
+            (rho, expected_rho_mean, expected_rho_std),
+        ):
+            point_mean = np.divide(
+                np.sum(sample_weights * values, axis=0),
+                point_weights,
+                out=np.zeros_like(point_weights),
+                where=point_weights > 0.0,
+            )
+            point_second = np.divide(
+                np.sum(sample_weights * values**2, axis=0),
+                point_weights,
+                out=np.zeros_like(point_weights),
+                where=point_weights > 0.0,
+            )
+            means.append(point_mean)
+            deviations.append(np.sqrt(np.maximum(point_second - point_mean**2, 0.0)))
+        expected_rho.append(np.sum(sample_weights * rho) / np.sum(sample_weights))
+
+    with xr.open_dataset(output_file, engine=config.nc_engine) as data:
+        assert data[FV.RHO].dims == (FC.STATE,)
+        assert data[FV.WEIGHT].dims == (FC.STATE, *support_dims)
+        assert FV.WS not in data
+        assert "bin_centres" not in data
+        np.testing.assert_allclose(data[FV.RHO], expected_rho)
+        for variable in (FV.WS, FV.RHO):
+            for statistic in ("mean", "std"):
+                assert data[f"{variable}_{statistic}"].dims == (
+                    FC.STATE,
+                    *support_dims,
+                )
+        np.testing.assert_allclose(
+            data[FV.WEIGHT].to_numpy().reshape(2, -1), expected_weights
+        )
+        populated = np.asarray(expected_weights) > 0.0
+        for actual, expected in (
+            (data[f"{FV.WS}_mean"], expected_ws_mean),
+            (data[f"{FV.WS}_std"], expected_ws_std),
+            (data[f"{FV.RHO}_mean"], expected_rho_mean),
+            (data[f"{FV.RHO}_std"], expected_rho_std),
+        ):
+            actual_values = actual.to_numpy().reshape(2, -1)
+            assert np.all(np.isfinite(actual_values))
+            np.testing.assert_allclose(
+                actual_values[populated], np.asarray(expected)[populated]
+            )
 
 
 def test_binned_data_rejects_point_dependent_source_weights(monkeypatch):
