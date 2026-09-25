@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
+import foxes.variables as FV
 from foxes.config import config
 from foxes.utils.xarray_utils import write_nc
 
@@ -34,7 +35,7 @@ def test_write_nc_rejects_invalid_compression_level(tmp_path):
         write_nc(source, tmp_path / "invalid.nc", complevel=10, verbosity=0)
 
 
-def test_write_nc_packs_without_rounding(tmp_path):
+def test_write_nc_packs_with_explicit_rounding(tmp_path):
     values = np.linspace(-2.0, -1.99, 100, dtype=np.float64)
     values[50] = np.nan
     source = xr.Dataset(
@@ -45,7 +46,7 @@ def test_write_nc_packs_without_rounding(tmp_path):
     )
     fpath = tmp_path / "packed.nc"
 
-    write_nc(source, fpath, pack=True, verbosity=0)
+    write_nc(source, fpath, round=4, pack=True, verbosity=0)
 
     with xr.open_dataset(fpath, engine=config.nc_engine) as written:
         expected = np.round(source["value"], 4)
@@ -58,7 +59,7 @@ def test_write_nc_packs_without_rounding(tmp_path):
         np.testing.assert_array_equal(written["integer"], source["integer"])
 
 
-def test_write_nc_applies_default_rounding_and_preserves_it_when_packed(tmp_path):
+def test_write_nc_applies_variable_rounding_and_preserves_it_when_packed(tmp_path):
     source = xr.Dataset(
         {
             "WS": ("row", np.array([1.23456, 1.23454])),
@@ -67,7 +68,7 @@ def test_write_nc_applies_default_rounding_and_preserves_it_when_packed(tmp_path
     )
     fpath = tmp_path / "default_rounding.nc"
 
-    write_nc(source, fpath, pack=True, verbosity=0)
+    write_nc(source, fpath, round={FV.WS: 4, FV.WD: 3}, pack=True, verbosity=0)
 
     with xr.open_dataset(fpath, engine=config.nc_engine) as written:
         np.testing.assert_equal(
@@ -78,17 +79,43 @@ def test_write_nc_applies_default_rounding_and_preserves_it_when_packed(tmp_path
         )
 
 
-def test_write_nc_does_not_pack_values_when_default_precision_is_lost(tmp_path):
+def test_write_nc_does_not_pack_values_when_selected_precision_is_lost(tmp_path):
     source = xr.Dataset({"WS": ("row", np.linspace(0.0001, 30.0001, 100))})
     fpath = tmp_path / "unpacked_precision.nc"
 
-    write_nc(source, fpath, pack=True, verbosity=0)
+    write_nc(source, fpath, round=4, pack=True, verbosity=0)
 
     with xr.open_dataset(fpath, engine=config.nc_engine) as written:
         assert written["WS"].encoding["dtype"] == np.dtype("float64")
         np.testing.assert_equal(
             written["WS"].to_numpy(), np.round(source["WS"].to_numpy(), 4)
         )
+
+
+def test_write_nc_packing_preserves_unrounded_values(tmp_path):
+    source = xr.Dataset(
+        {"value": ("row", np.array([0.123456789012345, 0.5, 0.987654321098765]))}
+    )
+    fpath = tmp_path / "unrounded.nc"
+
+    write_nc(source, fpath, pack=True, verbosity=0)
+
+    with xr.open_dataset(fpath, engine=config.nc_engine) as written:
+        assert written["value"].encoding["dtype"] == np.dtype("float64")
+        np.testing.assert_array_equal(written["value"], source["value"])
+
+
+def test_write_nc_never_reduces_weight_precision(tmp_path):
+    source = xr.Dataset(
+        {FV.WEIGHT: ("row", np.array([1.0, 3.0, 2.0, 6.0, 5.0, 3.0, 4.0, 0.0]))}
+    )
+    fpath = tmp_path / "weights.nc"
+
+    write_nc(source, fpath, round=4, pack=True, verbosity=0)
+
+    with xr.open_dataset(fpath, engine=config.nc_engine) as written:
+        assert written[FV.WEIGHT].encoding["dtype"] == np.dtype("float64")
+        np.testing.assert_array_equal(written[FV.WEIGHT], source[FV.WEIGHT])
 
 
 def test_write_nc_does_not_pack_coordinates(tmp_path):

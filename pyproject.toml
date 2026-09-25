@@ -132,6 +132,7 @@ include = ["foxes*"]
 [tool.mypy]
 python_version = "3.10"
 files = ["foxes"]
+exclude_gitignore = true
 exclude = [
     "examples/",
     "docs/",

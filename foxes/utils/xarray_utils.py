@@ -216,9 +216,10 @@ def write_nc(
     fpath
         Path to the output file, should be nc
     round
-        The rounding digits. If ``None``, use default output digits for each
-        variable. If int, applies to all variables. If a mapping, missing
-        variables fall back to their default output digits.
+        The rounding digits. If ``None``, values are not rounded. If int,
+        applies to all coordinates and non-weight data variables. If a mapping,
+        missing variables fall back to their default output digits. Weight data
+        are never rounded.
     complevel
         The compression level from 1 to 9, where 9 is maximum compression.
         Applied to all non-scalar variables, independently of rounding.
@@ -226,7 +227,8 @@ def write_nc(
         The NetCDF engine to use
     pack
         Whether to pack data using scale_factor and add_offset,
-        retaining the selected decimal precision
+        retaining the selected decimal precision. Unrounded and weight data
+        are packed only when they can be reconstructed exactly.
     verbosity
         The verbosity level, 0 = silent
     kwargs
@@ -289,12 +291,18 @@ def write_nc(
         d = (
             round
             if isinstance(round, int)
-            else FV.get_default_digits(v)
+            else None
             if round is None
             else round.get(v, FV.get_default_digits(v))
         )
-        data = _round(x.to_numpy(), v, d) if v != FV.WEIGHT else x.to_numpy()
-        enc[v] = get_encoding(data, complevel=complevel, pack=pack, digits=d)
+        is_weight = v == FV.WEIGHT
+        data = x.to_numpy() if is_weight else _round(x.to_numpy(), v, d)
+        enc[v] = get_encoding(
+            data,
+            complevel=complevel,
+            pack=pack,
+            digits=None if is_weight else d,
+        )
         dvrs[v] = (x.dims, data, _keep_attrs(x, enc[v]))
     ds = Dataset(coords=crds, data_vars=dvrs, attrs=ds.attrs)
 

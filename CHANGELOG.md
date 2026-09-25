@@ -1081,8 +1081,12 @@ This major version introduces the concept of `Engines` which handle the chunking
     tolerance, and 2048-point radial quadrature
   - Added the `Niayifar` model-book preset with local-TI-dependent wake growth,
     including YAML/WindIO input support
+- Development:
+  - Configured mypy to exclude Git-ignored files from repository checks
 - Bug fixes:
   - Reworked NetCDF compression and precision-preserving packing to output data
+  - Prevented packed NetCDF output from reducing unrounded data or weight
+    precision
   - Fixed `NEWAStates` spatial interpolation without state labels, as used by
     `MesoMicroField`
 
