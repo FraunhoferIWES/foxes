@@ -17,6 +17,7 @@ def gaussian_lookup_xy_range_dataset():
         sigma_over_d_min=0.02,
         radial_resolution=0.05,
         sigma_resolution=0.05,
+        sigma_spacing="log",
         n_rho=256,
         version_tag="xy-range-v1",
     )

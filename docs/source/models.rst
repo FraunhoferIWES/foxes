@@ -129,6 +129,7 @@ but that is mainly due to variations of various constructor argument choices. Ty
 
 * `Jensen_<superposition>_[wake_k]`: The classic Jensen wind deficit model,
 * `Bastankhah2014_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Bastankhah and Porté-Agel from 2014 <https://doi.org/10.1016/j.renene.2014.01.002>`_,
+* `Niayifar`: A Bastankhah2014 model-book preset using the local-TI wake-growth relation from `Niayifar and Porté-Agel <https://doi.org/10.3390/en9090741>`_,
 * `Bastankhah2016_<superposition>_[wake_k]`: The wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_,
 * `TurbOPark_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Pedersen et al. from 2022 <https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf>`_,
 * `CrespoHernandez_<superposition>_[wake_k]`: The top-hat TI addition wake model by `Crespo and Hernandez from 1996 <https://doi.org/10.1016/0167-6105(95)00033-X>`_,
@@ -156,6 +157,7 @@ Examples for valid wake model choices are:
 * `TurbOPark_quadratic_loc_k004`
 * `CrespoHernandez_max_ka0213_kb003`
 * `Bastankhah2014_linear`
+* `Niayifar`
 
 .. _wake-frames:
 
@@ -263,14 +265,15 @@ can be generated offline via:
 
 .. code-block:: console
 
-    foxes_create_gaussian_lookup ./gaussian_lookup.nc --radial-resolution 0.1 --sigma-resolution 0.05 --sigma-spacing log
+    foxes_create_gaussian_lookup ./gaussian_lookup.nc --radial-resolution 0.1 --sigma-resolution 0.05 --sigma-spacing log --asymptote-rel-tol 0.01 --n-rho 2048
 
 The resulting NetCDF artifact stores rotor-disc averaged Gaussian factors on
 the normalized geometry axes ``R/sigma`` and ``sigma/D``, along with its
 ``min_weight`` cutoff.
 
-The default lookup-axis settings are tuned for typical
-``Bastankhah2014_linear_k004`` use cases. During artifact generation,
+The default lookup-axis settings use logarithmic ``sigma/D`` spacing, a 1%
+large-sigma asymptote tolerance, and 2048 radial quadrature points. During
+artifact generation,
 ``min_weight`` derives the ``R/sigma`` extent when no explicit
 ``r_over_sigma_max`` is provided. The upper ``sigma/D`` extent is derived to
 meet the selected large-sigma asymptote relative-error tolerance.

@@ -156,7 +156,7 @@ def _run_orsted_example_one() -> tuple[np.ndarray, np.ndarray]:
         states,
         wake_models=["TurbOPark"],
         rotor_model="centre",
-        partial_wakes="gaussian_lookup",
+        partial_wakes="gaussian",
         ground_models={"TurbOPark": "ground_mirror"},
         mbook=mbook,
         verbosity=0,
@@ -269,7 +269,7 @@ def _run_orsted_example_two() -> tuple[np.ndarray, np.ndarray]:
         states,
         wake_models=["TurbOPark"],
         rotor_model="centre",
-        partial_wakes="gaussian_lookup",
+        partial_wakes="gaussian",
         ground_models={"TurbOPark": "ground_mirror"},
         mbook=mbook,
         verbosity=0,
@@ -298,8 +298,8 @@ def test_turbopark_matches_orsted_example_one_single_row():
         ]
     ).T
 
-    np.testing.assert_allclose(rews, expected_rews, rtol=3.0e-3)
-    np.testing.assert_allclose(power, expected_power, rtol=3.0e-3)
+    np.testing.assert_allclose(rews, expected_rews, rtol=3.0e-5)
+    np.testing.assert_allclose(power, expected_power, rtol=2.0e-4)
 
 
 def test_turbopark_matches_orsted_example_two_single_row():
@@ -321,5 +321,5 @@ def test_turbopark_matches_orsted_example_two_single_row():
         ]
     ).T
 
-    np.testing.assert_allclose(rews, expected_rews, rtol=3.0e-3)
-    np.testing.assert_allclose(power, expected_power, rtol=3.0e-3)
+    np.testing.assert_allclose(rews, expected_rews, rtol=3.0e-5)
+    np.testing.assert_allclose(power, expected_power, rtol=2.0e-4)

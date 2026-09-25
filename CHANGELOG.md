@@ -1067,12 +1067,6 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Inputs:
   - New states classes `BinnedFieldData` and `BinnedPointCloudData`, reducing
     source states into topology-native bins and interpolating the reduced data
-
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)
-
-## Unreleased
-
-- Inputs:
   - Added `read_binned_data`, selecting `BinnedFieldData` or
     `BinnedPointCloudData` from an artifact's `foxes_state_class` attribute
   - Changed binned-state artifacts to reconstruct histogram centers from bin
@@ -1082,6 +1076,14 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Reduced binned-state worker memory by transferring source support to loaded
     data and releasing duplicate artifact and support references during
     `set_running`, then restoring them during `unset_running`
+- Models:
+  - Updated Gaussian lookup defaults to logarithmic sigma spacing, 1% asymptote
+    tolerance, and 2048-point radial quadrature
+  - Added the `Niayifar` model-book preset with local-TI-dependent wake growth,
+    including YAML/WindIO input support
 - Bug fixes:
+  - Reworked NetCDF compression and precision-preserving packing to output data
   - Fixed `NEWAStates` spatial interpolation without state labels, as used by
     `MesoMicroField`
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)

@@ -445,6 +445,13 @@ class ModelBook:
             k=0.04,
             induction="Madsen",
         )
+        self.wake_models["Niayifar"] = fm.wake_models.wind.Bastankhah2014(
+            superposition="ws_linear",
+            ka=0.3837,
+            kb=0.003678,
+            ti_var=FV.TI,
+            induction="Madsen",
+        )
         self.wake_models.add_k_factory(
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah2014_<superposition>_[wake_k]",
