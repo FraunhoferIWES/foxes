@@ -57,7 +57,7 @@ class BinnedPointCloudData(PointCloudData):
         output_file: str | Path | None = None,
         write_mean_std: bool = False,
         interpolation: str = "linear",
-        fill_value: float | None = np.nan,
+        fill_value: float | None = None,
         bounds_error: bool = True,
         nan_policy: Literal["raise", "interpolate", "remove"] = "raise",
         nan_threshold: float = 0.0,
@@ -99,11 +99,14 @@ class BinnedPointCloudData(PointCloudData):
             :class:`PointCloudData` and used when filling missing statistics.
         fill_value
             Value returned outside the support cloud when ``bounds_error`` is
-            ``False``.
+            ``False``. Defaults to ``None``, causing unresolved target points
+            to use nearest-neighbor values instead.
         bounds_error
             Whether interpolation outside the support cloud raises an error.
-            Internally this is implemented with a NaN fill value and the
-            standard ``PointCloudData`` interpolation check.
+            When ``False`` with a ``None`` fill value, the selected method
+            is retained for resolved targets and nearest-neighbor interpolation
+            is used only for unresolved targets. A ``numpy.nan`` fill value
+            leaves unresolved target values as ``numpy.nan``.
         nan_policy
             Handling of non-finite statistics in active bins: ``"raise"``,
             spatially ``"interpolate"``, or ``"remove"`` support points before
@@ -117,6 +120,7 @@ class BinnedPointCloudData(PointCloudData):
         initial_source = None if isinstance(states, States) else states
         interp_pars = dict(kwargs.pop("interp_pars", {}) or {})
         interp_pars.setdefault("method", interpolation)
+        interp_pars.setdefault("bounds_error", bounds_error)
         interp_pars.setdefault(
             "fill_value",
             np.nan if bounds_error else fill_value,

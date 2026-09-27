@@ -13,9 +13,61 @@ import foxes.constants as FC
 from .dataset_states import DatasetStates
 
 
+def _griddata_with_nearest_fallback(
+    support_points: np.ndarray,
+    data: np.ndarray,
+    evaluation_points: np.ndarray,
+    interp_pars: dict[str, bool | float | str | None],
+) -> np.ndarray:
+    """Interpolate point-cloud data with the configured bounds behavior."""
+    griddata_pars = dict(interp_pars)
+    bounds_error = bool(griddata_pars.pop("bounds_error", True))
+    method = griddata_pars.get("method", "linear")
+    fill_value = griddata_pars.get("fill_value")
+    nearest_fallback = not bounds_error and fill_value is None
+    if fill_value is None:
+        griddata_pars["fill_value"] = np.nan
+    try:
+        results = griddata(support_points, data, evaluation_points, **griddata_pars)
+    except QhullError:
+        if method == "nearest":
+            raise
+        nearest_pars = dict(griddata_pars)
+        nearest_pars["method"] = "nearest"
+        return griddata(support_points, data, evaluation_points, **nearest_pars)
+
+    if not nearest_fallback or method == "nearest":
+        return results
+
+    missing = np.isnan(results)
+    missing_points = (
+        missing
+        if missing.ndim == 1
+        else np.any(missing, axis=tuple(range(1, missing.ndim)))
+    )
+    if np.any(missing_points):
+        nearest_pars = dict(griddata_pars)
+        nearest_pars["method"] = "nearest"
+        results[missing_points] = griddata(
+            support_points,
+            data,
+            evaluation_points[missing_points],
+            **nearest_pars,
+        )
+    return results
+
+
 class PointCloudData(DatasetStates):
     """
     Inflow data with point cloud support.
+
+    Notes
+    -----
+    Point-cloud interpolation options are supplied by ``interp_pars``, with
+    ``fill_value=None`` by default. When ``bounds_error`` is ``False``, target
+    points unresolved by the selected interpolation method use nearest-neighbor
+    values. Resolved target points retain the selected interpolation method. An
+    explicit ``numpy.nan`` fill value leaves unresolved values as ``numpy.nan``.
 
     Examples
     --------
@@ -255,7 +307,11 @@ class PointCloudData(DatasetStates):
     ) -> None:
         """Checks for NaN results and raises errors."""
         fill_value = ipars.get("fill_value", np.nan)
-        if isinstance(fill_value, (int, float)) and np.isnan(fill_value):
+        bounds_error = bool(ipars.get("bounds_error", True))
+        if bounds_error and (
+            fill_value is None
+            or (isinstance(fill_value, (int, float)) and np.isnan(fill_value))
+        ):
             sel = np.isnan(results)
             if np.any(sel):
                 point_indices = [j[0] for j in np.where(sel)]
@@ -336,7 +392,7 @@ class PointCloudData(DatasetStates):
         ipars: dict[str, bool | float | str | None] = dict(
             method="linear",
             rescale=True,
-            fill_value=np.nan,
+            fill_value=None,
         )
         ipars.update(self.interp_pars)
 
@@ -377,14 +433,7 @@ class PointCloudData(DatasetStates):
                 d = d[~sel]
 
         # interpolate
-        try:
-            results = griddata(gpts_array, d, pts, **ipars)
-        except QhullError:
-            if ipars.get("method", "linear") == "nearest":
-                raise
-            fpars = dict(ipars)
-            fpars["method"] = "nearest"
-            results = griddata(gpts_array, d, pts, **fpars)
+        results = _griddata_with_nearest_fallback(gpts_array, d, pts, ipars)
 
         # check for NaN results:
         self._check_nan(ipars, gpts_array, d, pts, idims, vrs, results)
@@ -640,6 +689,14 @@ class WeibullPointCloud(PointCloudData):
 class TurbinePointCloud(DatasetStates):
     """
     Point cloud data at turbine locations, for wake calculations.
+
+    Notes
+    -----
+    Point-cloud interpolation options are supplied by ``interp_pars``, with
+    ``fill_value=None`` by default. When ``bounds_error`` is ``False``, target
+    points unresolved by the selected interpolation method use nearest-neighbor
+    values. Resolved target points retain the selected interpolation method. An
+    explicit ``numpy.nan`` fill value leaves unresolved values as ``numpy.nan``.
     """
 
     def __init__(
@@ -930,7 +987,7 @@ class TurbinePointCloud(DatasetStates):
         ipars: dict[str, bool | float | str | None] = dict(
             method="linear",
             rescale=True,
-            fill_value=np.nan,
+            fill_value=None,
         )
         ipars.update(self.interp_pars)
 
@@ -983,14 +1040,7 @@ class TurbinePointCloud(DatasetStates):
         gpts2 = gpts2.reshape(n_states * n_turbines, gpts2.shape[-1])
         epts = epts.reshape(n_states * n_turbines, epts.shape[-1])
         d2 = np.asarray(d).reshape(n_states * n_turbines, d.shape[-1])
-        try:
-            results = griddata(gpts2, d2, epts, **ipars)
-        except QhullError:
-            if ipars.get("method", "linear") == "nearest":
-                raise
-            fpars = dict(ipars)
-            fpars["method"] = "nearest"
-            results = griddata(gpts2, d2, epts, **fpars)
+        results = _griddata_with_nearest_fallback(gpts2, d2, epts, ipars)
 
         PointCloudData._check_nan(
             cast(PointCloudData, self), ipars, gpts2, d2, epts, idims, vrs, results

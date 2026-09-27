@@ -911,15 +911,20 @@ class MesoMicroField(States):
         # create fdata:
         hfdata = FData.from_sizes(n_states=n_bins, n_turbines=algo.n_turbines)
 
-        # create tdata:
+        # Evaluate each micro state at all distinct target points. Target order can
+        # vary by state after Downwind sorting, even for a fixed farm layout.
+        target_points = tdata[FC.TARGETS].reshape(n_states * n_tpts, 3)
+        unique_points, point_map = np.unique(target_points, axis=0, return_inverse=True)
         tpoints: np.ndarray = np.zeros(
-            (n_bins, tdata.n_targets, tdata.n_tpoints, 3), dtype=config.dtype_double
+            (n_bins, len(unique_points), 1, 3), dtype=config.dtype_double
         )
-        tpoints[:] = tdata[FC.TARGETS][0, None, ...]
+        tpoints[:] = unique_points[None, :, None, :]
         htdata = TData.from_tpoints(
-            tpoints=tpoints, tweights=tdata[FC.TWEIGHTS], mdata=hmdata
+            tpoints=tpoints,
+            tweights=np.ones(1, dtype=config.dtype_double),
+            mdata=hmdata,
         )
-        del tpoints
+        del target_points, unique_points, tpoints
 
         # run field states calculation:
         micro_data = self.micro_states.calculate(
@@ -929,11 +934,12 @@ class MesoMicroField(States):
             cast(TData, htdata),
         )
         micro_results_vrs: list[str] = list(micro_data.keys())
-        micro_results: np.ndarray = np.stack(
-            list(micro_data.values()), axis=-1
-        )  # dims (n_bins, n_tpts, n_points, n_vrs)
+        micro_results: np.ndarray = np.stack(list(micro_data.values()), axis=-1)
+        micro_results = micro_results[:, point_map, 0].reshape(
+            n_bins, n_states, n_tpts, len(micro_results_vrs)
+        )
         n_vrs = len(micro_results_vrs)
-        del hmdata, hfdata, htdata, micro_data
+        del hmdata, hfdata, htdata, micro_data, point_map
 
         # replace WS, WD by U, V:
         if FV.U in micro_results_vrs or FV.V in micro_results_vrs:
@@ -990,9 +996,9 @@ class MesoMicroField(States):
 
             # apply speedups wrt each reference point:
             for i, v in enumerate(micro_results_vrs):
-                d = micro_results[..., i].reshape(n_bins, n_tpts)
+                d = micro_results[..., i]
                 for pi in range(n_points):
-                    a = d[fs2s[pi], :]
+                    a = d[fs2s[pi], np.arange(n_states), :]
                     if v in speedups.keys():
                         a *= speedups[v][pi][:, None]
                     w = weight[:, pi, None] if self.apply_blending else weight

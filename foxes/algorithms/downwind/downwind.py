@@ -420,9 +420,7 @@ class Downwind(Algorithm):
         if ini:
             self.initialize()
 
-        pop_model = self.population_model
-        assert pop_model is not None
-        POP = pop_model.index_coord
+        POP = FC.POP
         assert POP in pop_farm_results.sizes, (
             f"Algorithm '{self.name}': Population index coordinate '{POP}' not found in provided farm results"
         )

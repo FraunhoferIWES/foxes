@@ -1089,5 +1089,9 @@ This major version introduces the concept of `Engines` which handle the chunking
     precision
   - Fixed `NEWAStates` spatial interpolation without state labels, as used by
     `MesoMicroField`
+  - Fixed population-state ordering and conversion to population results
+  - Added nearest-neighbor fallback for point-cloud targets outside the
+    interpolation support when bounds errors are disabled
+  - Fixed `MesoMicroField` evaluation for state-dependent target ordering
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)

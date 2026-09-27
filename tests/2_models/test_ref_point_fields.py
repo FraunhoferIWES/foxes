@@ -9,7 +9,7 @@ import foxes.variables as FV
 import foxes.input.states.field_data as field_data_module
 import foxes.input.states.meso_micro_field as meso_micro_field_module
 import foxes.input.states.ref_point_fields as ref_point_fields_module
-from foxes.core import MData, TData
+from foxes.core import FData, MData, TData
 from foxes.input.states import (
     FieldData,
     ICONStates,
@@ -457,3 +457,95 @@ def test_meso_micro_field_preserves_state_only_meso_weights():
 
     assert tdata[FV.WEIGHT].shape == (2, 1, 1)
     np.testing.assert_allclose(tdata[FV.WEIGHT][:, 0, 0], [0.25, 0.75])
+
+
+def test_meso_micro_field_uses_each_states_target_order(monkeypatch):
+    class _MicroStates:
+        def calculate(self, algo, mdata, fdata, tdata):
+            x = tdata[FC.TARGETS][..., 0]
+            return {
+                FV.WS: x + 5.0,
+                FV.WD: np.full_like(x, 270.0),
+            }
+
+    states = MesoMicroField(
+        micro_states=_MicroStates(),
+        meso_states=SimpleNamespace(),
+        ref_points=np.array([[0.0, 0.0, 90.0]]),
+        output_vars=[FV.WS, FV.WD],
+        apply_blending=False,
+    )
+    states.COORDS0 = states.var("coords0")
+    states.VARS0 = states.var("vars0")
+    states.EXTRA0 = states.var("extra0")
+    states.STATE0 = states.var(FC.STATE + "0")
+    states.REF_POINTS = states.var("ref_points")
+    states.REF_POINT = states.var("ref_point")
+    states.REF_VARS = states.var("ref_vars")
+    states.REF_DATA = states.var("ref_data")
+    states.WD_BIN_DATA = states.var("wd_bin_data")
+    states.WD_BIN_DATA_VARS = states.var("wd_bin_data_vars")
+
+    mdata = MData(
+        data={
+            FC.STATE: np.array([0, 1]),
+            states.REF_POINTS: np.array([[0.0, 0.0, 90.0]]),
+            states.REF_VARS: np.array([FV.WS]),
+            states.REF_DATA: np.array([[[5.0]]]),
+            states.WD_BIN_DATA: np.array([[[270.0, -180.0, 180.0]]]),
+        },
+        dims={
+            FC.STATE: (FC.STATE,),
+            states.REF_POINTS: (states.REF_POINT, FC.XYH),
+            states.REF_VARS: (states.REF_VARS,),
+            states.REF_DATA: (
+                states.STATE0,
+                states.REF_POINT,
+                states.REF_VARS,
+            ),
+            states.WD_BIN_DATA: (
+                states.STATE0,
+                states.REF_POINT,
+                states.WD_BIN_DATA_VARS,
+            ),
+        },
+        extra_data={
+            states.COORDS0: [],
+            states.VARS0: [],
+            states.EXTRA0: {},
+        },
+    )
+    fdata = FData.from_sizes(n_states=2, n_turbines=2)
+    targets = np.array(
+        [
+            [[[0.0, 0.0, 90.0]], [[10.0, 0.0, 90.0]]],
+            [[[10.0, 0.0, 90.0]], [[0.0, 0.0, 90.0]]],
+        ]
+    )
+    tdata = TData.from_tpoints(
+        tpoints=targets,
+        tweights=np.ones(1),
+        mdata=mdata,
+    )
+
+    def _calculate_meso_data(**kwargs):
+        target_data = kwargs["tdata"]
+        target_data[FV.WEIGHT] = np.full((2, 1, 1), 0.5)
+        target_data.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
+        return {
+            FV.WS: np.full((2, 1), 5.0),
+            FV.WD: np.full((2, 1), 270.0),
+        }
+
+    monkeypatch.setattr(states, "_calculate_meso_data", _calculate_meso_data)
+    results = states.calculate(
+        SimpleNamespace(n_turbines=2),
+        mdata,
+        fdata,
+        tdata,
+    )
+
+    np.testing.assert_allclose(
+        results[FV.WS][..., 0],
+        [[5.0, 15.0], [15.0, 5.0]],
+    )

@@ -134,5 +134,5 @@ def test_subset_states_composes_with_population_states():
         loaded_data["data_vars"][subset.SMAP][1], np.array([3, 1])
     )
     np.testing.assert_array_equal(
-        loaded_data["data_vars"][population.SMAP][1], np.array([0, 0, 1, 1])
+        loaded_data["data_vars"][population.SMAP][1], np.array([0, 1, 0, 1])
     )

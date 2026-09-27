@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 import xarray as xr
 import foxes
 
@@ -129,6 +130,49 @@ def test_point_cloud_interpolate_falls_back_to_nearest_on_qhull_error():
     assert np.allclose(out[1], np.array([8.0, 270.0]))
 
 
+def _interpolate_point_cloud(interp_pars):
+    states = PointCloudData(
+        data_source=xr.Dataset(),
+        output_vars=[FV.WS],
+        interp_pars=interp_pars,
+    )
+    support_points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+    evaluation_points = np.array([[0.25, 0.25], [1.2, 0.1]])
+    data = np.array([[0.0], [1.0], [2.0]])
+    return states.interpolate_data(
+        mdata={},
+        idims=[FC.POINT],
+        d=data,
+        pts=evaluation_points,
+        vrs=[FV.WS],
+        gpts=support_points,
+    )
+
+
+def test_point_cloud_uses_default_none_fill_when_bounds_errors_disabled():
+    out = _interpolate_point_cloud({"bounds_error": False})
+
+    np.testing.assert_allclose(out, [[0.75], [1.0]])
+
+
+def test_point_cloud_keeps_nan_fill_when_bounds_errors_disabled():
+    out = _interpolate_point_cloud({"bounds_error": False, "fill_value": np.nan})
+
+    np.testing.assert_allclose(out[0], [0.75])
+    assert np.isnan(out[1, 0])
+
+
+def test_point_cloud_raises_for_default_none_fill_when_bounds_errors_enabled():
+    with pytest.raises(ValueError, match="outside of bounds"):
+        _interpolate_point_cloud({"bounds_error": True})
+
+
+def test_point_cloud_keeps_finite_fill_when_bounds_errors_disabled():
+    out = _interpolate_point_cloud({"bounds_error": False, "fill_value": -1.0})
+
+    np.testing.assert_allclose(out, [[0.75], [-1.0]])
+
+
 def test_point_cloud_interpolate_removes_invariant_axis_for_planar_support():
     states = PointCloudData(
         data_source=xr.Dataset(),
@@ -221,6 +265,56 @@ def test_turbine_point_cloud_interpolate_falls_back_to_nearest_on_qhull_error():
     assert out.shape == (1, 2, 2)
     assert np.allclose(out[0, 0], np.array([8.0, 270.0]))
     assert np.allclose(out[0, 1], np.array([8.0, 270.0]))
+
+
+def test_turbine_point_cloud_uses_default_none_fill():
+    data_source = xr.Dataset(
+        data_vars={
+            FV.WS: (
+                ("time", "turbine"),
+                np.array([[0.0, 1.0, 2.0], [10.0, 11.0, 12.0]]),
+            ),
+            FV.WD: (
+                ("time", "turbine"),
+                np.full((2, 3), 270.0),
+            ),
+        },
+        coords={"time": np.array([0, 1], dtype=np.int32), "turbine": np.arange(3)},
+    )
+    states = TurbinePointCloud(
+        data_source=data_source,
+        output_vars=[FV.WS, FV.WD],
+        states_coord="time",
+        turbine_coord="turbine",
+        interp_pars={"bounds_error": False},
+    )
+    support_points = np.array(
+        [
+            [[0.0, 0.0, 90.0], [1.0, 0.0, 90.0], [0.0, 1.0, 90.0]],
+            [[0.0, 0.0, 90.0], [1.0, 0.0, 90.0], [0.0, 1.0, 90.0]],
+        ]
+    )
+    evaluation_points = np.array(
+        [
+            [[0.25, 0.25, 90.0], [1.2, 0.1, 90.0], [0.0, 0.0, 90.0]],
+            [[0.25, 0.25, 90.0], [1.2, 0.1, 90.0], [0.0, 0.0, 90.0]],
+        ]
+    )
+    data = np.array([[[0.0], [1.0], [2.0]], [[10.0], [11.0], [12.0]]])
+
+    out = states.interpolate_data(
+        mdata={},
+        idims=[FC.TURBINE],
+        d=data,
+        pts=evaluation_points,
+        vrs=[FV.WS],
+        gpts=support_points,
+    )
+
+    np.testing.assert_allclose(
+        out,
+        [[[0.75], [1.0], [0.0]], [[10.75], [11.0], [10.0]]],
+    )
 
 
 def test_dataset_states_calculate_handles_turbine_dim_without_not_implemented():

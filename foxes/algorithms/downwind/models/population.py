@@ -19,10 +19,13 @@ class PopulationStates(States):
     """
     States extended by a population factor.
 
-    For each original state, n_pop states are created.
-    This is useful for parameter studies, where each
-    inserted state corresponds to a different value of the
-    associated variable.
+    For each population member, all original states are created.
+    This is useful for parameter studies, where each population
+    member corresponds to different values of the associated
+    variables.
+
+    The expanded state axis is population-major. Its flat index is
+    ``population_index * n_original_states + original_state_index``.
     """
 
     def __init__(self, states: States, n_pop: int, **kwargs: Any) -> None:
@@ -118,10 +121,6 @@ class PopulationStates(States):
         coords = loaded_data["coords"]
         data_vars = loaded_data["data_vars"]
 
-        # load only once:
-        if not force and self.SMAP in data_vars:
-            return
-
         # reset states dimension:
         if FC.STATE in coords:
             coords[self.STATE0] = coords.pop(FC.STATE)
@@ -144,9 +143,9 @@ class PopulationStates(States):
 
         # create mapping from new states to original states:
         smap: np.ndarray = np.zeros(
-            (self.states.size(), self.n_pop), dtype=config.dtype_int
+            (self.n_pop, self.states.size()), dtype=config.dtype_int
         )
-        smap[:] = np.arange(self.states.size())[:, None]
+        smap[:] = np.arange(self.states.size())[None, :]
         smap = smap.reshape(self.size())
         data_vars[self.SMAP] = ((FC.STATE,), smap)
 
@@ -477,8 +476,6 @@ class PopulationModel(TurbineModel):
 
         self.DATA = self.var("DATA")
         self.VARS = self.var("VARS")
-        if self.DATA in loaded_data["data_vars"]:
-            return
 
         states = getattr(algo, "states", None)
         assert isinstance(states, PopulationStates), (
@@ -618,7 +615,7 @@ class PopulationModel(TurbineModel):
 
     def farm2pop_results(self, algo: Algorithm, farm_results: Dataset) -> Dataset:
         """
-        Convert farm results to population results
+        Convert population-major flat farm results to population results.
 
         Parameters
         ----------
@@ -649,11 +646,7 @@ class PopulationModel(TurbineModel):
             if d.dims[0] == FC.STATE:
                 data[dname] = (
                     (FC.POP,) + d.dims,
-                    np.swapaxes(
-                        d.values.reshape((self.n_states0, self.n_pop) + d.shape[1:]),
-                        0,
-                        1,
-                    ),
+                    d.values.reshape((self.n_pop, self.n_states0) + d.shape[1:]),
                 )
             else:
                 data[dname] = (d.dims, d.values)

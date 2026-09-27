@@ -143,3 +143,24 @@ def test_binned_point_cloud_data_chunks_target_dependent_weights():
         [[0.2, 0.8], [0.8, 0.2]],
     )
     np.testing.assert_allclose(farm_results[FV.AMB_WD], [[270.0] * 2, [90.0] * 2])
+
+
+def test_binned_point_cloud_uses_nearest_when_bounds_errors_disabled():
+    states = BinnedPointCloudData(
+        _binned_point_cloud_artifact(),
+        bounds_error=False,
+    )
+    support_points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+    evaluation_points = np.array([[0.25, 0.25], [1.2, 0.1]])
+    data = np.array([[0.0], [1.0], [2.0]])
+
+    out = states.interpolate_data(
+        mdata={},
+        idims=[FC.POINT],
+        d=data,
+        pts=evaluation_points,
+        vrs=[FV.WS],
+        gpts=support_points,
+    )
+
+    np.testing.assert_allclose(out, [[0.75], [1.0]])
