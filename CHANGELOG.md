@@ -1064,6 +1064,11 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.6
 
+- Output:
+  - `FarmLayoutOutput` now selects an aspect-aware figure size from layout and
+    boundary extents when `figsize` is not supplied
+  - `FarmLayoutOutput` accepts color-to-label mappings for turbine legends,
+    placed consistently in the upper-left corner
 - Inputs:
   - New states classes `BinnedFieldData` and `BinnedPointCloudData`, reducing
     source states into topology-native bins and interpolating the reduced data
