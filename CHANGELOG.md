@@ -1096,3 +1096,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixed population-state ordering and conversion to population results
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)
+
+## v1.9.7
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)
