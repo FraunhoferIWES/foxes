@@ -9,6 +9,7 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -146,6 +147,33 @@ class FarmLayoutOutput(Output):
 
         return out
 
+    def _get_auto_figsize(
+        self, data: np.ndarray, lonlat: bool
+    ) -> tuple[float, float] | None:
+        """Derive a bounded figure aspect ratio from plotted extents."""
+        points = data[:, :2]
+        points = points[np.all(np.isfinite(points), axis=1)]
+        bounds = [points] if len(points) else []
+        if not lonlat and self.farm.boundary is not None:
+            boundary = np.stack(
+                [self.farm.boundary.p_min(), self.farm.boundary.p_max()]
+            )
+            if np.all(np.isfinite(boundary)):
+                bounds.append(boundary)
+        if not bounds:
+            return None
+
+        extent = np.ptp(np.concatenate(bounds), axis=0)
+        max_extent = np.max(extent)
+        if max_extent <= 0.0:
+            aspect = 1.0
+        else:
+            extent = np.maximum(extent, max_extent / 2.0)
+            aspect = extent[0] / extent[1]
+        default = np.asarray(plt.rcParams["figure.figsize"], dtype=float)
+        base_size = np.sqrt(np.prod(default))
+        return base_size * np.sqrt(aspect), base_size / np.sqrt(aspect)
+
     def get_figure(
         self,
         color_by: str | None = None,
@@ -158,6 +186,7 @@ class FarmLayoutOutput(Output):
         normalize_D: bool = False,
         ret_im: bool = False,
         bargs: dict[str, Any] | None = None,
+        legend_labels: dict[str, str] | None = None,
         anno_delx: float = 0,
         anno_dely: float = 0,
         lonlat: bool = False,
@@ -175,7 +204,7 @@ class FarmLayoutOutput(Output):
         fontsize
             Size of the turbine numbers
         figsize
-            The figsize for plt.Figure
+            The figsize for plt.Figure, or None to derive it from plot extents
         annotate
             Turbine index printing, Choices:
             0 = No annotation
@@ -194,6 +223,8 @@ class FarmLayoutOutput(Output):
             Flag for returned image object
         bargs
             Arguments for boundary plotting
+        legend_labels
+            Mapping from marker colors to labels for an upper-left legend
         anno_delx
             The annotation delta x
         anno_dely
@@ -214,7 +245,10 @@ class FarmLayoutOutput(Output):
         if self.nofig:
             return None, None
 
+        data = self.get_layout_data(lonlat=lonlat)
         if fig is None:
+            if figsize is None:
+                figsize = self._get_auto_figsize(data, lonlat)
             fig = plt.figure(figsize=figsize)
             ax = fig.add_subplot(111)
         else:
@@ -246,7 +280,6 @@ class FarmLayoutOutput(Output):
                             f"Variable '{FV.D}' not found in turbines. Maybe set explicitely, or try from_results?"
                         )
 
-            data = self.get_layout_data(lonlat=lonlat)
             x = data[:, 0] / D if normalize_D and not lonlat else data[:, 0]
             y = data[:, 1] / D if normalize_D and not lonlat else data[:, 1]
             n = range(len(x))
@@ -286,7 +319,12 @@ class FarmLayoutOutput(Output):
                     )
 
             c = kw.pop("c", "orange")
-            if c is None or isinstance(c, str) or np.all(np.isreal(c)):
+            if (
+                color_by is None
+                or c is None
+                or isinstance(c, str)
+                or np.issubdtype(np.asarray(c).dtype, np.number)
+            ):
                 im = ax.scatter(x, y, c=c, **kw)
                 legend = False
             else:
@@ -356,6 +394,20 @@ class FarmLayoutOutput(Output):
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.05)
             fig.colorbar(im, cax=cax)
+
+        if legend_labels:
+            handles = [
+                Line2D(
+                    [],
+                    [],
+                    color=color,
+                    marker="o",
+                    linestyle="none",
+                    label=label,
+                )
+                for color, label in legend_labels.items()
+            ]
+            ax.legend(handles=handles, loc="upper left")
 
         if ret_im:
             return ax, im

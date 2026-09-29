@@ -350,6 +350,35 @@ def test_farm_layout_output_figure_accepts_default_boundary_args():
     plt.close(ax.get_figure())
 
 
+def test_farm_layout_output_auto_figsize_and_colors():
+    farm = foxes.WindFarm()
+    for xy in ([0.0, 0.0], [1000.0, 100.0]):
+        farm.add_turbine(foxes.Turbine(xy, turbine_models=[], D=100.0, H=90.0))
+
+    ax = FarmLayoutOutput(farm=farm).get_figure(
+        c=np.array(["red", "orange"]),
+        legend_labels={
+            "orange": "Valid turbine",
+            "red": "Constraint violation",
+        },
+    )
+    width, height = ax.get_figure().get_size_inches()
+    colors = ax.collections[0].get_facecolors()
+    legend = ax.get_legend()
+    legend_labels = [text.get_text() for text in legend.get_texts()]
+    legend_location = legend._loc
+    plt.close(ax.get_figure())
+
+    assert width > height
+    np.testing.assert_allclose(colors[0, :3], [1.0, 0.0, 0.0])
+    assert legend_labels == ["Valid turbine", "Constraint violation"]
+    assert legend_location == legend.codes["upper left"]
+
+    ax = FarmLayoutOutput(farm=farm).get_figure(figsize=(3.0, 4.0))
+    np.testing.assert_allclose(ax.get_figure().get_size_inches(), [3.0, 4.0])
+    plt.close(ax.get_figure())
+
+
 def test_layout2d_figure_write_smoke_and_cleanup(tmp_path):
     algo, farm_results = _calc_farm_results()
     out = FarmLayoutOutput(
