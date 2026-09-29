@@ -22,6 +22,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 
 from .dataset_states import DatasetStates
+from ._point_plot_utils import line_plot_pars, scatter_plot_pars
 
 
 class SectorSimRefPointField(States):
@@ -42,6 +43,8 @@ class SectorSimRefPointField(States):
         apply_blending: bool = True,
         check_nans: bool = True,
         support_point_plot: str | None = None,
+        support_point_plot_pars: dict[str, Any] | None = None,
+        ref_point_plot_pars: dict[str, Any] | None = None,
         **kwargs: object,
     ) -> None:
         """
@@ -70,6 +73,13 @@ class SectorSimRefPointField(States):
         support_point_plot
             Path to a plot file, e.g. support_points.png, to visualize the
             selected field_states support points, reference point, and farm layout.
+        support_point_plot_pars
+            Additional parameters for `matplotlib.pyplot.plot` when drawing
+            the field-state support points. Defaults to blue points with
+            alpha 0.25.
+        ref_point_plot_pars
+            Additional parameters for `matplotlib.pyplot.scatter` when drawing
+            the reference point. Defaults to a red cross.
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
         self.field_states = field_states
@@ -84,6 +94,28 @@ class SectorSimRefPointField(States):
         self.apply_blending = apply_blending
         self.check_nans = check_nans
         self.support_point_plot = support_point_plot
+        self.support_point_plot_pars = line_plot_pars(
+            {
+                "color": "blue",
+                "alpha": 0.25,
+                "marker": ".",
+                "linestyle": "None",
+            },
+            support_point_plot_pars,
+            "support_point_plot_pars",
+        )
+        self.ref_point_plot_pars = scatter_plot_pars(
+            {
+                "color": "red",
+                "marker": "x",
+                "s": 80,
+                "linewidths": 2,
+                "label": "reference point",
+                "zorder": 100,
+            },
+            ref_point_plot_pars,
+            "ref_point_plot_pars",
+        )
 
         self.__ref_point_is_lonlat = ref_point_is_lonlat
         self.__utm_zone = utm_zone
@@ -137,24 +169,19 @@ class SectorSimRefPointField(States):
         )
 
         fig, ax = plt.subplots(figsize=figsize)
+        support_point_plot_pars = {
+            "label": f"{self.field_states.name} support points",
+            **self.support_point_plot_pars,
+        }
         ax.plot(
             support_points[:, 0],
             support_points[:, 1],
-            c="blue",
-            alpha=0.25,
-            marker=".",
-            linestyle="None",
-            label=f"{self.field_states.name} support points",
+            **support_point_plot_pars,
         )
         ax.scatter(
             self.ref_point[0],
             self.ref_point[1],
-            c="red",
-            marker="x",
-            s=80,
-            linewidths=2,
-            label="reference point",
-            zorder=100,
+            **self.ref_point_plot_pars,
         )
         wind_farm_names = algo.farm.wind_farm_names
         assert wind_farm_names is not None

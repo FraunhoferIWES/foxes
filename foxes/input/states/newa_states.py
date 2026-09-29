@@ -1,5 +1,5 @@
 import numpy as np
-from typing import cast
+from typing import Any, cast
 import matplotlib.pyplot as plt
 import xarray as xr
 from pathlib import Path
@@ -14,6 +14,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 from .dataset_states import DatasetStates
+from ._point_plot_utils import line_plot_pars
 
 
 class NEWAStates(DatasetStates):
@@ -52,6 +53,7 @@ class NEWAStates(DatasetStates):
         time_format: str | None = None,
         interp_pars: dict[str, bool | float | str | None] = {},
         wrf_point_plot: str | Path | None = None,
+        wrf_point_plot_pars: dict[str, Any] | None = None,
         **kwargs: object,
     ) -> None:
         """
@@ -94,6 +96,9 @@ class NEWAStates(DatasetStates):
         wrf_point_plot
             Path to a plot file, e.g. wrf_points.png, to visualize the
             selected WRF grid points and the layout of the farm.
+        wrf_point_plot_pars
+            Additional parameters for `matplotlib.pyplot.plot` when drawing
+            the WRF grid points. Defaults to blue points with alpha 0.2.
         kwargs
             Additional parameters for the base class
         """
@@ -128,6 +133,16 @@ class NEWAStates(DatasetStates):
         self.xlat_coord = xlat_coord
         self.xlon_coord = xlon_coord
         self.wrf_point_plot = wrf_point_plot
+        self.wrf_point_plot_pars = line_plot_pars(
+            {
+                "color": "blue",
+                "alpha": 0.2,
+                "marker": ".",
+                "linestyle": "None",
+            },
+            wrf_point_plot_pars,
+            "wrf_point_plot_pars",
+        )
         self.variables = list(set([v if v != FV.TI else FV.TKE for v in ovars]))
 
         self._cmap = {
@@ -283,10 +298,7 @@ class NEWAStates(DatasetStates):
             ax.plot(
                 xy[..., 0].flatten(),
                 xy[..., 1].flatten(),
-                c="blue",
-                alpha=0.2,
-                marker=".",
-                linestyle="None",
+                **self.wrf_point_plot_pars,
             )
             wind_farm_names = algo.farm.wind_farm_names
             assert wind_farm_names is not None

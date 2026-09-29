@@ -12,6 +12,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 from .dataset_states import DatasetStates
+from ._point_plot_utils import line_plot_pars
 
 
 class FieldData(DatasetStates):
@@ -44,6 +45,7 @@ class FieldData(DatasetStates):
         time_format: str | None = r"%Y-%m-%d_%H:%M:%S",
         weight_ncvar: str | None = None,
         grid_point_plot: str | None = None,
+        grid_point_plot_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -66,6 +68,9 @@ class FieldData(DatasetStates):
         grid_point_plot
             Path to a plot file, e.g. grid_points.png, to visualize the
             selected data grid points and the layout of the farm.
+        grid_point_plot_pars
+            Additional parameters for `matplotlib.pyplot.plot` when drawing
+            the grid points. Defaults to blue points with alpha 0.2.
         kwargs
             Additional parameters for the base class
         """
@@ -78,6 +83,17 @@ class FieldData(DatasetStates):
         self.h_coord = h_coord
         self.weight_ncvar = weight_ncvar
         self.grid_point_plot = grid_point_plot
+        self.grid_point_plot_pars = line_plot_pars(
+            {
+                "color": "blue",
+                "alpha": 0.2,
+                "marker": ".",
+                "linestyle": "None",
+                "zorder": 5,
+            },
+            grid_point_plot_pars,
+            "grid_point_plot_pars",
+        )
 
         assert FV.WEIGHT not in self.ovars, (
             f"States '{self.name}': Cannot have '{FV.WEIGHT}' as output variable, got {self.ovars}"
@@ -165,11 +181,7 @@ class FieldData(DatasetStates):
                 ax.plot(
                     xx,
                     yy,
-                    c="blue",
-                    alpha=0.2,
-                    marker=".",
-                    linestyle="None",
-                    zorder=5,
+                    **self.grid_point_plot_pars,
                 )
                 wind_farm_names = algo.farm.wind_farm_names
                 assert wind_farm_names is not None
@@ -200,6 +212,7 @@ class LatLonFieldData(DatasetStates):
         time_format: str | None = None,
         grid_point_plot: str | None = None,
         utm_zone: Any = None,
+        grid_point_plot_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -229,6 +242,9 @@ class LatLonFieldData(DatasetStates):
             - (lon, lat): use given lon, lat values
             - None: do not set UTM zone, assume it is already set,
             typically during the wind farm creation.
+        grid_point_plot_pars
+            Additional parameters for `matplotlib.pyplot.plot` when drawing
+            the grid points. Defaults to blue points with alpha 0.2.
         kwargs
             Additional parameters for the base class
         """
@@ -244,6 +260,16 @@ class LatLonFieldData(DatasetStates):
         self.lon_coord = lon_coord
         self.h_coord = h_coord
         self.grid_point_plot = grid_point_plot
+        self.grid_point_plot_pars = line_plot_pars(
+            {
+                "color": "blue",
+                "alpha": 0.2,
+                "marker": ".",
+                "linestyle": "None",
+            },
+            grid_point_plot_pars,
+            "grid_point_plot_pars",
+        )
         self.__utm_zone = utm_zone
 
         # longitude and latitude play the role of x and y here:
@@ -384,10 +410,7 @@ class LatLonFieldData(DatasetStates):
                 ax.plot(
                     pts[:, 0],
                     pts[:, 1],
-                    c="blue",
-                    alpha=0.2,
-                    marker=".",
-                    linestyle="None",
+                    **self.grid_point_plot_pars,
                 )
                 wind_farm_names = algo.farm.wind_farm_names
                 assert wind_farm_names is not None
