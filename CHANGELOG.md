@@ -1076,6 +1076,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Reduced binned-state worker memory by transferring source support to loaded
     data and releasing duplicate artifact and support references during
     `set_running`, then restoring them during `unset_running`
+  - Added configurable plotting parameters for WRF, grid, support, and reference
+    point plots in the corresponding states classes
 - Models:
   - Updated Gaussian lookup defaults to logarithmic sigma spacing, 1% asymptote
     tolerance, and 2048-point radial quadrature

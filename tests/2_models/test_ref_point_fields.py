@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -39,7 +40,7 @@ def _make_fake_downwind(loaded_data):
     return _FakeDownwind
 
 
-def _make_ref_point_field(support_point_plot=None):
+def _make_ref_point_field(support_point_plot=None, **kwargs):
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_row(
         farm=farm,
@@ -61,6 +62,7 @@ def _make_ref_point_field(support_point_plot=None):
         ref_point_states=ref_point_states,
         ref_point=[200.0, 50.0, 100.0],
         support_point_plot=support_point_plot,
+        **kwargs,
     )
     loaded_data = {
         "coords": {
@@ -122,7 +124,7 @@ def test_sector_sim_ref_point_field_load_data_triggers_support_point_plot(monkey
         states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
 
 
-def _make_meso_micro_field(support_point_plot=None):
+def _make_meso_micro_field(support_point_plot=None, **kwargs):
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_row(
         farm=farm,
@@ -148,6 +150,7 @@ def _make_meso_micro_field(support_point_plot=None):
         meso_states=meso_states,
         ref_points=np.array([[200.0, 50.0, 100.0], [600.0, 200.0, 100.0]]),
         support_point_plot=support_point_plot,
+        **kwargs,
     )
     loaded_data = {
         "coords": {
@@ -165,7 +168,11 @@ def _make_meso_micro_field(support_point_plot=None):
 
 def test_meso_micro_field_writes_support_point_plot(tmp_path):
     fpath = tmp_path / "meso_micro_support_points.png"
-    states, algo, loaded_data = _make_meso_micro_field(support_point_plot=str(fpath))
+    states, algo, loaded_data = _make_meso_micro_field(
+        support_point_plot=str(fpath),
+        support_point_plot_pars={"c": "darkblue", "alpha": 1.0},
+        ref_point_plot_pars={"c": "green", "lw": 3},
+    )
 
     states.write_support_point_plot(algo=algo, loaded_data=loaded_data)
 
@@ -208,6 +215,72 @@ def test_meso_micro_field_load_data_triggers_support_point_plot(monkeypatch):
 
     with pytest.raises(_PlotTriggered):
         states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
+
+
+@pytest.mark.parametrize(
+    ("factory", "module", "support_zorder", "ref_label", "ref_zorder"),
+    [
+        (_make_ref_point_field, ref_point_fields_module, None, "reference point", 100),
+        (
+            _make_meso_micro_field,
+            meso_micro_field_module,
+            5,
+            "reference points",
+            10,
+        ),
+    ],
+)
+def test_support_point_plot_pars_are_forwarded(
+    monkeypatch, factory, module, support_zorder, ref_label, ref_zorder
+):
+    support_pars = {"c": "darkblue", "alpha": 1.0}
+    ref_pars = {"c": "green", "s": 40, "lw": 3}
+    states, algo, loaded_data = factory(
+        support_point_plot_pars=support_pars,
+        ref_point_plot_pars=ref_pars,
+    )
+    fig = Mock()
+    ax = Mock()
+    monkeypatch.setattr(module.plt, "subplots", Mock(return_value=(fig, ax)))
+    monkeypatch.setattr(module, "FarmLayoutOutput", Mock())
+
+    states.get_support_point_figure(algo=algo, loaded_data=loaded_data)
+
+    expected_support = {
+        "color": "darkblue",
+        "alpha": 1.0,
+        "marker": ".",
+        "linestyle": "None",
+        "label": f"{states.field_states.name} support points"
+        if isinstance(states, SectorSimRefPointField)
+        else f"{states.micro_states.name} support points",
+    }
+    if support_zorder is not None:
+        expected_support["zorder"] = support_zorder
+    assert ax.plot.call_args.kwargs == expected_support
+    assert ax.scatter.call_args.kwargs == {
+        "c": "green",
+        "marker": "x",
+        "s": 40,
+        "linewidth": 3,
+        "label": ref_label,
+        "zorder": ref_zorder,
+    }
+    assert support_pars == {"c": "darkblue", "alpha": 1.0}
+    assert ref_pars == {"c": "green", "s": 40, "lw": 3}
+
+
+@pytest.mark.parametrize("factory", [_make_ref_point_field, _make_meso_micro_field])
+@pytest.mark.parametrize(
+    ("parameter", "message"),
+    [
+        ("support_point_plot_pars", "support_point_plot_pars must be a dictionary"),
+        ("ref_point_plot_pars", "ref_point_plot_pars must be a dictionary"),
+    ],
+)
+def test_support_point_plot_pars_reject_non_dictionary(factory, parameter, message):
+    with pytest.raises(TypeError, match=message):
+        factory(**{parameter: []})
 
 
 @pytest.mark.parametrize(
