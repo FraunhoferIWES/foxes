@@ -1065,41 +1065,34 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.9.6
 
 - Output:
-  - `FarmLayoutOutput` now selects an aspect-aware figure size from layout and
-    boundary extents when `figsize` is not supplied
-  - `FarmLayoutOutput` accepts color-to-label mappings for turbine legends,
-    placed consistently in the upper-left corner
+  - `FarmLayoutOutput` now derives an aspect-aware default figure size from the
+    layout and boundary extents, and accepts color-to-label mappings for an
+    upper-left turbine legend
+  - Added `FarmResultsEval.calc_farm_capacity_factor`; result evaluation now
+    accepts NaNs only where the corresponding weights are zero and uses
+    NaN-aware reductions
 - Inputs:
-  - New states classes `BinnedFieldData` and `BinnedPointCloudData`, reducing
-    source states into topology-native bins and interpolating the reduced data
-  - Added `read_binned_data`, selecting `BinnedFieldData` or
-    `BinnedPointCloudData` from an artifact's `foxes_state_class` attribute
-  - Changed binned-state artifacts to reconstruct histogram centers from bin
-    bounds, store non-histogram variables as state-only global weighted means,
-    and write spatial mean/standard-deviation diagnostics only when
-    `write_mean_std=True`
-  - Reduced binned-state worker memory by transferring source support to loaded
-    data and releasing duplicate artifact and support references during
-    `set_running`, then restoring them during `unset_running`
-  - Added configurable plotting parameters for WRF, grid, support, and reference
-    point plots in the corresponding states classes
+  - Replaced `BinnedStates` with the topology-specific `BinnedFieldData` and
+    `BinnedPointCloudData`, adding metadata-based loading with
+    `read_binned_data`, `MesoMicroField` integration, support-point plotting,
+    configurable plot styles, and expanded artifact examples; artifacts now
+    reconstruct histogram centers from bin bounds, store non-histogram
+    variables as state-only weighted means, optionally add spatial
+    mean/standard-deviation diagnostics, and use less worker memory
+  - `PointCloudData` now supports height coordinates and reference-height
+    selection, permits output variables other than wind speed and direction,
+    and falls back to nearest-neighbor interpolation outside its support when
+    bounds errors are disabled
+  - `MesoMicroField` now derives default reference points from meso-state
+    support and handles state-dependent target ordering correctly
 - Models:
-  - Updated Gaussian lookup defaults to logarithmic sigma spacing, 1% asymptote
-    tolerance, and 2048-point radial quadrature
-  - Added the `Niayifar` model-book preset with local-TI-dependent wake growth,
-    including YAML/WindIO input support
-- Development:
-  - Configured mypy to exclude Git-ignored files from repository checks
-  - Aligned shared test and documentation dependency floors with `iwopy`
+  - Added the `Niayifar` model-book preset with local-TI-dependent wake growth
+    and YAML/WindIO support
 - Bug fixes:
-  - Reworked NetCDF compression and precision-preserving packing to output data
-  - Prevented packed NetCDF output from reducing unrounded data or weight
-    precision
-  - Fixed `NEWAStates` spatial interpolation without state labels, as used by
-    `MesoMicroField`
+  - NetCDF output now combines compression with precision-preserving packing;
+    unrounded values and weights retain their original precision
+  - Fixed `NEWAStates` spatial interpolation without state labels and for
+    direction-only wind data
   - Fixed population-state ordering and conversion to population results
-  - Added nearest-neighbor fallback for point-cloud targets outside the
-    interpolation support when bounds errors are disabled
-  - Fixed `MesoMicroField` evaluation for state-dependent target ordering
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.6)

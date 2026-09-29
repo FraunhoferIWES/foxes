@@ -3,10 +3,10 @@
     :align: center
 
 .. versionadded:: 1.9.6
-    New input states classes `BinnedFieldData` and `BinnedPointCloudData`,
-    reducing any states into topology-native binned data for stochastic
-    evaluation, also reading/writing NetCDF files for that purpose. The
-    `read_binned_data` factory selects the matching class from an artifact.
+    `BinnedFieldData` and `BinnedPointCloudData` replace `BinnedStates`.
+    They reduce source states into topology-native histogram bins and support
+    NetCDF artifacts. `read_binned_data` selects the matching class from the
+    artifact metadata.
 
 
 Welcome to FOXES
