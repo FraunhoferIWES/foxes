@@ -1101,6 +1101,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Python versions:
   - Re-added support for Python 3.14
+- Output:
+  - Added opt-in true turbine radius rendering to `FarmLayoutOutput`, including
+    scatter-equivalent fill colors and `color_by` support
 - Bug fixes:
   - Fixed `AreaIntersection.add_to_figure` to render intersection boundaries
     and forward their plotting parameters

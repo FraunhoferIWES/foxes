@@ -6,20 +6,23 @@
 from __future__ import annotations
 
 import json
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
-from xarray import Dataset
 from typing import TYPE_CHECKING, Any
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.collections import PatchCollection
+from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+from matplotlib.patches import Circle
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from xarray import Dataset
+
+import foxes.constants as FC
+import foxes.variables as FV
 from foxes.config import config
 from foxes.output.output import Output
-import foxes.variables as FV
-import foxes.constants as FC
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, WindFarm
@@ -174,6 +177,69 @@ class FarmLayoutOutput(Output):
         base_size = np.sqrt(np.prod(default))
         return base_size * np.sqrt(aspect), base_size / np.sqrt(aspect)
 
+    def _get_turbine_diameters(self) -> np.ndarray:
+        """Return one finite positive rotor diameter per turbine."""
+        if self.from_res and self.fres is not None and FV.D in self.fres:
+            values = self.fres[FV.D]
+            if FC.STATE in values.dims:
+                values = values.isel({FC.STATE: self.rstate})
+            diameters = np.asarray(values, dtype=config.dtype_double).reshape(-1)
+        elif self.algo is not None:
+            diameters = self.farm.get_rotor_diameters(self.algo)
+        else:
+            diameters = np.asarray(
+                [
+                    np.nan if turbine.D is None else turbine.D
+                    for turbine in self.farm.turbines
+                ],
+                dtype=config.dtype_double,
+            )
+            if self.D is not None:
+                diameters[~np.isfinite(diameters)] = self.D
+
+        if diameters.size == 1 and self.farm.n_turbines != 1:
+            diameters = np.full(self.farm.n_turbines, diameters.item())
+        if diameters.shape != (self.farm.n_turbines,):
+            raise ValueError(
+                f"Expected {self.farm.n_turbines} rotor diameters, "
+                f"got shape {diameters.shape}"
+            )
+        if np.any(~np.isfinite(diameters)) or np.any(diameters <= 0.0):
+            raise ValueError(
+                "True turbine radii require finite positive rotor diameters"
+            )
+        return diameters
+
+    @staticmethod
+    def _add_turbine_circles(
+        ax: Axes,
+        x: np.ndarray,
+        y: np.ndarray,
+        radii: np.ndarray,
+        colors: Any,
+        **kwargs: Any,
+    ) -> PatchCollection:
+        """Add physical turbine circles to an axis."""
+        vmin = kwargs.pop("vmin", None)
+        vmax = kwargs.pop("vmax", None)
+        kwargs.setdefault("edgecolors", "face")
+        circles = [Circle((xi, yi), radius) for xi, yi, radius in zip(x, y, radii)]
+        if colors is not None and not (
+            not isinstance(colors, str)
+            and np.issubdtype(np.asarray(colors).dtype, np.number)
+        ):
+            kwargs["facecolors"] = colors
+        collection = PatchCollection(circles, **kwargs)
+        if (
+            colors is not None
+            and not isinstance(colors, str)
+            and np.issubdtype(np.asarray(colors).dtype, np.number)
+        ):
+            collection.set_array(np.asarray(colors))
+            collection.set_clim(vmin, vmax)
+        ax.add_collection(collection)
+        return collection
+
     def get_figure(
         self,
         color_by: str | None = None,
@@ -190,6 +256,7 @@ class FarmLayoutOutput(Output):
         anno_delx: float = 0,
         anno_dely: float = 0,
         lonlat: bool = False,
+        true_turbine_radii: bool = False,
         **kwargs: Any,
     ) -> Any:
         """
@@ -198,7 +265,7 @@ class FarmLayoutOutput(Output):
         Parameters
         ----------
         color_by
-            Set scatter color by variable results.
+            Set turbine color by variable results.
             Use "mean_REWS", etc, for means, also
             min, max, sum. All wrt states
         fontsize
@@ -231,8 +298,13 @@ class FarmLayoutOutput(Output):
             The annotation delta y
         lonlat
             Flag for lonlat coordinates, if available
+        true_turbine_radii
+            Replace scatter markers by circles using the physical turbine
+            radii in data coordinates while preserving direct and ``color_by``
+            fill colors. This is not available for lon/lat plots.
         kwargs
-            Parameters forwarded to `matplotlib.pyplot.scatter`
+            Parameters forwarded to `matplotlib.pyplot.scatter`, or to a
+            `matplotlib.collections.PatchCollection` for true turbine radii.
 
         Returns
         -------
@@ -244,6 +316,8 @@ class FarmLayoutOutput(Output):
         """
         if self.nofig:
             return None, None
+        if true_turbine_radii and lonlat:
+            raise ValueError("True turbine radii are not available for lon/lat plots")
 
         data = self.get_layout_data(lonlat=lonlat)
         if fig is None:
@@ -255,30 +329,16 @@ class FarmLayoutOutput(Output):
             ax = fig.axes[0] if ax is None else ax
 
         D = self.D
+        diameters = None
         x = None
         if self.farm.n_turbines:
+            if true_turbine_radii or (normalize_D and D is None):
+                diameters = self._get_turbine_diameters()
             if normalize_D and D is None:
-                if self.from_res:
-                    assert self.fres is not None
-                    if self.fres[FV.D].min() != self.fres[FV.D].max():
-                        raise ValueError(
-                            f"Expecting uniform D, found {self.fres[FV.D]}"
-                        )
-                    D = self.fres[FV.D][0]
-                else:
-                    D = None
-                    for ti, t in enumerate(self.farm.turbines):
-                        hD = t.D
-                        if D is None:
-                            D = hD
-                        elif D != hD:
-                            raise ValueError(
-                                f"Turbine {ti} has wrong rotor diameter, expecting D = {D} m, found D = {hD} m"
-                            )
-                    if D is None:
-                        raise ValueError(
-                            f"Variable '{FV.D}' not found in turbines. Maybe set explicitely, or try from_results?"
-                        )
+                assert diameters is not None
+                if np.min(diameters) != np.max(diameters):
+                    raise ValueError(f"Expecting uniform D, found {diameters}")
+                D = diameters[0]
 
             x = data[:, 0] / D if normalize_D and not lonlat else data[:, 0]
             y = data[:, 1] / D if normalize_D and not lonlat else data[:, 1]
@@ -319,13 +379,25 @@ class FarmLayoutOutput(Output):
                     )
 
             c = kw.pop("c", "orange")
+            radii = None
+            if true_turbine_radii:
+                assert diameters is not None
+                if normalize_D:
+                    assert D is not None
+                    radii = diameters / (2.0 * D)
+                else:
+                    radii = diameters / 2.0
             if (
                 color_by is None
                 or c is None
                 or isinstance(c, str)
                 or np.issubdtype(np.asarray(c).dtype, np.number)
             ):
-                im = ax.scatter(x, y, c=c, **kw)
+                if true_turbine_radii:
+                    assert radii is not None
+                    im = self._add_turbine_circles(ax, x, y, radii, c, **kw)
+                else:
+                    im = ax.scatter(x, y, c=c, **kw)
                 legend = False
             else:
                 legend = True
@@ -336,7 +408,13 @@ class FarmLayoutOutput(Output):
                 u = np.unique(lbls)
                 for lbl in u:
                     sel = lbls == lbl
-                    im = ax.scatter(x[sel], y[sel], c=c[sel], label=lbl, **kw)
+                    if true_turbine_radii:
+                        assert radii is not None
+                        im = self._add_turbine_circles(
+                            ax, x[sel], y[sel], radii[sel], c[sel], label=lbl, **kw
+                        )
+                    else:
+                        im = ax.scatter(x[sel], y[sel], c=c[sel], label=lbl, **kw)
                     ax.legend(
                         title=color_by, loc="center left", bbox_to_anchor=(1, 0.5)
                     )

@@ -1,7 +1,8 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import xarray as xr
-import matplotlib.pyplot as plt
+from matplotlib.collections import PatchCollection, PathCollection
 
 import foxes
 import foxes.constants as FC
@@ -377,6 +378,77 @@ def test_farm_layout_output_auto_figsize_and_colors():
     ax = FarmLayoutOutput(farm=farm).get_figure(figsize=(3.0, 4.0))
     np.testing.assert_allclose(ax.get_figure().get_size_inches(), [3.0, 4.0])
     plt.close(ax.get_figure())
+
+
+def test_farm_layout_output_true_turbine_radii_are_opt_in():
+    farm = foxes.WindFarm()
+    farm.add_turbine(foxes.Turbine([0.0, 0.0], turbine_models=[], D=100.0, H=90.0))
+    farm.add_turbine(foxes.Turbine([1000.0, 100.0], turbine_models=[], D=200.0, H=90.0))
+
+    colors = np.array(["red", "orange"])
+    default_ax = FarmLayoutOutput(farm=farm).get_figure(annotate=0, c=colors)
+    assert isinstance(default_ax.collections[0], PathCollection)
+
+    radius_ax = FarmLayoutOutput(farm=farm).get_figure(
+        annotate=0,
+        true_turbine_radii=True,
+        c=colors,
+    )
+    collection = radius_ax.collections[0]
+    widths = [path.get_extents().width for path in collection.get_paths()]
+    np.testing.assert_allclose(
+        collection.get_facecolors(), default_ax.collections[0].get_facecolors()
+    )
+    np.testing.assert_allclose(collection.get_edgecolors(), collection.get_facecolors())
+    plt.close(default_ax.get_figure())
+    plt.close(radius_ax.get_figure())
+
+    assert isinstance(collection, PatchCollection)
+    np.testing.assert_allclose(widths, [100.0, 200.0])
+
+
+def test_farm_layout_output_true_turbine_radii_support_color_by():
+    farm = foxes.WindFarm()
+    farm.add_turbine(foxes.Turbine([0.0, 0.0], turbine_models=[], D=100.0, H=90.0))
+    farm.add_turbine(foxes.Turbine([1000.0, 100.0], turbine_models=[], D=100.0, H=90.0))
+    farm_results = xr.Dataset({"score": ((FC.TURBINE,), [1.0, 2.0])})
+    output = FarmLayoutOutput(farm=farm, farm_results=farm_results)
+    plot_pars = {
+        "color_by": "score",
+        "cmap": "plasma",
+        "vmin": 0.0,
+        "vmax": 3.0,
+        "alpha": 0.6,
+    }
+
+    scatter_ax = output.get_figure(annotate=0, **plot_pars)
+    radius_ax = output.get_figure(
+        annotate=0,
+        true_turbine_radii=True,
+        **plot_pars,
+    )
+    scatter_ax.get_figure().canvas.draw()
+    radius_ax.get_figure().canvas.draw()
+    scatter = scatter_ax.collections[0]
+    circles = radius_ax.collections[0]
+
+    np.testing.assert_allclose(circles.get_array(), scatter.get_array())
+    np.testing.assert_allclose(circles.get_clim(), scatter.get_clim())
+    np.testing.assert_allclose(circles.get_facecolors(), scatter.get_facecolors())
+    np.testing.assert_allclose(circles.get_edgecolors(), scatter.get_edgecolors())
+    plt.close(scatter_ax.get_figure())
+    plt.close(radius_ax.get_figure())
+
+
+def test_farm_layout_output_true_turbine_radii_require_diameters():
+    farm = foxes.WindFarm()
+    farm.add_turbine(foxes.Turbine([0.0, 0.0], turbine_models=[], H=90.0))
+
+    ax = FarmLayoutOutput(farm=farm, D=100.0).get_figure(normalize_D=True)
+    plt.close(ax.get_figure())
+
+    with pytest.raises(ValueError, match="finite positive rotor diameters"):
+        FarmLayoutOutput(farm=farm).get_figure(true_turbine_radii=True)
 
 
 def test_layout2d_figure_write_smoke_and_cleanup(tmp_path):
