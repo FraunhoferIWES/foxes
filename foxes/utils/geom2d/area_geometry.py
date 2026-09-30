@@ -783,6 +783,19 @@ class AreaIntersection(AreaGeometry):
     def points_inside(self, points: np.ndarray) -> np.ndarray:
         return self._geometry.points_inside(points)
 
+    def add_to_figure(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Add image to an (x, y) figure.
+
+        Parameters
+        ----------
+        args
+            Positional arguments forwarded to the composed geometry
+        kwargs
+            Keyword arguments forwarded to the composed geometry
+        """
+        self._geometry.add_to_figure(*args, **kwargs)
+
     def inverse(self) -> AreaGeometry:
         return self._geometry.inverse()
 

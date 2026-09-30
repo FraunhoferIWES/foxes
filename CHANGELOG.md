@@ -1099,6 +1099,11 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.7
 
+- Python versions:
+  - Re-added support for Python 3.14
+- Bug fixes:
+  - Fixed `AreaIntersection.add_to_figure` to render intersection boundaries
+    and forward their plotting parameters
 
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)

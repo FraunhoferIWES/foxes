@@ -58,7 +58,7 @@ Evaluation Software"`
 
 ## Requirements
 
-The supported Python versions are `Python 3.10`...`3.13`.
+The supported Python versions are `Python 3.10`...`3.14`.
 
 ## Installation
 
