@@ -42,7 +42,7 @@ dependencies = [
 
 [project.optional-dependencies]
 opt = [
-    "foxes-opt>=0.7"
+    "foxes-opt>=0.9.0"
 ]
 icon_dream = [
     "cdo>=1.0.4",
