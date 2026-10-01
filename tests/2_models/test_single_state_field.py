@@ -46,3 +46,37 @@ def test_single_state_field_skips_nan_points_without_all_nan_warning():
     assert not any("All-NaN slice encountered" in m for m in msgs)
     assert np.isnan(tdata[FV.WS][0, 0, 0])
     assert np.isfinite(tdata[FV.WS][0, 1, 0])
+
+
+def test_single_state_field_interpolates_points_for_each_state():
+    data_source = xr.Dataset(
+        data_vars={
+            "ws": (("x", "y", "height"), np.array([[[8.0]], [[9.0]]])),
+        },
+        coords={
+            "x": np.array([0.0, 100.0]),
+            "y": np.array([0.0]),
+            "height": np.array([90.0]),
+        },
+    )
+    states = SingleStateField(
+        data_source=data_source,
+        output_vars=[FV.WS],
+        var2ncvar={FV.WS: "ws"},
+        bounds_extra_space=np.inf,
+        height_bounds=np.inf,
+    )
+    loaded = {"coords": {}, "data_vars": {}, "extra_data": {}}
+    states.load_data(algo=None, loaded_data=loaded, verbosity=0)
+    mdata = SimpleNamespace(extra_data=loaded["extra_data"])
+    points = np.array(
+        [
+            [[0.0, 0.0, 90.0]],
+            [[100.0, 0.0, 90.0]],
+        ]
+    )
+    tdata = TData.from_points(points=points)
+
+    states.calculate(algo=None, mdata=mdata, fdata=None, tdata=tdata)
+
+    np.testing.assert_allclose(tdata[FV.WS][:, 0, 0], [8.0, 9.0])

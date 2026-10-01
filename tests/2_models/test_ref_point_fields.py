@@ -622,3 +622,84 @@ def test_meso_micro_field_uses_each_states_target_order(monkeypatch):
         results[FV.WS][..., 0],
         [[5.0, 15.0], [15.0, 5.0]],
     )
+
+
+def test_sector_sim_ref_point_field_uses_each_states_targets():
+    class _FieldStates:
+        name = "field_states"
+
+        def calculate(self, algo, mdata, fdata, tdata):
+            x = tdata[FC.TARGETS][..., 0]
+            return {
+                FV.WS: x + 8.0,
+                FV.WD: np.full_like(x, 270.0),
+            }
+
+    class _RefPointStates:
+        name = "ref_point_states"
+
+        def calculate(self, algo, mdata, fdata, tdata):
+            shape = tdata[FC.TARGETS].shape[:-1]
+            tdata[FV.WEIGHT] = np.ones((shape[0], 1, 1))
+            tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
+            return {
+                FV.WS: np.full(shape, 8.0),
+                FV.WD: np.full(shape, 270.0),
+            }
+
+    states = SectorSimRefPointField(
+        field_states=_FieldStates(),
+        ref_point_states=_RefPointStates(),
+        ref_point=[0.0, 0.0, 100.0],
+        output_vars=[FV.WS, FV.WD],
+        apply_blending=False,
+    )
+    states.COORDS0 = states.var("coords0")
+    states.VARS0 = states.var("vars0")
+    states.EXTRA0 = states.var("extra0")
+    states.STATE0 = states.var(FC.STATE + "0")
+    states.REF_VARS = states.var("ref_vars")
+    states.REF_DATA = states.var("ref_data")
+    states.WD_BIN_DATA = states.var("wd_bin_data")
+    states.WD_BIN_DATA_VARS = states.var("wd_bin_data_vars")
+
+    mdata = MData(
+        data={
+            FC.STATE: np.array([0, 1]),
+            states.REF_VARS: np.array([FV.WS]),
+            states.REF_DATA: np.array([[8.0]]),
+            states.WD_BIN_DATA: np.array([[270.0, -180.0, 180.0]]),
+        },
+        dims={
+            FC.STATE: (FC.STATE,),
+            states.REF_VARS: (states.REF_VARS,),
+            states.REF_DATA: (states.STATE0, states.REF_VARS),
+            states.WD_BIN_DATA: (states.STATE0, states.WD_BIN_DATA_VARS),
+        },
+        extra_data={
+            states.COORDS0: [],
+            states.VARS0: [],
+            states.EXTRA0: {},
+        },
+    )
+    fdata = FData.from_sizes(n_states=2, n_turbines=1)
+    targets = np.array(
+        [
+            [[[0.0, 0.0, 100.0]]],
+            [[[100.0, 0.0, 100.0]]],
+        ]
+    )
+    tdata = TData.from_tpoints(
+        tpoints=targets,
+        tweights=np.ones(1),
+        mdata=mdata,
+    )
+
+    results = states.calculate(
+        SimpleNamespace(n_turbines=1),
+        mdata,
+        fdata,
+        tdata,
+    )
+
+    np.testing.assert_allclose(results[FV.WS][:, 0, 0], [8.0, 108.0])

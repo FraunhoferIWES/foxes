@@ -706,20 +706,40 @@ class SectorSimRefPointField(States):
         # compute field states at target points:
         field_n_states = len(fstates)
         if field_n_states > 0:
+            target_points = tdata[FC.TARGETS]
+            if np.any(target_points != target_points[0]):
+                state_indices = np.arange(n_states, dtype=config.dtype_int)
+                state_sector_pairs = [
+                    np.column_stack((state_indices, fs2s)) for fs2s in sector_maps
+                ]
+                eval_pairs, result_map = np.unique(
+                    np.concatenate(state_sector_pairs, axis=0),
+                    axis=0,
+                    return_inverse=True,
+                )
+                field_state_sel = fstates[eval_pairs[:, 1]]
+                field_target_sel = eval_pairs[:, 0]
+                field_result_maps = np.split(result_map, len(sector_maps))
+            else:
+                field_state_sel = fstates
+                field_target_sel = np.zeros(field_n_states, dtype=config.dtype_int)
+                field_result_maps = sector_maps
+            field_n_states = len(field_state_sel)
+
             # create mdata:
             mdict: dict[str, np.ndarray] = {c: mdata[c] for c in field_coords0}
             mdims: dict[str, tuple[str, ...]] = {c: (c,) for c in field_coords0}
             mdict.update({v: mdata[v] for v in field_vars0})
             mdims.update({v: cast(tuple[str, ...], mdata.dims[v]) for v in field_vars0})
             if FC.STATE in mdict:
-                mdict[FC.STATE] = mdict[FC.STATE][fstates]
+                mdict[FC.STATE] = mdict[FC.STATE][field_state_sel]
             else:
-                mdict[FC.STATE] = fstates
+                mdict[FC.STATE] = field_state_sel
             mdims[FC.STATE] = (FC.STATE,)
             for k in mdict.keys():
                 if len(mdims[k]) > 0 and mdims[k][0] == self.STATE0:
                     mdims[k] = (FC.STATE,) + mdims[k][1:]
-                    mdict[k] = mdict[k][fstates]
+                    mdict[k] = mdict[k][field_state_sel]
             hmdata = MData(
                 data=mdict,
                 dims=mdims,
@@ -735,15 +755,11 @@ class SectorSimRefPointField(States):
             )
 
             # create tdata:
-            tpoints: np.ndarray = np.zeros(
-                (field_n_states, tdata.n_targets, tdata.n_tpoints, 3),
-                dtype=config.dtype_double,
-            )
-            tpoints[:] = tdata[FC.TARGETS][0, None, ...]
             htdata = TData.from_tpoints(
-                tpoints=tpoints, tweights=tdata[FC.TWEIGHTS], mdata=hmdata
+                tpoints=target_points[field_target_sel],
+                tweights=tdata[FC.TWEIGHTS],
+                mdata=hmdata,
             )
-            del tpoints
 
             # run field states calculation:
             field_results: dict[str, np.ndarray] = self.field_states.calculate(
@@ -755,7 +771,9 @@ class SectorSimRefPointField(States):
             del hmdata, hfdata, htdata
 
             # evaluate sectors:
-            for bi, fs2s in enumerate(sector_maps):
+            for bi, (fs2s, field_result_map) in enumerate(
+                zip(sector_maps, field_result_maps)
+            ):
                 # sector weight:
                 weight = bf0 if bi == 0 else (1.0 - bf0)
 
@@ -782,7 +800,7 @@ class SectorSimRefPointField(States):
 
                 def _get_data(v: str) -> np.ndarray:
                     if v in field_results.keys():
-                        return field_results[v][fs2s, :, :]
+                        return field_results[v][field_result_map, :, :]
                     elif v in ref_results.keys():
                         return ref_results[v][:, None, None]
                     else:
@@ -805,12 +823,12 @@ class SectorSimRefPointField(States):
                                 out[v][:] += (
                                     w
                                     * speedups[v][:, None, None]
-                                    * field_results[v][fs2s, :, :]
+                                    * field_results[v][field_result_map, :, :]
                                 )
                                 del w
                             else:
                                 uv = wd2uv(field_results[FV.WD], field_results[FV.WS])[
-                                    fs2s, :, :
+                                    field_result_map, :, :
                                 ]
                                 w = (
                                     weight[:, None, None, None]
@@ -827,7 +845,7 @@ class SectorSimRefPointField(States):
                                 if isinstance(weight, np.ndarray)
                                 else weight
                             )
-                            out[v][:] += w * field_results[v][fs2s, :, :]
+                            out[v][:] += w * field_results[v][field_result_map, :, :]
                             del w
                     elif v in ref_results.keys():
                         out[v][:] = ref_results[v][:, None, None]

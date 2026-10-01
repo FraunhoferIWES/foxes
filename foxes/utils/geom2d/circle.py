@@ -81,9 +81,9 @@ class Circle(AreaGeometry):
             if np.all(sel):
                 minp = self.centre + deltas / magd[:, None] * self.radius
             else:
-                minp = np.zeros_like(points)
-                minp[sel] = deltas[sel] / magd[sel]
-                minp[~sel][:, 0] = 1
+                minp = np.zeros_like(deltas)
+                minp[sel] = deltas[sel] / magd[sel, None]
+                minp[~sel, 0] = 1.0
                 minp = self.centre + minp * self.radius
             return cast(tuple[np.ndarray, np.ndarray], (dists, minp))
         else:

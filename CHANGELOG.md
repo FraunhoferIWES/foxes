@@ -1107,6 +1107,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bug fixes:
   - Fixed `AreaIntersection.add_to_figure` to render intersection boundaries
     and forward their plotting parameters
+  - Fixed `Circle.points_distance` nearest-boundary coordinates for query
+    batches containing the circle centre
 
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)
