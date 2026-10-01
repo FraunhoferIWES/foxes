@@ -1105,11 +1105,13 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Added opt-in true turbine radius rendering to `FarmLayoutOutput`, including
     scatter-equivalent fill colors and `color_by` support; automatically sized
     figures keep the smallest rotor diameter at least four pixels wide
+    scatter-equivalent fill colors and `color_by` support
 - Bug fixes:
   - Fixed `AreaIntersection.add_to_figure` to render intersection boundaries
     and forward their plotting parameters
   - Fixed `Circle.points_distance` nearest-boundary coordinates for query
     batches containing the circle centre
+- Development:
+  - Adding Agents.md and related files for agentic coding
 
-
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.6](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.7](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)
