@@ -28,6 +28,9 @@ if TYPE_CHECKING:
     from foxes.core import Algorithm, WindFarm
 
 
+_MIN_ROTOR_DIAMETER_PIXELS = 4.0
+
+
 class FarmLayoutOutput(Output):
     """
     Plot the farm layout
@@ -151,7 +154,10 @@ class FarmLayoutOutput(Output):
         return out
 
     def _get_auto_figsize(
-        self, data: np.ndarray, lonlat: bool
+        self,
+        data: np.ndarray,
+        lonlat: bool,
+        min_rotor_diameter: float | None = None,
     ) -> tuple[float, float] | None:
         """Derive a bounded figure aspect ratio from plotted extents."""
         points = data[:, :2]
@@ -171,11 +177,34 @@ class FarmLayoutOutput(Output):
         if max_extent <= 0.0:
             aspect = 1.0
         else:
-            extent = np.maximum(extent, max_extent / 2.0)
-            aspect = extent[0] / extent[1]
+            aspect_extent = np.maximum(extent, max_extent / 2.0)
+            aspect = aspect_extent[0] / aspect_extent[1]
         default = np.asarray(plt.rcParams["figure.figsize"], dtype=float)
         base_size = np.sqrt(np.prod(default))
-        return base_size * np.sqrt(aspect), base_size / np.sqrt(aspect)
+        figsize = base_size * np.array([np.sqrt(aspect), 1.0 / np.sqrt(aspect)])
+
+        if min_rotor_diameter is not None:
+            subplot_fraction = np.array(
+                [
+                    plt.rcParams["figure.subplot.right"]
+                    - plt.rcParams["figure.subplot.left"],
+                    plt.rcParams["figure.subplot.top"]
+                    - plt.rcParams["figure.subplot.bottom"],
+                ]
+            )
+            margins = np.array(
+                [plt.rcParams["axes.xmargin"], plt.rcParams["axes.ymargin"]]
+            )
+            plot_extent = (extent + min_rotor_diameter) * (1.0 + 2.0 * margins)
+            required = (
+                plot_extent
+                / min_rotor_diameter
+                * _MIN_ROTOR_DIAMETER_PIXELS
+                / (float(plt.rcParams["figure.dpi"]) * subplot_fraction)
+            )
+            figsize *= max(1.0, np.max(required / figsize))
+
+        return float(figsize[0]), float(figsize[1])
 
     def _get_turbine_diameters(self) -> np.ndarray:
         """Return one finite positive rotor diameter per turbine."""
@@ -320,17 +349,8 @@ class FarmLayoutOutput(Output):
             raise ValueError("True turbine radii are not available for lon/lat plots")
 
         data = self.get_layout_data(lonlat=lonlat)
-        if fig is None:
-            if figsize is None:
-                figsize = self._get_auto_figsize(data, lonlat)
-            fig = plt.figure(figsize=figsize)
-            ax = fig.add_subplot(111)
-        else:
-            ax = fig.axes[0] if ax is None else ax
-
         D = self.D
         diameters = None
-        x = None
         if self.farm.n_turbines:
             if true_turbine_radii or (normalize_D and D is None):
                 diameters = self._get_turbine_diameters()
@@ -340,6 +360,23 @@ class FarmLayoutOutput(Output):
                     raise ValueError(f"Expecting uniform D, found {diameters}")
                 D = diameters[0]
 
+        if fig is None:
+            if figsize is None:
+                min_rotor_diameter = (
+                    float(np.min(diameters))
+                    if true_turbine_radii and diameters is not None
+                    else None
+                )
+                figsize = self._get_auto_figsize(
+                    data, lonlat, min_rotor_diameter=min_rotor_diameter
+                )
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+        else:
+            ax = fig.axes[0] if ax is None else ax
+
+        x = None
+        if self.farm.n_turbines:
             x = data[:, 0] / D if normalize_D and not lonlat else data[:, 0]
             y = data[:, 1] / D if normalize_D and not lonlat else data[:, 1]
             n = range(len(x))
