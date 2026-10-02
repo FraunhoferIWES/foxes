@@ -240,7 +240,6 @@ class Model(ABC):
         algo: Algorithm,
         data_stash: dict[str, dict[str, Any]] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -258,8 +257,6 @@ class Model(ABC):
             Keys are model names and values are dictionaries of large model data.
         sel
             The subset selection dictionary.
-        isel
-            The index subset selection dictionary.
         verbosity
             The verbosity level; ``0`` is silent.
 
@@ -270,7 +267,7 @@ class Model(ABC):
             )
         for m in self.sub_models():
             if not m.running:
-                m.set_running(algo, data_stash, sel, isel, verbosity=verbosity)
+                m.set_running(algo, data_stash, sel, verbosity=verbosity)
 
         if verbosity > 0:
             print(f"Model '{self.name}': running")
@@ -284,7 +281,6 @@ class Model(ABC):
         algo: Algorithm,
         data_stash: dict[str, dict[str, Any]] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -299,8 +295,6 @@ class Model(ABC):
             Keys are model names and values are dictionaries of large model data.
         sel
             The subset selection dictionary.
-        isel
-            The index subset selection dictionary.
         verbosity
             The verbosity level; ``0`` is silent.
 
@@ -311,7 +305,7 @@ class Model(ABC):
             )
         for m in self.sub_models():
             if m.running:
-                m.unset_running(algo, data_stash, sel, isel, verbosity=verbosity)
+                m.unset_running(algo, data_stash, sel, verbosity=verbosity)
 
         if verbosity > 0:
             print(f"Model '{self.name}': not running")

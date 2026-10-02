@@ -137,7 +137,7 @@ def test_process_engine_init_shared_memory_roundtrip_and_release():
     assert len(shared_memory) == 0
 
 
-def test_select_subsets_does_not_reapply_isel_to_selected_data():
+def test_select_subsets_reapplies_label_selection_safely():
     from foxes.core.engine import Engine
 
     selected_data = Dataset(coords={FC.STATE: np.array([0, 2, 5])})
@@ -147,7 +147,7 @@ def test_select_subsets_does_not_reapply_isel_to_selected_data():
         object(),
         selected_data,
         full_data,
-        isel={FC.STATE: [0, 2, 5]},
+        sel={FC.STATE: [0, 2, 5]},
     )
 
     assert np.array_equal(subsets[0][FC.STATE], [0, 2, 5])

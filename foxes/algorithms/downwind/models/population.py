@@ -508,7 +508,6 @@ class PopulationModel(TurbineModel):
         algo: Algorithm,
         data_stash: dict[str, dict[str, Any]] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -527,13 +526,11 @@ class PopulationModel(TurbineModel):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().set_running(algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, verbosity)
         if data_stash is not None:
             data_stash[self.name] = dict(data=self._data, inds0=self._inds0)
         del self._data, self._inds0
@@ -543,7 +540,6 @@ class PopulationModel(TurbineModel):
         algo: Algorithm,
         data_stash: dict[str, dict[str, Any]] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -559,13 +555,11 @@ class PopulationModel(TurbineModel):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, verbosity)
         if data_stash is not None:
             data = data_stash[self.name]
             self._data = data.pop("data")

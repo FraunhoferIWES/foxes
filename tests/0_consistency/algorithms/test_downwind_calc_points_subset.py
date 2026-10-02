@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import foxes
 import foxes.variables as FV
@@ -43,6 +44,12 @@ def test_downwind_calc_points_respects_states_sel_subset():
             points=points,
             states_sel=["2009-01-06 13:50:00"],
         )
+        with pytest.raises(TypeError, match="use state labels with 'states_sel'"):
+            algo.calc_points(
+                farm_results,
+                points=points,
+                states_isel=[0],
+            )
         plot_data = foxes.output.FlowPlots2D(algo, farm_results).get_states_data_xz(
             FV.AMB_WS,
             n_img_points=(2, 2),

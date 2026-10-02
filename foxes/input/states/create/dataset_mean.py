@@ -7,6 +7,7 @@ from typing import Any, Callable
 from foxes.core import get_engine, Engine
 from foxes.config import config
 from foxes.utils import uv2wd, wd2uv, write_nc
+from foxes.utils.wind_dir import WindDirectionHistogram
 import foxes.variables as FV
 
 
@@ -23,8 +24,7 @@ def _read_nc(
     dict[str, Any],
     dict[str, Any],
     dict[str, np.ndarray],
-    np.ndarray | None,
-    np.ndarray | None,
+    WindDirectionHistogram | None,
 ]:
     """Help function to read netCDF files with xarray."""
 
@@ -35,8 +35,7 @@ def _read_nc(
 
     dvrs: dict[str, Any] = {}
     counts: dict[str, np.ndarray] = {}
-    wd_histo: np.ndarray | None = None
-    wd_bin_wd: np.ndarray | None = None
+    wd_histo: WindDirectionHistogram | None = None
     uv: np.ndarray | None = None
     for v, c in var2ncvar.items():
         if c not in data:
@@ -139,23 +138,10 @@ def _read_nc(
 
     # compute wd histogram counts:
     if vname_main_wd is not None:
-        # prepare:
         assert uv is not None
-        wd = np.moveaxis(uv2wd(uv), ax_time, -1)
+        wd_histo = WindDirectionHistogram(wd_histo_width)
+        wd_histo.add(uv2wd(uv), axis=ax_time)
         del uv
-
-        wds = np.linspace(0.0, 360.0, 2 * int(180 / wd_histo_width * 2) + 1)
-        n_bins = len(wds) - 1
-        shp = wd.shape[:-1] + (n_bins,)
-        wd_histo = np.zeros(shp, dtype=config.dtype_int)
-        wd_bin_wd = np.zeros(shp, dtype=config.dtype_double)
-
-        # full vectorization crashes memory, loop over bins:
-        for i in range(n_bins):
-            sel = (wd >= wds[i]) & (wd < wds[i + 1])
-            if np.any(sel):
-                wd_histo[..., i] = np.sum(sel, axis=-1)
-                wd_bin_wd[..., i] = np.sum(np.where(sel, wd, 0), axis=-1)
 
     crds: dict[str, np.ndarray] = {}
     for dims, __ in dvrs.values():
@@ -163,7 +149,7 @@ def _read_nc(
             if d != coord and d not in crds and d in data.coords:
                 crds[d] = data[d].values
 
-    return crds, dvrs, counts, wd_histo, wd_bin_wd
+    return crds, dvrs, counts, wd_histo
 
 
 def create_dataset_mean(
@@ -195,13 +181,17 @@ def create_dataset_mean(
     vname_mean_ws
         The variable name to use for the mean wind speed
     vname_main_wd
-        The variable name to use for the main wind direction
+        The variable name to use for the main wind direction, or ``None``
+        to disable its calculation
     wd_histo_width
-        The minimal wind direction histogramm bin width
+        The minimum width of the 50-percent-overlapping wind direction
+        sectors. The main direction is the circular mean of the sector
+        containing the most samples
     add_uv
         Flag for adding U and V to the resulting data
     add_counts
-        Flag for adding the counts of each data variable
+        Flag for adding the counts of each data variable. Main wind direction
+        counts include every valid sample in two overlapping sectors
     to_file
         If given, write the mean state to this file
     preprocess
@@ -220,13 +210,14 @@ def create_dataset_mean(
 
     """
     # prepare:
+    if vname_main_wd is not None:
+        WindDirectionHistogram(wd_histo_width)
     engine = get_engine()
     assert engine is not None
     crds: dict[str, np.ndarray] = {}
     dvrs: dict[str, Any] = {}
     counts: dict[str, Any] = {}
-    wd_histo: np.ndarray | None = None
-    wd_bin_wd: np.ndarray | None = None
+    wd_histo: WindDirectionHistogram | None = None
 
     # extend names by defaults:
     v2nc = {v: v for v in {FV.WS, FV.WD, FV.U, FV.V, FV.TI, FV.RHO}}
@@ -265,21 +256,16 @@ def create_dataset_mean(
         hcrds: dict[str, Any],
         hdvrs: dict[str, Any],
         hcounts: dict[str, np.ndarray],
-        hwd_histo: np.ndarray | None,
-        hwd_bin_wd: np.ndarray | None,
+        hwd_histo: WindDirectionHistogram | None,
     ) -> None:
         """Helper function that evaluates single result"""
-        nonlocal wd_histo, wd_bin_wd, crds, dvrs, counts
+        nonlocal wd_histo, crds, dvrs, counts
 
         if hwd_histo is not None:
-            assert hwd_bin_wd is not None
             if wd_histo is None:
-                wd_histo = hwd_histo.astype(config.dtype_double, copy=True)
-                wd_bin_wd = hwd_bin_wd.copy()
+                wd_histo = hwd_histo
             else:
-                assert wd_bin_wd is not None
-                wd_histo += hwd_histo
-                wd_bin_wd += hwd_bin_wd
+                wd_histo.combine(hwd_histo)
 
         for v, t in hcounts.items():
             if v not in counts:
@@ -343,38 +329,15 @@ def create_dataset_mean(
         if verbosity > 0:
             print("Computing main wind direction")
         assert vname_main_wd is not None
-        assert wd_bin_wd is not None
 
         vname_histo_counts = f"{vname_main_wd}_counts"
         dms = dvrs[FV.WD][0]
-        n_bins = int(wd_histo.shape[-1] / 2)
-        assert n_bins == wd_histo.shape[-1] / 2, (
-            f"Number of bins must be integer, got {wd_histo.shape[-1] / 2}"
-        )
-        dvrs[vname_main_wd] = (dms, np.full_like(dvrs[FV.WD][1], np.nan))
+        dvrs[vname_main_wd] = (dms, wd_histo.main_direction())
         if add_counts:
             cnts[vname_histo_counts] = (
                 dms + ("wd_bins",),
-                np.zeros_like(wd_histo[..., :n_bins]),
+                wd_histo.counts,
             )
-
-        maxhits = np.zeros_like(wd_histo[..., 0])
-        for b in range(n_bins):
-            hits = wd_histo[..., 2 * b] + wd_histo[..., 2 * b - 1]
-            wd = (
-                wd_bin_wd[..., 0] + 360 * wd_histo[..., 0]
-                if b == 0
-                else wd_bin_wd[..., 2 * b]
-            )
-            wd = np.mod((wd + wd_bin_wd[..., 2 * b - 1]) / hits, 360)
-            if add_counts:
-                cnts[vname_histo_counts][1][..., b] = hits
-            sel = hits > maxhits
-            if np.any(sel):
-                maxhits[sel] = hits[sel]
-                dvrs[vname_main_wd][1][sel] = wd[sel]
-            del hits, sel
-        del maxhits
 
     if add_counts:
         dvrs.update(cnts)

@@ -305,11 +305,10 @@ class BinnedFieldData(FieldData):
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """Stash native data and release duplicate initialization inputs."""
-        super().set_running(algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, verbosity)
         if data_stash is not None:
             data_stash[self.name]["binned"] = self._binned.stash_worker_data()
 
@@ -318,11 +317,10 @@ class BinnedFieldData(FieldData):
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """Restore native and binned initialization data after execution."""
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, verbosity)
         if data_stash is not None:
             data = data_stash[self.name].pop("binned")
             if not isinstance(data, dict):

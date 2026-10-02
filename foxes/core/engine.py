@@ -456,7 +456,6 @@ class Engine(ABC):
         self,
         *datasets: Any,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         default_n_states: int | None = None,
     ) -> tuple[list[Any], int | None]:
         """
@@ -465,11 +464,9 @@ class Engine(ABC):
         Parameters
         ----------
         datasets
-            The xarray dataset or data array objects.
+            The ordered xarray dataset or data array objects.
         sel
-            The selection dictionary.
-        isel
-            The index selection dictionary.
+            Coordinate-label selectors to apply with ``sel``.
         default_n_states
             The fallback number of states if no dataset has a state dimension.
 
@@ -487,25 +484,20 @@ class Engine(ABC):
             new_datasets: list[Any] = []
             for data in subsets:
                 if data is not None:
-                    s = {c: u for c, u in sel.items() if c in data.coords}
-                    new_datasets.append(data.sel(s) if len(s) else data)
-                else:
-                    new_datasets.append(data)
-            subsets = new_datasets
-
-        if isel is not None:
-            new_datasets = []
-            for data in subsets:
-                if data is not None:
-                    s = {c: u for c, u in isel.items() if c in data.dims}
-                    if len(s) > 0:
-                        already_subset = all(
-                            c in data.coords
-                            and np.array_equal(data[c].to_numpy(), np.asarray(u))
-                            for c, u in s.items()
+                    missing = [
+                        c for c in sel if c in data.dims and c not in data.coords
+                    ]
+                    if missing:
+                        raise ValueError(
+                            f"Cannot select dimensions without coordinates: {missing}"
                         )
-                        data = data if already_subset else data.isel(s)
-                    new_datasets.append(data)
+                    s = {c: u for c, u in sel.items() if c in data.coords}
+                    non_unique = [c for c in s if not data.get_index(c).is_unique]
+                    if non_unique:
+                        raise ValueError(
+                            f"Cannot select dimensions with duplicate labels: {non_unique}"
+                        )
+                    new_datasets.append(data.sel(s) if len(s) else data)
                 else:
                     new_datasets.append(data)
             subsets = new_datasets
@@ -748,6 +740,7 @@ class Engine(ABC):
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
         point_data: Dataset | None = None,
+        **kwargs: Any,
     ) -> Any:
         """
         Run the model calculation.
@@ -764,6 +757,8 @@ class Engine(ABC):
             The initial farm data.
         point_data
             The initial point data.
+        kwargs
+            Additional engine-specific calculation options.
 
         Returns
         -------
@@ -1200,9 +1195,10 @@ class Engine(ABC):
                         while wcount < n_states:
                             splits = min(self.split_size, n_states - wcount)
                             assert self.results is not None
-                            dssub = self.results.isel(
-                                {FC.STATE: slice(wcount, wcount + splits)}
-                            )
+                            state_labels = self.results[FC.STATE].to_numpy()[
+                                wcount : wcount + splits
+                            ]
+                            dssub = self.results.sel({FC.STATE: state_labels})
 
                             fpath = self.out_dir / f"{self.base_name}_{fcounter:06d}.nc"
                             future = self.engine.submit(

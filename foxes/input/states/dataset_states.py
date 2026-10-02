@@ -1008,8 +1008,10 @@ class DatasetStates(States):
         if self.load_mode == "lazy":
             i0 = mdata.states_i0(counter=True)
             assert i0 is not None
-            s = slice(i0, i0 + n_states)
-            data = self.__lazy_data.isel({states_coord: s}).load()
+            labels = (
+                mdata[FC.STATE] if FC.STATE in mdata else np.arange(i0, i0 + n_states)
+            )
+            data = self.__lazy_data.sel({states_coord: labels}).load()
 
         # loading this chunk's data on the fly:
         elif self.load_mode == "fly":
@@ -1017,6 +1019,8 @@ class DatasetStates(States):
             i0 = mdata.states_i0(counter=True)
             assert i0 is not None
             i1 = i0 + n_states
+            labels = mdata[FC.STATE] if FC.STATE in mdata else np.arange(i0, i1)
+            label_i0 = 0
             j0 = 0
             for fpath, n in self._files_maxi.items():
                 if i0 < j0 or i0 == i1:
@@ -1030,7 +1034,9 @@ class DatasetStates(States):
                             f"States '{self.name}': Invalid state indices for file {fpath}: (i0, i1, j0, j1, a, b) = {(i0, i1, j0, j1, a, b)}"
                         )
                         isel = copy(self.isel) if self.isel is not None else {}
-                        isel[states_coord] = slice(a, b)
+                        sel = copy(self.sel) if self.sel is not None else {}
+                        n_file_states = b - a
+                        sel[states_coord] = labels[label_i0 : label_i0 + n_file_states]
 
                         d = _read_nc_file(
                             fpath,
@@ -1038,7 +1044,7 @@ class DatasetStates(States):
                             vars=list(self._vars.values()),
                             nc_engine=config.nc_engine,
                             isel=isel,
-                            sel=self.sel,
+                            sel=sel,
                             mode="load",
                             drop_vars=[str(v) for v in self.drop_vars],
                             sort=self.sort,
@@ -1054,11 +1060,13 @@ class DatasetStates(States):
                             )
                         del d
                         i0 += b - a
+                        label_i0 += n_file_states
                     j0 = j1
 
             assert i0 == i1, (
                 f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
             )
+            assert label_i0 == n_states
             assert len(chunk_data) > 0, (
                 f"States '{self.name}': No data read for load_mode '{self.load_mode}'"
             )
@@ -1110,7 +1118,6 @@ class DatasetStates(States):
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -1129,13 +1136,11 @@ class DatasetStates(States):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().set_running(algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data_stash[self.name] = dict(
@@ -1151,7 +1156,6 @@ class DatasetStates(States):
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -1167,13 +1171,11 @@ class DatasetStates(States):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data = data_stash[self.name]

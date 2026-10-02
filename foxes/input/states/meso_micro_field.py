@@ -63,7 +63,9 @@ class MesoMicroField(States):
             PointCloudData, ICONStates, and their binned variants.
         ref_points
             The [x, y, h] reference point coordinates, shape (n_ref_points, 3),
-            or meso-state support points at ref_height if None.
+            or valid meso-state support points at ref_height if None. Automatically
+            selected points with invalid, calm, or ambiguous micro-state data are
+            discarded.
         ref_points_are_lonlat
             Whether the reference point coordinates are in longitude/latitude.
         ref_height
@@ -347,6 +349,42 @@ class MesoMicroField(States):
         self.ref_height = float(points[0, 2])
         return points
 
+    def _filter_default_ref_points(
+        self,
+        results: dict[str, np.ndarray],
+        loaded_data_vars: dict[str, Any],
+        verbosity: int,
+    ) -> int:
+        """Discard automatic references with unusable micro-state data."""
+        assert self.ref_points is not None
+        wd = results[FV.WD][:, :, 0]
+        ws = results[FV.WS][:, :, 0]
+        valid = np.all(np.isfinite(wd) & np.isfinite(ws) & (ws > 1.0e-10), axis=0)
+        valid &= np.array(
+            [len(np.unique(wd[:, pi])) == len(wd) for pi in range(wd.shape[1])]
+        )
+        if np.all(valid):
+            return len(valid)
+        if not np.any(valid):
+            raise ValueError(
+                f"States '{self.name}': No automatically selected reference point "
+                "has finite, non-calm micro states with distinct wind directions"
+            )
+        if verbosity > 0:
+            print(
+                f"States '{self.name}': Discarding {np.sum(~valid)} of "
+                f"{len(valid)} automatic reference points with invalid, calm, "
+                "or ambiguous micro-state data"
+            )
+        self.ref_points = self.ref_points[valid]
+        for key, values in results.items():
+            results[key] = values[:, valid, ...]
+        loaded_data_vars[self.REF_POINTS] = (
+            (self.REF_POINT, FC.XYH),
+            self.ref_points,
+        )
+        return len(self.ref_points)
+
     def load_data(
         self,
         algo: Algorithm,
@@ -390,13 +428,15 @@ class MesoMicroField(States):
             self.WD_BIN_DATA_VARS = self.var("wd_bin_data_vars")
 
             # update ref points:
-            if self.ref_points is None:
+            default_ref_points = self.ref_points is None
+            if default_ref_points:
                 self.ref_points = self._get_default_ref_points(loaded_data)
                 if verbosity > 0:
                     print(
                         f"States '{self.name}': Using meso states grid point locations as reference points, shape: {self.ref_points.shape}, ref_height: {self.ref_height} m"
                     )
             self._lonlat_to_utm(verbosity=verbosity)
+            assert self.ref_points is not None
             n_points = len(self.ref_points)
             assert n_points > 0, (
                 f"States '{self.name}': No reference points found, ref_points: {self.ref_points}, ref_height: {self.ref_height}"
@@ -527,6 +567,14 @@ class MesoMicroField(States):
                 f"States '{self.name}': Field states '{self.micro_states.name}' must provide '{FV.WS}', got {list(results.keys())}"
             )
 
+            if default_ref_points:
+                n_points = self._filter_default_ref_points(
+                    results,
+                    loaded_data_vars,
+                    verbosity,
+                )
+                assert self.ref_points is not None
+
             if self.check_nans:
                 for k, v in results.items():
                     if np.any(np.isnan(v)):
@@ -615,7 +663,6 @@ class MesoMicroField(States):
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -634,13 +681,11 @@ class MesoMicroField(States):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().set_running(algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data_stash[self.name] = dict(
@@ -653,7 +698,6 @@ class MesoMicroField(States):
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -669,13 +713,11 @@ class MesoMicroField(States):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data = data_stash[self.name]

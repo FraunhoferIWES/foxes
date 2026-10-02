@@ -918,7 +918,6 @@ class Downwind(Algorithm):
         ambient: bool = False,
         chunked_results: bool = False,
         states_sel: list[Any] | None = None,
-        states_isel: list[int] | None = None,
         clear_mem: bool = False,
         **kwargs: Any,
     ) -> Dataset:
@@ -950,8 +949,6 @@ class Downwind(Algorithm):
             Flag for chunked results
         states_sel
             Reduce to selected states
-        states_isel
-            Reduce to the selected states indices
         clear_mem
             Clear idata memory after starting the run
         kwargs
@@ -984,17 +981,35 @@ class Downwind(Algorithm):
         if not mlist.initialized:
             mlist.initialize(self, self.loaded_data, verbosity=self.verbosity - 1)
 
+        if "states_isel" in kwargs:
+            raise TypeError(
+                "'states_isel' is not supported by calc_points; use state labels "
+                "with 'states_sel'"
+            )
+
         # subset selections:
+        state_index = farm_results.get_index(FC.STATE)
         sel = {} if states_sel is None else {FC.STATE: states_sel}
-        isel = {} if states_isel is None else {FC.STATE: states_isel}
-        if states_isel is not None:
-            farm_results = farm_results.isel(isel)
         if states_sel is not None:
+            if not state_index.is_unique:
+                raise ValueError(
+                    "Cannot select states by label because the state coordinate "
+                    "contains duplicates"
+                )
             farm_results = farm_results.sel(sel)
+            if not farm_results.get_index(FC.STATE).is_unique:
+                raise ValueError("State selection contains duplicate labels")
         n_states = farm_results.sizes[FC.STATE]
 
         # get input model data:
         model_data, extra_data = self.get_model_data(pop=clear_mem)
+        if FC.STATE in model_data.dims and FC.STATE not in model_data.coords:
+            if model_data.sizes[FC.STATE] != len(state_index):
+                raise ValueError(
+                    "Cannot attach state labels to model data with a different "
+                    "state count"
+                )
+            model_data = model_data.assign_coords({FC.STATE: state_index})
         self.print("\nInput data:\n\n", model_data, "\n")
         if len(extra_data) > 0:
             self.print("\nExtra data:")
@@ -1031,7 +1046,6 @@ class Downwind(Algorithm):
             outputs=ovars,
             parameters=calc_pars,
             sel=sel,
-            isel=isel,
             **kwargs,
         )
         del model_data, farm_results, point_data

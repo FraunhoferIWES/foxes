@@ -2,6 +2,7 @@
 General utilities.
 """
 
+from .wind_dir import WindDirectionHistogram as WindDirectionHistogram
 from .wind_dir import wd2uv as wd2uv
 from .wind_dir import wd2wdvec as wd2wdvec
 from .wind_dir import wdvec2wd as wdvec2wd
@@ -61,6 +62,10 @@ from .cubic_roots import cubic_roots as cubic_roots
 from .regularize import sqrt_reg as sqrt_reg
 from .tab_files import read_tab_file as read_tab_file
 from .random_xy import random_xy_square as random_xy_square
+from .regular_grid import GridAxes as GridAxes
+from .regular_grid import detect_regular_grid as detect_regular_grid
+from .regular_grid import regular_grid_from_points as regular_grid_from_points
+from .regular_grid import select_grid_axes as select_grid_axes
 from .wrg_utils import ReaderWRG as ReaderWRG
 from .weibull import weibull_weights as weibull_weights
 from .download import download_file as download_file

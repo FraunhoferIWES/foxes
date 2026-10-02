@@ -246,7 +246,6 @@ class Timelines(WakeFrame):
         algo: Algorithm,
         data_stash: dict[str, Any] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -265,23 +264,18 @@ class Timelines(WakeFrame):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
         states: States,
 
         """
-        super().set_running(algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, verbosity)
 
-        if data_stash is not None and (sel is not None or isel is not None):
+        if data_stash is not None and sel is not None:
             tldata = self.timelines_data
             assert tldata is not None, "Timeline data not initialized"
             data_stash[self.name]["data"] = tldata
 
-            if isel is not None:
-                tldata = tldata.isel(isel)
-            if sel is not None:
-                tldata = tldata.sel(sel)
+            tldata = tldata.sel(sel)
             self.timelines_data = tldata
 
     def unset_running(
@@ -289,7 +283,6 @@ class Timelines(WakeFrame):
         algo: Algorithm,
         data_stash: dict[str, Any] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -305,13 +298,11 @@ class Timelines(WakeFrame):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data = data_stash[self.name]

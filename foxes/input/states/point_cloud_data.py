@@ -3,7 +3,7 @@ import xarray as xr
 from typing import Any, cast
 from foxes.core import Algorithm, FData, LoadedData, MData, TData
 from scipy.interpolate import griddata
-from scipy.spatial import QhullError
+from scipy.spatial import Delaunay, QhullError
 
 from foxes.config import config
 from foxes.utils import weibull_weights
@@ -13,19 +13,66 @@ import foxes.constants as FC
 from .dataset_states import DatasetStates
 
 
+class _SupportHull:
+    """Normalized convex hull with tolerant point membership checks."""
+
+    def __init__(self, support_points: np.ndarray) -> None:
+        support = np.asarray(support_points, dtype=np.float64)
+        self._centre = np.mean(support, axis=0)
+        self._scale = np.ptp(support, axis=0)
+        self._active = self._scale > 0.0
+        self._support = (support[:, self._active] - self._centre[self._active]) / (
+            self._scale[self._active]
+        )
+        self._tolerance = np.sqrt(np.finfo(self._support.dtype).eps)
+        self._triangulation = None
+        if self._support.shape[1] > 1:
+            try:
+                self._triangulation = Delaunay(self._support)
+            except QhullError:
+                pass
+
+    def contains(self, evaluation_points: np.ndarray) -> np.ndarray:
+        """Return a mask selecting points inside the support hull."""
+        points = np.asarray(evaluation_points, dtype=np.float64)
+        if self._support.shape[1] == 0:
+            return np.all(
+                np.isclose(points, self._centre, atol=self._tolerance, rtol=0.0),
+                axis=1,
+            )
+        query = (points[:, self._active] - self._centre[self._active]) / (
+            self._scale[self._active]
+        )
+        if self._support.shape[1] == 1:
+            return (query[:, 0] >= np.min(self._support) - self._tolerance) & (
+                query[:, 0] <= np.max(self._support) + self._tolerance
+            )
+        if self._triangulation is None:
+            return np.zeros(len(query), dtype=bool)
+        return self._triangulation.find_simplex(query, tol=self._tolerance) >= 0
+
+
+def _points_inside_support(
+    support_points: np.ndarray, evaluation_points: np.ndarray
+) -> np.ndarray:
+    """Identify evaluation points inside the support-point convex hull."""
+    return _SupportHull(support_points).contains(evaluation_points)
+
+
 def _griddata_with_nearest_fallback(
     support_points: np.ndarray,
     data: np.ndarray,
     evaluation_points: np.ndarray,
     interp_pars: dict[str, bool | float | str | None],
+    full_support_points: np.ndarray | None = None,
 ) -> np.ndarray:
     """Interpolate point-cloud data with the configured bounds behavior."""
     griddata_pars = dict(interp_pars)
     bounds_error = bool(griddata_pars.pop("bounds_error", True))
     method = griddata_pars.get("method", "linear")
     fill_value = griddata_pars.get("fill_value")
-    nearest_fallback = not bounds_error and fill_value is None
-    if fill_value is None:
+    nearest_extrapolation = not bounds_error and fill_value is None
+    if method != "nearest":
         griddata_pars["fill_value"] = np.nan
     try:
         results = griddata(support_points, data, evaluation_points, **griddata_pars)
@@ -36,7 +83,7 @@ def _griddata_with_nearest_fallback(
         nearest_pars["method"] = "nearest"
         return griddata(support_points, data, evaluation_points, **nearest_pars)
 
-    if not nearest_fallback or method == "nearest":
+    if method == "nearest":
         return results
 
     missing = np.isnan(results)
@@ -45,16 +92,93 @@ def _griddata_with_nearest_fallback(
         if missing.ndim == 1
         else np.any(missing, axis=tuple(range(1, missing.ndim)))
     )
-    if np.any(missing_points):
+    nearest_points = np.zeros(len(evaluation_points), dtype=bool)
+    if np.any(missing_points) and not np.any(np.isnan(data)):
+        hull_points = (
+            support_points if full_support_points is None else full_support_points
+        )
+        nearest_points = missing_points & _points_inside_support(
+            hull_points, evaluation_points
+        )
+    if nearest_extrapolation:
+        nearest_points |= missing_points
+    if np.any(nearest_points):
         nearest_pars = dict(griddata_pars)
         nearest_pars["method"] = "nearest"
-        results[missing_points] = griddata(
+        results[nearest_points] = griddata(
             support_points,
             data,
-            evaluation_points[missing_points],
+            evaluation_points[nearest_points],
             **nearest_pars,
         )
+    unresolved = missing_points & ~nearest_points
+    if fill_value is not None and np.any(unresolved):
+        results[unresolved] = fill_value
     return results
+
+
+def _interpolate_point_cloud_fields(
+    support_points: np.ndarray,
+    data: np.ndarray,
+    evaluation_points: np.ndarray,
+    interp_pars: dict[str, bool | float | str | None],
+    check_input_nans: bool,
+    chunk_size_points: int | None = None,
+) -> np.ndarray:
+    """Interpolate each trailing data field from its own valid support."""
+    support = np.asarray(support_points)
+    values = np.asarray(data)
+    query = np.asarray(evaluation_points)
+    query_shape = query.shape[:-1]
+    query = query.reshape((-1, query.shape[-1]))
+    flat_values = values.reshape((len(support), -1))
+
+    def _interpolate_valid(
+        valid_support: np.ndarray, valid_values: np.ndarray
+    ) -> np.ndarray:
+        if chunk_size_points is None:
+            return _griddata_with_nearest_fallback(
+                valid_support,
+                valid_values,
+                query,
+                interp_pars,
+                full_support_points=support,
+            )
+        chunks = []
+        for start in range(0, len(query), chunk_size_points):
+            point_slice = slice(start, min(start + chunk_size_points, len(query)))
+            chunks.append(
+                _griddata_with_nearest_fallback(
+                    valid_support,
+                    valid_values,
+                    query[point_slice],
+                    interp_pars,
+                    full_support_points=support,
+                )
+            )
+        return np.concatenate(chunks, axis=0)
+
+    input_nans = np.isnan(flat_values)
+    if check_input_nans or not np.any(input_nans):
+        results = _interpolate_valid(support, flat_values)
+    else:
+        valid_masks, field_groups = np.unique(
+            ~input_nans.T, axis=0, return_inverse=True
+        )
+        results = np.full(
+            (len(query), flat_values.shape[1]),
+            np.nan,
+            dtype=np.result_type(values.dtype, np.float64),
+        )
+        for group, valid in enumerate(valid_masks):
+            fields = field_groups == group
+            if not np.any(valid):
+                continue
+            results[:, fields] = _interpolate_valid(
+                support[valid], flat_values[valid][:, fields]
+            ).reshape((len(query), np.sum(fields)))
+
+    return results.reshape(query_shape + values.shape[1:])
 
 
 class PointCloudData(DatasetStates):
@@ -64,10 +188,12 @@ class PointCloudData(DatasetStates):
     Notes
     -----
     Point-cloud interpolation options are supplied by ``interp_pars``, with
-    ``fill_value=None`` by default. When ``bounds_error`` is ``False``, target
-    points unresolved by the selected interpolation method use nearest-neighbor
-    values. Resolved target points retain the selected interpolation method. An
-    explicit ``numpy.nan`` fill value leaves unresolved values as ``numpy.nan``.
+    ``fill_value=None`` by default. Numerical interpolation gaps inside the
+    support hull use nearest-neighbor values. When ``bounds_error`` is ``False``,
+    points outside the hull also use nearest-neighbor values. Resolved target
+    points retain the selected interpolation method. An explicit ``numpy.nan``
+    fill value leaves outside-hull values as ``numpy.nan``. If input NaN checks
+    are disabled, each state-variable field uses its own valid support points.
 
     Examples
     --------
@@ -425,15 +551,13 @@ class PointCloudData(DatasetStates):
             gpts_array = gpts_array[:, varying_axes]
             pts = pts[:, varying_axes]
 
-        # remove NaN data points:
-        if not self.check_input_nans:
-            sel = np.any(np.isnan(d), axis=tuple(range(1, d.ndim)))
-            if np.any(sel):
-                gpts_array = gpts_array[~sel]
-                d = d[~sel]
-
-        # interpolate
-        results = _griddata_with_nearest_fallback(gpts_array, d, pts, ipars)
+        results = _interpolate_point_cloud_fields(
+            gpts_array,
+            d,
+            pts,
+            ipars,
+            check_input_nans=self.check_input_nans,
+        )
 
         # check for NaN results:
         self._check_nan(ipars, gpts_array, d, pts, idims, vrs, results)

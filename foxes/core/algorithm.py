@@ -675,7 +675,6 @@ class Algorithm(Model):
         algo: Algorithm,
         data_stash: dict[str, dict[str, Any]] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -692,15 +691,13 @@ class Algorithm(Model):
             Keys are model names and values are dictionaries of large model data.
         sel
             The subset selection dictionary.
-        isel
-            The index subset selection dictionary.
         verbosity
             The verbosity level; ``0`` is silent.
 
         """
         assert algo is self
 
-        super().set_running(algo, data_stash, sel, isel, verbosity=verbosity)
+        super().set_running(algo, data_stash, sel, verbosity=verbosity)
 
         if data_stash is not None:
             data_stash[self.name].update(
@@ -717,7 +714,6 @@ class Algorithm(Model):
         algo: Algorithm,
         data_stash: dict[str, dict[str, Any]] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -732,15 +728,13 @@ class Algorithm(Model):
             Keys are model names and values are dictionaries of large model data.
         sel
             The subset selection dictionary.
-        isel
-            The index subset selection dictionary.
         verbosity
             The verbosity level; ``0`` is silent.
 
         """
         assert algo is self
 
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data = data_stash[self.name]
@@ -809,24 +803,25 @@ class Algorithm(Model):
             if isinstance(m, Model)
         ]
         for m in mdls:
-            m.set_running(
-                self, data_stash, sel=None, isel=None, verbosity=self.verbosity - 2
+            m.set_running(self, data_stash, sel=None, verbosity=self.verbosity - 2)
+
+        try:
+            # run parallel calculation:
+            return self._launch_parallel_farm_calc(
+                *args,
+                chunk_store=chunk_store,
+                **kwargs,
             )
-
-        # run parallel calculation:
-        farm_results = self._launch_parallel_farm_calc(
-            *args,
-            chunk_store=chunk_store,
-            **kwargs,
-        )
-
-        # reset to not running:
-        for m in mdls:
-            m.unset_running(
-                self, data_stash, sel=None, isel=None, verbosity=self.verbosity - 2
-            )
-
-        return farm_results
+        finally:
+            # reset to not running:
+            for m in mdls:
+                if m.running:
+                    m.unset_running(
+                        self,
+                        data_stash,
+                        sel=None,
+                        verbosity=self.verbosity - 2,
+                    )
 
     def _launch_parallel_points_calc(self, *args: Any, **kwargs: Any) -> xr.Dataset:
         """
@@ -852,7 +847,6 @@ class Algorithm(Model):
         self,
         *args: Any,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> xr.Dataset:
         """
@@ -864,8 +858,6 @@ class Algorithm(Model):
             Parameters
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         kwargs
             Keyword parameters
 
@@ -883,27 +875,29 @@ class Algorithm(Model):
 
         # set to running:
         data_stash: dict[str, Any] = {}
-        self.set_running(
-            self, data_stash, sel=sel, isel=isel, verbosity=self.verbosity - 2
-        )
+        self.set_running(self, data_stash, sel=sel, verbosity=self.verbosity - 2)
 
         # run parallel calculation:
         chunk_store = self.reset_chunk_store()
-        point_results = self._launch_parallel_points_calc(
-            *args,
-            chunk_store=chunk_store,
-            sel=sel,
-            isel=isel,
-            **kwargs,
-        )
-        self.reset_chunk_store(chunk_store)
-
-        # reset to not running:
-        self.unset_running(
-            self, data_stash, sel=sel, isel=isel, verbosity=self.verbosity - 2
-        )
-
-        return point_results
+        try:
+            return self._launch_parallel_points_calc(
+                *args,
+                chunk_store=chunk_store,
+                sel=sel,
+                **kwargs,
+            )
+        finally:
+            try:
+                self.reset_chunk_store(chunk_store)
+            finally:
+                # reset to not running:
+                if self.running:
+                    self.unset_running(
+                        self,
+                        data_stash,
+                        sel=sel,
+                        verbosity=self.verbosity - 2,
+                    )
 
     def finalize(self, clear_mem: bool = False) -> None:
         """

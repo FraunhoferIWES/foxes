@@ -5,16 +5,14 @@ from pathlib import Path
 from tqdm.autonotebook import tqdm
 from xarray import open_dataset, DataArray, Dataset
 from utm import latlon_to_zone_number, latitude_to_zone_letter, from_latlon, to_latlon
-from scipy.interpolate import (
-    griddata,
-    LinearNDInterpolator,
-    NearestNDInterpolator,
-    CloughTocher2DInterpolator,
-)
 from typing import Any, Callable, cast
 
 from foxes.config import config
 from foxes.core import Engine, get_engine
+from foxes.input.states.point_cloud_data import (
+    _SupportHull,
+    _interpolate_point_cloud_fields,
+)
 from foxes.utils import wd2uv, uv2wd, write_nc
 import foxes.variables as FV
 import foxes.constants as FC
@@ -142,9 +140,7 @@ def _process_first_file(
         lat, lon, force_zone_number=utm_zone_number, force_zone_letter=utm_zone_letter
     )
     wrf_points = np.stack(wrf_points[:2], axis=-1)
-    interp = LinearNDInterpolator(
-        wrf_points, np.arange(wrf_points.shape[0]), fill_value=np.nan
-    )
+    support_hull = _SupportHull(wrf_points)
     p_min = np.min(wrf_points, axis=0)
     p_max = np.max(wrf_points, axis=0)
     step = resolution / 10
@@ -157,21 +153,20 @@ def _process_first_file(
         points[:, :, 0] = x[:, None]
         points[:, :, 1] = y[None, :]
         ok = True
-        if np.any(np.isnan(interp(points[0, :, :]))):
+        if not np.all(support_hull.contains(points[0, :, :])):
             p_min[0] += step
             ok = False
-        if np.any(np.isnan(interp(points[-1, :, :]))):
+        if not np.all(support_hull.contains(points[-1, :, :])):
             p_max[0] -= step
             ok = False
-        if np.any(np.isnan(interp(points[:, 0, :]))):
+        if not np.all(support_hull.contains(points[:, 0, :])):
             p_min[1] += step
             ok = False
-        if np.any(np.isnan(interp(points[:, -1, :]))):
+        if not np.all(support_hull.contains(points[:, -1, :])):
             p_max[1] -= step
             ok = False
         if ok:
             break
-    del interp
     if p_max[0] - p_min[0] < resolution or p_max[1] - p_min[1] < resolution:
         raise ValueError(
             f"Cannot satisfy bounds lon={lon_bounds}, lat={lat_bounds} with resolution {resolution} m. Final bounds: {p_min} - {p_max}"
@@ -369,33 +364,20 @@ def _process_file(
     data_by_dims = {vrs_list[i]: d for i, d in enumerate(data_by_dims.values())}
 
     # prepare interpolation:
-    ipars = dict(method="linear", rescale=True)
+    ipars: dict[str, bool | float | str | None] = dict(method="linear", rescale=True)
     if interp_pars is not None:
         ipars.update(interp_pars)
 
     def _interpolate(pts: np.ndarray, arr: np.ndarray, qts: np.ndarray) -> np.ndarray:
-        if not check_nan:
-            s = np.any(np.isnan(arr), axis=tuple(range(1, len(arr.shape))))
-            s = np.s_[~s, ...]
-            pts = pts[s]
-            arr = arr[s]
-            del s
-
         if chunk_size_points is None:
-            return cast(np.ndarray, griddata(pts, arr, qts, **ipars))
+            return _interpolate_point_cloud_fields(
+                pts,
+                arr,
+                qts,
+                ipars,
+                check_input_nans=check_nan,
+            )
         else:
-            hpars = {k: d for k, d in ipars.items() if k != "method"}
-            if ipars["method"] == "nearest":
-                interp = NearestNDInterpolator(pts, arr, **hpars)
-            elif ipars["method"] == "linear":
-                interp = LinearNDInterpolator(pts, arr, **hpars)
-            elif ipars["method"] == "cubic":
-                interp = CloughTocher2DInterpolator(pts, arr, **hpars)
-            else:
-                raise ValueError(
-                    f"Unsupported interpolation method {ipars['method']}, supported methods are 'linear', 'nearest', and 'cubic'"
-                )
-
             nx, ny = qts.shape[:2]
             n_points = nx * ny
             qts = qts.reshape(n_points, 2)
@@ -409,7 +391,15 @@ def _process_file(
                     print(
                         f"  {fpath.name}: INTERPOLATING {dms}, {hvrs}, done_points {done_points}/{n_points}, p_chunk {p_chunk}"
                     )
-                res.append(interp(qts[p_chunk]))
+                res.append(
+                    _interpolate_point_cloud_fields(
+                        pts,
+                        arr,
+                        qts[p_chunk],
+                        ipars,
+                        check_input_nans=check_nan,
+                    )
+                )
                 done_points += p_chunk.stop - p_chunk.start
             res = np.concatenate(res, axis=0)
             return cast(np.ndarray, res.reshape(nx, ny, *res.shape[1:]))

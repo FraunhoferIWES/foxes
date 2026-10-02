@@ -123,8 +123,8 @@ class Sequential(Iterative):
     def get_model_data(self, pop: bool = False) -> tuple[Dataset, dict[str, Any]]:
         if self._model_data is None:
             return super().get_model_data(pop=pop)
-        assert self.counter is not None
-        return self._model_data.isel({FC.STATE: [self.counter]}), self.loaded_data[
+        assert self.index is not None
+        return self._model_data.sel({FC.STATE: [self.index]}), self.loaded_data[
             "extra_data"
         ]
 
@@ -264,8 +264,8 @@ class Sequential(Iterative):
 
                 for v in self._point_results.data_vars.keys():
                     if FC.STATE in self._point_results[v].dims:
-                        assert self.counter is not None
-                        self._point_results[v].loc[{FC.STATE: [self.counter]}] = pres[v]
+                        assert self.index is not None
+                        self._point_results[v].loc[{FC.STATE: [self.index]}] = pres[v]
 
                 for p in self.plugins:
                     p.update(self, fres, pres)
@@ -396,8 +396,8 @@ class Sequential(Iterative):
 
         """
         assert self._farm_results is not None
-        assert self.counter is not None
-        return self._farm_results.isel({FC.STATE: [self.counter]})
+        assert self.index is not None
+        return self._farm_results.sel({FC.STATE: [self.index]})
 
     @property
     def point_results(self) -> Dataset | None:
@@ -424,8 +424,8 @@ class Sequential(Iterative):
 
         """
         assert self._point_results is not None
-        assert self.counter is not None
-        return self._point_results.isel({FC.STATE: [self.counter]})
+        assert self.index is not None
+        return self._point_results.sel({FC.STATE: [self.index]})
 
     def calc_farm(self) -> Dataset:
         """
@@ -460,8 +460,6 @@ class Sequential(Iterative):
             The points of interest, shape: (n_states, n_points, 3)
         states_sel
             Reduce to selected states
-        states_isel
-            Reduce to the selected states indices
 
         Returns
         -------

@@ -10,6 +10,30 @@ from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
+
+def _select_states(
+    farm_results: Dataset,
+    states_sel: Any,
+    states_isel: Any,
+) -> Dataset:
+    """Select states by label, resolving an optional positional user request."""
+    if states_sel is not None and states_isel is not None:
+        raise ValueError("Choose either 'states_sel' or 'states_isel', not both")
+    if states_isel is not None:
+        state_index = farm_results.get_index(FC.STATE)
+        if not state_index.is_unique:
+            raise ValueError(
+                "Cannot convert 'states_isel' to labels because the state "
+                "coordinate contains duplicates"
+            )
+        states_sel = state_index[states_isel].tolist()
+    return (
+        farm_results.sel({FC.STATE: states_sel})
+        if states_sel is not None
+        else farm_results
+    )
+
+
 if TYPE_CHECKING:
     from foxes.core import Algorithm
 
@@ -113,10 +137,7 @@ def get_grid_xy(
 
     """
     # prepare:
-    if states_isel is not None:
-        farm_results = farm_results.isel({FC.STATE: states_isel})
-    if states_sel is not None:
-        farm_results = farm_results.sel({FC.STATE: states_sel})
+    farm_results = _select_states(farm_results, states_sel, states_isel)
     n_states = farm_results.sizes[FC.STATE]
 
     # get base rectangle:
@@ -245,10 +266,7 @@ def get_grid_xz(
     """
 
     # prepare:
-    if states_isel is not None:
-        farm_results = farm_results.isel({FC.STATE: states_isel})
-    if states_sel is not None:
-        farm_results = farm_results.sel({FC.STATE: states_sel})
+    farm_results = _select_states(farm_results, states_sel, states_isel)
     n_states, n_turbines = farm_results[FV.H].shape
     n_x = np.append(wd2uv(x_direction), [0.0], axis=0)
     n_z = np.array([0.0, 0.0, 1.0])
@@ -391,10 +409,7 @@ def get_grid_yz(
     """
 
     # prepare:
-    if states_isel is not None:
-        farm_results = farm_results.isel({FC.STATE: states_isel})
-    if states_sel is not None:
-        farm_results = farm_results.sel({FC.STATE: states_sel})
+    farm_results = _select_states(farm_results, states_sel, states_isel)
     n_states, n_turbines = farm_results[FV.H].shape
     n_x = np.append(wd2uv(x_direction), [0.0], axis=0)
     n_z = np.array([0.0, 0.0, 1.0])

@@ -6,7 +6,11 @@ import foxes
 
 from foxes.core import MData, TData
 from foxes.input.states.dataset_states import DatasetStates
-from foxes.input.states.point_cloud_data import PointCloudData, TurbinePointCloud
+from foxes.input.states.point_cloud_data import (
+    PointCloudData,
+    TurbinePointCloud,
+    _interpolate_point_cloud_fields,
+)
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -128,6 +132,75 @@ def test_point_cloud_interpolate_falls_back_to_nearest_on_qhull_error():
     assert out.shape == (2, 2)
     assert np.allclose(out[0], np.array([8.0, 270.0]))
     assert np.allclose(out[1], np.array([8.0, 270.0]))
+
+
+def test_point_cloud_recovers_source_points_rejected_by_linear_griddata():
+    states = PointCloudData(data_source=xr.Dataset(), output_vars=[FV.WS])
+    support_points = np.array(
+        [
+            [527641.3981037099, 6975685.023524016],
+            [527749.0381092395, 7003595.903495733],
+            [527811.6986173344, 7019545.854586328],
+            [531749.6079805237, 7001586.549207918],
+            [533693.7101425079, 6985629.205895866],
+            [535658.8440108196, 6975653.049863696],
+            [563852.1682889046, 7009440.208922766],
+            [563866.4632408092, 7013427.22964292],
+            [565727.8676016734, 6975537.119269336],
+            [565735.4604211745, 6977529.878374044],
+            [565918.6191978771, 7025380.3368212925],
+        ]
+    )
+    data = np.arange(len(support_points), dtype=float)[:, None]
+
+    out = states.interpolate_data(
+        mdata={},
+        idims=[FC.POINT],
+        d=data,
+        pts=support_points,
+        vrs=[FV.WS],
+        gpts=support_points,
+    )
+
+    np.testing.assert_allclose(out, data)
+    chunked = _interpolate_point_cloud_fields(
+        support_points,
+        data,
+        support_points,
+        {"method": "linear", "rescale": True},
+        check_input_nans=True,
+        chunk_size_points=3,
+    )
+    np.testing.assert_allclose(chunked, data)
+
+
+def test_point_cloud_interpolates_states_with_independent_valid_points():
+    states = PointCloudData(
+        data_source=xr.Dataset(),
+        output_vars=[FV.WS],
+        check_input_nans=False,
+    )
+    support_points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
+    data = np.array(
+        [
+            [[4.0], [10.0]],
+            [[5.0], [np.nan]],
+            [[6.0], [11.0]],
+            [[7.0], [12.0]],
+        ]
+    )
+
+    out = states.interpolate_data(
+        mdata={},
+        idims=[FC.POINT],
+        d=data,
+        pts=np.array([[1.0, 0.0]]),
+        vrs=[FV.WS],
+        gpts=support_points,
+    )
+
+    np.testing.assert_allclose(out[:, 0], [[5.0]])
+    assert np.isfinite(out[:, 1]).all()
 
 
 def _interpolate_point_cloud(interp_pars):
@@ -447,3 +520,64 @@ def test_turbine_point_cloud_preserves_values_for_grid_layout_with_varying_wd():
 
     got = _run_ambient_rews(ws, wd, turbine_xy, hubs)
     assert np.allclose(got, ws)
+
+
+@pytest.mark.parametrize("load_mode", ["preload", "lazy", "fly"])
+def test_turbine_point_cloud_load_modes_preserve_timestamp_labels(tmp_path, load_mode):
+    state_index = pd.date_range("2020-01-01", periods=4, freq="h")
+    ws = np.arange(12, dtype=float).reshape(4, 3) + 7.0
+    data_source = xr.Dataset(
+        coords={FC.STATE: state_index, FC.TURBINE: np.arange(3)},
+        data_vars={
+            FV.WS: ((FC.STATE, FC.TURBINE), ws),
+            FV.WD: ((FC.STATE, FC.TURBINE), np.full_like(ws, 270.0)),
+        },
+    )
+    data_path = tmp_path / "turbine_point_cloud.nc"
+    data_source.to_netcdf(data_path)
+
+    states = TurbinePointCloud(
+        data_source=data_path,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        fixed_vars={FV.TI: 0.06, FV.RHO: 1.225},
+        load_mode=load_mode,
+    )
+    farm = foxes.WindFarm()
+    for turbine_i in range(3):
+        farm.add_turbine(
+            foxes.Turbine(
+                xy=[500.0 * turbine_i, 0.0],
+                H=100.0,
+                turbine_models=["null_type"],
+            ),
+            verbosity=0,
+        )
+    algo = foxes.algorithms.Downwind(
+        farm,
+        states,
+        wake_models=[],
+        rotor_model="centre",
+        verbosity=0,
+    )
+    write_nc = (
+        {
+            "out_dir": tmp_path,
+            "base_name": "results",
+            "split": 2,
+            "ret_data": True,
+        }
+        if load_mode == "preload"
+        else None
+    )
+
+    with foxes.Engine.new("single", chunk_size_states=2, verbosity=0):
+        results = algo.calc_farm(write_nc=write_nc)
+
+    np.testing.assert_array_equal(results[FC.STATE].to_numpy(), state_index.to_numpy())
+    np.testing.assert_allclose(results[FV.AMB_REWS].to_numpy(), ws)
+    if write_nc is not None:
+        for file_i, expected_labels in enumerate((state_index[:2], state_index[2:])):
+            with xr.open_dataset(tmp_path / f"results_{file_i:06d}.nc") as split_data:
+                np.testing.assert_array_equal(
+                    split_data[FC.STATE].to_numpy(), expected_labels.to_numpy()
+                )

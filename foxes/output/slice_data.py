@@ -45,6 +45,20 @@ class SliceData(Output):
         self.fres = farm_results
         self.verbosity_delta = verbosity_delta
 
+    def _state_labels(self, states_sel: Any, states_isel: Any) -> Any:
+        """Resolve an optional positional state request to coordinate labels."""
+        if states_sel is not None and states_isel is not None:
+            raise ValueError("Choose either 'states_sel' or 'states_isel', not both")
+        if states_isel is None:
+            return states_sel
+        state_index = self.fres.get_index(FC.STATE)
+        if not state_index.is_unique:
+            raise ValueError(
+                "Cannot convert 'states_isel' to labels because the state "
+                "coordinate contains duplicates"
+            )
+        return state_index[states_isel].tolist()
+
     def _data_mod(
         self,
         a_pos: np.ndarray,
@@ -139,19 +153,16 @@ class SliceData(Output):
         **kwargs: Any,
     ) -> Any:
         """Helper function for mean data calculation"""
-        states_sel = kwargs.pop("states_sel", None)
-        states_isel = kwargs.pop("states_isel", None)
+        states_sel = self._state_labels(
+            kwargs.pop("states_sel", None),
+            kwargs.pop("states_isel", None),
+        )
         farm_results = self.fres
-        if states_isel is not None:
-            farm_results = farm_results.isel({FC.STATE: states_isel})
         if states_sel is not None:
             farm_results = farm_results.sel({FC.STATE: states_sel})
-        if states_sel is not None or states_isel is not None:
-            all_states = self.fres[FC.STATE].to_numpy()
-            selected_states = farm_results[FC.STATE].to_numpy()
-            selected_indices = np.asarray(
-                [np.flatnonzero(all_states == state)[0] for state in selected_states]
-            )
+        if states_sel is not None:
+            all_states = self.fres.get_index(FC.STATE)
+            selected_indices = all_states.get_indexer(farm_results.get_index(FC.STATE))
             full_g_pts = np.zeros(
                 (len(all_states), *g_pts.shape[1:]), dtype=g_pts.dtype
             )
@@ -166,8 +177,6 @@ class SliceData(Output):
             verbosity=verbosity - self.verbosity_delta,
             **kwargs,
         )
-        if states_isel is not None:
-            point_results = point_results.isel({FC.STATE: states_isel})
         if states_sel is not None:
             point_results = point_results.sel({FC.STATE: states_sel})
         states = point_results[FC.STATE].to_numpy()
@@ -680,8 +689,10 @@ class SliceData(Output):
         **kwargs: Any,
     ) -> Any:
         """Helper function for states data calculation"""
-        states_sel = kwargs.pop("states_sel", None)
-        states_isel = kwargs.pop("states_isel", None)
+        states_sel = self._state_labels(
+            kwargs.pop("states_sel", None),
+            kwargs.pop("states_isel", None),
+        )
 
         # calculate point results:
         point_results = grids.calc_point_results(
@@ -690,7 +701,6 @@ class SliceData(Output):
             g_pts=g_pts,
             verbosity=verbosity - self.verbosity_delta,
             states_sel=states_sel,
-            states_isel=states_isel,
             **kwargs,
         )
         states = point_results[FC.STATE].to_numpy()

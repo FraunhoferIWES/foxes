@@ -6,6 +6,7 @@ from pathlib import Path
 
 from foxes.core import Algorithm, LoadedData, MData
 from scipy.interpolate import griddata
+from scipy.spatial import Delaunay
 
 from foxes.utils.utm_utils import from_lonlat
 from foxes.config import config, get_output_path
@@ -530,6 +531,30 @@ class NEWAStates(DatasetStates):
             )
         gpts_array: np.ndarray = gpts
 
+        full_support: np.ndarray | None = None
+
+        def _get_full_support() -> np.ndarray:
+            """Identify query points within the full interpolation hull."""
+            nonlocal full_support
+            if full_support is None:
+                support = np.asarray(gpts_array, dtype=np.float64)
+                query = np.asarray(pts, dtype=np.float64)
+                centre = np.mean(support, axis=0)
+                scale = np.ptp(support, axis=0)
+                active = scale > 0.0
+                support = (support[:, active] - centre[active]) / scale[active]
+                query = (query[:, active] - centre[active]) / scale[active]
+                tolerance = np.sqrt(np.finfo(support.dtype).eps)
+                if support.shape[1] == 1:
+                    full_support = (query[:, 0] >= np.min(support) - tolerance) & (
+                        query[:, 0] <= np.max(support) + tolerance
+                    )
+                else:
+                    full_support = (
+                        Delaunay(support).find_simplex(query, tol=tolerance) >= 0
+                    )
+            return full_support
+
         # check and reshape d, data is on a non-regular grid:
         n_gpts, n_dms = gpts_array.shape
         if d.shape[0] != n_gpts:
@@ -601,15 +626,69 @@ class NEWAStates(DatasetStates):
                             f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
                         )
 
-        # remove NaN data points:
-        if not self.check_input_nans:
-            sel = np.any(np.isnan(d), axis=tuple(range(1, d.ndim)))
-            if np.any(sel):
-                gpts_array = gpts_array[~sel]
-                d = d[~sel]
+        fill_value = ipars.get("fill_value", np.nan)
+        use_nearest_fallback = (
+            ipars.get("method", "linear") != "nearest"
+            and isinstance(fill_value, (int, float))
+            and np.isnan(fill_value)
+        )
 
-        # interpolate:
-        results = griddata(gpts_array, d, pts, **ipars)
+        def _fill_missing_inside_support(
+            results: np.ndarray,
+            source_points: np.ndarray,
+            source_data: np.ndarray,
+        ) -> np.ndarray:
+            """Fill numerical hull gaps without extrapolating outside support."""
+            missing = np.isnan(results)
+            if np.any(missing):
+                inside = _get_full_support().reshape(
+                    (pts.shape[0],) + (1,) * (results.ndim - 1)
+                )
+                missing &= inside
+                if np.any(missing):
+                    nearest = griddata(
+                        source_points,
+                        source_data,
+                        pts,
+                        method="nearest",
+                        rescale=bool(ipars.get("rescale", False)),
+                    ).reshape(results.shape)
+                    results[missing] = nearest[missing]
+            return results
+
+        input_nans = np.isnan(d)
+        if self.check_input_nans or not np.any(input_nans):
+            results = griddata(gpts_array, d, pts, **ipars)
+            if use_nearest_fallback and not np.any(input_nans):
+                results = _fill_missing_inside_support(results, gpts_array, d)
+        else:
+            flat_data = d.reshape((n_gpts, -1))
+            valid_masks, field_groups = np.unique(
+                ~np.isnan(flat_data).T, axis=0, return_inverse=True
+            )
+            flat_results = np.full(
+                (pts.shape[0], flat_data.shape[1]),
+                np.nan,
+                dtype=np.result_type(d.dtype, np.float64),
+            )
+
+            for group, valid in enumerate(valid_masks):
+                fields = field_groups == group
+                if not np.any(valid):
+                    continue
+
+                group_results = griddata(
+                    gpts_array[valid], flat_data[valid][:, fields], pts, **ipars
+                ).reshape((pts.shape[0], np.sum(fields)))
+                if use_nearest_fallback:
+                    group_results = _fill_missing_inside_support(
+                        group_results,
+                        gpts_array[valid],
+                        flat_data[valid][:, fields],
+                    )
+                flat_results[:, fields] = group_results
+
+            results = flat_results.reshape((pts.shape[0],) + d.shape[1:])
 
         # check for NaN results:
         _check_nan(gpts_array, d, pts, idims, results)

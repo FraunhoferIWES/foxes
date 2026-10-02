@@ -184,7 +184,6 @@ class OnePointFlowStates(States):
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -203,28 +202,21 @@ class OnePointFlowStates(States):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().set_running(algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, verbosity)
 
-        if data_stash is not None and (sel is not None or isel is not None):
+        if data_stash is not None and sel is not None:
             data_stash[self.name]["data"] = self.timelines_data
-
-            if isel is not None:
-                self.timelines_data = self.timelines_data.isel(isel)
-            if sel is not None:
-                self.timelines_data = self.timelines_data.sel(sel)
+            self.timelines_data = self.timelines_data.sel(sel)
 
     def unset_running(
         self,
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -240,13 +232,11 @@ class OnePointFlowStates(States):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data = data_stash[self.name]

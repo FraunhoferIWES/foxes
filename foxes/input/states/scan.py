@@ -111,7 +111,6 @@ class ScanStates(States):
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -129,13 +128,11 @@ class ScanStates(States):
             Large data stash. This function adds data here if given.
         sel
             The subset selection dictionary.
-        isel
-            The index subset selection dictionary.
         verbosity
             The verbosity level, 0 = silent.
 
         """
-        super().set_running(algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data_stash[self.name].update(dict(scans=self.scans))
@@ -146,7 +143,6 @@ class ScanStates(States):
         algo: Algorithm,
         data_stash: dict[str, dict[str, object]] | None,
         sel: dict[str, object] | None = None,
-        isel: dict[str, object] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -161,13 +157,11 @@ class ScanStates(States):
             Reconstruct model data from this stash if given.
         sel
             The subset selection dictionary.
-        isel
-            The index subset selection dictionary.
         verbosity
             The verbosity level, 0 = silent.
 
         """
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data = data_stash[self.name]

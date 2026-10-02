@@ -227,7 +227,6 @@ class SingleChunkEngine(Engine):
         out_vars: list[str] | None = None,
         chunk_store: dict[Any, Any] | None = None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         iterative: bool = False,
         write_nc: dict[str, Any] | None = None,
         write_chunk_ani: dict[str, Any] | None = None,
@@ -255,8 +254,6 @@ class SingleChunkEngine(Engine):
             The chunk store
         sel
             Selection of coordinate subsets
-        isel
-            Selection of coordinate subsets index values
         iterative
             Flag for use within the iterative algorithm
         write_nc
@@ -303,7 +300,6 @@ class SingleChunkEngine(Engine):
             farm_data,
             point_data,
             sel=sel,
-            isel=isel,
             default_n_states=algo.n_states,
         )
 

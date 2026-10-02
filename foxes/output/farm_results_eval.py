@@ -686,7 +686,8 @@ class FarmResultsEval(Output):
         if FV.CAP in self.results:
             capacity_data = self.results[FV.CAP]
             if FC.STATE in capacity_data.dims:
-                capacity_data = capacity_data.isel({FC.STATE: 0})
+                state_label = capacity_data[FC.STATE].to_numpy()[0]
+                capacity_data = capacity_data.sel({FC.STATE: state_label})
             capacity = np.sum(capacity_data.to_numpy())
         else:
             capacity = self.calc_farm_capacity()

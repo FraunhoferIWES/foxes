@@ -84,3 +84,89 @@ The full list of currently implemented ambient states can be found in the
 * :class:`OnePointFlowTimeseries<foxes.input.states.one_point_flow.OnePointFlowTimeseries>`: Horizontally homogeneous data translated into inhomogeneous flow,
 * :class:`WeibullSectors<foxes.input.states.weibull_sectors.WeibullSectors>`: Spatially homogeneous Weibull wind speed distributions organized in wind direction sectors.
 * :class:`WRGStates<foxes.input.states.wrg_states.WRGStates>`: Wind resource data, i.e., a regular grid of wind roses expressed via Weibull parameters
+
+Creating a single mean field
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :func:`create_dataset_mean_from_states<foxes.input.states.create.create_dataset_mean_from_states>`
+function evaluates any states model on a Cartesian grid and reduces its state
+dimension using the state weights. Wind speed and direction are averaged as
+vectors and written as ``WS`` and ``WD``. By default, ``MAIN_WD`` additionally
+contains the circular mean of the direction sector with the greatest total
+state weight. Sectors overlap by 50 percent so a mode crossing one sector
+boundary is centred in another sector. Their minimum width is controlled by
+``wd_histo_width``; set ``vname_main_wd=None`` to disable the calculation. The
+grid is read from ``micro_states``. Complete Cartesian support
+retains its native axes; irregular support is converted to a regular grid using
+:func:`regular_grid_from_points<foxes.utils.regular_grid_from_points>`. An
+optional area geometry crops the horizontal axes while retaining one exterior
+grid point on every side. Point and state batches bound the temporary evaluation
+data, and the result can be used directly by
+:class:`SingleStateField<foxes.input.states.SingleStateField>`:
+
+    .. code-block:: python
+
+        import numpy as np
+        import pandas as pd
+        import xarray as xr
+
+        import foxes
+        import foxes.variables as FV
+
+        states = foxes.input.states.StatesTable(
+            data_source=pd.DataFrame(
+                {
+                    FV.WS: [8.0, 10.0],
+                    FV.WD: [260.0, 280.0],
+                    FV.WEIGHT: [0.4, 0.6],
+                }
+            ),
+            output_vars=[FV.WS, FV.WD],
+        )
+        grid = xr.Dataset(
+            data_vars={
+                FV.WS: (
+                    ("state", "height", "y", "x"),
+                    np.full((1, 1, 11, 11), 8.0),
+                ),
+                FV.WD: (
+                    ("state", "height", "y", "x"),
+                    np.full((1, 1, 11, 11), 270.0),
+                ),
+            },
+            coords={
+                "state": [0],
+                "x": np.arange(0.0, 1001.0, 100.0),
+                "y": np.arange(0.0, 1001.0, 100.0),
+                "height": [100.0],
+            },
+        )
+        micro_states = foxes.input.states.FieldData(
+            data_source=grid,
+            output_vars=[FV.WS, FV.WD],
+            states_coord="state",
+            x_coord="x",
+            y_coord="y",
+            h_coord="height",
+            time_format=None,
+        )
+        with foxes.Engine.new("default", verbosity=0):
+            mean_data = foxes.input.states.create.create_dataset_mean_from_states(
+                states=states,
+                micro_states=micro_states,
+                output_vars=[FV.WS, FV.WD],
+                wd_histo_width=30.0,
+                verbosity=0,
+            )
+
+        mean_states = foxes.input.states.SingleStateField(
+            data_source=mean_data,
+            output_vars=[FV.WS, FV.WD],
+        )
+
+Use :func:`detect_regular_grid<foxes.utils.detect_regular_grid>` to inspect
+explicit three-dimensional support points without selecting a replacement grid,
+or :func:`select_grid_axes<foxes.utils.select_grid_axes>` to crop known native
+axes directly. The ``grid_point_plot`` argument of
+``create_dataset_mean_from_states`` writes a proof plot containing source
+support points, selected mean-field points, and the boundary when supplied.

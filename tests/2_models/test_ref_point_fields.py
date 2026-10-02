@@ -376,6 +376,55 @@ def test_meso_micro_field_gets_newa_reference_points():
     )
 
 
+def test_meso_micro_field_filters_invalid_default_reference_points():
+    states, _, _ = _make_meso_micro_field()
+    states.ref_points = np.array(
+        [[0.0, 0.0, 100.0], [100.0, 0.0, 100.0], [200.0, 0.0, 100.0]]
+    )
+    states.REF_POINTS = states.var("ref_points")
+    states.REF_POINT = states.var("ref_point")
+    results = {
+        FV.WD: np.array(
+            [
+                [[180.0], [0.0], [10.0]],
+                [[180.0], [120.0], [130.0]],
+                [[180.0], [240.0], [250.0]],
+            ]
+        ),
+        FV.WS: np.array(
+            [
+                [[0.0], [8.0], [8.0]],
+                [[0.0], [8.0], [0.0]],
+                [[0.0], [8.0], [8.0]],
+            ]
+        ),
+    }
+    loaded_data_vars = {}
+
+    n_points = states._filter_default_ref_points(results, loaded_data_vars, 0)
+
+    assert n_points == 1
+    np.testing.assert_array_equal(states.ref_points, [[100.0, 0.0, 100.0]])
+    np.testing.assert_array_equal(results[FV.WD][:, 0, 0], [0.0, 120.0, 240.0])
+    np.testing.assert_array_equal(
+        loaded_data_vars[states.REF_POINTS][1], states.ref_points
+    )
+
+
+def test_meso_micro_field_rejects_only_invalid_default_reference_points():
+    states, _, _ = _make_meso_micro_field()
+    states.ref_points = np.array([[0.0, 0.0, 100.0]])
+    states.REF_POINTS = states.var("ref_points")
+    states.REF_POINT = states.var("ref_point")
+    results = {
+        FV.WD: np.full((3, 1, 1), 180.0),
+        FV.WS: np.zeros((3, 1, 1)),
+    }
+
+    with pytest.raises(ValueError, match="No automatically selected reference point"):
+        states._filter_default_ref_points(results, {}, 0)
+
+
 def test_meso_micro_field_gets_projected_icon_reference_points(monkeypatch):
     states, _, _ = _make_meso_micro_field()
     meso_states = ICONStates(

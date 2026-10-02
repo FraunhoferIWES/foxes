@@ -287,21 +287,30 @@ class Iterative(Downwind):
         **kwargs: Any,
     ) -> Dataset:
         """Helper function for running the main farm calculation"""
-        if self._final_run:
-            isel = None
-        elif self.conv_crit.conv_states is not None:
-            isel = {FC.STATE: ~self.conv_crit.conv_states}
-        else:
-            isel = None
-
         prev_fres = self.__prev_farm_results
+        if self._final_run:
+            sel = None
+        elif self.conv_crit.conv_states is not None:
+            if prev_fres is None:
+                raise ValueError("Missing previous farm results for state selection")
+            state_index = prev_fres.get_index(FC.STATE)
+            if not state_index.is_unique:
+                raise ValueError(
+                    "Iterative state selection requires unique state labels"
+                )
+            sel = {
+                FC.STATE: state_index[~self.conv_crit.conv_states].tolist(),
+            }
+        else:
+            sel = None
+
         self.__prev_farm_results = None
         fres = super()._launch_parallel_farm_calc(
             mlist,
             *data,
             farm_data=prev_fres,
             iterative=True,
-            isel=isel,
+            sel=sel,
             **kwargs,
         )
         self.__prev_farm_results = prev_fres

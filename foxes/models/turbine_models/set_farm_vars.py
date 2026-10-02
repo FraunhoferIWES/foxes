@@ -204,7 +204,6 @@ class SetFarmVars(TurbineModel):
         algo: Algorithm,
         data_stash: dict[str, dict[str, Any]] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -223,13 +222,11 @@ class SetFarmVars(TurbineModel):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().set_running(algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             data_stash[self.name]["vdata"] = self.__vdata
@@ -240,7 +237,6 @@ class SetFarmVars(TurbineModel):
         algo: Algorithm,
         data_stash: dict[str, dict[str, Any]] | None,
         sel: dict[str, Any] | None = None,
-        isel: dict[str, Any] | None = None,
         verbosity: int = 0,
     ) -> None:
         """
@@ -256,13 +252,11 @@ class SetFarmVars(TurbineModel):
             Key: model name. Value: dict, large model data
         sel
             The subset selection dictionary
-        isel
-            The index subset selection dictionary
         verbosity
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, verbosity)
 
         if data_stash is not None:
             self.__vdata = data_stash[self.name].pop("vdata")
