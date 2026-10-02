@@ -407,6 +407,33 @@ def test_farm_layout_output_true_turbine_radii_are_opt_in():
     np.testing.assert_allclose(widths, [100.0, 200.0])
 
 
+def test_farm_layout_output_true_radii_auto_figsize_has_visible_rotors():
+    farm = foxes.WindFarm()
+    for xy in ([0.0, 0.0], [20000.0, 100.0]):
+        farm.add_turbine(foxes.Turbine(xy, turbine_models=[], D=100.0, H=90.0))
+    output = FarmLayoutOutput(farm=farm)
+
+    default_ax = output.get_figure(annotate=0)
+    radius_ax = output.get_figure(annotate=0, true_turbine_radii=True)
+    radius_ax.get_figure().canvas.draw()
+    p0, p1 = radius_ax.transData.transform([[0.0, 0.0], [100.0, 0.0]])
+
+    assert (
+        radius_ax.get_figure().get_figwidth() > default_ax.get_figure().get_figwidth()
+    )
+    assert p1[0] - p0[0] >= 4.0
+    plt.close(default_ax.get_figure())
+    plt.close(radius_ax.get_figure())
+
+    explicit_ax = output.get_figure(
+        annotate=0,
+        figsize=(3.0, 4.0),
+        true_turbine_radii=True,
+    )
+    np.testing.assert_allclose(explicit_ax.get_figure().get_size_inches(), [3.0, 4.0])
+    plt.close(explicit_ax.get_figure())
+
+
 def test_farm_layout_output_true_turbine_radii_support_color_by():
     farm = foxes.WindFarm()
     farm.add_turbine(foxes.Turbine([0.0, 0.0], turbine_models=[], D=100.0, H=90.0))

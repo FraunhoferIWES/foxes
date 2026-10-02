@@ -1,0 +1,208 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$description": "Fraunhofer IWES source design tokens. Map these values to the selected technology without changing approved values. Conventions: a group's $type applies to every token below it unless a token overrides it, and a token without reviewStatus is approved — only 'needs-review' is stated.",
+  "$extensions": {
+    "de.fraunhofer.iwes.sources": {
+      "corporateDesign": "Fraunhofer Corporate Design Design Basics, May 2021",
+      "colourClimate": "Fraunhofer Farbklima",
+      "iwesMiniStyleguide": "Fraunhofer IWES Mini Styleguide"
+    }
+  },
+  "color": {
+    "$type": "color",
+    "green": { "$value": "#179c7d" },
+    "green80": { "$value": "#45b097" },
+    "green60": { "$value": "#74c4b1" },
+    "green40": { "$value": "#a2d7cb" },
+    "green20": { "$value": "#d1ebe5" },
+    "steelBlue": { "$value": "#005b7f" },
+    "steelBlue80": { "$value": "#337c99" },
+    "steelBlue60": { "$value": "#669db2" },
+    "steelBlue40": { "$value": "#99bdcc" },
+    "steelBlue20": { "$value": "#ccdee5" },
+    "silverGrey": { "$value": "#a6bbc8" },
+    "silverGrey80": { "$value": "#b8c9d3" },
+    "silverGrey60": { "$value": "#cad6de" },
+    "silverGrey40": { "$value": "#dbe4e9" },
+    "silverGrey20": { "$value": "#edf1f4" },
+    "orange": { "$value": "#f58220" },
+    "orange80": { "$value": "#f79b4d" },
+    "orange60": { "$value": "#f9b479" },
+    "orange40": { "$value": "#fbcda6" },
+    "orange20": { "$value": "#fde6d2" },
+    "graphit": { "$value": "#1c3f52" },
+    "sand": { "$value": "#d3c7ae" },
+    "petrol": { "$value": "#008598" },
+    "aqua": { "$value": "#39c1cd" },
+    "lime": { "$value": "#b2d235" },
+    "yellow": { "$value": "#fdb913" },
+    "red": { "$value": "#bb0056" },
+    "wineRed": { "$value": "#7c154d" },
+    "white": { "$value": "#ffffff" },
+    "black": { "$value": "#000000" },
+    "graphit20": { "$value": "#d2d8dc", "reviewStatus": "needs-review" },
+    "petrol20": { "$value": "#cce7ea", "reviewStatus": "needs-review" },
+    "aqua20": { "$value": "#d7f3f5", "reviewStatus": "needs-review" },
+    "yellow20": { "$value": "#fff1d0", "reviewStatus": "needs-review" },
+    "red20": { "$value": "#f1ccdd", "reviewStatus": "needs-review" },
+    "aqua75": { "$value": "#5ecdd7", "reviewStatus": "needs-review" },
+    "green75": { "$value": "#51b39b", "reviewStatus": "needs-review" },
+    "primaryHover": { "$value": "#12836a", "reviewStatus": "needs-review" },
+    "primaryActive": { "$value": "#0e6a56", "reviewStatus": "needs-review" },
+    "warningText": { "$value": "#9a6b00", "reviewStatus": "needs-review" }
+  },
+  "semanticColor": {
+    "$type": "color",
+    "primary": { "$value": "{color.green}" },
+    "primaryHover": { "$value": "{color.primaryHover}" },
+    "primaryActive": { "$value": "{color.primaryActive}" },
+    "primarySubtle": { "$value": "{color.green20}" },
+    "primaryContrast": { "$value": "{color.petrol}" },
+    "background": { "$value": "{color.white}" },
+    "backgroundAlternative": { "$value": "{color.silverGrey20}" },
+    "surface": { "$value": "{color.white}" },
+    "surfaceHover": { "$value": "{color.silverGrey20}" },
+    "surfaceSelected": { "$value": "{color.green20}" },
+    "text": { "$value": "{color.black}" },
+    "textMuted": { "$value": "{color.graphit}" },
+    "textInverse": { "$value": "{color.white}" },
+    "border": { "$value": "{color.silverGrey}" },
+    "borderSubtle": { "$value": "{color.silverGrey40}" },
+    "borderStrong": { "$value": "{color.graphit}" },
+    "success": { "$value": "{color.petrol}", "reviewStatus": "needs-review" },
+    "successSubtle": { "$value": "{color.petrol20}", "reviewStatus": "needs-review" },
+    "warning": { "$value": "{color.warningText}", "reviewStatus": "needs-review" },
+    "warningSubtle": { "$value": "{color.yellow20}", "reviewStatus": "needs-review" },
+    "error": { "$value": "{color.red}", "reviewStatus": "needs-review" },
+    "errorSubtle": { "$value": "{color.red20}", "reviewStatus": "needs-review" },
+    "info": { "$value": "{color.steelBlue}", "reviewStatus": "needs-review" },
+    "infoSubtle": { "$value": "{color.steelBlue20}", "reviewStatus": "needs-review" }
+  },
+  "gradient": {
+    "$type": "gradient",
+    "brand": { "$value": "linear-gradient(135deg, {color.steelBlue} 0%, {color.aqua75} 55%, {color.green75} 100%)" },
+    "badge": { "$value": "linear-gradient(135deg, {color.orange} 0%, {color.yellow} 100%)" }
+  },
+  "typography": {
+    "fontFamily": {
+      "$type": "fontFamily",
+      "sans": { "$value": "Roboto" },
+      "mono": { "$value": "ui-monospace, JetBrains Mono, Consolas, Liberation Mono, monospace", "reviewStatus": "needs-review" }
+    },
+    "fontWeight": {
+      "$type": "fontWeight",
+      "light": { "$value": 300 },
+      "bold": { "$value": 700 }
+    },
+    "fontSize": {
+      "$type": "dimension",
+      "3xl": { "$value": "32px", "reviewStatus": "needs-review" },
+      "2xl": { "$value": "24px" },
+      "xl": { "$value": "20px" },
+      "lg": { "$value": "16px" },
+      "base": { "$value": "16px" },
+      "sm": { "$value": "14px" },
+      "xs": { "$value": "12px" },
+      "quote": { "$value": "22px" }
+    },
+    "lineHeight": {
+      "$type": "dimension",
+      "3xl": { "$value": "40px" },
+      "2xl": { "$value": "32px" },
+      "xl": { "$value": "28px" },
+      "lg": { "$value": "24px" },
+      "base": { "$value": "24px" },
+      "sm": { "$value": "22px" },
+      "xs": { "$value": "16px" },
+      "quote": { "$value": "30px" }
+    },
+    "measure": { "$value": "65ch", "$type": "dimension" }
+  },
+  "spacing": {
+    "$type": "dimension",
+    "0": { "$value": "0px" },
+    "1": { "$value": "4px" },
+    "2": { "$value": "8px" },
+    "3": { "$value": "12px" },
+    "4": { "$value": "16px" },
+    "5": { "$value": "20px" },
+    "6": { "$value": "24px" },
+    "8": { "$value": "32px" },
+    "12": { "$value": "48px" },
+    "16": { "$value": "64px" }
+  },
+  "layout": {
+    "$type": "dimension",
+    "containerMax": { "$value": "1280px", "reviewStatus": "needs-review" },
+    "contentMax": { "$value": "720px", "reviewStatus": "needs-review" },
+    "frameInset": { "$value": "24px", "reviewStatus": "needs-review" },
+    "frameInsetLarge": { "$value": "64px", "reviewStatus": "needs-review" },
+    "gridGutter": { "$value": "24px" },
+    "rowUnit": { "$value": 16.6667, "$type": "number", "$description": "Height of one grid row as a percentage of the container width." },
+    "headerHeight": { "$value": "64px", "reviewStatus": "needs-review" },
+    "footerHeight": { "$value": "40px", "reviewStatus": "needs-review" },
+    "touchTargetMin": { "$value": "44px", "reviewStatus": "needs-review" },
+    "breakpoint": {
+      "sm": { "$value": "640px" },
+      "md": { "$value": "768px" },
+      "lg": { "$value": "1024px" },
+      "xl": { "$value": "1280px" }
+    }
+  },
+  "logo": {
+    "$type": "dimension",
+    "markSize": { "$value": "32px", "reviewStatus": "needs-review" },
+    "minimumWidth": { "$value": "120px", "reviewStatus": "needs-review" },
+    "printMinimumWidth": { "$value": "45mm" }
+  },
+  "border": {
+    "$type": "dimension",
+    "width": { "$value": "1px" },
+    "accentWidth": { "$value": "3px" },
+    "focusWidth": { "$value": "2px" }
+  },
+  "radius": {
+    "$type": "dimension",
+    "$description": "All approved radii are zero; the scale exists so components can reference an intent.",
+    "none": { "$value": "0px" },
+    "sm": { "$value": "0px" },
+    "md": { "$value": "0px" },
+    "full": { "$value": "0px" }
+  },
+  "motion": {
+    "duration": {
+      "$type": "duration",
+      "instant": { "$value": "100ms", "reviewStatus": "needs-review" },
+      "fast": { "$value": "150ms", "reviewStatus": "needs-review" },
+      "base": { "$value": "250ms", "reviewStatus": "needs-review" },
+      "slow": { "$value": "350ms", "reviewStatus": "needs-review" }
+    },
+    "disabledOpacity": { "$value": 0.4, "$type": "number", "reviewStatus": "needs-review" }
+  },
+  "icon": {
+    "$type": "dimension",
+    "sm": { "$value": "16px" },
+    "md": { "$value": "20px" },
+    "lg": { "$value": "24px" },
+    "xl": { "$value": "48px" }
+  },
+  "chart": {
+    "$type": "color",
+    "1": { "$value": "{color.green}" },
+    "2": { "$value": "{color.steelBlue}" },
+    "3": { "$value": "{color.aqua}" },
+    "4": { "$value": "{color.silverGrey}" },
+    "5": { "$value": "{color.lime}" },
+    "6": { "$value": "{color.orange}" },
+    "grid": { "$value": "{color.silverGrey40}" }
+  },
+  "zIndex": {
+    "$type": "number",
+    "base": { "$value": 0 },
+    "sticky": { "$value": 100 },
+    "dropdown": { "$value": 200 },
+    "overlay": { "$value": 300 },
+    "modal": { "$value": 400 },
+    "toast": { "$value": 500 }
+  }
+}

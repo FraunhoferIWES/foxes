@@ -297,9 +297,11 @@ class SingleStateField(States):
         super().calculate(algo, mdata, fdata, tdata)
         vrs = mdata.extra_data[self.VARS]
         data = mdata.extra_data[self.DATA]
+        n_states = tdata.n_states
         n_targets = tdata.n_targets
         n_tpoints = tdata.n_tpoints
-        points = tdata[FC.TARGETS][0, ...].reshape(n_targets * n_tpoints, 3)
+        assert n_states is not None
+        points = tdata[FC.TARGETS].reshape(n_states * n_targets * n_tpoints, 3)
 
         # get interpolation points:
         pts = {}
@@ -307,12 +309,16 @@ class SingleStateField(States):
             if c in self._cmap:
                 pts[c] = points[:, i]
 
-        valid = np.ones(n_targets * n_tpoints, dtype=bool)
+        valid = np.ones(n_states * n_targets * n_tpoints, dtype=bool)
         for c in self._cmap:
             valid &= np.isfinite(pts[c])
 
         out: dict[str, np.ndarray] = {
-            v: np.full(n_targets * n_tpoints, np.nan, dtype=config.dtype_double)
+            v: np.full(
+                n_states * n_targets * n_tpoints,
+                np.nan,
+                dtype=config.dtype_double,
+            )
             for v in vrs
         }
 
@@ -362,14 +368,14 @@ class SingleStateField(States):
 
         # set interpolated values:
         for v in vrs:
-            tdata[v] = out[v].reshape(1, n_targets, n_tpoints)
+            tdata[v] = out[v].reshape(n_states, n_targets, n_tpoints)
 
         # set fixed values:
         for v, d in self.fixed_vars.items():
             tdata[v][:] = d
 
         # set weights:
-        tdata[FV.WEIGHT] = np.ones((1, 1, 1), dtype=config.dtype_double)
+        tdata[FV.WEIGHT] = np.ones((n_states, 1, 1), dtype=config.dtype_double)
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}
