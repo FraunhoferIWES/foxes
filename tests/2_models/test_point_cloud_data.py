@@ -236,8 +236,31 @@ def test_point_cloud_keeps_nan_fill_when_bounds_errors_disabled():
 
 
 def test_point_cloud_raises_for_default_none_fill_when_bounds_errors_enabled():
-    with pytest.raises(ValueError, match="outside of bounds"):
+    with pytest.raises(ValueError, match="outside the support hull"):
         _interpolate_point_cloud({"bounds_error": True})
+
+
+def test_point_cloud_reports_inside_bounds_outside_support_hull(capsys):
+    states = PointCloudData(
+        data_source=xr.Dataset(),
+        output_vars=[FV.WS],
+        interp_pars={"bounds_error": True},
+    )
+    support_points = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+
+    with pytest.raises(ValueError, match="outside the support hull"):
+        states.interpolate_data(
+            mdata={},
+            idims=[FC.POINT],
+            d=np.array([[0.0], [1.0], [2.0]]),
+            pts=np.array([[0.8, 0.8]]),
+            vrs=[FV.WS],
+            gpts=support_points,
+        )
+
+    diagnostic = capsys.readouterr().out
+    assert "Inside coordinate bounds:  [ True  True]" in diagnostic
+    assert "Inside support hull:        False" in diagnostic
 
 
 def test_point_cloud_keeps_finite_fill_when_bounds_errors_disabled():

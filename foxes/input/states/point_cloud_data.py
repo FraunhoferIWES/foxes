@@ -440,22 +440,27 @@ class PointCloudData(DatasetStates):
         ):
             sel = np.isnan(results)
             if np.any(sel):
-                point_indices = [j[0] for j in np.where(sel)]
-                p = pts[point_indices[0]]
+                missing_axes = tuple(range(1, sel.ndim))
+                missing_points = np.any(sel, axis=missing_axes) if missing_axes else sel
+                point_index = int(np.flatnonzero(missing_points)[0])
+                n_missing_points = int(np.sum(missing_points))
+                p = pts[point_index]
                 qmin = np.min(gpts, axis=0)
                 qmax = np.max(gpts, axis=0)
-                isin = (p >= qmin) & (p <= qmax)
+                inside_bounds = (p >= qmin) & (p <= qmax)
+                inside_hull = bool(_points_inside_support(gpts, p[None, :])[0])
                 method = "linear"
                 print("\n\nInterpolation error")
                 print("dims:   ", idims[1:] if FC.STATE in idims else idims)
-                print(f"point {point_indices[0]}: ", p)
+                print(f"point {point_index}: ", p)
                 print("qmin:   ", qmin)
                 print("qmax:   ", qmax)
-                print("Inside: ", isin, "\n\n")
+                print("Inside coordinate bounds: ", inside_bounds)
+                print("Inside support hull:       ", inside_hull, "\n\n")
 
-                if not np.all(isin):
+                if not inside_hull:
                     raise ValueError(
-                        f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
+                        f"States '{self.name}': Interpolation method '{method}' failed for {n_missing_points} points, e.g. for point {p}, outside the support hull with coordinate bounds {qmin} - {qmax}, dimensions = {idims}."
                     )
                 else:
                     sel2 = np.isnan(d)
@@ -472,10 +477,10 @@ class PointCloudData(DatasetStates):
                             print(f"  {w}: {d[nan_indices[0][0], iw]}")
                         print("\n\n")
                         raise ValueError(
-                            f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[nan_indices[0][0]]} with {v} = {d[nan_indices[0][0], nan_indices[1][0]]}."
+                            f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {n_missing_points} grid points, e.g. {gpts[nan_indices[0][0]]} with {v} = {d[nan_indices[0][0], nan_indices[1][0]]}."
                         )
                     raise ValueError(
-                        f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
+                        f"States '{self.name}': Interpolation method '{method}' failed for {n_missing_points} points inside the support hull, for unknown reason."
                     )
 
     def interpolate_data(
