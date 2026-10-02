@@ -150,9 +150,6 @@ result*.*
 area.png
 binned_data.nc
 
-# AI
-Agents.md
-
 # exceptions:
 !foxes/output/results_writer.py
 !tests/**/results*
