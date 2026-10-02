@@ -273,10 +273,10 @@ subprocess.
 	remains in annotations.
 - Ruff formatting/linting and mypy run through pre-commit. Pytest is the test
 	runner; Sphinx with AutoAPI, numpydoc, and MyST-NB builds the documentation.
-- The repository has no browser UI and no design-token adapter. Any future UI,
-	brand asset, or visual-design work must first follow the policy in
-	[AGENTS.md](../AGENTS.md#ui-design-policy); scientific plot changes also use
-	the applicable corporate chart guidance.
+- FOXES follows the Fraunhofer corporate design. The repository has no browser
+	UI and no design-token adapter; corporate requirements apply to scientific
+	plots, animations, examples, notebooks, documentation, and brand assets. See
+	[ADR-0002](adr/0002-corporate-design.md).
 
 ## ADR Triggers
 

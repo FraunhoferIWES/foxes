@@ -1115,5 +1115,6 @@ This major version introduces the concept of `Engines` which handle the chunking
     batches containing the circle centre
 - Development:
   - Adding Agents.md and related files for agentic coding
+  - Recorded Fraunhofer corporate design for FOXES visual surfaces
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.7](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)
