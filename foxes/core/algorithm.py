@@ -381,7 +381,8 @@ class Algorithm(Model):
         Parameters
         ----------
         points
-            The points, shape: (n_states, n_points, 3)
+            Static points with shape ``(n_points, 3)`` or state-dependent
+            points with shape ``(n_states, n_points, 3)``.
         states_indices
             The indices of the states dimension
         n_states
@@ -389,38 +390,37 @@ class Algorithm(Model):
 
         Returns
         -------
-        xarray.Dataset
-            A dataset containing the points data
+        point_data
+            Point data with ``FC.TARGETS`` dimensions
+            ``(FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)``. Static target
+            coordinates have a singleton ``FC.STATE`` axis for worker-side
+            broadcasting.
 
         """
         if n_states is None:
             n_states = self.n_states
         assert n_states is not None
-        if states_indices is None:
-            idata: dict[str, Any] = {"coords": {}, "data_vars": {}}
-        else:
-            idata = {
-                "coords": {FC.STATE: states_indices},
-                "data_vars": {},
-            }
+        idata: dict[str, Any] = {"coords": {}, "data_vars": {}}
 
         if len(points.shape) == 2 and points.shape[1] == 3:
-            pts = np.zeros((n_states,) + points.shape, dtype=config.dtype_double)
-            pts[:] = points[None]
-            points = pts
-            del pts
-
-        if (
-            len(points.shape) != 3
-            or points.shape[0] != n_states
-            or points.shape[2] != 3
+            target_data = np.asarray(points, dtype=config.dtype_double)[
+                None, :, None, :
+            ]
+        elif (
+            len(points.shape) == 3
+            and points.shape[0] == n_states
+            and points.shape[2] == 3
         ):
+            target_data = points[:, :, None, :]
+        else:
             raise ValueError(
                 f"points have wrong dimensions, expecting ({n_states}, {points.shape[1]}, 3), got {points.shape}"
             )
+        if states_indices is not None and target_data.shape[0] == n_states:
+            idata["coords"][FC.STATE] = states_indices
         idata["data_vars"][FC.TARGETS] = (
             (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH),
-            points[:, :, None, :],
+            target_data,
         )
         idata["data_vars"][FC.TWEIGHTS] = (
             (FC.TPOINT,),

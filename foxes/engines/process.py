@@ -189,6 +189,8 @@ class ProcessEngineRunner(EngineRunner):
         algo.reset_chunk_store(chunk_store.copy())
         mdata = self._recombine_mdata_with_shared(mdata, shared)
         fdata, has_prev_farm_results = self._apply_prev_farm_results(algo, mdata, fdata)
+        if tdata is not None:
+            tdata.expand_targets()
 
         results: dict[str, Any] | None
         if tdata is None:

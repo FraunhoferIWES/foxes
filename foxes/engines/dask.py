@@ -217,6 +217,8 @@ class DaskProcessRunner(ProcessEngineRunner):
         mdata = self._resolve_data_container(mdata)
         fdata = self._resolve_data_container(fdata)
         tdata = self._resolve_data_container(tdata)
+        if tdata is not None:
+            tdata.expand_targets()
         cpars = self._resolve_nested_value(cpars)
         fdata, has_prev_farm_results = self._apply_prev_farm_results(algo, mdata, fdata)
 

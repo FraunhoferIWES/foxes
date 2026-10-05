@@ -145,7 +145,10 @@ mere spelling conveniences.
 
 Farm variables ordinarily lead with `(FC.STATE, FC.TURBINE)`. Target variables
 ordinarily lead with `(FC.STATE, FC.TARGET, FC.TPOINT)`, and `FC.TARGETS` adds
-`FC.XYH`. Point calculations use these target dimensions internally;
+`FC.XYH`. Static `FC.TARGETS` keep that dimension tuple with a singleton
+`FC.STATE` axis until an engine runner broadcasts them to the active state
+chunk. State-dependent target coordinates carry the full state axis. Point
+calculations use these target dimensions internally;
 `calc_points()` selects the single target point and exposes `FC.TARGET` as
 `FC.POINT` in the returned xarray dataset. Keep dimensions as tuples of
 constants. Do not substitute array shape comments for dimension metadata.

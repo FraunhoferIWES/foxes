@@ -484,8 +484,18 @@ class Engine(ABC):
             new_datasets: list[Any] = []
             for data in subsets:
                 if data is not None:
+                    compact_static_targets = (
+                        FC.TARGETS in data
+                        and data[FC.TARGETS].dims
+                        == (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
+                        and data[FC.TARGETS].sizes[FC.STATE] == 1
+                    )
                     missing = [
-                        c for c in sel if c in data.dims and c not in data.coords
+                        c
+                        for c in sel
+                        if c in data.dims
+                        and c not in data.coords
+                        and not (c == FC.STATE and compact_static_targets)
                     ]
                     if missing:
                         raise ValueError(
@@ -505,6 +515,13 @@ class Engine(ABC):
         n_states = default_n_states
         for data in subsets:
             if data is not None and FC.STATE in data.sizes:
+                if (
+                    FC.TARGETS in data
+                    and data[FC.TARGETS].dims
+                    == (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
+                    and data[FC.TARGETS].sizes[FC.STATE] == 1
+                ):
+                    continue
                 n_states = data.sizes[FC.STATE]
                 break
 

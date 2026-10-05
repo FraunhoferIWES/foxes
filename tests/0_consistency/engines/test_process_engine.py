@@ -5,7 +5,7 @@ from multiprocessing import shared_memory as mp_shared_memory
 from multiprocessing import resource_tracker
 from xarray import Dataset
 
-from foxes.core import MData, FData
+from foxes.core import Algorithm, MData, FData
 import foxes.constants as FC
 from foxes.engines.process import (
     ProcessEngine,
@@ -155,6 +155,38 @@ def test_select_subsets_reapplies_label_selection_safely():
     assert n_states == 3
 
 
+def test_select_subsets_ignores_compact_static_target_state_axis():
+    from foxes.core.engine import Engine
+
+    selected_data = Dataset(coords={FC.STATE: np.array([0, 2, 5])})
+    point_data = Algorithm.new_point_data(
+        type("Algo", (), {"n_states": 10})(),
+        np.arange(12, dtype=float).reshape(4, 3),
+        states_indices=np.arange(10),
+    )
+
+    subsets, n_states = Engine.select_subsets(
+        object(),
+        selected_data,
+        point_data,
+        sel={FC.STATE: [0, 2, 5]},
+    )
+
+    assert np.array_equal(subsets[0][FC.STATE], [0, 2, 5])
+    assert subsets[1].sizes[FC.STATE] == 1
+    assert FC.STATE not in subsets[1].coords
+    assert n_states == 3
+
+
+def test_select_subsets_rejects_other_unlabelled_state_dimensions():
+    from foxes.core.engine import Engine
+
+    data = Dataset(data_vars={"value": ((FC.STATE,), np.arange(3))})
+
+    with pytest.raises(ValueError, match="dimensions without coordinates"):
+        Engine.select_subsets(object(), data, sel={FC.STATE: [0, 2]})
+
+
 def test_mdata_pop_shared_respects_min_size_threshold():
     shared_small = np.arange(4, dtype=np.int32)
     shared_large = np.arange(32, dtype=np.float64)
@@ -234,6 +266,52 @@ def test_process_engine_get_chunk_input_data_uses_min_size_threshold_for_split()
     assert "shared_small" in mdata
     assert "chunked" in mdata
     assert FC.STATE in fdata
+
+
+def test_point_chunks_keep_static_targets_compact_until_worker():
+    n_states = 7
+    points = np.arange(30, dtype=float).reshape(10, 3)
+
+    class _Algo:
+        n_states = 7
+        n_turbines = 1
+
+    algo = _Algo()
+    point_data = Algorithm.new_point_data(
+        algo,
+        points,
+        states_indices=np.arange(n_states),
+    )
+    assert point_data[FC.TARGETS].dims == (
+        FC.STATE,
+        FC.TARGET,
+        FC.TPOINT,
+        FC.XYH,
+    )
+    assert point_data[FC.TARGETS].shape == (1, 10, 1, 3)
+    assert point_data[FC.TARGETS].nbytes == points.nbytes
+
+    engine = ProcessEngine(n_procs=2, verbosity=0)
+    model_data = Dataset(coords={FC.STATE: np.arange(n_states)})
+    _, _, tdata = engine.get_chunk_input_data(
+        algo=algo,
+        model_data=model_data,
+        farm_data=None,
+        point_data=point_data,
+        states_i0_i1=(1, 4),
+        targets_i0_i1=(2, 6),
+        out_vars=[],
+        chunki_states=0,
+        chunki_points=0,
+        n_chunks_states=1,
+        n_chunks_points=1,
+    )
+
+    assert tdata[FC.TARGETS].shape == (1, 4, 1, 3)
+    assert tdata.n_states == 3
+    tdata.expand_targets()
+    assert tdata[FC.TARGETS].shape == (3, 4, 1, 3)
+    np.testing.assert_array_equal(tdata[FC.TARGETS][0, :, 0], points[2:6])
 
 
 def test_process_engine_prepare_chunk_removes_shared_extra_data():

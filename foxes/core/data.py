@@ -979,24 +979,25 @@ class TData(Data):
         super()._run_entry_checks(name, data, dims)
         data = self[name]
         dims = self.dims[name]
-        n_states = self.n_states
-        assert n_states is not None
 
         if name == FC.TARGETS:
             dms: tuple[str, ...] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
-            shp: tuple[int, ...] = (n_states, self.n_targets, self.n_tpoints, 3)
             if dims != dms:
                 raise ValueError(
                     f"TData '{self.name}': Invalid dims of {FC.TARGETS}, expecting {dms}, got {dims}"
                 )
-            if data.shape != shp:
+            n_states = self.n_states
+            assert n_states is not None
+            expected_shape = (n_states, self.n_targets, self.n_tpoints, 3)
+            broadcast_shape = (1, self.n_targets, self.n_tpoints, 3)
+            if data.shape not in {expected_shape, broadcast_shape}:
                 raise ValueError(
-                    f"TData '{self.name}': Invalid shape of {FC.TARGETS}, expecting {shp}, got {data.shape}"
+                    f"TData '{self.name}': Invalid shape of {FC.TARGETS}, expecting {expected_shape} or {broadcast_shape}, got {data.shape}"
                 )
 
         elif name == FC.TWEIGHTS:
             dms = (FC.TPOINT,)
-            shp = (self.n_tpoints,)
+            shp: tuple[int, ...] = (self.n_tpoints,)
             if dims != dms:
                 raise ValueError(
                     f"TData '{self.name}': Invalid dims of {FC.TWEIGHTS}, expecting {dms}, got {dims}"
@@ -1017,6 +1018,8 @@ class TData(Data):
             )
 
         elif name not in self.sizes:
+            n_states = self.n_states
+            assert n_states is not None
             dms = (FC.STATE, FC.TARGET, FC.TPOINT)
             shp = (n_states, self.n_targets, self.n_tpoints)
             if len(data.shape) < 3:
@@ -1090,6 +1093,21 @@ class TData(Data):
 
         """
         return np.einsum("stp...,p->st...", self[variable], self[FC.TWEIGHTS])
+
+    def expand_targets(self) -> None:
+        """Broadcast singleton-state target coordinates over this state chunk.
+
+        Replaces ``FC.TARGETS`` with a broadcast view whose leading size equals
+        ``n_states``. Other target data remains unchanged.
+        """
+        n_states = self.n_states
+        assert n_states is not None
+        targets = self[FC.TARGETS]
+        if targets.shape[0] == 1 and n_states != 1:
+            self[FC.TARGETS] = np.broadcast_to(
+                targets,
+                (n_states,) + targets.shape[1:],
+            )
 
     def targets_i0(self) -> int | None:
         """
@@ -1324,12 +1342,20 @@ class TData(Data):
             The data object
 
         """
+        broadcast_states = (
+            FC.TARGETS in ds
+            and ds[FC.TARGETS].dims == (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
+            and ds[FC.TARGETS].shape[0] == 1
+        )
+        if broadcast_states:
+            kwargs["s_states"] = None
+
         if mdata is None:
             cb0 = callback
         else:
 
             def cb_mdata(data: dict[str, Any], dims: dict[str, Any]) -> None:
-                if FC.STATE not in data:
+                if broadcast_states or FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
                     dims[FC.STATE] = mdata.dims[FC.STATE]
                 if callback is not None:
@@ -1341,31 +1367,20 @@ class TData(Data):
             kwargs["n_chunks_states"] = mdata.n_chunks_states
             kwargs["n_chunks_points"] = mdata.n_chunks_points
 
-        if s_targets is None:
-            cb1 = cb0
-        else:
+        if s_targets is not None:
+            for name, data in ds.data_vars.items():
+                if FC.TARGET in data.dims and data.dims != (FC.TARGET,):
+                    state_dependent = len(data.dims) >= 3 and data.dims[:3] == (
+                        FC.STATE,
+                        FC.TARGET,
+                        FC.TPOINT,
+                    )
+                    if not state_dependent:
+                        raise ValueError(
+                            f"Expecting coordinates '{(FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{name}', got {data.dims}"
+                        )
+            if FC.TARGET not in ds.coords:
+                ds = ds.assign_coords({FC.TARGET: np.arange(ds.sizes[FC.TARGET])})
+            ds = ds.isel({FC.TARGET: s_targets})
 
-            def cb_targets(data: dict[str, Any], dims: dict[str, Any]) -> None:
-                if FC.TARGET not in data:
-                    data[FC.TARGET] = np.arange(ds.sizes[FC.TARGET])
-                    dims[FC.TARGET] = (FC.TARGET,)
-                for v, d in data.items():
-                    if FC.TARGET in dims[v]:
-                        if dims[v] == (FC.TARGET,):
-                            data[v] = d[s_targets].copy()
-                        elif len(dims[v]) < 3 or dims[v][:3] != (
-                            FC.STATE,
-                            FC.TARGET,
-                            FC.TPOINT,
-                        ):
-                            raise ValueError(
-                                f"Expecting coordinates '{(FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}"
-                            )
-                        else:
-                            data[v] = d[:, s_targets]
-                if cb0 is not None:
-                    cb0(data, dims)
-
-            cb1 = cb_targets
-
-        return super().from_dataset(ds, *args, callback=cb1, **kwargs)
+        return super().from_dataset(ds, *args, callback=cb0, **kwargs)

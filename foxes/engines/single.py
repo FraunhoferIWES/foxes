@@ -45,6 +45,8 @@ class SingleChunkEngineRunner(EngineRunner):
                 algo, mdata, cast(FData, data[0])
             )
             data = (fdata, *data[1:])
+        if len(data) > 1 and data[1] is not None:
+            data[1].expand_targets()
 
         results: dict[str, Any] | None = model.calculate(algo, mdata, *data, **cpars)
         results = self._merge_prev_farm_results(

@@ -119,6 +119,11 @@ as `FV`. Avoid local string copies of established constants.
 - `TData` stores targets, target-point weights, and point variables.
 - These containers are NumPy-backed mappings with dimension and size metadata;
 	they are not xarray datasets.
+- Static `FC.TARGETS` coordinates retain dimensions
+	`(FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)` with a singleton `FC.STATE` axis.
+	Engine runners broadcast that axis to the active state chunk immediately
+	before model calculation; state-dependent targets retain their full state
+	axis.
 - `LoadedData` separates `coords`, dimensioned `data_vars`, and non-array
 	`extra_data` during initialization.
 - The public boundary of `Algorithm.calc_farm()` and `calc_points()` is xarray.
@@ -225,6 +230,8 @@ over Python loops on those axes. At the same time, do not materialize a full
 state/target product merely to slice it per engine chunk.
 
 - Let engines choose and propagate chunk metadata.
+- Keep static target coordinates compact until engine runners broadcast them to
+	the active state chunk.
 - Keep chunk-local results deterministic and independent of task completion
 	order.
 - Avoid sending unnecessary algorithm state or large caches to every process.
@@ -271,6 +278,9 @@ subprocess.
 - Public Python APIs follow [docstring conventions](docstrings.md): NumPy-style
 	docstrings expose the scientific and runtime contract while type information
 	remains in annotations.
+- Static target coordinates use a singleton state axis during chunk transport
+	and are broadcast by engine runners. See
+	[ADR-0003](adr/0003-compact-static-target-coordinates.md).
 - Ruff formatting/linting and mypy run through pre-commit. Pytest is the test
 	runner; Sphinx with AutoAPI, numpydoc, and MyST-NB builds the documentation.
 - FOXES follows the Fraunhofer corporate design. The repository has no browser

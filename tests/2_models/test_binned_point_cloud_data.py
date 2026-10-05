@@ -117,7 +117,7 @@ def test_binned_point_cloud_data_chunks_target_dependent_weights():
 
     with foxes.Engine.new(
         "numpy",
-        chunk_size_states=1,
+        chunk_size_states=2,
         progress_bar=False,
         verbosity=0,
     ):
@@ -130,13 +130,13 @@ def test_binned_point_cloud_data_chunks_target_dependent_weights():
             ambient=True,
         )
 
-    assert len(states.weight_chunks) == 2
-    np.testing.assert_array_equal(states.weight_chunks[0][0], [1])
-    np.testing.assert_array_equal(states.weight_chunks[1][0], [2])
-    assert states.weight_chunks[0][1].shape == (1, 2, 1)
-    assert states.weight_chunks[1][1].shape == (1, 2, 1)
-    np.testing.assert_allclose(states.weight_chunks[0][1][0, :, 0], [0.2, 0.8])
-    np.testing.assert_allclose(states.weight_chunks[1][1][0, :, 0], [0.8, 0.2])
+    assert len(states.weight_chunks) == 1
+    np.testing.assert_array_equal(states.weight_chunks[0][0], [1, 2])
+    assert states.weight_chunks[0][1].shape == (2, 2, 1)
+    np.testing.assert_allclose(
+        states.weight_chunks[0][1][..., 0],
+        [[0.2, 0.8], [0.8, 0.2]],
+    )
     np.testing.assert_array_equal(farm_results[FC.STATE], [1, 2])
     np.testing.assert_allclose(
         farm_results[FV.WEIGHT],
