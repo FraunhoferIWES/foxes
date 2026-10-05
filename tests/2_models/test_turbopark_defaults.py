@@ -65,7 +65,25 @@ def test_jensen_turbopark_scalar_ati_runs_without_ambient_ti():
     )
     states = foxes.input.states.SingleStateStates(ws=8.0, wd=270.0, rho=1.225)
     algo = foxes.algorithms.Downwind(
-        _farm([turbine_type]),
+        _farm([turbine_type], n_turbines=3),
+        states,
+        wake_models=["JensenTurbOPark"],
+        mbook=mbook,
+        verbosity=0,
+    )
+
+    with _engine():
+        farm_results = algo.calc_farm()
+
+    _assert_farm_results(farm_results)
+    assert np.isfinite(farm_results[FV.REWS].to_numpy()).all()
+
+
+def test_jensen_turbopark_ambient_ati_handles_multiple_active_targets():
+    mbook, turbine_type = _mbook_with_ttype()
+    states = foxes.input.states.SingleStateStates(ws=8.0, wd=270.0, ti=0.08, rho=1.225)
+    algo = foxes.algorithms.Downwind(
+        _farm([turbine_type], n_turbines=3),
         states,
         wake_models=["JensenTurbOPark"],
         mbook=mbook,

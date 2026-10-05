@@ -186,6 +186,22 @@ class JensenTurbOParkWake(TopHatWakeModel):
     centreline formulation, but uses the TurbOPark wake-growth
     expression for the effective wake radius.
 
+    Attributes
+    ----------
+    ati
+        Scalar ambient turbulence intensity, or ``None`` when ambient
+        turbulence intensity is read from ``FV.AMB_TI``.
+    sbeta_factor
+        Factor multiplying the induction-dependent ``sbeta`` term.
+    c1
+        Factor multiplying ambient turbulence intensity in the wake-growth
+        expression.
+    c2
+        Factor multiplying ambient turbulence intensity in the wake-growth
+        expression.
+    wake_k
+        Wake-growth coefficient model.
+
     :group: models.wake_models.wind
     """
 
@@ -200,23 +216,34 @@ class JensenTurbOParkWake(TopHatWakeModel):
         **wake_k: Any,
     ) -> None:
         """
+        Initialize the Jensen TurbOPark wake model.
+
         Parameters
         ----------
         superposition
-            The wind deficit superposition
+            The name of the wind-deficit superposition model.
         sbeta_factor
-            Factor multiplying sbeta
+            Factor multiplying the induction-dependent ``sbeta`` term.
         c1
-            Factor from Frandsen turbulence model
+            Factor multiplying ambient turbulence intensity in the
+            wake-growth expression.
         c2
-            Factor from Frandsen turbulence model
+            Factor multiplying ambient turbulence intensity in the
+            wake-growth expression.
         induction
-            The induction model
+            The axial-induction model or its model-book name.
         ati
-            Scalar ambient turbulence intensity. When provided, this value
-            replaces the ``FV.AMB_TI`` lookup and must be finite and positive.
+            Scalar ambient turbulence intensity. When provided, this value is
+            used instead of looking up ``FV.AMB_TI`` and must be finite and
+            positive. When ``None``, ``FV.AMB_TI`` is read from the calculation
+            data.
         wake_k
-            Parameters for the WakeK class
+            Keyword parameters forwarded to ``WakeK``.
+
+        Raises
+        ------
+        ValueError
+            If ``ati`` is not finite and positive.
         """
         if ati is not None and (not np.isfinite(ati) or ati <= 0):
             raise ValueError("JensenTurbOParkWake: 'ati' must be finite and positive")
@@ -285,6 +312,11 @@ class JensenTurbOParkWake(TopHatWakeModel):
         wake_r
             The wake radii, shape: (n_states, n_targets)
 
+        Notes
+        -----
+        Uses the configured scalar ``ati`` when provided; otherwise reads
+        ambient turbulence intensity from ``FV.AMB_TI``.
+
         """
         assert not isinstance(self.induction, str)
 
@@ -315,9 +347,8 @@ class JensenTurbOParkWake(TopHatWakeModel):
                     downwind_index=downwind_index,
                     upcast=True,
                 )
-                ati = ati[st_sel]
             else:
-                ati = np.full(np.count_nonzero(st_sel), self.ati, dtype=np.float64)
+                ati = np.full_like(x, self.ati, dtype=np.float64)
 
             k = self.wake_k(
                 FC.STATE_TARGET,
@@ -331,6 +362,7 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 selection=st_sel,
             )
 
+            ati = ati[st_sel]
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct[st_sel])
 

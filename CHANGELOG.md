@@ -1129,6 +1129,6 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Recorded Fraunhofer corporate design for FOXES visual surfaces
 - Wake models:
   - `JensenTurbOParkWake` accepts scalar ambient TI and can run without
-    `FV.AMB_TI`
+    `FV.AMB_TI`; ATI stays aligned with target selection in multi-target runs
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.7](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)
