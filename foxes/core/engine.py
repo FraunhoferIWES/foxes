@@ -1158,6 +1158,11 @@ class Engine(ABC):
 
         def __exit__(self, *exit_args: Any) -> None:
             assert self.__entered, "ChunkResultsManager: exit called without enter"
+            if exit_args[0] is not None:
+                if self.pbar is not None:
+                    self.pbar.close()
+                self.__entered = False
+                return
             assert self.counter == self.n_chunks_all, (
                 f"{self.name}: Incomplete chunk calculation: {self.counter} of {self.n_chunks_all} chunks done"
             )

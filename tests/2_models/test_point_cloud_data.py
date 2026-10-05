@@ -236,7 +236,7 @@ def test_point_cloud_keeps_nan_fill_when_bounds_errors_disabled():
 
 
 def test_point_cloud_raises_for_default_none_fill_when_bounds_errors_enabled():
-    with pytest.raises(ValueError, match="outside the support hull"):
+    with pytest.raises(ValueError, match="set bounds_error=False"):
         _interpolate_point_cloud({"bounds_error": True})
 
 

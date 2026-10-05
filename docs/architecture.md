@@ -157,6 +157,10 @@ default engine; `DefaultEngine` chooses a single-chunk or process strategy from
 the problem size. Engine changes therefore require both numerical-equivalence
 tests and coverage of chunk boundaries and cleanup.
 
+Chunk result managers assert completeness after normal execution. During
+exception unwinding they preserve the active worker or model exception instead
+of replacing it with a secondary incomplete-chunk assertion.
+
 ## Extension Points
 
 ### Models And Registries
@@ -215,6 +219,8 @@ results only through explicit output APIs or command-line tools.
 - Fail with contextual exceptions that identify the model, variable, dimensions,
 	or backend involved. FOXES is a library, so do not terminate the interpreter
 	for a recoverable caller error.
+- Point-cloud support-hull failures name the configured interpolation method and
+	the nearest-neighbor fallback setting that can resolve unsupported targets.
 - User input data can carry any classification. Before an AI tool inspects such
 	data, apply [the repository classification policy](../AGENTS.md#data-classification).
 	Synthetic tests and public packaged examples do not authorize access to a

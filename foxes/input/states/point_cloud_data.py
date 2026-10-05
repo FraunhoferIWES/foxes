@@ -449,7 +449,7 @@ class PointCloudData(DatasetStates):
                 qmax = np.max(gpts, axis=0)
                 inside_bounds = (p >= qmin) & (p <= qmax)
                 inside_hull = bool(_points_inside_support(gpts, p[None, :])[0])
-                method = "linear"
+                method = str(ipars.get("method", "linear"))
                 print("\n\nInterpolation error")
                 print("dims:   ", idims[1:] if FC.STATE in idims else idims)
                 print(f"point {point_index}: ", p)
@@ -460,7 +460,7 @@ class PointCloudData(DatasetStates):
 
                 if not inside_hull:
                     raise ValueError(
-                        f"States '{self.name}': Interpolation method '{method}' failed for {n_missing_points} points, e.g. for point {p}, outside the support hull with coordinate bounds {qmin} - {qmax}, dimensions = {idims}."
+                        f"States '{self.name}': Interpolation method '{method}' failed for {n_missing_points} points, e.g. for point {p}, outside the support hull with coordinate bounds {qmin} - {qmax}, dimensions = {idims}. To keep '{method}' interpolation where available and use nearest-neighbor values for unresolved points, set bounds_error=False on BinnedPointCloudData or interp_pars={{'bounds_error': False}} on PointCloudData."
                     )
                 else:
                     sel2 = np.isnan(d)

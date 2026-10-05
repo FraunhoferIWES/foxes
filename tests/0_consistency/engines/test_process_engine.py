@@ -582,6 +582,26 @@ def test_process_engine_rejects_invalid_shared_entries():
         )
 
 
+def test_chunk_results_manager_preserves_active_exception():
+    engine = ProcessEngine(n_procs=2, verbosity=0)
+    manager = engine.new_chunk_results_manager(
+        algo=_DummyAlgo(),
+        chunk_store={},
+        goal_data=Dataset(),
+        n_chunks_states=1,
+        n_chunks_targets=1,
+        out_vars=[],
+        out_dims=(),
+        coords={},
+        iterative=False,
+        write_nc=None,
+    )
+
+    with pytest.raises(ValueError, match="worker failure"):
+        with manager:
+            raise ValueError("worker failure")
+
+
 def test_process_engine_pool_run_shares_memory_but_keeps_extra_data_local():
     engine = ProcessEngine(n_procs=2, verbosity=0, min_shared_array_bytes=0)
     arr = np.arange(6, dtype=np.int32).reshape(2, 3)
