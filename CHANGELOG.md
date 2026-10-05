@@ -1127,5 +1127,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Development:
   - Adding Agents.md and related files for agentic coding
   - Recorded Fraunhofer corporate design for FOXES visual surfaces
+- Wake models:
+  - `JensenTurbOParkWake` accepts scalar ambient TI and can run without
+    `FV.AMB_TI`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.7](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)

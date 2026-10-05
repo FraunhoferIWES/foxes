@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import numpy as np
+import pytest
+
 import foxes
 import foxes.variables as FV
 from foxes.input.yaml.windio.read_attributes import _read_wind_deficit
@@ -51,6 +54,35 @@ def test_jensen_turbopark_defaults():
     assert wake_model.wind_superposition == "ws_quadratic_amb_target"
     assert wake_model.wake_k.repr() == f"k=0.6*{FV.AMB_TI}"
     assert mbook.default_partial_wakes(wake_model) == "top_hat"
+
+
+def test_jensen_turbopark_scalar_ati_runs_without_ambient_ti():
+    mbook, turbine_type = _mbook_with_ttype()
+    mbook.wake_models["JensenTurbOPark"] = JensenTurbOParkWake(
+        ati=0.08,
+        ka=0.6,
+        induction="Betz",
+    )
+    states = foxes.input.states.SingleStateStates(ws=8.0, wd=270.0, rho=1.225)
+    algo = foxes.algorithms.Downwind(
+        _farm([turbine_type]),
+        states,
+        wake_models=["JensenTurbOPark"],
+        mbook=mbook,
+        verbosity=0,
+    )
+
+    with _engine():
+        farm_results = algo.calc_farm()
+
+    _assert_farm_results(farm_results)
+    assert np.isfinite(farm_results[FV.REWS].to_numpy()).all()
+
+
+@pytest.mark.parametrize("ati", [0.0, -0.1, np.nan])
+def test_jensen_turbopark_rejects_nonpositive_or_nonfinite_scalar_ati(ati):
+    with pytest.raises(ValueError, match="ati.*finite and positive"):
+        JensenTurbOParkWake(ati=ati)
 
 
 def test_windio_turbopark_uses_original_model_structure():

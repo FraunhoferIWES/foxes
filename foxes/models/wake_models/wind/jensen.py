@@ -196,6 +196,7 @@ class JensenTurbOParkWake(TopHatWakeModel):
         c1: float = 1.5,
         c2: float = 0.8,
         induction: str = "Betz",
+        ati: float | None = None,
         **wake_k: Any,
     ) -> None:
         """
@@ -211,13 +212,20 @@ class JensenTurbOParkWake(TopHatWakeModel):
             Factor from Frandsen turbulence model
         induction
             The induction model
+        ati
+            Scalar ambient turbulence intensity. When provided, this value
+            replaces the ``FV.AMB_TI`` lookup and must be finite and positive.
         wake_k
             Parameters for the WakeK class
         """
+        if ati is not None and (not np.isfinite(ati) or ati <= 0):
+            raise ValueError("JensenTurbOParkWake: 'ati' must be finite and positive")
+
         super().__init__(wind_superposition=superposition, induction=induction)
         self.sbeta_factor = sbeta_factor
         self.c1 = c1
         self.c2 = c2
+        self.ati = ati
         self.wake_k = WakeK(**wake_k)
 
     def __repr__(self) -> str:
@@ -296,17 +304,20 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 selection=st_sel,
             )
 
-            ati = self.get_data(
-                FV.AMB_TI,
-                FC.STATE_TARGET,
-                lookup="w",
-                algo=algo,
-                fdata=fdata,
-                tdata=tdata,
-                downwind_index=downwind_index,
-                upcast=True,
-            )
-            ati = ati[st_sel]
+            if self.ati is None:
+                ati = self.get_data(
+                    FV.AMB_TI,
+                    FC.STATE_TARGET,
+                    lookup="w",
+                    algo=algo,
+                    fdata=fdata,
+                    tdata=tdata,
+                    downwind_index=downwind_index,
+                    upcast=True,
+                )
+                ati = ati[st_sel]
+            else:
+                ati = np.full(np.count_nonzero(st_sel), self.ati, dtype=np.float64)
 
             k = self.wake_k(
                 FC.STATE_TARGET,
@@ -314,6 +325,7 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
+                ti=ati if self.ati is not None else None,
                 amb_ti=ati,
                 upcast=False,
                 selection=st_sel,
