@@ -348,7 +348,7 @@ class JensenTurbOParkWake(TopHatWakeModel):
                     upcast=True,
                 )
             else:
-                ati = np.full_like(x, self.ati, dtype=np.float64)
+                ati = self.ati
 
             k = self.wake_k(
                 FC.STATE_TARGET,
@@ -362,7 +362,9 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 selection=st_sel,
             )
 
-            ati = ati[st_sel]
+            if self.ati is None:
+                ati = ati[st_sel]
+
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct[st_sel])
 
