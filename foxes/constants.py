@@ -133,6 +133,11 @@ PREV_FARM_RESULTS = "prev_farm_results"
 """
 
 
+FARM_RESULTS = "farm_results"
+"""Identifier for farm results dataset
+"""
+
+
 WDEFL_ROT_ANGLE = "wake_deflection_rotation_angle"
 """Identifier for the wake deflection rotation angle data
 """
