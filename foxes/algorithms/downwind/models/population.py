@@ -117,7 +117,6 @@ class PopulationStates(States):
         # prepare:
         self.STATE0 = self.var(FC.STATE + "0")
         self.SMAP = self.var("smap")
-        n_states0 = self.states.size()
         coords = loaded_data["coords"]
         data_vars = loaded_data["data_vars"]
 
@@ -132,14 +131,6 @@ class PopulationStates(States):
                 dims = tuple([self.STATE0 if d == FC.STATE else d for d in dims])
                 data_vars[dname] = (dims, data)
                 need_state0 = True
-
-        # make sure that the weight variable is present:
-        if FV.WEIGHT not in data_vars:
-            data_vars[FV.WEIGHT] = (
-                (self.STATE0,),
-                np.full(n_states0, 1 / n_states0, dtype=config.dtype_double),
-            )
-            need_state0 = True
 
         # create mapping from new states to original states:
         smap: np.ndarray = np.zeros(

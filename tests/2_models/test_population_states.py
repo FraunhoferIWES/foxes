@@ -44,6 +44,34 @@ class _LoadedStatesMock(_FlyStatesMock):
         )
 
 
+class _SpatialWeightStatesMock(_FlyStatesMock):
+    def __init__(self, n_states):
+        super().__init__(n_states)
+        self.load_mode = "preload"
+
+    def load_data(self, algo, loaded_data, force=False, verbosity=0):
+        super().load_data(algo, loaded_data, force=force, verbosity=verbosity)
+        loaded_data["data_vars"]["spatial_weight"] = (
+            (FC.STATE, FC.POINT),
+            np.array([[0.8, 0.6], [0.2, 0.4]]),
+        )
+
+    def calculate(self, algo, mdata, fdata, tdata):
+        if FV.WEIGHT in mdata:
+            weights = np.broadcast_to(
+                mdata[FV.WEIGHT][:, None],
+                (mdata.n_states, tdata.n_targets),
+            )
+        else:
+            weights = mdata["spatial_weight"]
+        tdata.add(
+            FV.WEIGHT,
+            weights[..., None],
+            (FC.STATE, FC.TARGET, FC.TPOINT),
+        )
+        return {}
+
+
 def test_population_states_load_chunk_data_fly():
     states = _FlyStatesMock(5)
     pstates = PopulationStates(states, n_pop=2)
@@ -147,6 +175,42 @@ def test_population_states_reapplies_mapping_after_reinitialization():
         loaded_data["data_vars"][population.SMAP][1],
         np.array([0, 1, 0, 1, 0, 1]),
     )
+
+
+def test_population_states_preserves_spatial_weight_ownership():
+    states = _SpatialWeightStatesMock(2)
+    population = PopulationStates(states, n_pop=2)
+
+    loaded_data = population.initialize(None)
+
+    assert FV.WEIGHT not in loaded_data["data_vars"]
+    assert loaded_data["data_vars"]["spatial_weight"][0] == (
+        population.STATE0,
+        FC.POINT,
+    )
+
+    data = {FC.STATE: np.arange(4)}
+    dims = {FC.STATE: (FC.STATE,)}
+    for name, (entry_dims, values) in loaded_data["data_vars"].items():
+        data[name] = values
+        dims[name] = entry_dims
+    mdata = MData(data=data, dims=dims)
+    fdata = FData(
+        data={
+            FC.STATE: np.arange(4),
+            FC.TURBINE: np.arange(1),
+        },
+        dims={
+            FC.STATE: (FC.STATE,),
+            FC.TURBINE: (FC.TURBINE,),
+        },
+    )
+    tdata = TData.from_points(np.zeros((4, 2, 3)), mdata=mdata)
+
+    results = population.calculate(None, mdata, fdata, tdata)
+
+    expected = np.array([[0.8, 0.6], [0.2, 0.4]] * 2)
+    np.testing.assert_allclose(results[FV.WEIGHT][..., 0], expected)
 
 
 def test_population_model_data_matches_population_major_order():
