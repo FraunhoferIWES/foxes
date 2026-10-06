@@ -242,6 +242,15 @@ state/target product merely to slice it per engine chunk.
 - Let engines choose and propagate chunk metadata.
 - Keep static target coordinates compact until engine runners broadcast them to
 	the active state chunk.
+- Dataset-backed states reconstruct interpolated point and height ordering with
+	paired state/point index gathers, without a field-state/target-state
+	cross-product. This includes fixed locations permuted by downwind order.
+	`MesoMicroField` likewise gathers only the selected micro-bin/point pairs
+	before reference scaling. Upstream dataset-backed spatial interpolation
+	still evaluates all input states at all unique coordinates; genuinely moving
+	targets and distinct vectorized population layouts can therefore increase its
+	intermediate memory footprint. Paired gathers retain population-major state
+	ordering, including state chunks that cross population-member boundaries.
 - Keep chunk-local results deterministic and independent of task completion
 	order.
 - Avoid sending unnecessary algorithm state or large caches to every process.

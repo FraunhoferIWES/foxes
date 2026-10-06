@@ -178,6 +178,16 @@ edge case. For numerical code, assert values, dimensions, ordering, and finite
 or NaN behavior as applicable. Use deterministic synthetic arrays or public
 packaged fixtures. Do not use private research or customer data as a fixture.
 
+The layout-population interpolation regressions in
+`tests/2_models/test_point_cloud_data.py` require the optional `foxes-opt`
+integration and otherwise skip. With a sibling editable optimizer environment,
+run them against the current FOXES checkout without synchronizing that
+developer-owned environment:
+
+```console
+uv run --no-sync --project ../foxes-opt pytest tests/2_models/test_point_cloud_data.py -k layout_optimization_population -q
+```
+
 ### Model Coverage
 
 Public model-family tests use parametrized class paths and
