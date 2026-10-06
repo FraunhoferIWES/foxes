@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 # mypy: disable-error-code=override
 
 from typing import TYPE_CHECKING, Any, Sequence
