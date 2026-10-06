@@ -107,6 +107,10 @@ as `FV`. Avoid local string copies of established constants.
 - Target variables start with `(FC.STATE, FC.TARGET, FC.TPOINT)`.
 - Target coordinates use
 	`(FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)`.
+- Turbine ground positions have shape `(2,)` for static layouts or
+	`(FC.STATE, 2)` for state-dependent layouts. `InitFarmData` materializes both
+	as `FV.TXYH` with dimensions `(FC.STATE, FC.TURBINE, FC.XYH)`; spatial bounds
+	contain every turbine position over all states.
 - Ambient fields use the established `FV.AMB_*` names; do not infer ambientness
 	from array location alone.
 - Dimension metadata is part of the contract. A numerically correct array with

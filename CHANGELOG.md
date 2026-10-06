@@ -1120,6 +1120,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Engine cleanup now preserves active worker exceptions instead of replacing
     them with incomplete-chunk assertions; point-cloud support errors suggest
     the nearest-neighbor fallback configuration
+  - Wind-farm bounds now include turbine coordinates from every state, enabling
+    `MesoMicroField` with vectorized population layouts
+  - Population states now preserve target-dependent weights from wrapped states
+    instead of replacing spatial binned-state frequencies with uniform weights
 - Development:
   - Adding Agents.md and related files for agentic coding
   - Recorded Fraunhofer corporate design for FOXES visual surfaces

@@ -28,7 +28,8 @@ class Turbine:
         Parameters
         ----------
         xy
-            The turbine ground position with shape ``(2,)``.
+            The turbine ground position with shape ``(2,)`` for a static
+            position or ``(n_states, 2)`` for state-dependent positions.
         turbine_models
             The turbine model names as they appear in the model book.
         index
