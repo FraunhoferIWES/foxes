@@ -1536,31 +1536,42 @@ class DatasetStates(States):
         is_turbine_point_cloud: bool = False,
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
+        Calculate ambient fields at target points for one state chunk.
 
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        Use NumPy arrays for chunk-local calculations. Return interpolated fields
+        and populate state or target-dependent weights in ``tdata``.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The calculation algorithm.
         mdata
-            The model data
+            Model data containing the current state chunk and input fields.
         fdata
-            The farm data
+            Farm data with the current per-state turbine ordering.
         tdata
-            The target point data
+            Target data containing coordinates with shape
+            ``(n_states, n_targets, n_tpoints, 3)`` in meters.
         is_turbine_point_cloud
-            Flag indicating that interpolation points are turbine point-cloud
-            coordinates that must preserve per-state/per-turbine ordering.
+            Preserve per-state and per-turbine ordering when interpolating
+            turbine point-cloud coordinates.
 
         Returns
         -------
         results
-            The resulting data, keys: output variable str.
-            Values with shape
-            (n_states, n_targets, n_tpoints)
+            Output variable names mapped to arrays with shape
+            ``(n_states, n_targets, n_tpoints)`` in each state's target order.
+
+        Notes
+        -----
+        Target ordering may vary solely because of downwind permutations.
+        Reconstruct results with paired state and point indices, without
+        materializing all combinations of field states and target states.
+
+        Spatial interpolation still evaluates every input state at each unique
+        target coordinate. Its intermediate size can grow with both the state
+        count and the number of unique points when coordinates genuinely vary,
+        including distinct layouts in a vectorized optimization population.
 
         """
 
@@ -1771,19 +1782,17 @@ class DatasetStates(States):
 
                 # reconstruct time varying pts:
                 if has_p and points_data["points_vary"]:
-                    shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
-                    d = d[:, points_data["up2p"], :].reshape(shp)
+                    point_indices = points_data["up2p"].reshape(n_states, n_pts)
                     if FC.STATE in dims:
-                        d = d[sinds, sinds, ...]
+                        d = d[sinds[:, None], point_indices, ...]
                     else:
-                        d = d[0, ...]
+                        d = d[0, point_indices, ...]
                 elif has_h and points_data["heights_vary"]:
-                    shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
-                    d = d[:, points_data["uh2h"], :].reshape(shp)
+                    height_indices = points_data["uh2h"].reshape(n_states, n_pts)
                     if FC.STATE in dims:
-                        d = d[sinds, sinds, ...]
+                        d = d[sinds[:, None], height_indices, ...]
                     else:
-                        d = d[0, ...]
+                        d = d[0, height_indices, ...]
                 del pts
 
             # case no interpolation needed:

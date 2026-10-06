@@ -608,21 +608,57 @@ def test_meso_micro_field_preserves_state_only_meso_weights():
     np.testing.assert_allclose(tdata[FV.WEIGHT][:, 0, 0], [0.25, 0.75])
 
 
-def test_meso_micro_field_uses_each_states_target_order(monkeypatch):
+def _guard_micro_reconstruction(monkeypatch):
+    selections = []
+    stack = np.stack
+
+    class MicroResultArray(np.ndarray):
+        def __getitem__(self, indices):
+            if (
+                isinstance(indices, tuple)
+                and len(indices) > 1
+                and isinstance(indices[1], np.ndarray)
+            ):
+                assert indices[1].ndim == 2, "Cross-bin target-state expansion"
+                assert np.ndim(indices[0]) == 2
+                selections.append(indices[1].shape)
+            return super().__getitem__(indices)
+
+    def stack_with_guard(*args, **kwargs):
+        result = stack(*args, **kwargs)
+        if result.ndim == 4 and result.shape[-2] == 1:
+            return result.view(MicroResultArray)
+        return result
+
+    monkeypatch.setattr(meso_micro_field_module.np, "stack", stack_with_guard)
+    return selections
+
+
+@pytest.mark.parametrize("n_bins", [1, 2])
+@pytest.mark.parametrize("apply_blending", [False, True])
+@pytest.mark.parametrize("target_layout", ["fixed", "reordered", "moving"])
+@pytest.mark.parametrize("invalid_reference", [False, True])
+def test_meso_micro_field_uses_each_states_target_order(
+    monkeypatch, n_bins, apply_blending, target_layout, invalid_reference
+):
+    bin_directions = np.array([270.0, 90.0])[:n_bins]
+
     class _MicroStates:
         def calculate(self, algo, mdata, fdata, tdata):
             x = tdata[FC.TARGETS][..., 0]
             return {
-                FV.WS: x + 5.0,
-                FV.WD: np.full_like(x, 270.0),
+                FV.WS: x + 5.0 + 10.0 * mdata[FC.STATE][:, None, None],
+                FV.WD: np.broadcast_to(
+                    bin_directions[mdata[FC.STATE]][:, None, None], x.shape
+                ).copy(),
             }
 
     states = MesoMicroField(
         micro_states=_MicroStates(),
-        meso_states=SimpleNamespace(),
+        meso_states=SimpleNamespace(name="meso_states"),
         ref_points=np.array([[0.0, 0.0, 90.0]]),
         output_vars=[FV.WS, FV.WD],
-        apply_blending=False,
+        apply_blending=apply_blending,
     )
     states.COORDS0 = states.var("coords0")
     states.VARS0 = states.var("vars0")
@@ -640,8 +676,14 @@ def test_meso_micro_field_uses_each_states_target_order(monkeypatch):
             FC.STATE: np.array([0, 1]),
             states.REF_POINTS: np.array([[0.0, 0.0, 90.0]]),
             states.REF_VARS: np.array([FV.WS]),
-            states.REF_DATA: np.array([[[5.0]]]),
-            states.WD_BIN_DATA: np.array([[[270.0, -180.0, 180.0]]]),
+            states.REF_DATA: (5.0 + 10.0 * np.arange(n_bins))[:, None, None],
+            states.WD_BIN_DATA: np.column_stack(
+                (
+                    bin_directions,
+                    np.full(n_bins, -180.0 / n_bins),
+                    np.full(n_bins, 180.0 / n_bins),
+                )
+            )[:, None, :],
         },
         dims={
             FC.STATE: (FC.STATE,),
@@ -671,6 +713,10 @@ def test_meso_micro_field_uses_each_states_target_order(monkeypatch):
             [[[10.0, 0.0, 90.0]], [[0.0, 0.0, 90.0]]],
         ]
     )
+    if target_layout == "fixed":
+        targets[1] = targets[0]
+    elif target_layout == "moving":
+        targets[1, ..., 0] += 2.0
     tdata = TData.from_tpoints(
         tpoints=targets,
         tweights=np.ones(1),
@@ -681,12 +727,22 @@ def test_meso_micro_field_uses_each_states_target_order(monkeypatch):
         target_data = kwargs["tdata"]
         target_data[FV.WEIGHT] = np.full((2, 1, 1), 0.5)
         target_data.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
+        wind_speed = np.full((2, 1), 5.0)
+        if invalid_reference:
+            wind_speed[0, 0] = np.nan
         return {
-            FV.WS: np.full((2, 1), 5.0),
-            FV.WD: np.full((2, 1), 270.0),
+            FV.WS: wind_speed,
+            FV.WD: bin_directions[np.arange(2) % n_bins, None],
         }
 
     monkeypatch.setattr(states, "_calculate_meso_data", _calculate_meso_data)
+    selections = _guard_micro_reconstruction(monkeypatch)
+    if invalid_reference:
+        with pytest.raises(ValueError, match="Reference point.*NaN"):
+            states.calculate(SimpleNamespace(n_turbines=2), mdata, fdata, tdata)
+        assert not selections
+        return
+
     results = states.calculate(
         SimpleNamespace(n_turbines=2),
         mdata,
@@ -694,10 +750,11 @@ def test_meso_micro_field_uses_each_states_target_order(monkeypatch):
         tdata,
     )
 
-    np.testing.assert_allclose(
-        results[FV.WS][..., 0],
-        [[5.0, 15.0], [15.0, 5.0]],
-    )
+    reference_speeds = 5.0 + 10.0 * (np.arange(2) % n_bins)
+    expected = 5.0 + targets[..., 0] * (5.0 / reference_speeds[:, None, None])
+    np.testing.assert_allclose(results[FV.WS], expected)
+    assert results[FV.WS].shape == (2, 2, 1)
+    assert selections and all(shape == (2, 2) for shape in selections)
 
 
 def test_sector_sim_ref_point_field_uses_each_states_targets():

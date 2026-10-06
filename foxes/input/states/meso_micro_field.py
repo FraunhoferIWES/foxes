@@ -817,36 +817,51 @@ class MesoMicroField(States):
     def calculate(
         self, algo: Algorithm, *data: Any, **parameters: Any
     ) -> dict[str, np.ndarray]:
+        """
+        Calculate meso-scaled micro fields at target points.
+
+        Evaluate a single state chunk using NumPy arrays and populate meso
+        state or target-dependent weights in ``tdata``.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data
+            Three positional chunk containers in order: ``mdata`` with meso
+            states, micro bins and reference fields; ``fdata`` with per-state
+            turbine ordering; and ``tdata`` with coordinates in meters of shape
+            ``(n_states, n_targets, n_tpoints, 3)``. Populate weights in
+            ``tdata``.
+        parameters
+            Additional keyword parameters, unused by this implementation.
+
+        Returns
+        -------
+        results
+            Output variable names mapped to arrays with shape
+            ``(n_states, n_targets, n_tpoints)`` in each state's target order.
+
+        Raises
+        ------
+        TypeError
+            If the three positional chunk containers are not provided.
+        ValueError
+            If checked reference data contain NaNs or a reference wind
+            direction matches zero or multiple micro sectors.
+
+        Notes
+        -----
+        Select micro bin and point pairs directly before applying reference
+        speedups and mixing weights, without reconstructing every micro bin
+        at every state's target layout.
+
+        """
         if len(data) != 3:
             raise TypeError(
                 f"States '{self.name}': Expecting 3 data arguments (mdata, fdata, tdata), got {len(data)}"
             )
         mdata, fdata, tdata = data
-        """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
-
-        Parameters
-        ----------
-        algo
-            The calculation algorithm
-        mdata
-            The model data
-        fdata
-            The farm data
-        tdata
-            The target point data
-
-        Returns
-        -------
-        results
-            The resulting data, keys: output variable str.
-            Values
-            (n_states, n_targets, n_tpoints)
-
-        """
 
         # prepare
         super().calculate(algo, mdata, fdata, tdata)
@@ -1006,12 +1021,12 @@ class MesoMicroField(States):
             cast(TData, htdata),
         )
         micro_results_vrs: list[str] = list(micro_data.keys())
-        micro_results: np.ndarray = np.stack(list(micro_data.values()), axis=-1)
-        micro_results = micro_results[:, point_map, 0].reshape(
-            n_bins, n_states, n_tpts, len(micro_results_vrs)
-        )
+        micro_results: np.ndarray = np.stack(list(micro_data.values()), axis=-1)[
+            :, :, 0, :
+        ]
+        point_map = point_map.reshape(n_states, n_tpts)
         n_vrs = len(micro_results_vrs)
-        del hmdata, hfdata, htdata, micro_data, point_map
+        del hmdata, hfdata, htdata, micro_data
 
         # replace WS, WD by U, V:
         if FV.U in micro_results_vrs or FV.V in micro_results_vrs:
@@ -1070,7 +1085,7 @@ class MesoMicroField(States):
             for i, v in enumerate(micro_results_vrs):
                 d = micro_results[..., i]
                 for pi in range(n_points):
-                    a = d[fs2s[pi], np.arange(n_states), :]
+                    a = d[fs2s[pi][:, None], point_map]
                     if v in speedups.keys():
                         a *= speedups[v][pi][:, None]
                     w = weight[:, pi, None] if self.apply_blending else weight
@@ -1078,6 +1093,7 @@ class MesoMicroField(States):
                     del a, w
                 del d
             del speedups
+        del point_map
         micro_results = mires  # now with dims (n_states, n_tpts, n_points, n_vrs)
         del mires
 

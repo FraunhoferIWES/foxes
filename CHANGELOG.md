@@ -1124,6 +1124,11 @@ This major version introduces the concept of `Engines` which handle the chunking
     `MesoMicroField` with vectorized population layouts
   - Population states now preserve target-dependent weights from wrapped states
     instead of replacing spatial binned-state frequencies with uniform weights
+  - Dataset-backed states now reconstruct point and height ordering without
+    quadratic cross-state temporaries, including fixed locations permuted by
+    downwind order
+  - `MesoMicroField` now gathers selected micro-bin/point pairs directly instead
+    of reconstructing every micro bin at every state's target layout
 - Development:
   - Adding Agents.md and related files for agentic coding
   - Recorded Fraunhofer corporate design for FOXES visual surfaces

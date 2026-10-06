@@ -5,6 +5,7 @@ import xarray as xr
 import foxes
 
 from foxes.core import MData, TData
+from foxes.input.states import FieldData, MesoMicroField
 from foxes.input.states.dataset_states import DatasetStates
 from foxes.input.states.point_cloud_data import (
     PointCloudData,
@@ -460,6 +461,162 @@ def test_dataset_states_calculate_handles_turbine_dim_without_not_implemented():
         states.received_pts, np.array([[0.0, 0.0, 90.0], [100.0, 0.0, 90.0]])
     )
     assert np.allclose(results[FV.WS][0, :, 0], np.array([8.0, 9.0]))
+
+
+def _dataset_reconstruction_case(dimension, state_dependent, n_states):
+    grid = np.array([0.0, 1000.0]) if dimension == FV.X else np.array([0.0, 200.0])
+    wind_speed = 8.0 + 0.01 * grid
+    field_dims = (dimension,)
+    if state_dependent:
+        wind_speed = wind_speed[None, :] + np.arange(n_states)[:, None]
+        field_dims = (FC.STATE, dimension)
+    data_source = xr.Dataset(
+        coords={
+            FC.STATE: np.arange(n_states),
+            FV.X: np.array([0.0, 1000.0]),
+            FV.Y: np.array([-100.0, 100.0]),
+            dimension: grid,
+        },
+        data_vars={
+            FV.WS: (field_dims, wind_speed),
+            FV.RHO: (field_dims, 1.0 + 0.01 * wind_speed),
+            FV.WD: ((FC.STATE,), np.resize([270.0, 90.0], n_states)),
+        },
+    )
+    states = FieldData(
+        data_source,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        fixed_vars={FV.TI: 0.06},
+        states_coord=FC.STATE,
+        x_coord=FV.X,
+        y_coord=FV.Y,
+        h_coord=FV.H if dimension == FV.H else None,
+        time_format=None,
+        bounds_extra_space=None,
+        height_bounds=(0.0, 200.0),
+    )
+    farm = foxes.WindFarm()
+    locations = np.array([0.0, 250.0, 750.0])
+    heights = np.array([60.0, 90.0, 120.0])
+    for location, height in zip(locations, heights):
+        farm.add_turbine(
+            foxes.Turbine(xy=[location, 0.0], H=height, turbine_models=["null_type"]),
+            verbosity=0,
+        )
+    algo = foxes.algorithms.Downwind(farm, states, wake_models=[], verbosity=0)
+    expected = np.broadcast_to(
+        8.0 + 0.01 * (locations if dimension == FV.X else heights), (n_states, 3)
+    ).copy()
+    if state_dependent:
+        expected += np.arange(n_states)[:, None]
+    return algo, expected
+
+
+def _guard_dataset_reconstruction(monkeypatch, states):
+    selections = []
+    interpolate_data = states.interpolate_data
+
+    class ReconstructionArray(np.ndarray):
+        def __getitem__(self, indices):
+            if (
+                isinstance(indices, tuple)
+                and len(indices) > 1
+                and isinstance(indices[1], np.ndarray)
+            ):
+                assert indices[1].ndim == 2, "Cross-state point expansion"
+                state_indices = indices[0]
+                if isinstance(state_indices, (int, np.integer)) or (
+                    isinstance(state_indices, np.ndarray)
+                    and state_indices.shape == (self.shape[0], 1)
+                ):
+                    selections.append(indices[1].shape)
+            return super().__getitem__(indices)
+
+    def interpolate_with_guard(*args, **kwargs):
+        return interpolate_data(*args, **kwargs).view(ReconstructionArray)
+
+    monkeypatch.setattr(states, "interpolate_data", interpolate_with_guard)
+    return selections
+
+
+@pytest.mark.parametrize("dimension", [FV.X, FV.H])
+@pytest.mark.parametrize("state_dependent", [False, True])
+@pytest.mark.parametrize("n_states", [1, 3])
+def test_dataset_states_reconstruct_downwind_order_without_cross_state_expansion(
+    monkeypatch, dimension, state_dependent, n_states
+):
+    algo, expected = _dataset_reconstruction_case(dimension, state_dependent, n_states)
+    selections = _guard_dataset_reconstruction(monkeypatch, algo.states)
+    with foxes.Engine.new("single", verbosity=0):
+        results = algo.calc_farm()
+
+    assert results[FV.AMB_REWS].dims == (FC.STATE, FC.TURBINE)
+    np.testing.assert_allclose(results[FV.AMB_REWS], expected)
+    np.testing.assert_allclose(results[FV.AMB_RHO], 1.0 + 0.01 * expected)
+    if n_states > 1:
+        assert selections == [(n_states, 3)]
+        assert not np.array_equal(results[FV.ORDER][0], results[FV.ORDER][1])
+    else:
+        assert not selections
+
+
+@pytest.mark.parametrize("dimension", [FV.X, FV.H])
+def test_dataset_states_reconstruction_preserves_bounds_errors(dimension):
+    algo, _ = _dataset_reconstruction_case(dimension, True, 3)
+    if dimension == FV.X:
+        algo.farm.turbines[0].xy = np.array([2000.0, 0.0])
+    else:
+        algo.farm.turbines[0].H = 250.0
+    with foxes.Engine.new("single", verbosity=0):
+        with pytest.raises(ValueError, match="out of bounds"):
+            algo.calc_farm()
+
+
+@pytest.mark.parametrize("states_type", ["dataset", "meso-micro"])
+@pytest.mark.parametrize("engine_type", ["single", "process"])
+def test_layout_optimization_population_matches_individuals(states_type, engine_type):
+    layout_module = pytest.importorskip("foxes_opt.problems.layout")
+    objectives_module = pytest.importorskip("foxes_opt.objectives")
+    algo, _ = _dataset_reconstruction_case(FV.X, True, 2)
+    if states_type == "meso-micro":
+        meso_algo, _ = _dataset_reconstruction_case(FV.X, True, 2)
+        meso_algo.states.name = "meso_field"
+        algo.states = MesoMicroField(
+            micro_states=algo.states,
+            meso_states=meso_algo.states,
+            ref_points=[[0.0, 0.0, 90.0]],
+        )
+    algo.farm.boundary = foxes.utils.geom2d.Circle([500.0, 0.0], 1000.0)
+    problem = layout_module.FarmLayoutOptProblem("layout_reconstruction", algo)
+    objective = objectives_module.FarmVarObjective(
+        problem, "ambient_rews", FV.AMB_REWS, "weights", "sum", False
+    )
+    problem.add_objective(objective)
+    with foxes.Engine.new(engine_type, n_procs=2, chunk_size_states=3, verbosity=0):
+        problem.initialize(verbosity=0)
+        layouts = np.repeat(problem.initial_values_float()[None, :], 3, axis=0)
+        layouts[1, ::2] += 100.0
+        layouts[2, ::2] = [650.0, 50.0, 450.0]
+        for candidates in (layouts, layouts[::-1]):
+            vars_int = np.zeros((len(candidates), 0), dtype=int)
+            population = problem.apply_population(vars_int, candidates)
+            population_objectives = objective.calc_population(
+                vars_int, candidates, population
+            )
+            for candidate_i, candidate in enumerate(candidates):
+                individual = problem.apply_individual(vars_int[candidate_i], candidate)
+                for variable in (FV.AMB_REWS, FV.AMB_RHO):
+                    np.testing.assert_allclose(
+                        population[variable].to_numpy().reshape(3, 2, 3)[candidate_i],
+                        individual[variable],
+                    )
+                np.testing.assert_allclose(
+                    population_objectives[candidate_i],
+                    objective.calc_individual(
+                        vars_int[candidate_i], candidate, individual
+                    ),
+                )
+                assert all(turbine.xy.shape == (2,) for turbine in algo.farm.turbines)
 
 
 def _run_ambient_rews(
