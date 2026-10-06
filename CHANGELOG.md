@@ -1130,5 +1130,12 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Wake models:
   - `JensenTurbOParkWake` accepts scalar ambient TI and can run without
     `FV.AMB_TI`; ATI stays aligned with target selection in multi-target runs
+- Input:
+  - Added `PECDStates` for explicitly selected PECD wind-speed and
+    wind-direction CSV files, assigned a shared 100 m height by default, with
+    optional ABL-log extrapolation of wind speed to additional heights
+- Examples:
+  - Added a PECD CSV example with a farm calculation, mean flow plot, and
+    packaged ten-day sample files covering longitudes 3°E through 6°E
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.7](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)

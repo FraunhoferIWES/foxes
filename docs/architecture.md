@@ -201,6 +201,11 @@ adapters own parsing and boundary validation; core models should not parse file
 formats. `DataBook` and `StaticData` locate packaged or user-supplied data by
 logical category. Keep resource lookup separate from scientific calculation.
 
+`PECDStates` resolves and loads CSVs during construction, before an algorithm
+data book is available. It checks the configured input path first, then uses
+`StaticData` to look up missing files by basename in the `STATES` category.
+Files absent from both locations raise a contextual `FileNotFoundError`.
+
 ### Sequential Plugins
 
 Sequential extensions implement the plugin lifecycle (`initialize`, `update`,
