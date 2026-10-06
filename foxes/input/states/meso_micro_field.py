@@ -31,6 +31,9 @@ class MesoMicroField(States):
     """
     Combines field data representing micro scale wind direction sectors
     and meso scale results at multiple reference points into a timeseries of fields.
+
+    Micro-state loading supports scalar and state-dependent turbine positions,
+    including positions produced by vectorized population evaluations.
     """
 
     def __init__(

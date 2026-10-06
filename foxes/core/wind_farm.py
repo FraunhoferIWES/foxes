@@ -551,7 +551,10 @@ class WindFarm:
         sample_dx: float = 10.0,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Returns min max points of the wind farm ground points
+        Return bounds containing all wind-farm ground positions.
+
+        Static and state-dependent turbine positions are included. The latter
+        are reduced over all states.
 
         Parameters
         ----------
@@ -567,16 +570,31 @@ class WindFarm:
 
         Returns
         -------
-        x_mima
-            The (x_min, x_max) point
-        y_mima
-            The (y_min, y_max) point
+        p_min
+            The minimum x/y coordinates.
+        p_max
+            The maximum x/y coordinates.
 
         """
         if self.boundary is not None:
             xy = np.stack((self.boundary.p_min(), self.boundary.p_max()), axis=0)
+            n_positions = None
         else:
-            xy = self.xy_array
+            xy_by_turbine = []
+            for turbine in self.__turbines:
+                turbine_xy = np.asarray(turbine.xy, dtype=config.dtype_double)
+                if (
+                    turbine_xy.ndim == 0
+                    or turbine_xy.shape[-1] != 2
+                    or turbine_xy.size == 0
+                ):
+                    raise ValueError(
+                        f"WindFarm '{self.name}': Expecting turbine xy with final "
+                        f"dimension 2, got shape {turbine_xy.shape}"
+                    )
+                xy_by_turbine.append(turbine_xy.reshape(-1, 2))
+            n_positions = [len(turbine_xy) for turbine_xy in xy_by_turbine]
+            xy = np.concatenate(xy_by_turbine, axis=0)
 
         if extra_space is not None:
             extra_space_value: float | np.ndarray
@@ -592,7 +610,10 @@ class WindFarm:
                 if self.boundary is not None:
                     extra_space_value *= np.max(rds)
                 else:
-                    extra_space_value = extra_space_value * rds[:, None]
+                    if rds.ndim > 1:
+                        rds = np.max(rds, axis=tuple(range(1, rds.ndim)))
+                    assert n_positions is not None
+                    extra_space_value *= np.repeat(rds, n_positions)[:, None]
             else:
                 extra_space_value = float(extra_space)
 

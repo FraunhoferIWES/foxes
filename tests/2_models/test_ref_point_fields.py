@@ -217,6 +217,33 @@ def test_meso_micro_field_load_data_triggers_support_point_plot(monkeypatch):
         states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
 
 
+def test_meso_micro_field_load_data_preserves_state_dependent_turbine_xy(monkeypatch):
+    states, algo, _ = _make_meso_micro_field()
+    algo.farm.turbines[0].xy = np.array([[0.0, 0.0], [100.0, -50.0]])
+    algo.farm.turbines[1].xy = np.array([[400.0, 0.0], [550.0, 75.0]])
+    captured = {}
+
+    class _HelperFarmCaptured(Exception):
+        pass
+
+    def _capture_helper_farm(*args, farm, **kwargs):
+        captured["farm"] = farm
+        raise _HelperFarmCaptured
+
+    monkeypatch.setattr(meso_micro_field_module, "Downwind", _capture_helper_farm)
+
+    with pytest.raises(_HelperFarmCaptured):
+        states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
+
+    helper_farm = captured["farm"]
+    assert helper_farm.turbines[0].xy.shape == (2, 2)
+    assert helper_farm.turbines[1].xy.shape == (2, 2)
+    assert all(t.xy.shape == (2,) for t in helper_farm.turbines[2:])
+    xy_min, xy_max = helper_farm.get_xy_bounds()
+    np.testing.assert_array_equal(xy_min, [0.0, -50.0])
+    np.testing.assert_array_equal(xy_max, [600.0, 200.0])
+
+
 @pytest.mark.parametrize(
     ("factory", "module", "support_zorder", "ref_label", "ref_zorder"),
     [
