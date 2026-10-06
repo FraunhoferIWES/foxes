@@ -1771,19 +1771,17 @@ class DatasetStates(States):
 
                 # reconstruct time varying pts:
                 if has_p and points_data["points_vary"]:
-                    shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
-                    d = d[:, points_data["up2p"], :].reshape(shp)
+                    point_indices = points_data["up2p"].reshape(n_states, n_pts)
                     if FC.STATE in dims:
-                        d = d[sinds, sinds, ...]
+                        d = d[sinds[:, None], point_indices, ...]
                     else:
-                        d = d[0, ...]
+                        d = d[0, point_indices, ...]
                 elif has_h and points_data["heights_vary"]:
-                    shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
-                    d = d[:, points_data["uh2h"], :].reshape(shp)
+                    height_indices = points_data["uh2h"].reshape(n_states, n_pts)
                     if FC.STATE in dims:
-                        d = d[sinds, sinds, ...]
+                        d = d[sinds[:, None], height_indices, ...]
                     else:
-                        d = d[0, ...]
+                        d = d[0, height_indices, ...]
                 del pts
 
             # case no interpolation needed:

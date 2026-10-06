@@ -1113,6 +1113,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bug fixes:
   - Fixed `AreaIntersection.add_to_figure` to render intersection boundaries
     and forward their plotting parameters
+  - Avoided states-squared temporary arrays when reconstructing state-varying
+    interpolation points and heights
   - Internal state subsets now use coordinate labels consistently, supporting
     timestamps and other non-default state indices
   - Fixed `Circle.points_distance` nearest-boundary coordinates for query

@@ -19,6 +19,61 @@ class _AlgoMock:
     pass
 
 
+class _ReconstructionStates(DatasetStates):
+    def __init__(self, calc_dims, calc_data, n_states):
+        super().__init__(
+            data_source=xr.Dataset(),
+            output_vars=[FV.WS],
+            fixed_vars={},
+            var2ncvar={},
+            load_mode="preload",
+        )
+        self._N = n_states
+        self._inds = np.arange(n_states, dtype=np.int32)
+        self._cmap = {FC.STATE: FC.STATE}
+        self.calc_dims = calc_dims
+        self.calc_data = calc_data
+
+    def _get_calc_data(self, mdata, fdata):
+        return {self.calc_dims: ([FV.WS], self.calc_data)}, None
+
+    def interpolate_data(self, mdata, idims, d, pts, vrs, state_labels=None, gpts=None):
+        values = pts[:, 0]
+        if d.ndim == 3:
+            state_values = np.arange(d.shape[-2], dtype=float) * 1000.0
+            return values[:, None, None] + state_values[None, :, None]
+        return values[:, None]
+
+
+def _reconstruction_inputs(coordinate_dim, state_dependent, n_states, n_pts):
+    if coordinate_dim == FV.X:
+        coordinate_rows = np.array(
+            [[0.0, 1.0, 0.0, 2.0], [2.0, 0.0, 1.0, 0.0], [1.0, 2.0, 0.0, 0.0]]
+        )[:n_states, :n_pts]
+    else:
+        coordinate_rows = np.array(
+            [
+                [80.0, 100.0, 80.0, 120.0],
+                [120.0, 80.0, 100.0, 80.0],
+                [80.0, 120.0, 80.0, 100.0],
+            ]
+        )[:n_states, :n_pts]
+    n_states, n_pts = coordinate_rows.shape
+    points = np.zeros((n_states, n_pts, 3), dtype=float)
+    points[..., 2] = 90.0
+    if coordinate_dim == FV.X:
+        points[..., 0] = coordinate_rows
+    else:
+        points[..., 2] = coordinate_rows
+    dims = (
+        (FC.STATE, coordinate_dim, "vars0")
+        if state_dependent
+        else (coordinate_dim, "vars0")
+    )
+    data_shape = (n_states, 3, 1) if state_dependent else (3, 1)
+    return coordinate_rows, points, dims, np.zeros(data_shape)
+
+
 def test_default_state_indices_are_reconstructed_not_serialized():
     states = DatasetStates(
         data_source=xr.Dataset(),
@@ -460,6 +515,59 @@ def test_dataset_states_calculate_handles_turbine_dim_without_not_implemented():
         states.received_pts, np.array([[0.0, 0.0, 90.0], [100.0, 0.0, 90.0]])
     )
     assert np.allclose(results[FV.WS][0, :, 0], np.array([8.0, 9.0]))
+
+
+@pytest.mark.parametrize("coordinate_dim", [FV.X, FV.H])
+@pytest.mark.parametrize("state_dependent", [False, True])
+@pytest.mark.parametrize("n_states,n_pts", [(1, 4), (3, 1), (3, 4)])
+def test_dataset_states_reconstructs_varying_points_without_cross_state_values(
+    coordinate_dim, state_dependent, n_states, n_pts
+):
+    coordinate_rows, points, dims, calc_data = _reconstruction_inputs(
+        coordinate_dim, state_dependent, n_states, n_pts
+    )
+    n_states, n_pts = coordinate_rows.shape
+    states = _ReconstructionStates(dims, calc_data, n_states)
+    mdata = MData(
+        data={FC.STATE: np.arange(n_states, dtype=np.int32)},
+        dims={FC.STATE: (FC.STATE,)},
+        name="mdata_reconstruction",
+    )
+    tdata = TData.from_points(points=points, variables=[FV.WS])
+
+    results = states.calculate(algo=None, mdata=mdata, fdata=None, tdata=tdata)
+
+    expected = coordinate_rows.copy()
+    if state_dependent:
+        expected += np.arange(n_states, dtype=float)[:, None] * 1000.0
+    np.testing.assert_allclose(results[FV.WS][..., 0], expected)
+
+
+@pytest.mark.parametrize("coordinate_dim", [FV.X, FV.H])
+def test_dataset_states_rejects_incomplete_varying_coordinate_mapping(
+    coordinate_dim, monkeypatch
+):
+    coordinate_rows, points, dims, calc_data = _reconstruction_inputs(
+        coordinate_dim, state_dependent=True, n_states=3, n_pts=4
+    )
+    n_states = coordinate_rows.shape[0]
+    states = _ReconstructionStates(dims, calc_data, n_states)
+    mdata = MData(
+        data={FC.STATE: np.arange(n_states, dtype=np.int32)},
+        dims={FC.STATE: (FC.STATE,)},
+        name="mdata_reconstruction",
+    )
+    tdata = TData.from_points(points=points, variables=[FV.WS])
+    original_unique = np.unique
+
+    def incomplete_mapping(*args, **kwargs):
+        unique_points, inverse = original_unique(*args, **kwargs)
+        return unique_points, inverse[:-1]
+
+    monkeypatch.setattr(np, "unique", incomplete_mapping)
+
+    with pytest.raises(ValueError, match="reshape"):
+        states.calculate(algo=None, mdata=mdata, fdata=None, tdata=tdata)
 
 
 def _run_ambient_rews(
