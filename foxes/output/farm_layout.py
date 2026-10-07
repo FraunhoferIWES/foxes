@@ -318,7 +318,9 @@ class FarmLayoutOutput(Output):
         ret_im
             Flag for returned image object
         bargs
-            Arguments for boundary plotting
+            Arguments for boundary plotting. The optional ``boundary`` entry
+            overrides the farm geometry for this figure only; ``None`` disables
+            the boundary overlay without changing the farm or its bounds.
         legend_labels
             Mapping from marker colors to labels for an upper-left legend
         anno_delx
@@ -472,11 +474,12 @@ class FarmLayoutOutput(Output):
                     yc = np.mean(y[turb_indices])
                     ax.text(xc, yc, wf_name, dict(size=fontsize))
 
-        if self.farm.boundary is not None:
-            hbargs = {"fill_mode": "inside_lightgray"}
-            if bargs is not None:
-                hbargs.update(bargs)
-            self.farm.boundary.add_to_figure(ax, **hbargs)
+        hbargs = {"fill_mode": "inside_lightgray"}
+        if bargs is not None:
+            hbargs.update(bargs)
+        boundary = hbargs.pop("boundary", self.farm.boundary)
+        if boundary is not None:
+            boundary.add_to_figure(ax, **hbargs)
 
         if title is not None or annotate != 3:
             ti = (

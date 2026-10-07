@@ -1101,6 +1101,13 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Python versions:
   - Re-added support for Python 3.14
+- Inputs:
+  - Added loading-time support-point plot hooks to point-cloud, Weibull,
+    turbine-backed, and binned point-cloud states, matching field-state styles
+  - Added opt-in farm-overlay parameters to grid, WRF, and meso/micro support
+    plots so titles and turbines can be hidden without changing default plots
+  - Added opt-in per-axis strides for regular CFD and meso/micro point plots,
+    preserving grid edges without sampling numerical data or reference points
 - Core:
   - Static point coordinates now retain a singleton state axis during chunk
     transport and are broadcast inside engine runners, avoiding repeated target
@@ -1112,6 +1119,8 @@ This major version introduces the concept of `Engines` which handle the chunking
     scatter-equivalent fill colors and `color_by` support; automatically sized
     figures keep the smallest rotor diameter at least four pixels wide
     scatter-equivalent fill colors and `color_by` support
+  - Added figure-only farm-boundary overrides for diagnostic overlays without
+    changing numerical farm bounds
 - Bug fixes:
   - Fixed `AreaIntersection.add_to_figure` to render intersection boundaries
     and forward their plotting parameters
@@ -1134,5 +1143,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Development:
   - Adding Agents.md and related files for agentic coding
   - Recorded Fraunhofer corporate design for FOXES visual surfaces
+  - Added serial regression coverage for CFD extrapolation, NaN masking, and
+    binned meso/micro mean-flow contour rendering
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.7](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)

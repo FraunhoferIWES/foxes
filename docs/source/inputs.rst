@@ -85,6 +85,62 @@ The full list of currently implemented ambient states can be found in the
 * :class:`WeibullSectors<foxes.input.states.weibull_sectors.WeibullSectors>`: Spatially homogeneous Weibull wind speed distributions organized in wind direction sectors.
 * :class:`WRGStates<foxes.input.states.wrg_states.WRGStates>`: Wind resource data, i.e., a regular grid of wind roses expressed via Weibull parameters
 
+State support-point plots
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``FieldData``, ``LatLonFieldData``, ``PointCloudData``, ``WeibullPointCloud``,
+``BinnedFieldData``, ``BinnedPointCloudData``, and ``TurbinePointCloud`` accept
+``grid_point_plot`` to write a support-point image with the farm layout.
+Point-cloud plots project selected support heights onto the horizontal plane;
+ordinary and binned clouds use the first loaded dataset, whereas turbine-backed
+clouds plot the current farm turbine locations during loading. The latter does
+not represent subsequent state-dependent or optimization layouts. ``None``
+disables these diagnostic plots. ``NEWAStates`` uses ``wrf_point_plot``, and
+``MesoMicroField`` uses ``support_point_plot`` for micro support and reference
+points together.
+
+The corresponding ``grid_point_plot_pars``, ``wrf_point_plot_pars``, and
+``support_point_plot_pars`` control support markers. Farm overlays have separate
+``grid_point_plot_farm_pars``, ``wrf_point_plot_farm_pars``, and
+``support_point_plot_farm_pars`` dictionaries passed to
+:meth:`FarmLayoutOutput.get_figure<foxes.output.FarmLayoutOutput.get_figure>`.
+For an exceptional title-free plot with invisible turbines, pass
+``{"title": "", "alpha": 0.0, "annotate": 0}`` as the farm-overlay dictionary.
+This keeps the support/reference markers visible. Defaults retain the usual
+farm title, visible turbines, and annotation behavior. Parameter dictionaries
+are copied, and non-dictionary values raise ``TypeError``. Direct parameters
+passed to ``MesoMicroField.get_support_point_figure`` override its configured
+farm-overlay defaults.
+
+Dense CFD grids can otherwise merge into a solid colour at image resolution.
+``FieldData.grid_point_plot_stride`` and
+``MesoMicroField.support_point_plot_stride`` accept a positive integer sampling
+step along each horizontal axis. The default ``1`` draws every selected point;
+for example, ``15`` draws every fifteenth coordinate and retains the outermost
+coordinates. Sampling applies only to the diagnostic image, never to loaded CFD
+data, interpolation, or reference points. Combine it with small, edge-free
+markers such as ``{"markersize": 2.0, "markeredgewidth": 0.0}``.
+
+To draw an outline above the points without hiding them, set the overlay's
+``bargs`` to ``{"show_boundary": True, "fill_mode": None}`` and use
+``pars_boundary`` with ``facecolor="none"`` and a higher ``zorder`` than the
+markers. The optional ``bargs["boundary"]`` overrides the boundary for the
+figure only, including plots made with a temporary loading farm that has no
+boundary. Passing ``None`` disables that figure's boundary; omitting the key
+uses the farm boundary. Numerical farm bounds are never changed by this option.
+
+Mean-flow plot coverage
+^^^^^^^^^^^^^^^^^^^^^^
+
+For mean-flow plots extending beyond farm bounds, ``bounds_extra_space=None``
+on the micro ``FieldData`` retains its full native horizontal grid. Extrapolation
+beyond the selected CFD grid can produce extreme values that dominate the plot's
+colour scale. To leave unsupported regions blank instead, explicitly pass
+``interp_pars={"bounds_error": False, "fill_value": np.nan}``, with NumPy
+imported as ``np``. ``MesoMicroField`` reference points must remain inside the
+selected micro grid. These options change data selection and interpolation,
+not just figure styling; they are opt-in and do not change normal defaults.
+
 Creating a single mean field
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

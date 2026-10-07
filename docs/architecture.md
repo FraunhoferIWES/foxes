@@ -201,6 +201,23 @@ adapters own parsing and boundary validation; core models should not parse file
 formats. `DataBook` and `StaticData` locate packaged or user-supplied data by
 logical category. Keep resource lookup separate from scientific calculation.
 
+State support-point diagnostics are opt-in loading-time outputs. Regular,
+scattered, Weibull, binned, and turbine-backed spatial states expose
+`grid_point_plot`; NEWA and meso/micro states use their existing WRF and support
+plot hooks. Point-cloud variants share the rendering helper in
+`foxes/input/states/point_cloud_data.py`, including cleanup after failed writes.
+Separate `*_point_plot_farm_pars` dictionaries customize the farm overlay without
+changing support/reference markers or normal visible-turbine/title defaults.
+Turbine-backed diagnostics show the current farm layout, not later
+state-dependent or optimization coordinates. These plots do not select an
+engine or configure global matplotlib state.
+Regular CFD and meso/micro support diagnostics support opt-in per-axis plot
+strides, owned by shared point-plot helpers. They preserve grid edges and leave
+loaded state data and reference points unchanged. `FarmLayoutOutput` accepts a
+figure-only boundary override through `bargs`, so diagnostics from temporary
+loading farms can show the original geometry without changing numerical farm
+bounds or loading behavior.
+
 ### Sequential Plugins
 
 Sequential extensions implement the plugin lifecycle (`initialize`, `update`,

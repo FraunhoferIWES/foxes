@@ -43,12 +43,14 @@ def test_newa_wrf_point_plot_pars_override_defaults_without_mutating_input():
     assert plot_pars == {"c": "darkblue", "alpha": 1.0}
 
 
-def test_newa_forwards_wrf_point_plot_pars(monkeypatch, tmp_path):
+@pytest.mark.parametrize("farm_pars", [None, {"title": "", "alpha": 0, "annotate": 0}])
+def test_newa_forwards_wrf_point_plot_pars(monkeypatch, tmp_path, farm_pars):
     plot_file = tmp_path / "wrf_points.png"
     states = NEWAStates(
         "unused.nc",
         wrf_point_plot=plot_file,
         wrf_point_plot_pars={"color": "darkblue", "alpha": 1.0},
+        wrf_point_plot_farm_pars=farm_pars,
     )
     states._heights = [100.0]
     data = {
@@ -74,7 +76,25 @@ def test_newa_forwards_wrf_point_plot_pars(monkeypatch, tmp_path):
         "marker": ".",
         "linestyle": "None",
     }
+    layout_pars = {"fig": fig, "ax": ax, "annotate": 0, "fontsize": 12}
+    layout_pars.update(farm_pars or {})
+    assert (
+        newa_states_module.FarmLayoutOutput.return_value.get_figure.call_args.kwargs
+        == layout_pars
+    )
     fig.savefig.assert_called_once_with(plot_file, bbox_inches="tight")
+
+
+def test_newa_wrf_point_plot_farm_pars_are_copied_and_validated():
+    overrides = {"title": "", "alpha": 0, "annotate": 0}
+    states = NEWAStates("unused.nc", wrf_point_plot_farm_pars=overrides)
+    assert states.wrf_point_plot_farm_pars == overrides
+    assert states.wrf_point_plot_farm_pars is not overrides
+    assert NEWAStates("unused.nc").wrf_point_plot_farm_pars == {}
+    with pytest.raises(
+        TypeError, match="wrf_point_plot_farm_pars must be a dictionary"
+    ):
+        NEWAStates("unused.nc", wrf_point_plot_farm_pars=[])
 
 
 def test_newa_wrf_point_plot_pars_rejects_non_dictionary():

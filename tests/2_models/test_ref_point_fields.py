@@ -1,8 +1,10 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+import xarray as xr
 
 import foxes
 import foxes.constants as FC
@@ -20,6 +22,7 @@ from foxes.input.states import (
     SectorSimRefPointField,
     SingleStateStates,
 )
+from foxes.utils.geom2d.polygon import ClosedPolygon
 
 
 class _PlotTriggered(Exception):
@@ -180,11 +183,188 @@ def test_meso_micro_field_writes_support_point_plot(tmp_path):
     assert fpath.stat().st_size > 0
 
 
+@pytest.mark.parametrize("fill_value", [None, np.nan])
+def test_binned_mean_flow_respects_cfd_support(fill_value, tmp_path):
+    grid_shape = (1, 2, 4)
+    micro_data = xr.Dataset(
+        {
+            FV.WS: (
+                (FC.STATE, FV.Y, FV.X),
+                np.broadcast_to([8.0, 1.0, 8.0, 8.0], grid_shape),
+            ),
+            FV.WD: ((FC.STATE, FV.Y, FV.X), np.full(grid_shape, 270.0)),
+            FV.TI: ((FC.STATE, FV.Y, FV.X), np.full(grid_shape, 0.1)),
+        },
+        coords={FC.STATE: [0], FV.X: [-500.0, -450.0, 0.0, 500.0], FV.Y: [0.0, 500.0]},
+    )
+    micro_states = FieldData(
+        micro_data,
+        output_vars=[FV.WS, FV.WD, FV.TI],
+        states_coord=FC.STATE,
+        x_coord=FV.X,
+        y_coord=FV.Y,
+        h_coord=None,
+        time_format=None,
+        bounds_extra_space=None,
+        interp_pars={"bounds_error": False, "fill_value": fill_value},
+    )
+    meso_states = foxes.input.states.BinnedPointCloudData(
+        SingleStateStates(ws=8.0, wd=270.0, ti=0.1, rho=1.225),
+        bin_vars={FV.WS: [0.0, 16.0], FV.WD: [180.0, 360.0]},
+        support_points=np.array(
+            [
+                [0.0, 0.0, 90.0],
+                [500.0, 0.0, 90.0],
+                [0.0, 500.0, 90.0],
+                [500.0, 500.0, 90.0],
+            ]
+        ),
+        bounds_error=False,
+    )
+    states = MesoMicroField(
+        micro_states=micro_states,
+        meso_states=meso_states,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+    )
+    farm = foxes.WindFarm()
+    farm.add_turbine(
+        foxes.Turbine([0.0, 0.0], H=90.0, D=100.0, turbine_models=["null_type"]),
+        verbosity=0,
+    )
+    algo = foxes.algorithms.Downwind(
+        farm, states, wake_models=[], rotor_model="centre", verbosity=0
+    )
+    with foxes.Engine.new("single", verbosity=0):
+        farm_results = algo.calc_farm()
+        flow_output = foxes.output.FlowPlots2D(algo, farm_results)
+        mean_flow_data = flow_output.get_mean_data_xy(
+            FV.WS,
+            n_img_points=(4, 3),
+            xmin=-1000.0,
+            xmax=500.0,
+            ymin=0.0,
+            ymax=500.0,
+            z=90.0,
+        )
+    parameters, data, _ = mean_flow_data
+    wind_speed = data[..., parameters["variables"].index(FV.WS)]
+    if fill_value is None:
+        np.testing.assert_allclose(wind_speed[0], 78.0)
+    else:
+        assert np.isnan(wind_speed[0]).all()
+    np.testing.assert_allclose(wind_speed[1:], 8.0)
+
+    figure = flow_output.get_mean_fig_xy(mean_flow_data, levels=40, title="")
+    try:
+        plot_file = tmp_path / "binned_mean_flow.png"
+        figure.savefig(plot_file)
+        assert plot_file.stat().st_size > 0
+        assert figure.axes[0].get_title() == ""
+        color_limits = figure.axes[0].collections[0].get_clim()
+        assert np.isfinite(color_limits).all()
+        if fill_value is not None:
+            assert 7.9 < color_limits[0] <= color_limits[1] < 8.1
+    finally:
+        plt.close(figure)
+
+
 def test_meso_micro_field_support_plot_requires_file_name():
     states, algo, loaded_data = _make_meso_micro_field()
 
     with pytest.raises(ValueError, match="Missing file_name"):
         states.write_support_point_plot(algo=algo, loaded_data=loaded_data)
+
+
+@pytest.mark.parametrize(
+    ("stride", "error"),
+    [
+        (0, ValueError),
+        (-1, ValueError),
+        (1.5, TypeError),
+        (True, TypeError),
+        (None, TypeError),
+    ],
+)
+def test_meso_micro_support_plot_stride_requires_positive_integer(stride, error):
+    with pytest.raises(
+        error, match="support_point_plot_stride must be a positive integer"
+    ):
+        _make_meso_micro_field(support_point_plot_stride=stride)
+
+
+@pytest.mark.parametrize("stride", [1, 2, 10])
+def test_meso_micro_support_plot_stride_preserves_reference_points(stride, tmp_path):
+    states, algo, loaded_data = _make_meso_micro_field(
+        support_point_plot_stride=stride,
+        support_point_plot_pars={"markersize": 2.0, "markeredgewidth": 0.0},
+        ref_point_plot_pars={"s": 16.0, "linewidths": 0.8},
+        support_point_plot_farm_pars={
+            "title": "",
+            "alpha": 0.0,
+            "annotate": 0,
+            "bargs": {
+                "show_boundary": True,
+                "fill_mode": None,
+                "pars_boundary": {
+                    "facecolor": "none",
+                    "zorder": 20,
+                    "label": "Wind farm boundary",
+                },
+            },
+        },
+    )
+    algo.farm.boundary = ClosedPolygon(
+        np.array([[0.0, 0.0], [400.0, 0.0], [200.0, 200.0]])
+    )
+    original_x = loaded_data["coords"][states.micro_states.var(FV.X)].copy()
+    axis = states.get_support_point_figure(algo, loaded_data)
+    try:
+        assert len(axis.lines[0].get_xdata()) == (9 if stride == 1 else 4)
+        assert axis.lines[0].get_markersize() == 2.0
+        np.testing.assert_array_equal(
+            axis.collections[0].get_offsets(), states.ref_points[:, :2]
+        )
+        np.testing.assert_array_equal(
+            loaded_data["coords"][states.micro_states.var(FV.X)], original_x
+        )
+        assert len(axis.patches) == 1
+        assert axis.get_title() == ""
+        assert "Wind farm boundary" in [
+            text.get_text() for text in axis.get_legend().get_texts()
+        ]
+        plot_file = tmp_path / "support_points.png"
+        axis.figure.savefig(plot_file)
+        assert plot_file.stat().st_size > 0
+    finally:
+        plt.close(axis.figure)
+
+
+def test_meso_micro_field_support_plot_farm_pars(monkeypatch):
+    overrides = {"title": "", "alpha": 0, "annotate": 0}
+    states, algo, loaded_data = _make_meso_micro_field(
+        support_point_plot_farm_pars=overrides
+    )
+    assert states.support_point_plot_farm_pars is not overrides
+    fig, ax = Mock(), Mock()
+    layout = Mock()
+    monkeypatch.setattr(
+        meso_micro_field_module.plt, "subplots", Mock(return_value=(fig, ax))
+    )
+    monkeypatch.setattr(meso_micro_field_module, "FarmLayoutOutput", layout)
+    states.get_support_point_figure(algo, loaded_data)
+    assert layout.return_value.get_figure.call_args.kwargs == {
+        "fig": fig,
+        "ax": ax,
+        "fontsize": 12,
+        **overrides,
+    }
+    states.get_support_point_figure(algo, loaded_data, annotate=2, title="Caller title")
+    assert layout.return_value.get_figure.call_args.kwargs["title"] == "Caller title"
+    assert layout.return_value.get_figure.call_args.kwargs["annotate"] == 2
+    with pytest.raises(
+        TypeError, match="support_point_plot_farm_pars must be a dictionary"
+    ):
+        _make_meso_micro_field(support_point_plot_farm_pars=[])
 
 
 def test_meso_micro_field_load_data_triggers_support_point_plot(monkeypatch):
@@ -217,8 +397,15 @@ def test_meso_micro_field_load_data_triggers_support_point_plot(monkeypatch):
         states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
 
 
-def test_meso_micro_field_load_data_preserves_state_dependent_turbine_xy(monkeypatch):
+@pytest.mark.parametrize("with_boundary", [False, True])
+def test_meso_micro_field_load_data_preserves_state_dependent_turbine_xy(
+    monkeypatch, with_boundary
+):
     states, algo, _ = _make_meso_micro_field()
+    if with_boundary:
+        algo.farm.boundary = ClosedPolygon(
+            np.array([[0.0, 0.0], [1000.0, 0.0], [0.0, 1000.0]])
+        )
     algo.farm.turbines[0].xy = np.array([[0.0, 0.0], [100.0, -50.0]])
     algo.farm.turbines[1].xy = np.array([[400.0, 0.0], [550.0, 75.0]])
     captured = {}
@@ -236,6 +423,7 @@ def test_meso_micro_field_load_data_preserves_state_dependent_turbine_xy(monkeyp
         states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
 
     helper_farm = captured["farm"]
+    assert helper_farm.boundary is None
     assert helper_farm.turbines[0].xy.shape == (2, 2)
     assert helper_farm.turbines[1].xy.shape == (2, 2)
     assert all(t.xy.shape == (2,) for t in helper_farm.turbines[2:])

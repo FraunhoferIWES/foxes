@@ -15,7 +15,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 from .dataset_states import DatasetStates
-from ._point_plot_utils import line_plot_pars
+from ._point_plot_utils import farm_plot_pars, line_plot_pars
 
 
 class NEWAStates(DatasetStates):
@@ -55,9 +55,12 @@ class NEWAStates(DatasetStates):
         interp_pars: dict[str, bool | float | str | None] = {},
         wrf_point_plot: str | Path | None = None,
         wrf_point_plot_pars: dict[str, Any] | None = None,
+        wrf_point_plot_farm_pars: dict[str, Any] | None = None,
         **kwargs: object,
     ) -> None:
         """
+        Initialize ambient states from NEWA-format WRF data.
+
         Parameters
         ----------
         input_files_nc
@@ -100,8 +103,18 @@ class NEWAStates(DatasetStates):
         wrf_point_plot_pars
             Additional parameters for `matplotlib.pyplot.plot` when drawing
             the WRF grid points. Defaults to blue points with alpha 0.2.
+        wrf_point_plot_farm_pars
+            Parameters for :meth:`FarmLayoutOutput.get_figure` on the point-plot
+            axes. ``None`` preserves the default overlay. Use
+            ``{"title": "", "alpha": 0, "annotate": 0}`` for a title-free,
+            transparent turbine overlay. Caller dictionaries are copied.
         kwargs
             Additional parameters for the base class
+
+        Raises
+        ------
+        TypeError
+            If a plot-parameter mapping is not a dictionary or ``None``.
         """
         if output_vars is None:
             ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
@@ -134,6 +147,9 @@ class NEWAStates(DatasetStates):
         self.xlat_coord = xlat_coord
         self.xlon_coord = xlon_coord
         self.wrf_point_plot = wrf_point_plot
+        self.wrf_point_plot_farm_pars = farm_plot_pars(
+            wrf_point_plot_farm_pars, "wrf_point_plot_farm_pars"
+        )
         self.wrf_point_plot_pars = line_plot_pars(
             {
                 "color": "blue",
@@ -304,9 +320,12 @@ class NEWAStates(DatasetStates):
             wind_farm_names = algo.farm.wind_farm_names
             assert wind_farm_names is not None
             anno = 3 if len(wind_farm_names) > 1 else 0
-            FarmLayoutOutput(farm=algo.farm).get_figure(
-                fig=fig, ax=ax, annotate=anno, fontsize=12
-            )
+            layout_pars = {
+                "annotate": anno,
+                "fontsize": 12,
+                **self.wrf_point_plot_farm_pars,
+            }
+            FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig, ax=ax, **layout_pars)
             ax.set_xlabel(f"{FV.X} [m]")
             ax.set_ylabel(f"{FV.Y} [m]")
             ax.set_aspect("equal", adjustable="box")

@@ -225,6 +225,14 @@ available alternatives.
 	caller may supply; do not use those suffixes interchangeably.
 - Error messages name the relevant model or container and the expected versus
 	actual variable, dimensions, shape, key, or backend.
+- State support-point diagnostics use `grid_point_plot`, `wrf_point_plot`, or
+	`support_point_plot` for the output path. Their `_pars` suffix names support
+	marker options; `_farm_pars` names the separate `FarmLayoutOutput.get_figure`
+	overlay options. Use the same grid-point names for regular, scattered,
+	Weibull, binned, and turbine-backed states.
+- The `grid_point_plot_stride` and `support_point_plot_stride` options name
+	positive per-axis sampling steps for diagnostic rendering only. They do not
+	select or reduce scientific input data or reference points.
 
 ## Documentation Names
 

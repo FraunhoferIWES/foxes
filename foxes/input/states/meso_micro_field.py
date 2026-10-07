@@ -24,7 +24,13 @@ import foxes.constants as FC
 import foxes.variables as FV
 
 from .dataset_states import DatasetStates
-from ._point_plot_utils import line_plot_pars, scatter_plot_pars
+from ._point_plot_utils import (
+    farm_plot_pars,
+    grid_plot_points,
+    line_plot_pars,
+    point_plot_stride,
+    scatter_plot_pars,
+)
 
 
 class MesoMicroField(States):
@@ -51,9 +57,13 @@ class MesoMicroField(States):
         support_point_plot: str | None = None,
         support_point_plot_pars: dict[str, Any] | None = None,
         ref_point_plot_pars: dict[str, Any] | None = None,
+        support_point_plot_farm_pars: dict[str, Any] | None = None,
+        support_point_plot_stride: int = 1,
         **kwargs: object,
     ) -> None:
         """
+        Combine micro-scale sector fields with meso-scale reference states.
+
         Parameters
         ----------
         micro_states
@@ -82,10 +92,10 @@ class MesoMicroField(States):
             The output variables. If None, all micro_states variables are used.
         fixed_vars
             Fixed variables, e.g. {"var_name": var_value}.
-        apply_blending
-            Whether to blend between wind direction sectors.
         check_nans
             Whether to check for NaN values.
+        apply_blending
+            Whether to blend between wind direction sectors.
         support_point_plot
             Path to a plot file, e.g. support_points.png, to visualize the
             selected micro_states support points, reference points, and farm layout.
@@ -96,6 +106,26 @@ class MesoMicroField(States):
         ref_point_plot_pars
             Additional parameters for `matplotlib.pyplot.scatter` when drawing
             the reference points. Defaults to red crosses.
+        support_point_plot_farm_pars
+            Parameters for :meth:`FarmLayoutOutput.get_figure` on the support-plot
+            axes. ``None`` preserves the default overlay. Use
+            ``{"title": "", "alpha": 0, "annotate": 0}`` for a title-free,
+            transparent turbine overlay. Caller dictionaries are copied.
+        support_point_plot_stride
+            Positive sampling step along each distinct horizontal support axis.
+            The default 1 draws all support points. Larger values thin only the
+            image and retain the outermost coordinates. Reference points and
+            numerical state data are not sampled.
+        kwargs
+            Additional parameters for the base states class.
+
+        Raises
+        ------
+        TypeError
+            If a plot-parameter mapping is not a dictionary or ``None``, or the
+            plot stride is not an integer.
+        ValueError
+            If the plot stride is less than 1.
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
         self.micro_states = micro_states
@@ -106,6 +136,12 @@ class MesoMicroField(States):
         self.ref_height = ref_height
         self.apply_blending = apply_blending
         self.support_point_plot = support_point_plot
+        self.support_point_plot_stride = point_plot_stride(
+            support_point_plot_stride, "support_point_plot_stride"
+        )
+        self.support_point_plot_farm_pars = farm_plot_pars(
+            support_point_plot_farm_pars, "support_point_plot_farm_pars"
+        )
         self.support_point_plot_pars = line_plot_pars(
             {
                 "color": "blue",
@@ -171,7 +207,7 @@ class MesoMicroField(States):
             Farm annotation mode. If None, wind farm names are annotated for
             multi-farm layouts, otherwise turbine labels are omitted.
         kwargs
-            Parameters forwarded to :meth:`FarmLayoutOutput.get_figure`.
+            Farm-layout parameters overriding ``support_point_plot_farm_pars``.
 
         Returns
         -------
@@ -189,6 +225,9 @@ class MesoMicroField(States):
             loaded_data=loaded_data,
             all_heights=all_heights,
             height=height,
+        )
+        support_points = grid_plot_points(
+            support_points, self.support_point_plot_stride
         )
 
         fig, ax = plt.subplots(figsize=figsize)
@@ -211,13 +250,15 @@ class MesoMicroField(States):
         farm_annotate = 3 if annotate is None and len(wind_farm_names) > 1 else 0
         if annotate is not None:
             farm_annotate = annotate
-        FarmLayoutOutput(farm=algo.farm).get_figure(
-            fig=fig,
-            ax=ax,
-            annotate=farm_annotate,
-            fontsize=12,
+        layout_pars = {
+            "annotate": farm_annotate,
+            "fontsize": 12,
+            **self.support_point_plot_farm_pars,
             **kwargs,
-        )
+        }
+        if annotate is not None:
+            layout_pars["annotate"] = annotate
+        FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig, ax=ax, **layout_pars)
         ax.set_xlabel(f"{FV.X} [m]")
         ax.set_ylabel(f"{FV.Y} [m]")
         ax.set_aspect("equal", adjustable="box")
