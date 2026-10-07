@@ -36,7 +36,8 @@ class CalculatorType(TurbineType):
             Beware that the turbine ordering in fdata is in downwind order,
             hence external data X of shape (n_states, n_turbines) in farm order
             needs to be reordered by X[ssel, order] with
-            ssel = fdata[FV.ORDER_SSEL], order = fdata[FV.ORDER]
+            order = fdata[FV.ORDER] and
+            ssel = np.broadcast_to(np.arange(order.shape[0])[:, None], order.shape)
             before using it in combination with fdata variables.
         out_vars
             The output variables of the function

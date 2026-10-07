@@ -801,9 +801,8 @@ class Downwind(Algorithm):
         )
         if farm_results is not None:
             farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-            for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
-                if v in farm_results:
-                    farm_results[v] = farm_results[v].astype(config.dtype_int)
+            if FV.ORDER in farm_results:
+                farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(config.dtype_int)
         del model_data
 
         # finalize models:

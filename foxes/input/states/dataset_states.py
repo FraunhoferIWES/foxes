@@ -1386,8 +1386,8 @@ class DatasetStates(States):
                 )
                 mvd.append(dims)
         if len(mvd) > 0:
-            ssel = fdata[FV.ORDER_SSEL].astype(config.dtype_int)
             order = fdata[FV.ORDER].astype(config.dtype_int)
+            ssel = np.broadcast_to(np.arange(n_states)[:, None], order.shape)
             for dims0 in mvd:
                 vrs, d0 = data.pop(dims0)
                 dims = (FC.STATE,) + dims0

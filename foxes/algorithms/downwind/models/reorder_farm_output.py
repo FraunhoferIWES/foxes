@@ -72,8 +72,10 @@ class ReorderFarmOutput(FarmDataModel):
             Values with shape (n_states, n_turbines)
 
         """
-        ssel = fdata[FV.ORDER_SSEL]
-        order_inv = fdata[FV.ORDER_INV]
+        order = fdata[FV.ORDER]
+        ssel = np.broadcast_to(np.arange(order.shape[0])[:, None], order.shape)
+        order_inv = np.empty_like(order)
+        order_inv[ssel, order] = np.arange(order.shape[1])[None, :]
 
         out = {}
         for v in self.output_farm_vars(algo):

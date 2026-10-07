@@ -31,14 +31,6 @@ ORDER = "order"
 """ The turbine order
 """
 
-ORDER_INV = "order_inv"
-""" The inverse of the turbine order
-"""
-
-ORDER_SSEL = "order_ssel"
-""" The states selection for applying the order
-"""
-
 WS = "WS"
 """ The wind speed in m/s
 """
