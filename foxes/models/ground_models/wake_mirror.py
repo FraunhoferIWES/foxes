@@ -42,6 +42,7 @@ class WakeMirror(GroundModel):
         """
         Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
+
         Parameters
         ----------
         algo

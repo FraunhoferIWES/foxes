@@ -15,6 +15,19 @@ if TYPE_CHECKING:
 
 
 class LoadedData(TypedDict):
+    """
+    Data loaded during model initialization.
+
+    Attributes
+    ----------
+    coords
+        Coordinate values by coordinate name.
+    data_vars
+        Dimension names and values by data-variable name.
+    extra_data
+        Additional non-array data by name.
+    """
+
     coords: dict[
         str,
         np.ndarray[Any, Any]

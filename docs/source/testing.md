@@ -1,13 +1,11 @@
 # Testing
 
-For testing, please clone the repository and install the required dependencies:
+From a development environment, run the full Python test suite with:
+
 ```console
-git clone https://github.com/FraunhoferIWES/foxes.git
-cd foxes
-pip install -e .[test]
+uv run pytest tests
 ```
 
-The tests are then run by
-```console
-pytest tests
-```
+Contributor setup, focused test selection, notebook checks, and completion
+gates are maintained in the repository's
+[development guide](https://github.com/FraunhoferIWES/foxes/blob/main/docs/development.md).

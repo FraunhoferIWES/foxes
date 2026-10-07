@@ -321,10 +321,14 @@ subprocess.
 	[ADR-0003](adr/0003-compact-static-target-coordinates.md).
 - Ruff formatting/linting and mypy run through pre-commit. Pytest is the test
 	runner; Sphinx with AutoAPI, numpydoc, and MyST-NB builds the documentation.
-- FOXES follows the Fraunhofer corporate design. The repository has no browser
-	UI and no design-token adapter; corporate requirements apply to scientific
-	plots, animations, examples, notebooks, documentation, and brand assets. See
-	[ADR-0002](adr/0002-corporate-design.md).
+- FOXES follows the Fraunhofer corporate design. Corporate requirements apply
+	to scientific plots, animations, examples, notebooks, documentation, and
+	brand assets. Sphinx HTML uses `iwes-tokens.css` as the adapter for the
+	authoritative `design-tokens.json` values and `iwes.css` as its
+	Sphinx-Immaterial theme layer; a consistency test prevents token drift. FOXES
+	still has no browser application frontend. See
+	[ADR-0002](adr/0002-corporate-design.md) and
+	[ADR-0004](adr/0004-sphinx-design-token-adapter.md).
 
 ## ADR Triggers
 
