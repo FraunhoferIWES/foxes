@@ -272,6 +272,8 @@ state/target product merely to slice it per engine chunk.
 	order.
 - Avoid sending unnecessary algorithm state or large caches to every process.
 - Preserve state and turbine ordering when collecting parallel results.
+- Reduced iterative passes keep farm data in downwind order and reorder fresh
+	model data by `FV.ORDER` before evaluating turbine models and controllers.
 - Compare serial and parallel numerical results when changing engine-facing
 	code; speed alone is not correctness.
 - Measure representative state, turbine, and target sizes before accepting a

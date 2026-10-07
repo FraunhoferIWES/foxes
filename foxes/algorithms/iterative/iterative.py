@@ -259,7 +259,10 @@ class Iterative(Downwind):
 
                 # add model that calculates wake effects:
                 mlist.models.append(
-                    self.get_model("FarmWakesCalculation")(urelax=urelax)
+                    self.get_model("FarmWakesCalculation")(
+                        urelax=urelax,
+                        reorder_mdata=True,
+                    )
                 )
                 calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 

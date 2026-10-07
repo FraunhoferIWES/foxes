@@ -1144,6 +1144,8 @@ This major version introduces the concept of `Engines` which handle the chunking
     downwind order
   - `MesoMicroField` now gathers selected micro-bin/point pairs directly instead
     of reconstructing every micro bin at every state's target layout
+  - Iterative calculations now keep per-turbine model selections and operating
+    flags aligned with downwind-ordered farm data after the first iteration
 - Development:
   - Adding Agents.md and related files for agentic coding
   - Recorded Fraunhofer corporate design for FOXES visual surfaces
