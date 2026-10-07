@@ -219,6 +219,15 @@ _windio_ input can be interpreted and run by foxes via the `foxes_windio` comman
 foxes_windio path/to/windio_input.yaml
 ```
 
+For `attributes.analysis.rotor_averaging`, FOXES maps the WindIO `name` to its
+partial-wake model as follows: `center` and `none` select `centre`,
+`area_overlap` selects `top_hat`, `gaussian_overlap` selects `gaussian_lookup`,
+and `grid` uses the adjacent `grid` setting. Grid wake averaging reuses
+`rotor_points` when `background_averaging` is also `grid`; otherwise it uses a
+separate partial-wake grid. Other or missing names use the wake model's default.
+All Gaussian wake models, including TurbOPark, default to `gaussian_lookup`. An
+explicit `wake_averaging` value takes precedence over the WindIO-name mapping.
+
 The command line options are very similar to `foxes_yaml`, see above, and
 
 ```console

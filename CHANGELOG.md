@@ -1122,6 +1122,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Added figure-only farm-boundary overrides for diagnostic overlays without
     changing numerical farm bounds
 - Bug fixes:
+  - WindIO `rotor_averaging.name` now selects the corresponding FOXES
+    partial-wake model instead of silently falling back to model defaults
+  - Gaussian wake models, including `TurbOPark`, now consistently default to
+    lookup-based Gaussian partial wakes
   - Fixed `AreaIntersection.add_to_figure` to render intersection boundaries
     and forward their plotting parameters
   - Internal state subsets now use coordinate labels consistently, supporting

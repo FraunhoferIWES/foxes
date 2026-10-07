@@ -22,7 +22,7 @@ def test_turbopark_defaults_match_original_model():
     assert wake_model.induction == "Betz"
     assert wake_model.wind_superposition == "ws_quadratic_amb_target"
     assert wake_model.wake_k.repr() == f"k=0.04*{FV.AMB_TI}"
-    assert mbook.default_partial_wakes(wake_model) == "gaussian"
+    assert mbook.default_partial_wakes(wake_model) == "gaussian_lookup"
 
     algo = foxes.algorithms.Downwind(
         _farm([turbine_type]),
@@ -33,7 +33,7 @@ def test_turbopark_defaults_match_original_model():
     )
 
     assert algo.ground_models["TurbOPark"].name == "no_ground"
-    assert algo.partial_wakes["TurbOPark"].name == "gaussian"
+    assert algo.partial_wakes["TurbOPark"].name == "gaussian_lookup"
 
     with _engine():
         farm_results = algo.calc_farm()

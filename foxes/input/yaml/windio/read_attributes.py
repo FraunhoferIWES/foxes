@@ -254,7 +254,18 @@ def _read_rotor_averaging(
     if "wake_averaging" in rotor_averaging:
         wake_averaging = rotor_averaging["wake_averaging"]
     else:
-        wake_averaging = rotor_averaging
+        rotor_averaging_name = rotor_averaging.get("name", None)
+        if isinstance(rotor_averaging_name, str):
+            wake_averaging = {
+                "center": "centre",
+                "centre": "centre",
+                "none": "centre",
+                "area_overlap": "top_hat",
+                "gaussian_overlap": "gaussian_lookup",
+                "grid": "grid",
+            }.get(rotor_averaging_name.lower(), None)
+        else:
+            wake_averaging = None
     wse_P = rotor_averaging.get("wind_speed_exponent_for_power", 1)
     wse_ct = rotor_averaging.get("wind_speed_exponent_for_ct", 1)
     if verbosity > 2:
