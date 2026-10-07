@@ -1105,6 +1105,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Static point coordinates now retain a singleton state axis during chunk
     transport and are broadcast inside engine runners, avoiding repeated target
     arrays without changing point-result dimensions
+  - Downwind ordering now derives transient state selectors and inverse
+    permutations locally instead of storing them in farm data
 - Output:
   - Added opt-in true turbine radius rendering to `FarmLayoutOutput`, including
     scatter-equivalent fill colors and `color_by` support; automatically sized

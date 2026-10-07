@@ -42,8 +42,6 @@ class InitFarmData(FarmDataModel):
             FV.WD,
             FV.YAW,
             FV.ORDER,
-            FV.ORDER_SSEL,
-            FV.ORDER_INV,
         ]
 
     def calculate(
@@ -80,21 +78,9 @@ class InitFarmData(FarmDataModel):
         # initialize with farm order, will be corrected later:
         order: np.ndarray = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
         order[:] = np.arange(n_turbines)[None, :]
-        ssel = np.zeros_like(order)
-        ssel[:] = np.arange(n_states)[:, None]
         fdata.add(
             FV.ORDER,
             order,
-            (FC.STATE, FC.TURBINE),
-        )
-        fdata.add(
-            FV.ORDER_SSEL,
-            ssel,
-            (FC.STATE, FC.TURBINE),
-        )
-        fdata.add(
-            FV.ORDER_INV,
-            order.copy(),
             (FC.STATE, FC.TURBINE),
         )
 
@@ -150,6 +136,7 @@ class InitFarmData(FarmDataModel):
 
         # calculate downwind order:
         order = algo.wake_frame.calc_order(algo, mdata, fdata)
+        ssel = np.broadcast_to(np.arange(n_states)[:, None], order.shape)
 
         # apply downwind order to all data:
         for data in [fdata, mdata]:
@@ -174,6 +161,5 @@ class InitFarmData(FarmDataModel):
             (FC.STATE, FC.TURBINE),
         )
         fdata[FV.ORDER] = order
-        fdata[FV.ORDER_INV][ssel, order] = np.arange(n_turbines)[None, :]
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
