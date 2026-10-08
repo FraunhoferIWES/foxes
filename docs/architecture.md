@@ -201,6 +201,10 @@ adapters own parsing and boundary validation; core models should not parse file
 formats. `DataBook` and `StaticData` locate packaged or user-supplied data by
 logical category. Keep resource lookup separate from scientific calculation.
 
+The WindIO adapter selects the iterative algorithm and per-wake `ground_mirror`
+for every enabled blockage (induction wake) model. It also enables ground
+mirroring for TurbOPark wind deficits, preserving other per-wake ground settings.
+
 State support-point diagnostics are opt-in loading-time outputs. Regular,
 scattered, Weibull, binned, and turbine-backed spatial states expose
 `grid_point_plot`; NEWA and meso/micro states use their existing WRF and support

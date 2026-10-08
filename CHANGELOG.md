@@ -1120,6 +1120,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bug fixes:
   - WindIO and Gaussian partial wakes: Applied declared rotor averaging and
     consistent lookup-based defaults, including `TurbOPark`
+  - WindIO blockage models: Automatically enabled ground mirroring for
+    induction wakes
   - `AreaIntersection`: Restored boundary rendering and plot parameters
   - `Circle`: Corrected nearest-boundary coordinates for centre-point queries
   - State indexing: Preserved coordinate labels such as timestamps in subsets

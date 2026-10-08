@@ -204,7 +204,7 @@ def _read_blockage(
     mbook: ModelBook,
     verbosity: int,
 ) -> None:
-    """Reads the blockage model"""
+    """Read a blockage model and enable its ground mirror."""
     indc_def_map: Any = Dict(
         {
             "RankineHalfBody": "RankineHalfBody",
@@ -234,6 +234,8 @@ def _read_blockage(
             print("       ", mbook.wake_models[wname])
         algo_dict["wake_models"].append(wname)
         algo_dict["algo_type"] = "Iterative"
+        ground_models = algo_dict.setdefault("ground_models", {})
+        ground_models[wname] = "ground_mirror"
 
 
 def _read_rotor_averaging(
@@ -452,21 +454,22 @@ def read_attributes(
     mbook: ModelBook,
     verbosity: int = 1,
 ) -> None:
-    """
-    Reads the attributes part of windio
+    """Read WindIO attributes into FOXES algorithm settings.
+
+    Enabled blockage models select the iterative algorithm and ground
+    mirroring. TurbOPark wind deficits also enable ground mirroring.
 
     Parameters
     ----------
     wio_attrs
-        The windio attributes data
+        The WindIO attributes containing analysis and optional flow-model data.
     idict
-        The foxes input data dictionary
+        The FOXES input data dictionary. Its ``algorithm`` mapping is updated
+        with model selections and per-wake ground models.
     mbook
-        The model book
+        The model book in which parsed wake and deflection models are registered.
     verbosity
-        The verbosity level, 0=silent
-
-
+        The verbosity level, where ``0`` is silent.
     """
     if verbosity > 1:
         print("Reading attributes")

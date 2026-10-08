@@ -139,7 +139,15 @@ foxes_windio path/to/windio_input.yaml
 
 Use the example under `examples/windio` as the supported input reference. An
 explicit FOXES `wake_averaging` setting takes precedence over inferred WindIO
-rotor-averaging choices. List all command options with:
+rotor-averaging choices.
+
+Enabled WindIO blockage models automatically select the iterative algorithm and
+`ground_mirror` for their induction wakes. This applies to `RankineHalfBody`,
+`Rathmann`, `SelfSimilarityDeficit`, and `SelfSimilarityDeficit2020`. Selecting
+`None` or `none` leaves blockage disabled. TurbOPark wind deficits also enable
+ground mirroring; other per-wake ground settings remain unchanged.
+
+List all command options with:
 
 ```console
 foxes_windio -h
