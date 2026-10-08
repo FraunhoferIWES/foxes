@@ -1,0 +1,284 @@
+:root,
+[data-md-color-scheme="default"] {
+  --md-default-fg-color: var(--iwes-semantic-color-text);
+  --md-default-fg-color--light: var(--iwes-semantic-color-text-muted);
+  --md-default-bg-color: var(--iwes-semantic-color-background);
+  --md-primary-fg-color: var(--iwes-semantic-color-background);
+  --md-primary-bg-color: var(--iwes-semantic-color-text-muted);
+  --md-accent-fg-color: var(--iwes-color-steel-blue);
+  --md-typeset-a-color: var(--iwes-color-steel-blue);
+  --md-code-fg-color: var(--iwes-semantic-color-text-muted);
+  --md-code-bg-color: var(--iwes-semantic-color-background-alternative);
+}
+
+html {
+  font-size: var(--iwes-typography-font-size-base);
+}
+
+body,
+input {
+  font-family: var(--iwes-typography-font-family-sans), sans-serif;
+  font-weight: var(--iwes-typography-font-weight-light);
+  letter-spacing: 0;
+}
+
+.md-grid {
+  max-width: var(--iwes-layout-container-max);
+}
+
+.md-header {
+  min-height: var(--iwes-layout-header-height);
+  color: var(--iwes-semantic-color-text-muted);
+  background: var(--iwes-semantic-color-background);
+  border-bottom: var(--iwes-border-accent-width) solid var(--iwes-semantic-color-primary);
+  box-shadow: none;
+}
+
+.md-header__inner {
+  min-height: calc(var(--iwes-layout-header-height) - var(--iwes-border-accent-width));
+}
+
+.md-header__title,
+.md-header__topic,
+.md-nav__title,
+.md-typeset strong,
+.md-typeset b {
+  font-weight: var(--iwes-typography-font-weight-bold);
+}
+
+.md-header__button,
+.md-header__button.md-icon,
+.md-source,
+.md-search__icon {
+  color: var(--iwes-semantic-color-text-muted);
+}
+
+.md-search__form,
+.md-search__output {
+  color: var(--iwes-semantic-color-text);
+  background: var(--iwes-semantic-color-background-alternative);
+  border: var(--iwes-border-width) solid var(--iwes-semantic-color-border);
+  border-radius: var(--iwes-radius-none);
+  box-shadow: none;
+}
+
+.md-search__input::placeholder {
+  color: var(--iwes-semantic-color-text-muted);
+  opacity: 1;
+}
+
+.md-main {
+  background: var(--iwes-semantic-color-background);
+}
+
+.md-content__inner {
+  max-width: var(--iwes-layout-content-max);
+  margin-inline: auto;
+}
+
+.md-typeset {
+  color: var(--iwes-semantic-color-text);
+  font-size: var(--iwes-typography-font-size-base);
+  font-weight: var(--iwes-typography-font-weight-light);
+  line-height: var(--iwes-typography-line-height-base);
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  color: var(--iwes-semantic-color-text-muted);
+  letter-spacing: 0;
+}
+
+.md-typeset h1 {
+  margin-block: var(--iwes-spacing-12) var(--iwes-spacing-6);
+  font-size: var(--iwes-typography-font-size-3xl);
+  font-weight: var(--iwes-typography-font-weight-light);
+  line-height: var(--iwes-typography-line-height-3xl);
+}
+
+.md-typeset h2 {
+  margin-block: var(--iwes-spacing-12) var(--iwes-spacing-4);
+  font-size: var(--iwes-typography-font-size-2xl);
+  font-weight: var(--iwes-typography-font-weight-bold);
+  line-height: var(--iwes-typography-line-height-2xl);
+}
+
+.md-typeset h3 {
+  margin-block: var(--iwes-spacing-8) var(--iwes-spacing-3);
+  font-size: var(--iwes-typography-font-size-xl);
+  font-weight: var(--iwes-typography-font-weight-bold);
+  line-height: var(--iwes-typography-line-height-xl);
+}
+
+.md-typeset h4 {
+  font-size: var(--iwes-typography-font-size-lg);
+  font-weight: var(--iwes-typography-font-weight-bold);
+  line-height: var(--iwes-typography-line-height-lg);
+}
+
+.md-typeset em,
+.md-typeset i {
+  font-style: normal;
+  font-weight: var(--iwes-typography-font-weight-bold);
+}
+
+.md-typeset a {
+  color: var(--iwes-color-steel-blue);
+  text-decoration: underline;
+  text-decoration-thickness: var(--iwes-border-width);
+  text-underline-offset: var(--iwes-spacing-1);
+}
+
+.md-typeset a:hover {
+  color: var(--iwes-semantic-color-primary-active);
+  text-decoration-thickness: var(--iwes-border-focus-width);
+}
+
+.md-nav__link {
+  min-height: var(--iwes-layout-touch-target-min);
+  align-items: center;
+  color: var(--iwes-semantic-color-text-muted);
+  letter-spacing: 0;
+}
+
+.md-nav__link:hover,
+.md-nav__link:focus {
+  color: var(--iwes-color-steel-blue);
+}
+
+.md-nav__link--active {
+  padding-left: var(--iwes-spacing-3);
+  color: var(--iwes-semantic-color-text);
+  font-weight: var(--iwes-typography-font-weight-bold);
+  background: var(--iwes-semantic-color-surface-selected);
+  border-left: var(--iwes-border-accent-width) solid var(--iwes-semantic-color-primary);
+}
+
+.md-nav--primary .md-nav__title,
+.md-nav--secondary .md-nav__title {
+  color: var(--iwes-semantic-color-text-muted);
+  background: var(--iwes-semantic-color-background);
+  box-shadow: none;
+}
+
+.md-sidebar {
+  background: var(--iwes-semantic-color-background);
+}
+
+.md-typeset code,
+.md-typeset pre,
+.md-typeset .highlight,
+.md-typeset .highlighttable,
+.md-typeset .tabbed-set > input:checked + label,
+.md-typeset .md-button {
+  border-radius: var(--iwes-radius-none);
+}
+
+.md-typeset code {
+  font-family: var(--iwes-typography-font-family-mono);
+}
+
+.md-typeset pre > code {
+  padding: var(--iwes-spacing-4);
+  border-left: var(--iwes-border-accent-width) solid var(--iwes-semantic-color-border);
+}
+
+.md-typeset table,
+.md-typeset table.data:not(.plain) {
+  border: 0;
+  border-radius: var(--iwes-radius-none);
+  box-shadow: none;
+}
+
+.md-typeset table th {
+  color: var(--iwes-semantic-color-text);
+  font-weight: var(--iwes-typography-font-weight-bold);
+  background: var(--iwes-semantic-color-background-alternative);
+  border-bottom: var(--iwes-border-width) solid var(--iwes-semantic-color-border-strong);
+}
+
+.md-typeset table td {
+  font-weight: var(--iwes-typography-font-weight-light);
+  border-bottom: var(--iwes-border-width) solid var(--iwes-semantic-color-border-subtle);
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  background: var(--iwes-semantic-color-surface);
+  border: var(--iwes-border-width) solid var(--iwes-semantic-color-border-subtle);
+  border-left: var(--iwes-border-accent-width) solid var(--iwes-semantic-color-primary);
+  border-radius: var(--iwes-radius-none);
+  box-shadow: none;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  background: var(--iwes-semantic-color-background-alternative);
+  border-radius: var(--iwes-radius-none);
+}
+
+.md-typeset .versionadded,
+.md-typeset .versionchanged {
+  padding: var(--iwes-spacing-3) var(--iwes-spacing-4);
+  background: var(--iwes-semantic-color-primary-subtle);
+  border-left: var(--iwes-border-accent-width) solid var(--iwes-semantic-color-primary);
+}
+
+.md-typeset .md-button {
+  min-height: var(--iwes-layout-touch-target-min);
+  color: var(--iwes-semantic-color-text-inverse);
+  font-weight: var(--iwes-typography-font-weight-bold);
+  background: var(--iwes-color-steel-blue);
+  border: var(--iwes-border-width) solid var(--iwes-color-steel-blue);
+}
+
+.md-typeset .md-button:hover {
+  color: var(--iwes-semantic-color-text-inverse);
+  background: var(--iwes-semantic-color-primary-active);
+  border-color: var(--iwes-semantic-color-primary-active);
+}
+
+.md-footer {
+  min-height: var(--iwes-layout-footer-height);
+  color: var(--iwes-semantic-color-text-muted);
+  background: var(--iwes-semantic-color-background-alternative);
+  border-top: var(--iwes-border-width) solid var(--iwes-semantic-color-border);
+}
+
+.md-footer-meta {
+  color: var(--iwes-semantic-color-text-muted);
+  background: var(--iwes-semantic-color-background-alternative);
+}
+
+.md-footer a,
+.md-footer-meta a {
+  color: var(--iwes-color-steel-blue);
+}
+
+:focus-visible {
+  outline: var(--iwes-border-focus-width) solid var(--iwes-color-steel-blue);
+  outline-offset: var(--iwes-spacing-1);
+}
+
+@media (max-width: 640px) {
+  .md-content__inner {
+    padding-inline: var(--iwes-spacing-4);
+  }
+
+  .md-typeset h1 {
+    margin-top: var(--iwes-spacing-8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
