@@ -22,6 +22,7 @@ from foxes.input.states import (
     SectorSimRefPointField,
     SingleStateStates,
 )
+from foxes.utils.geom2d.area_geometry import AreaUnion
 from foxes.utils.geom2d.polygon import ClosedPolygon
 
 
@@ -293,7 +294,10 @@ def test_meso_micro_support_plot_stride_requires_positive_integer(stride, error)
 
 
 @pytest.mark.parametrize("stride", [1, 2, 10])
-def test_meso_micro_support_plot_stride_preserves_reference_points(stride, tmp_path):
+@pytest.mark.parametrize("n_boundaries", [1, 3])
+def test_meso_micro_support_plot_stride_preserves_reference_points(
+    stride, n_boundaries, tmp_path
+):
     states, algo, loaded_data = _make_meso_micro_field(
         support_point_plot_stride=stride,
         support_point_plot_pars={"markersize": 2.0, "markeredgewidth": 0.0},
@@ -313,8 +317,12 @@ def test_meso_micro_support_plot_stride_preserves_reference_points(stride, tmp_p
             },
         },
     )
-    algo.farm.boundary = ClosedPolygon(
-        np.array([[0.0, 0.0], [400.0, 0.0], [200.0, 200.0]])
+    polygon_points = np.array([[0.0, 0.0], [400.0, 0.0], [200.0, 200.0]])
+    algo.farm.boundary = AreaUnion(
+        [
+            ClosedPolygon(polygon_points + [20.0 * index, 0.0])
+            for index in range(n_boundaries)
+        ]
     )
     original_x = loaded_data["coords"][states.micro_states.var(FV.X)].copy()
     axis = states.get_support_point_figure(algo, loaded_data)
@@ -327,10 +335,12 @@ def test_meso_micro_support_plot_stride_preserves_reference_points(stride, tmp_p
         np.testing.assert_array_equal(
             loaded_data["coords"][states.micro_states.var(FV.X)], original_x
         )
-        assert len(axis.patches) == 1
+        assert len(axis.patches) == n_boundaries
         assert axis.get_title() == ""
-        assert "Wind farm boundary" in [
-            text.get_text() for text in axis.get_legend().get_texts()
+        assert [text.get_text() for text in axis.get_legend().get_texts()] == [
+            f"{states.micro_states.name} support points",
+            "reference points",
+            "Wind farm boundary",
         ]
         plot_file = tmp_path / "support_points.png"
         axis.figure.savefig(plot_file)
@@ -346,6 +356,7 @@ def test_meso_micro_field_support_plot_farm_pars(monkeypatch):
     )
     assert states.support_point_plot_farm_pars is not overrides
     fig, ax = Mock(), Mock()
+    ax.get_legend_handles_labels.return_value = ([], [])
     layout = Mock()
     monkeypatch.setattr(
         meso_micro_field_module.plt, "subplots", Mock(return_value=(fig, ax))
@@ -456,6 +467,7 @@ def test_support_point_plot_pars_are_forwarded(
     )
     fig = Mock()
     ax = Mock()
+    ax.get_legend_handles_labels.return_value = ([], [])
     monkeypatch.setattr(module.plt, "subplots", Mock(return_value=(fig, ax)))
     monkeypatch.setattr(module, "FarmLayoutOutput", Mock())
 

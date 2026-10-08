@@ -188,7 +188,10 @@ class MesoMicroField(States):
         **kwargs: Any,
     ) -> Any:
         """
-        Creates a figure showing farm layout, reference points, and support points.
+        Create a plot showing farm layout, reference points, and support points.
+
+        Repeated legend labels appear once, represented by their first artist.
+        All support points, reference points, and boundary components remain drawn.
 
         Parameters
         ----------
@@ -263,7 +266,11 @@ class MesoMicroField(States):
         ax.set_ylabel(f"{FV.Y} [m]")
         ax.set_aspect("equal", adjustable="box")
         ax.autoscale_view(tight=True)
-        ax.legend(loc="best")
+        handles, labels = ax.get_legend_handles_labels()
+        legend_entries: dict[str, Any] = {}
+        for handle, label in zip(handles, labels):
+            legend_entries.setdefault(label, handle)
+        ax.legend(list(legend_entries.values()), list(legend_entries), loc="best")
         return ax
 
     def write_support_point_plot(
