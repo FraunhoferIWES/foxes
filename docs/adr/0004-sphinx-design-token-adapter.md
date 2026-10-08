@@ -26,6 +26,13 @@ uses only adapter values for IWES design decisions. Sphinx loads the adapter
 before the theme layer through `docs/source/conf.py`. The documentation remains
 white-dominant and flat and does not expose a dark colour scheme.
 
+The header uses the approved semantic primary green with semantic text (black)
+for its labels, controls, and focus indicators. This pairing has a 6.09:1
+contrast ratio; white or muted text on the primary green would not meet the
+4.5:1 requirement for normal text. Search retains a light surface with dark text,
+including on desktop where the upstream white-palette selectors need explicit
+overrides. The page body remains white.
+
 Sphinx-Immaterial continues to own documentation navigation, search, and
 responsive behavior. The adapter does not introduce a FOXES application
 frontend or a runtime dependency.

@@ -64,9 +64,8 @@ pip install "foxes[test,opt]"
 
 ## Development setup
 
-Contributors must first read
-[`AGENTS.md`](https://github.com/FraunhoferIWES/foxes/blob/main/AGENTS.md), the
-canonical repository policy. It links the scoped instructions and the
+Agentic coding is required to follow
+[`AGENTS.md`](https://github.com/FraunhoferIWES/foxes/blob/main/AGENTS.md). It links the scoped instructions and the
 architecture, naming, docstring, and
 [development](https://github.com/FraunhoferIWES/foxes/blob/main/docs/development.md)
 guides. The development guide defines the `uv` environment and validation

@@ -325,8 +325,10 @@ subprocess.
 	to scientific plots, animations, examples, notebooks, documentation, and
 	brand assets. Sphinx HTML uses `iwes-tokens.css` as the adapter for the
 	authoritative `design-tokens.json` values and `iwes.css` as its
-	Sphinx-Immaterial theme layer; a consistency test prevents token drift. FOXES
-	still has no browser application frontend. See
+	Sphinx-Immaterial theme layer; a consistency test prevents token drift. The
+	documentation remains white-dominant with a primary-green header, black
+	header text and focus indicators, and a light search surface. FOXES still
+	has no browser application frontend. See
 	[ADR-0002](adr/0002-corporate-design.md) and
 	[ADR-0004](adr/0004-sphinx-design-token-adapter.md).
 

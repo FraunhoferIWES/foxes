@@ -26,6 +26,8 @@ FOXES uses vectorized calculations and supports local or distributed execution.
 Wind-farm optimization is provided by the separate
 `foxes-opt <https://github.com/FraunhoferIWES/foxes-opt>`_ package.
 
+Requires Python 3.10 through 3.14.
+
 Source code repository (and issue tracker):
     https://github.com/FraunhoferIWES/foxes
 
@@ -36,6 +38,34 @@ License
     MIT_
 
 .. _MIT: https://github.com/FraunhoferIWES/foxes/blob/main/LICENSE
+
+Citation
+--------
+
+Please cite the JOSS paper "FOXES: Farm Optimization and eXtended yield
+Evaluation Software".
+
+.. image:: https://joss.theoj.org/papers/10.21105/joss.05464/status.svg
+    :target: https://doi.org/10.21105/joss.05464
+    :alt: JOSS paper DOI: 10.21105/joss.05464
+
+BibTeX:
+
+.. code-block:: bibtex
+
+    @article{
+        Schmidt2023,
+        author = {Jonas Schmidt and Lukas Vollmer and Martin D{\"o}renk{\"a}mper and Bernhard Stoevesandt},
+        title = {FOXES: Farm Optimization and eXtended yield Evaluation Software},
+        doi = {10.21105/joss.05464},
+        url = {https://doi.org/10.21105/joss.05464},
+        year = {2023},
+        publisher = {The Open Journal},
+        volume = {8},
+        number = {86},
+        pages = {5464},
+        journal = {Journal of Open Source Software}
+    }
 
 Contents
 --------
@@ -69,9 +99,8 @@ Contributing
 Acknowledgements
 ----------------
 
-Development of *FOXES* and its internal predecessors was supported by:
+Development of *FOXES* was supported by:
 
-* BMWK projects *Smart Wind Farms* (0325851B), *GW-Wakes* (0325397B), and
-    *X-Wakes* (03EE3008A)
+* BMWK projects *Smart Wind Farms* (0325851B), *GW-Wakes* (0325397B), and *X-Wakes* (03EE3008A)
 * BMBF project *H2Digital* (03SF0635)
 * Horizon Europe projects *FLOW* (101084205) and *AIRE* (101083716)
