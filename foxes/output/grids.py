@@ -47,14 +47,14 @@ def calc_point_results(
     **kwargs: Any,
 ) -> Dataset:
     """
-    Helper function that calculates results at grid points.
+    Calculate point results at static grid points.
 
     Parameters
     ----------
     algo
         The algorithm for point calculation
     g_pts
-        The grid points, shape: (n_states, n_x, n_y, 3)
+        The static grid points, shape: ``(n_pts, 3)``.
     farm_results
         The farm results
     seq_iter
@@ -63,6 +63,11 @@ def calc_point_results(
         The verbosity level, 0 = silent
     kwargs
         Additional parameters for algo.calc_points
+
+    Returns
+    -------
+    point_results
+        Calculated variables with dimensions ``(state, point)``.
 
     """
     averb = None if verbosity == algo.verbosity else algo.verbosity
@@ -92,7 +97,7 @@ def get_grid_xy(
     verbosity: int = 0,
 ) -> tuple[np.ndarray, np.ndarray, Any, np.ndarray]:
     """
-    Helper function that generates 2D grid in a horizontal xy-plane.
+    Generate a static coordinate grid in a horizontal xy-plane.
 
     Parameters
     ----------
@@ -133,12 +138,12 @@ def get_grid_xy(
     z_pos
         The z position of the grid
     g_pts
-        The grid points, shape: (n_states, n_pts, 3)
+        The static grid points, shape: ``(n_pts, 3)``. Coordinates are
+        shared by all selected states.
 
     """
     # prepare:
     farm_results = _select_states(farm_results, states_sel, states_isel)
-    n_states = farm_results.sizes[FC.STATE]
 
     # get base rectangle:
     x_min = xmin if xmin is not None else farm_results[FV.X].min().to_numpy() - xspace
@@ -179,10 +184,10 @@ def get_grid_xy(
     N_x, N_y = len(x_pos), len(y_pos)
     n_pts = len(x_pos) * len(y_pos)
     z_pos = 0.5 * (z_min + z_max)
-    g_pts: np.ndarray = np.zeros((n_states, N_x, N_y, 3), dtype=config.dtype_double)
-    g_pts[:, :, :, 0] = x_pos[None, :, None]
-    g_pts[:, :, :, 1] = y_pos[None, None, :]
-    g_pts[:, :, :, 2] = z_pos
+    g_pts: np.ndarray = np.zeros((N_x, N_y, 3), dtype=config.dtype_double)
+    g_pts[:, :, 0] = x_pos[:, None]
+    g_pts[:, :, 1] = y_pos[None, :]
+    g_pts[:, :, 2] = z_pos
 
     if verbosity > 1:
         print("\nFlowPlots2D plot grid:")
@@ -197,7 +202,7 @@ def get_grid_xy(
         x_pos,
         y_pos,
         z_pos,
-        g_pts.reshape(n_states, n_pts, 3),
+        g_pts.reshape(n_pts, 3),
     )
 
 
@@ -218,7 +223,7 @@ def get_grid_xz(
     verbosity: int = 0,
 ) -> tuple[np.ndarray, Any, np.ndarray, np.ndarray]:
     """
-    Helper function that generates 2D grid in a vertical xz-plane.
+    Generate a static coordinate grid in a vertical xz-plane.
 
     Parameters
     ----------
@@ -261,7 +266,8 @@ def get_grid_xz(
     z_pos
         The z grid positions, shape: (n_z,)
     g_pts
-        The grid points, shape: (n_states, n_pts, 3)
+        The static grid points, shape: ``(n_pts, 3)``. Coordinates are
+        shared by all selected states.
 
     """
 
@@ -322,10 +328,10 @@ def get_grid_xz(
     N_x, N_z = len(x_pos), len(z_pos)
     n_pts = len(x_pos) * len(z_pos)
     y_pos = 0.5 * (y_min + y_max)
-    g_pts: np.ndarray = np.zeros((n_states, N_x, N_z, 3), dtype=config.dtype_double)
-    g_pts[:] += x_pos[None, :, None, None] * n_x[None, None, None, :]
-    g_pts[:] += y_pos * n_y[None, None, None, :]
-    g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
+    g_pts: np.ndarray = np.zeros((N_x, N_z, 3), dtype=config.dtype_double)
+    g_pts[:] += x_pos[:, None, None] * n_x[None, None, :]
+    g_pts[:] += y_pos * n_y[None, None, :]
+    g_pts[:] += z_pos[None, :, None] * n_z[None, None, :]
 
     if verbosity > 1:
         print("\nFlowPlots2D plot grid:")
@@ -340,7 +346,7 @@ def get_grid_xz(
         x_pos,
         y_pos,
         z_pos,
-        g_pts.reshape(n_states, n_pts, 3),
+        g_pts.reshape(n_pts, 3),
     )
 
 
@@ -361,7 +367,7 @@ def get_grid_yz(
     verbosity: int = 0,
 ) -> tuple[Any, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Helper function that generates 2D grid in a vertical yz-plane.
+    Generate a static coordinate grid in a vertical yz-plane.
 
     Parameters
     ----------
@@ -404,7 +410,8 @@ def get_grid_yz(
     z_pos
         The z grid positions, shape: (n_z,)
     g_pts
-        The grid points, shape: (n_states, n_pts, 3)
+        The static grid points, shape: ``(n_pts, 3)``. Coordinates are
+        shared by all selected states.
 
     """
 
@@ -465,10 +472,10 @@ def get_grid_yz(
     N_y, N_z = len(y_pos), len(z_pos)
     n_pts = len(y_pos) * len(z_pos)
     x_pos = 0.5 * (x_min + x_max)
-    g_pts: np.ndarray = np.zeros((n_states, N_y, N_z, 3), dtype=config.dtype_double)
-    g_pts[:] += x_pos * n_x[None, None, None, :]
-    g_pts[:] += y_pos[None, :, None, None] * n_y[None, None, None, :]
-    g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
+    g_pts: np.ndarray = np.zeros((N_y, N_z, 3), dtype=config.dtype_double)
+    g_pts[:] += x_pos * n_x[None, None, :]
+    g_pts[:] += y_pos[:, None, None] * n_y[None, None, :]
+    g_pts[:] += z_pos[None, :, None] * n_z[None, None, :]
 
     if verbosity > 1:
         print("\nFlowPlots2D plot grid:")
@@ -483,7 +490,7 @@ def get_grid_yz(
         x_pos,
         y_pos,
         z_pos,
-        g_pts.reshape(n_states, n_pts, 3),
+        g_pts.reshape(n_pts, 3),
     )
 
 

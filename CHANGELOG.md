@@ -1117,6 +1117,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Output:
   - `FarmLayoutOutput`: Added true turbine-radius rendering and figure-only
     boundary overrides without changing numerical farm geometry
+  - `SliceData` and `FlowPlots2D`: Store XY, XZ, and YZ grid coordinates once
+    with shape `(n_points, 3)` instead of repeating them across all states;
+    selected-state output uses the same static grids and engine broadcasting
 - Bug fixes:
   - WindIO and Gaussian partial wakes: Applied declared rotor averaging and
     consistent lookup-based defaults, including `TurbOPark`

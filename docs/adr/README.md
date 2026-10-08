@@ -16,6 +16,7 @@ all of them.
 | [0002](0002-corporate-design.md) | Accepted | Apply Fraunhofer corporate design to FOXES plots, animations, documentation, notebooks, and brand assets. |
 | [0003](0003-compact-static-target-coordinates.md) | Accepted | Keep static target coordinates compact with a singleton state axis and broadcast them inside engine runners. |
 | [0004](0004-sphinx-design-token-adapter.md) | Accepted | Adapt authoritative IWES design tokens to Sphinx CSS and prevent token drift with a consistency test. |
+| [0005](0005-static-output-grid-coordinates.md) | Accepted | Store output slice grids without a state axis and pass them through the static-point calculation contract. |
 
 ## When To Add An ADR
 

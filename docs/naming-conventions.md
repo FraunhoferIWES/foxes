@@ -153,6 +153,11 @@ calculations use these target dimensions internally;
 `FC.POINT` in the returned xarray dataset. Keep dimensions as tuples of
 constants. Do not substitute array shape comments for dimension metadata.
 
+Output grid coordinates (`g_pts` in grid-data tuples) are static arrays with
+shape `(n_points, 3)`, not state-by-point arrays. Grid bounds may depend on the
+selected farm states, but the resulting plane is shared by those states. See
+[ADR-0005](adr/0005-static-output-grid-coordinates.md).
+
 Use established count and chunk names: `n_states`, `n_turbines`, `n_targets`,
 `n_tpoints`, `chunk_size_states`, `chunk_size_points`, `chunki_states`,
 `chunki_points`, `n_chunks_states`, `n_chunks_points`, and `states_i0`. Use

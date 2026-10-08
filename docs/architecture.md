@@ -128,6 +128,10 @@ as `FV`. Avoid local string copies of established constants.
 	Engine runners broadcast that axis to the active state chunk immediately
 	before model calculation; state-dependent targets retain their full state
 	axis.
+- Output slice grids use static `(n_points, 3)` coordinates. `SliceData` and
+	`FlowPlots2D` pass these directly to point calculation without repeating them
+	over states. Returned grid-data tuples use the same static representation;
+	calculated point-result dimensions and mean weights are unchanged.
 - `LoadedData` separates `coords`, dimensioned `data_vars`, and non-array
 	`extra_data` during initialization.
 - The public boundary of `Algorithm.calc_farm()` and `calc_points()` is xarray.
@@ -263,6 +267,9 @@ state/target product merely to slice it per engine chunk.
 - Let engines choose and propagate chunk metadata.
 - Keep static target coordinates compact until engine runners broadcast them to
 	the active state chunk.
+- Slice means currently collect point results before reducing over states.
+	Static output grids avoid state-expanded coordinate storage, but do not bound
+	the memory used by complete state-by-point result arrays.
 - Dataset-backed states reconstruct interpolated point and height ordering with
 	paired state/point index gathers, without a field-state/target-state
 	cross-product. This includes fixed locations permuted by downwind order.
@@ -323,6 +330,9 @@ subprocess.
 - Static target coordinates use a singleton state axis during chunk transport
 	and are broadcast by engine runners. See
 	[ADR-0003](adr/0003-compact-static-target-coordinates.md).
+- Output slice grids have no state axis and use the existing static-point
+	calculation contract. See
+	[ADR-0005](adr/0005-static-output-grid-coordinates.md).
 - Ruff formatting/linting and mypy run through pre-commit. Pytest is the test
 	runner; Sphinx with AutoAPI, numpydoc, and MyST-NB builds the documentation.
 - FOXES follows the Fraunhofer corporate design. Corporate requirements apply

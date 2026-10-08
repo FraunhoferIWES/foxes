@@ -188,6 +188,9 @@ developer-owned environment:
 uv run --no-sync --project ../foxes-opt pytest tests/2_models/test_point_cloud_data.py -k layout_optimization_population -q
 ```
 
+Static output-grid shape, memory, state selection, and serial chunking are
+covered by `tests/0_consistency/test_output_grids.py`.
+
 ### Model Coverage
 
 Public model-family tests use parametrized class paths and

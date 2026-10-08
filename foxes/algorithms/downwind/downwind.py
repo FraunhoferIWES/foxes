@@ -929,11 +929,13 @@ class Downwind(Algorithm):
             The farm results. The calculated variables have
             dimensions (state, turbine)
         points
-            The points of interest, shape: (n_states, n_points, 3)
-        outputs
-            The output variables, or None for defaults
+            Static points with shape ``(n_points, 3)`` or state-dependent
+            points with shape ``(n_states, n_points, 3)``. Static coordinates
+            are broadcast to each engine state chunk.
         point_models
             Additional point models to be executed
+        outputs
+            The output variables, or None for defaults
         calc_parameters
             Parameters for model calculation.
             Key: model name str, value: parameter dict
@@ -969,7 +971,7 @@ class Downwind(Algorithm):
 
         # welcome:
         points = np.asarray(points)
-        self.print_deco("calc_points", n_points=points.shape[1])
+        self.print_deco("calc_points", n_points=points.shape[-2])
 
         # collect models and initialize:
         mlist, calc_pars = self._collect_point_models(
