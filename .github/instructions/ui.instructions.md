@@ -9,10 +9,13 @@ This file is present, so the corporate design applies. A free-design project
 deletes it and `docs/fraunhofer-design/` instead — see `AGENTS.md`, "UI Design
 Policy", and establish that policy before the first UI change.
 
-FOXES currently has no browser frontend and no design-token adapter. Do not
-introduce an application stack or token copy as part of an unrelated scientific
-plot change. For Python plotting code under `foxes/output/`, examples, or
-notebooks, read the chart and FOXES-specific guidance in
+FOXES has no browser application frontend. Sphinx documentation adapts the
+authoritative tokens through `docs/source/_static/iwes-tokens.css` and applies
+them through `docs/source/_static/iwes.css`; the consistency test at
+`tests/0_consistency/test_docs_design_tokens.py` prevents drift. Do not
+introduce an application stack or another token copy as part of an unrelated
+scientific plot change. For Python plotting code under `foxes/output/`,
+examples, or notebooks, read the chart and FOXES-specific guidance in
 `docs/fraunhofer-design/ui-guidelines.md`; Python is intentionally not included
 in this file's broad `applyTo` glob because most package changes are non-visual.
 

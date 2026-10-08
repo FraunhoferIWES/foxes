@@ -15,6 +15,7 @@ all of them.
 | [0001](0001-forward-only-development.md) | Accepted | Development is forward-only by default; code changes require tests, and every change requires pre-commit, current docstrings, a current-version changelog entry, and synchronized FOXES documentation. |
 | [0002](0002-corporate-design.md) | Accepted | Apply Fraunhofer corporate design to FOXES plots, animations, documentation, notebooks, and brand assets. |
 | [0003](0003-compact-static-target-coordinates.md) | Accepted | Keep static target coordinates compact with a singleton state axis and broadcast them inside engine runners. |
+| [0004](0004-sphinx-design-token-adapter.md) | Accepted | Adapt authoritative IWES design tokens to Sphinx CSS and prevent token drift with a consistency test. |
 
 ## When To Add An ADR
 

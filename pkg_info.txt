@@ -78,6 +78,7 @@ cloudpickle==3.1.2
     # via
     #   dask
     #   distributed
+    #   pygmo
 cma==4.5.0
     # via pymoo
 colorama==0.4.6 ; sys_platform == 'win32'
@@ -151,7 +152,7 @@ fonttools==4.65.0 ; python_full_version < '3.11'
     # via matplotlib
 fonttools==4.66.0 ; python_full_version >= '3.11'
     # via matplotlib
-foxes-opt==0.8.0
+foxes-opt==0.9.0
     # via foxes
 fqdn==1.5.1
     # via jsonschema
@@ -218,7 +219,7 @@ ipywidgets==8.1.9
     #   jupyter
 isoduration==20.11.0
     # via jsonschema
-iwopy==0.4.0
+iwopy==0.5.0
     # via foxes-opt
 jedi==0.20.0
     # via ipython
@@ -425,6 +426,7 @@ numpy==2.2.6 ; python_full_version < '3.11'
     #   moocore
     #   netcdf4
     #   pandas
+    #   pygmo
     #   pymoo
     #   pyogrio
     #   scipy
@@ -446,6 +448,7 @@ numpy==2.4.6 ; python_full_version == '3.11.*'
     #   moocore
     #   netcdf4
     #   pandas
+    #   pygmo
     #   pymoo
     #   pyogrio
     #   scipy
@@ -467,6 +470,7 @@ numpy==2.5.3 ; python_full_version >= '3.12'
     #   moocore
     #   netcdf4
     #   pandas
+    #   pygmo
     #   pymoo
     #   pyogrio
     #   scipy
@@ -581,6 +585,8 @@ pygments==2.21.0
     #   nbmake
     #   pytest
     #   sphinx
+pygmo==2.19.8
+    # via foxes-opt
 pymoo==0.6.2
     # via foxes-opt
 pyogrio==0.13.0
@@ -678,18 +684,21 @@ scipy==1.15.3 ; python_full_version < '3.11'
     #   foxes
     #   iwopy
     #   metpy
+    #   pygmo
     #   pymoo
 scipy==1.17.1 ; python_full_version == '3.11.*'
     # via
     #   foxes
     #   iwopy
     #   metpy
+    #   pygmo
     #   pymoo
 scipy==1.18.1 ; python_full_version >= '3.12'
     # via
     #   foxes
     #   iwopy
     #   metpy
+    #   pygmo
     #   pymoo
 send2trash==2.1.0
     # via jupyter-server

@@ -8,11 +8,13 @@ directory rather than keeping it as advice — see `AGENTS.md`, "UI Design Polic
 
 ### FOXES Scope
 
-FOXES currently has no browser frontend and no design-token adapter. Its visual
-surface consists mainly of matplotlib plots, animations, notebook output,
-documentation, and project/brand assets. Apply the chart, colour, typography,
-image, logo, and accessibility rules here when those surfaces change. Do not
-apply web component requirements to non-visual numerical code.
+FOXES has no browser application frontend. Sphinx documentation uses
+`docs/source/_static/iwes-tokens.css` as its design-token adapter and
+`docs/source/_static/iwes.css` as its theme layer. Its other visual surfaces
+consist mainly of matplotlib plots, animations, notebook output, and
+project/brand assets. Apply the chart, colour, typography, image, logo, and
+accessibility rules here when those surfaces change. Do not apply web component
+requirements to non-visual numerical code.
 
 Plotting is also a public Python API. Preserve caller-supplied matplotlib axes,
 styles, colours, labels, and output options unless the API explicitly promises a

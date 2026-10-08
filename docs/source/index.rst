@@ -2,39 +2,36 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionadded:: 1.9.6
-    `BinnedFieldData` and `BinnedPointCloudData` replace `BinnedStates`.
-    They reduce source states into topology-native histogram bins and support
-    NetCDF artifacts. `read_binned_data` selects the matching class from the
-    artifact metadata.
+.. versionadded:: 1.9.7
+    Support for Python 3.14.
 
+.. versionadded:: 1.9.7
+    ``FarmLayoutOutput`` can render physical rotor radii and override farm
+    boundaries for figures without changing numerical farm geometry.
 
 Welcome to FOXES
 ================
 
 *Farm Optimization and eXtended yield Evaluation Software*
 
-*FOXES* is a modular wind farm and wake modelling code written in Python
-by Fraunhofer IWES. It has many applications, for example
+*FOXES* is a modular Python package for wind-farm and wake modelling by
+Fraunhofer IWES. Typical applications include:
 
 * Wind farm optimization, e.g. layout optimization or wake steering,
 * Wind farm post-construction analysis,
 * Wake model studies, comparison and validation,
 * Wind farm simulations invoking complex model chains.
 
-The fast performance of *foxes* is owed to vectorization and parallelization,
-and it is intended to be used for large wind farms and large timeseries inflow data.
-The parallelization on local or remote clusters is supported, based on
-`mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ or
-`dask.distributed <https://distributed.dask.org/en/stable/>`_.
-The wind farm
-optimization capabilities invoke the `foxes-opt <https://github.com/FraunhoferIWES/foxes-opt>`_
-package which as well supports vectorization and parallelization.
+FOXES uses vectorized calculations and supports local or distributed execution.
+Wind-farm optimization is provided by the separate
+`foxes-opt <https://github.com/FraunhoferIWES/foxes-opt>`_ package.
+
+Requires Python 3.10 through 3.14.
 
 Source code repository (and issue tracker):
     https://github.com/FraunhoferIWES/foxes
 
-Please report code issues under the github link above.
+Please report issues in the repository's issue tracker.
 
 License
 -------
@@ -42,72 +39,53 @@ License
 
 .. _MIT: https://github.com/FraunhoferIWES/foxes/blob/main/LICENSE
 
+Citation
+--------
+
+Please cite the JOSS paper "FOXES: Farm Optimization and eXtended yield
+Evaluation Software".
+
+.. image:: https://joss.theoj.org/papers/10.21105/joss.05464/status.svg
+    :target: https://doi.org/10.21105/joss.05464
+    :alt: JOSS paper DOI: 10.21105/joss.05464
+
+BibTeX:
+
+.. code-block:: bibtex
+
+    @article{
+        Schmidt2023,
+        author = {Jonas Schmidt and Lukas Vollmer and Martin D{\"o}renk{\"a}mper and Bernhard Stoevesandt},
+        title = {FOXES: Farm Optimization and eXtended yield Evaluation Software},
+        doi = {10.21105/joss.05464},
+        url = {https://doi.org/10.21105/joss.05464},
+        year = {2023},
+        publisher = {The Open Journal},
+        volume = {8},
+        number = {86},
+        pages = {5464},
+        journal = {Journal of Open Source Software}
+    }
+
 Contents
 --------
-    .. toctree::
-        :maxdepth: 2
 
-        citation
+.. toctree::
+    :maxdepth: 2
 
-    .. toctree::
-        :maxdepth: 2
-
-        installation
-
-    .. toctree::
-        :maxdepth: 1
-
-        overview
-
-    .. toctree::
-        :maxdepth: 2
-
-        inputs
-
-    .. toctree::
-        :maxdepth: 2
-
-        models
-
-    .. toctree::
-        :maxdepth: 2
-
-        notebooks/parallelization
-
-    .. toctree::
-        :maxdepth: 2
-
-        parameter_files
-
-    .. toctree::
-        :maxdepth: 2
-
-        examples
-
-    .. toctree::
-        :maxdepth: 2
-
-        optimization
-
-    .. toctree::
-        :maxdepth: 1
-
-        api
-
-    .. toctree::
-        :maxdepth: 2
-
-        notebooks/data
-
-    .. toctree::
-        :maxdepth: 1
-
-        testing
-
-    .. toctree::
-        :maxdepth: 1
-
-        CHANGELOG
+    citation
+    installation
+    overview
+    inputs
+    models
+    notebooks/parallelization
+    parameter_files
+    examples
+    optimization
+    api
+    notebooks/data
+    testing
+    CHANGELOG
 
 Contributing
 ------------
@@ -121,11 +99,8 @@ Contributing
 Acknowledgements
 ----------------
 
-The development of *foxes* and its predecessors *flapFOAM* and *flappy* (internal - non public)
-has been supported through multiple publicly funded research projects. We acknowledge in particular
-the funding by the Federal Ministry of Economic Affairs and Climate Action (BMWK) through the p
-rojects *Smart Wind Farms* (grant no. 0325851B), *GW-Wakes* (0325397B) and *X-Wakes* (03EE3008A)
-as well as the funding by the Federal Ministry of Education and Research (BMBF) in the framework
-of the project *H2Digital* (03SF0635). We furthermore acknowledge funding by the Horizon Europe
-project FLOW (Atmospheric Flow, Loads and pOwer for Wind energy - grant id 101084205) and
-*AIRE* (EU Program Horizon Europe, grant agreement 101083716).
+Development of *FOXES* was supported by:
+
+* BMWK projects *Smart Wind Farms* (0325851B), *GW-Wakes* (0325397B), and *X-Wakes* (03EE3008A)
+* BMBF project *H2Digital* (03SF0635)
+* Horizon Europe projects *FLOW* (101084205) and *AIRE* (101083716)

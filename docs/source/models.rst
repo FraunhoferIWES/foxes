@@ -17,7 +17,7 @@ The results of *foxes* runs depend on a number of model choices by the user:
 * :ref:`Turbine models <turbine-models>`: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data.
 * :ref:`Farm controllers <farm-controllers>`: Responsible for running the turbine models, in a certain order and optionally depending on conditions.
 * :ref:`Ground models <ground-models>`: Add ground effects to the wake calculation, for example the reflection from horizontal planes.
-* :ref:`Point models <point-models>`: Calculate point-based data during the evaluation of `algo.calc_points()`, or as a modification of ambient states., like those from the ambient input states.
+* :ref:`Point models <point-models>`: Calculate point-based data during ``algo.calc_points()`` or modify ambient-state results.
 * :ref:`Vertical profiles <vertical-profiles>`: Analytical vertical profiles transform uniform ambient states into height dependent inflow.
 
 All concrete models are stored in the so-called :code:`ModelBook` object under
@@ -117,8 +117,7 @@ For wind-speed superpositions, the base name scales deficits by the source turbi
 waked wind speed, while the `_amb` suffix selects the source ambient wind speed. The
 `_target` suffix selects the target turbine's waked wind speed, and `_amb_target`
 selects its ambient wind speed. The same choices are available through the
-`scale_amb` and `scale_target` constructor parameters. The legacy `_loc` names
-remain available as aliases for `_amb_target`.
+`scale_amb` and `scale_target` constructor parameters.
 
 `ws_product` is different: it combines dimensionless deficits and applies the
 result to the target ambient wind speed, so a separate `_amb_target` variant
@@ -154,7 +153,7 @@ Examples for valid wake model choices are:
 * `Jensen_quadratic_k0075`
 * `Bastankhah2014_linear_ka02_kb0012`
 * `Bastankhah2016_linear_lim_ambka04`
-* `TurbOPark_quadratic_loc_k004`
+* `TurbOPark_quadratic_amb_target_k004`
 * `CrespoHernandez_max_ka0213_kb003`
 * `Bastankhah2014_linear`
 * `Niayifar`
@@ -246,49 +245,26 @@ can be found under the names
 * `axiwake<n>`: The axiwake model, with `n` representing the number of steps for the discretization of the integral over each downstream rotor,
 * `grid<n2>`: The grid model with `n2` representing the number of points in a regular square grid.
 
-Partial wakes are now chosen when costructing the algorithm object.
-There are several ways of specifying partial wakes model choices for
-the selected wake models:
+Partial wakes are selected when constructing the algorithm. Choices can be
+specified for the selected wake models:
 
 * by a dictionary, which maps wake model names to model choices (or default choices, if not found),
 * or by a list, where the mapping to the wake models is in order of appearance,
 * or by a string, in which case all models are either mapped to the given model, or, if that fails with `TypeError`, to their defaults,
 * or by `None`, which means all models are mapped to the default choice.
 
-A verification of the different partial wakes models
-is carried out in the Partial wakes verification example.
-All types approach the correct rotor average for high point
-counts, but with different efficiency.
+A comparison is available in the
+:doc:`partial-wake notebook <notebooks/partial_wakes>`.
 
-For Gaussian lookup-table based partial wakes workflows, the lookup artifact
-can be generated offline via:
+Generate a custom Gaussian lookup artifact with:
 
 .. code-block:: console
 
-    foxes_create_gaussian_lookup ./gaussian_lookup.nc --radial-resolution 0.1 --sigma-resolution 0.05 --sigma-spacing log --asymptote-rel-tol 0.01 --n-rho 2048
+    foxes_create_gaussian_lookup gaussian_lookup.nc
 
-The resulting NetCDF artifact stores rotor-disc averaged Gaussian factors on
-the normalized geometry axes ``R/sigma`` and ``sigma/D``, along with its
-``min_weight`` cutoff.
-
-The default lookup-axis settings use logarithmic ``sigma/D`` spacing, a 1%
-large-sigma asymptote tolerance, and 2048 radial quadrature points. During
-artifact generation,
-``min_weight`` derives the ``R/sigma`` extent when no explicit
-``r_over_sigma_max`` is provided. The upper ``sigma/D`` extent is derived to
-meet the selected large-sigma asymptote relative-error tolerance.
-
-By default, :class:`PartialGaussianLookup<foxes.models.partial_wakes.gaussian.PartialGaussianLookup>`
-uses clipped radial out-of-bounds handling (``bounds_policy="clip"``). If
-clipped ``R/sigma`` points yield weights above ``min_weight``, an error is
-raised to indicate insufficient lookup-table coverage for a non-negligible
-wake contribution. The policy applies only to ``R/sigma``. Query points above
-the generated ``sigma/D`` range always use the large-sigma asymptote
-``exp(-0.5 * (R/sigma)**2)``, while points below the range use the lower table
-bound. Artifacts are validated against their configured
-``asymptote_rel_tol`` for weights at or above the artifact ``min_weight``. Small
-values can be suppressed via ``min_weight``. Optional radial policies are
-``bounds_policy="nan"`` or ``"raise"``.
+Use ``--help`` to inspect generation options. See
+:class:`PartialGaussianLookup<foxes.models.partial_wakes.gaussian.PartialGaussianLookup>`
+for artifact loading, validation, and out-of-bounds policies.
 
 .. _turbine-models:
 

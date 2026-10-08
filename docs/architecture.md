@@ -201,6 +201,10 @@ adapters own parsing and boundary validation; core models should not parse file
 formats. `DataBook` and `StaticData` locate packaged or user-supplied data by
 logical category. Keep resource lookup separate from scientific calculation.
 
+The WindIO adapter selects the iterative algorithm and per-wake `ground_mirror`
+for every enabled blockage (induction wake) model. It also enables ground
+mirroring for TurbOPark wind deficits, preserving other per-wake ground settings.
+
 State support-point diagnostics are opt-in loading-time outputs. Regular,
 scattered, Weibull, binned, and turbine-backed spatial states expose
 `grid_point_plot`; NEWA and meso/micro states use their existing WRF and support
@@ -272,6 +276,8 @@ state/target product merely to slice it per engine chunk.
 	order.
 - Avoid sending unnecessary algorithm state or large caches to every process.
 - Preserve state and turbine ordering when collecting parallel results.
+- Reduced iterative passes keep farm data in downwind order and reorder fresh
+	model data by `FV.ORDER` before evaluating turbine models and controllers.
 - Compare serial and parallel numerical results when changing engine-facing
 	code; speed alone is not correctness.
 - Measure representative state, turbine, and target sizes before accepting a
@@ -319,10 +325,16 @@ subprocess.
 	[ADR-0003](adr/0003-compact-static-target-coordinates.md).
 - Ruff formatting/linting and mypy run through pre-commit. Pytest is the test
 	runner; Sphinx with AutoAPI, numpydoc, and MyST-NB builds the documentation.
-- FOXES follows the Fraunhofer corporate design. The repository has no browser
-	UI and no design-token adapter; corporate requirements apply to scientific
-	plots, animations, examples, notebooks, documentation, and brand assets. See
-	[ADR-0002](adr/0002-corporate-design.md).
+- FOXES follows the Fraunhofer corporate design. Corporate requirements apply
+	to scientific plots, animations, examples, notebooks, documentation, and
+	brand assets. Sphinx HTML uses `iwes-tokens.css` as the adapter for the
+	authoritative `design-tokens.json` values and `iwes.css` as its
+	Sphinx-Immaterial theme layer; a consistency test prevents token drift. The
+	documentation remains white-dominant with a primary-green header, black
+	header text and focus indicators, and a light search surface. FOXES still
+	has no browser application frontend. See
+	[ADR-0002](adr/0002-corporate-design.md) and
+	[ADR-0004](adr/0004-sphinx-design-token-adapter.md).
 
 ## ADR Triggers
 

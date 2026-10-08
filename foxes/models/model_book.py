@@ -804,8 +804,6 @@ class ModelBook:
         """
         if isinstance(wake_model, TurbineInductionModel):
             return "grid9"
-        elif isinstance(wake_model, fm.wake_models.wind.TurbOParkWake):
-            return "gaussian"
         elif isinstance(wake_model, fm.wake_models.TopHatWakeModel):
             return "top_hat"
         elif isinstance(wake_model, fm.wake_models.GaussianWakeModel):
