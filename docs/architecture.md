@@ -331,8 +331,10 @@ subprocess.
 	authoritative `design-tokens.json` values and `iwes.css` as its
 	Sphinx-Immaterial theme layer; a consistency test prevents token drift. The
 	documentation remains white-dominant with a primary-green header, black
-	header text and focus indicators, and a light search surface. FOXES still
-	has no browser application frontend. See
+	header text and focus indicators, and a light search surface. Its 20px rem
+	basis preserves theme control sizing; body and sidebar text explicitly use
+	16px type with 24px line spacing. FOXES still has no browser application
+	frontend. See
 	[ADR-0002](adr/0002-corporate-design.md) and
 	[ADR-0004](adr/0004-sphinx-design-token-adapter.md).
 

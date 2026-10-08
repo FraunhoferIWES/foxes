@@ -33,6 +33,12 @@ contrast ratio; white or muted text on the primary green would not meet the
 including on desktop where the upstream white-palette selectors need explicit
 overrides. The page body remains white.
 
+Typography uses the approved 20px token as the root rem basis for
+Sphinx-Immaterial layout and controls. Body text and both navigation sidebars
+explicitly use the approved 16px base size with 24px line spacing; the header
+title uses 20px with 28px line spacing. Setting the root to 16px instead would
+shrink the theme's default navigation to 11.2px.
+
 Sphinx-Immaterial continues to own documentation navigation, search, and
 responsive behavior. The adapter does not introduce a FOXES application
 frontend or a runtime dependency.
