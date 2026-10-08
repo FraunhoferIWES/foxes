@@ -12,7 +12,7 @@
 }
 
 html {
-  font-size: var(--iwes-typography-font-size-base);
+  font-size: var(--iwes-typography-font-size-xl);
 }
 
 body,
@@ -36,6 +36,11 @@ input {
 
 .md-header__inner {
   min-height: calc(var(--iwes-layout-header-height) - var(--iwes-border-accent-width));
+}
+
+.md-header__title {
+  font-size: var(--iwes-typography-font-size-xl);
+  line-height: var(--iwes-typography-line-height-xl);
 }
 
 .md-header__title,
@@ -146,6 +151,11 @@ input {
 .md-typeset a:hover {
   color: var(--iwes-semantic-color-primary-active);
   text-decoration-thickness: var(--iwes-border-focus-width);
+}
+
+.md-nav {
+  font-size: var(--iwes-typography-font-size-base);
+  line-height: var(--iwes-typography-line-height-base);
 }
 
 .md-nav__link {
