@@ -18,19 +18,15 @@ FOXES uses vectorized calculations and supports local or distributed execution.
 Wind-farm optimization is provided by the separate
 [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package.
 
-Documentation: [https://fraunhoferiwes.github.io/foxes](https://fraunhoferiwes.github.io/foxes)
-
-Source code repository (and issue tracker): [https://github.com/FraunhoferIWES/foxes](https://github.com/FraunhoferIWES/foxes)
-
-Please report issues in the repository's issue tracker.
-
-PyPI: [https://pypi.org/project/foxes/](https://pypi.org/project/foxes/)
-
-conda-forge: [https://anaconda.org/conda-forge/foxes](https://anaconda.org/conda-forge/foxes)
+| Resource | Link |
+| :--- | :--- |
+| Documentation | [https://fraunhoferiwes.github.io/foxes](https://fraunhoferiwes.github.io/foxes) |
+| Source code | [https://github.com/FraunhoferIWES/foxes](https://github.com/FraunhoferIWES/foxes) |
+| PyPI | [https://pypi.org/project/foxes/](https://pypi.org/project/foxes/) |
+| conda-forge | [https://anaconda.org/conda-forge/foxes](https://anaconda.org/conda-forge/foxes) |
+| License | [MIT](https://github.com/FraunhoferIWES/foxes/blob/main/LICENSE) |
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/FraunhoferIWES/foxes)
-
-License: [MIT](https://github.com/FraunhoferIWES/foxes/blob/main/LICENSE)
 
 ## Citation
 
