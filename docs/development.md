@@ -191,7 +191,17 @@ uv run --no-sync --project ../foxes-opt pytest tests/2_models/test_point_cloud_d
 Static output-grid shape, memory, state selection, and serial chunking are
 covered by `tests/0_consistency/test_output_grids.py`.
 
+`tests/0_consistency/algorithms/test_downwind_ambient.py` covers ambient variable
+retention, defaults, explicit outputs, error handling, and unchanged wake effects
+for Downwind and Iterative using only the single engine. Binned-reduction and
+mean-field tests also cover internal use of retained ordinary point outputs.
+
 ### Model Coverage
+
+`tests/2_models/test_ref_point_fields.py` covers meso/micro reference disk
+membership, per-reference heights, circular wind-vector means, scalar means,
+loading bounds, invalid radii, empty neighborhoods, and the exact-point default.
+The smoothing fixtures are synthetic CFD grids and run with a single engine.
 
 Public model-family tests use parametrized class paths and
 `tests/_model_smoke_helpers.py`. Extend that matrix when a new public model fits

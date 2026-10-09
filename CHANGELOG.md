@@ -1144,3 +1144,19 @@ This major version introduces the concept of `Engines` which handle the chunking
     binned meso/micro plots
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.7](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)
+
+## v1.9.8
+
+- Inputs:
+  - `MesoMicroField`: Added optional `ref_point_radius` disk averages of CFD
+    reference fields during loading, using U/V wind-vector means before
+    recovering WS/WD and constructing reference sector calibrations
+- Core:
+  - Ambient calculations: Extended `ambient_keep=False` to point results so
+    ordinary and ambient variable pairs can both be retained without wakes;
+    binned reduction and mean-field creation now request ordinary outputs directly
+- Bug fixes:
+  - Iterative ambient calculations: Retained ordinary fields during intermediate
+    passes while respecting the requested final output retention
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.8](https://github.com/FraunhoferIWES/foxes/commits/v1.9.8)

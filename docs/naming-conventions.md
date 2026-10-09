@@ -50,6 +50,7 @@ configuration keys, and xarray fields are compatibility-sensitive.
 | farm results | The xarray dataset returned by `calc_farm()` | `FData`, which is an internal chunk container |
 | point results | The xarray dataset returned by `calc_points()` | `TData`, which is an internal target container |
 | ambient | The unwaked/reference value, represented by established `FV.AMB_*` variables | Inflow when a specific input source is meant |
+| reference disk | Closed horizontal neighborhood of a meso/micro reference point, controlled by `ref_point_radius` in metres for loading-time micro calibration averages | Turbine-target smoothing or a three-dimensional neighborhood |
 | wake model | A model for wake deficits or related wake effects | Wake frame, wake deflection, or superposition |
 | wake frame | The coordinate/order representation used to locate wakes | Wake model |
 | wake superposition | The rule that combines multiple wake contributions | Partial-wake model |
@@ -170,6 +171,10 @@ Import `foxes.variables as FV`. Use constants such as `FV.WS`, `FV.WD`,
 `FV.TI`, `FV.RHO`, `FV.P`, and `FV.CT` instead of string literals. Use the
 corresponding `FV.AMB_*` constant for unwaked values. Preserve canonical case,
 including intentionally unusual existing names such as `FV.p` and `FV.AMB_p`.
+
+`ambient_keep` names the opt-in retention of ordinary fields in ambient-only
+farm and point calculations. Retained ordinary and `FV.AMB_*` counterparts
+both represent unwaked values; their names do not imply wake effects were run.
 
 - Coordinates: `FV.X`, `FV.Y`, `FV.H`, `FV.D`, and `FV.TXYH`.
 - Wind: `FV.WS`, `FV.WD`, `FV.UV`, `FV.U`, and `FV.V`.

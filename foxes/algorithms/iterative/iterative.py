@@ -345,12 +345,17 @@ class Iterative(Downwind):
 
         Parameters
         ----------
+        outputs
+            The output variables, ``None`` for all calculated variables, or
+            ``"default"`` for the standard farm outputs.
         finalize
             Flag for finalization after calculation
         ret_dwnd_order
             Also return the results in downwind order
         kwargs
-            Arguments for calc_farm in the base class.
+            Arguments for ``Downwind.calc_farm``, including ``ambient`` and
+            ``ambient_keep``. Intermediate iterations retain ordinary fields;
+            the final results respect the caller's ``ambient_keep`` setting.
 
         Returns
         -------
@@ -366,6 +371,7 @@ class Iterative(Downwind):
         self._it = -1
         self._final_run = False
         fres_dwnd = None
+        iteration_kwargs = {**kwargs, "ambient_keep": True}
         assert self._it is not None
         while self._it < self.max_it:
             self._it += 1
@@ -378,7 +384,7 @@ class Iterative(Downwind):
 
             self.__prev_farm_results = fres
             fres = super().calc_farm(
-                outputs=None, finalize=False, clear_mem=False, **kwargs
+                outputs=None, finalize=False, clear_mem=False, **iteration_kwargs
             )
             if np.any(np.isnan(fres["REWS"].values)):
                 raise Exception("NaN encountered in REWS during iteration")

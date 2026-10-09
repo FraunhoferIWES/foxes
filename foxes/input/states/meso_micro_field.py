@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
-from scipy.spatial import QhullError
+from scipy.spatial import QhullError, cKDTree
 from typing import Any, cast
 
 from foxes.config import config, get_output_path
@@ -35,11 +35,12 @@ from ._point_plot_utils import (
 
 class MesoMicroField(States):
     """
-    Combines field data representing micro scale wind direction sectors
-    and meso scale results at multiple reference points into a timeseries of fields.
+    Micro-scale sector fields calibrated against meso-scale reference states.
 
     Micro-state loading supports scalar and state-dependent turbine positions,
     including positions produced by vectorized population evaluations.
+    Optional reference disks average calibration fields during loading without
+    smoothing the micro fields evaluated at turbine targets.
     """
 
     def __init__(
@@ -59,6 +60,7 @@ class MesoMicroField(States):
         ref_point_plot_pars: dict[str, Any] | None = None,
         support_point_plot_farm_pars: dict[str, Any] | None = None,
         support_point_plot_stride: int = 1,
+        ref_point_radius: float | None = None,
         **kwargs: object,
     ) -> None:
         """
@@ -68,43 +70,43 @@ class MesoMicroField(States):
         ----------
         micro_states
             Micro-scale field data states. Their states must represent
-            different wind direction sectors and must be in "preload" mode.
+            different wind direction sectors and must be in ``"preload"`` mode.
         meso_states
             Meso-scale states evaluated at reference points. These define the final
             states and state weights and are used to scale the micro states.
             Supported spatial models include FieldData, NEWAStates,
             PointCloudData, ICONStates, and their binned variants.
         ref_points
-            The [x, y, h] reference point coordinates, shape (n_ref_points, 3),
-            or valid meso-state support points at ref_height if None. Automatically
+            The ``[x, y, h]`` reference coordinates, shape ``(n_ref_points, 3)``,
+            or valid meso-state support points at ``ref_height`` if ``None``. Automatically
             selected points with invalid, calm, or ambiguous micro-state data are
             discarded.
         ref_points_are_lonlat
             Whether the reference point coordinates are in longitude/latitude.
         ref_height
-            The height of the reference points when ref_points is None.
+            The height of the reference points when ``ref_points`` is ``None``.
             Defaults to the highest reference point. Required for point-cloud
             data without height coordinates.
         utm_zone
             The UTM zone for the reference point coordinates, if applicable.
-            Either a string like "32N" or None to infer it automatically.
+            Either a string like ``"32N"`` or ``None`` to infer it automatically.
         output_vars
-            The output variables. If None, all micro_states variables are used.
+            The output variables. If ``None``, all ``micro_states`` variables are used.
         fixed_vars
-            Fixed variables, e.g. {"var_name": var_value}.
+            Fixed variables, e.g. ``{"var_name": var_value}``.
         check_nans
             Whether to check for NaN values.
         apply_blending
             Whether to blend between wind direction sectors.
         support_point_plot
-            Path to a plot file, e.g. support_points.png, to visualize the
+            Path to a plot file, e.g. ``support_points.png``, to visualize the
             selected micro_states support points, reference points, and farm layout.
         support_point_plot_pars
-            Additional parameters for `matplotlib.pyplot.plot` when drawing
+            Additional parameters for ``matplotlib.pyplot.plot`` when drawing
             the micro-state support points. Defaults to blue points with
             alpha 0.25.
         ref_point_plot_pars
-            Additional parameters for `matplotlib.pyplot.scatter` when drawing
+            Additional parameters for ``matplotlib.pyplot.scatter`` when drawing
             the reference points. Defaults to red crosses.
         support_point_plot_farm_pars
             Parameters for :meth:`FarmLayoutOutput.get_figure` on the support-plot
@@ -116,6 +118,14 @@ class MesoMicroField(States):
             The default 1 draws all support points. Larger values thin only the
             image and retain the outermost coordinates. Reference points and
             numerical state data are not sampled.
+        ref_point_radius
+            Positive finite horizontal radius in metres for averaging micro
+            fields around each reference point. Use all distinct CFD horizontal
+            support points inside the closed disk, evaluated at the reference
+            point's height, with equal weights. Average wind vectors as U/V
+            before recovering WS/WD; average other variables arithmetically.
+            ``None`` evaluates the exact reference point without averaging.
+            Only reference calibration is smoothed, not turbine-target fields.
         kwargs
             Additional parameters for the base states class.
 
@@ -125,7 +135,8 @@ class MesoMicroField(States):
             If a plot-parameter mapping is not a dictionary or ``None``, or the
             plot stride is not an integer.
         ValueError
-            If the plot stride is less than 1.
+            If the plot stride is less than 1 or the reference-point radius is
+            not positive and finite.
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
         self.micro_states = micro_states
@@ -135,6 +146,15 @@ class MesoMicroField(States):
         self.check_nans = check_nans
         self.ref_height = ref_height
         self.apply_blending = apply_blending
+        if ref_point_radius is not None and (
+            isinstance(ref_point_radius, (bool, np.bool_))
+            or not np.isfinite(ref_point_radius)
+            or ref_point_radius <= 0.0
+        ):
+            raise ValueError(
+                f"States '{self.name}': ref_point_radius must be positive and finite"
+            )
+        self.ref_point_radius = ref_point_radius
         self.support_point_plot = support_point_plot
         self.support_point_plot_stride = point_plot_stride(
             support_point_plot_stride, "support_point_plot_stride"
@@ -436,6 +456,57 @@ class MesoMicroField(States):
         )
         return len(self.ref_points)
 
+    def _get_ref_point_samples(
+        self, loaded_data: LoadedData
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return contiguous ``(n_samples, 3)`` disks and per-reference counts."""
+        assert self.ref_points is not None
+        if self.ref_point_radius is None:
+            return self.ref_points, np.ones(len(self.ref_points), dtype=int)
+        support = self.micro_states.get_grid_points(
+            loaded_data=loaded_data,
+            all_heights=False,
+            height=float(self.ref_points[0, 2]),
+        )
+        support_xy = np.unique(support[:, :2], axis=0)
+        neighborhoods = cKDTree(support_xy).query_ball_point(
+            self.ref_points[:, :2], self.ref_point_radius, return_sorted=True
+        )
+        counts = np.array([len(indices) for indices in neighborhoods], dtype=int)
+        empty = np.flatnonzero(counts == 0)
+        if len(empty):
+            raise ValueError(
+                f"States '{self.name}': No micro support points within "
+                f"ref_point_radius={self.ref_point_radius} m of reference "
+                f"point {empty[0]} at {self.ref_points[empty[0]].tolist()}"
+            )
+        samples = [
+            np.column_stack((support_xy[indices], np.full(count, reference[2])))
+            for indices, count, reference in zip(neighborhoods, counts, self.ref_points)
+        ]
+        return np.concatenate(samples, axis=0), counts
+
+    def _average_ref_point_results(
+        self, results: dict[str, np.ndarray], counts: np.ndarray
+    ) -> dict[str, np.ndarray]:
+        """
+        Average sample groups, converting WS/WD to U/V before reduction.
+
+        Return new arrays shaped ``(n_states, n_ref_points, 1)`` from contiguous
+        ``(n_states, n_samples, 1)`` results without mutating the input mapping.
+        NaNs propagate through the means for existing reference validation.
+        """
+        starts = np.concatenate(([0], np.cumsum(counts)[:-1]))
+        averaged = {
+            variable: np.add.reduceat(values, starts, axis=1) / counts[None, :, None]
+            for variable, values in results.items()
+        }
+        wind = wd2uv(results[FV.WD], results[FV.WS])
+        wind = np.add.reduceat(wind, starts, axis=1) / counts[None, :, None, None]
+        averaged[FV.WS] = np.linalg.norm(wind, axis=-1)
+        averaged[FV.WD] = uv2wd(wind)
+        return averaged
+
     def load_data(
         self,
         algo: Algorithm,
@@ -444,26 +515,37 @@ class MesoMicroField(States):
         verbosity: int = 0,
     ) -> None:
         """
-        Load and/or create all model data that is subject to chunking.
+        Load chunked model data and calibrate micro-sector reference fields.
 
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
+        Extend ``loaded_data`` with reference calibrations and model data that
+        the engine chunks and supplies as ``mdata`` during calculations.
+
+        If ``ref_point_radius`` is set, evaluate micro fields on horizontal
+        CFD support points inside each reference disk at its reference height.
+        Store equal-weight means after vector-averaging wind as U/V. Use the
+        averaged WS/WD for sector construction and reference calibration;
+        turbine-target field evaluations remain pointwise.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The calculation algorithm.
         loaded_data
             Data that has already been loaded, to be extended by this function.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
+            Keys are ``"coords"`` with dimension-coordinate arrays,
+            ``"data_vars"`` with ``name -> (dimensions, array)`` entries,
+            and ``"extra_data"`` with additional non-array data.
         force
-            Overwrite existing data
+            Overwrite existing data.
         verbosity
-            The verbosity level, 0 = silent
+            The verbosity level, where ``0`` is silent.
 
+        Raises
+        ------
+        ValueError
+            If a reference disk contains no micro support points, checked
+            reference results contain NaNs, or reference sector directions
+            are not distinct.
         """
 
         self.REF_DATA = self.var("ref_data")
@@ -520,6 +602,16 @@ class MesoMicroField(States):
                     Turbine(xy=rp[:2], turbine_models=["null_type"], H=self.ref_height),
                     verbosity=verbosity - 1,
                 )
+                if self.ref_point_radius is not None:
+                    for offset in (-self.ref_point_radius, self.ref_point_radius):
+                        farm.add_turbine(
+                            Turbine(
+                                xy=rp[:2] + offset,
+                                turbine_models=["null_type"],
+                                H=rp[2],
+                            ),
+                            verbosity=verbosity - 1,
+                        )
             halgo = Downwind(
                 farm=farm,
                 states=self.micro_states,
@@ -590,10 +682,11 @@ class MesoMicroField(States):
             n_states = mdata.n_states
             assert n_states is not None
             fdata = FData.from_sizes(n_states=n_states, n_turbines=halgo.n_turbines)
-            points = np.zeros((n_states, n_points, 3), dtype=self.ref_points.dtype)
-            points[:] = self.ref_points[None, :, :]
+            samples, sample_counts = self._get_ref_point_samples(ld)
+            points = np.zeros((n_states, len(samples), 3), dtype=config.dtype_double)
+            points[:] = samples[None, :, :]
             tdata = TData.from_points(points=points, mdata=mdata)
-            del points
+            del points, samples
 
             # compute results at reference point:
             halgo.initialize()
@@ -617,6 +710,9 @@ class MesoMicroField(States):
             assert FV.WS in results.keys(), (
                 f"States '{self.name}': Field states '{self.micro_states.name}' must provide '{FV.WS}', got {list(results.keys())}"
             )
+            if self.ref_point_radius is not None:
+                results = self._average_ref_point_results(results, sample_counts)
+            del sample_counts
 
             if default_ref_points:
                 n_points = self._filter_default_ref_points(

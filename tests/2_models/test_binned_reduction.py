@@ -65,6 +65,7 @@ class _Downwind:
     source_results = None
     outputs = None
     ambient = None
+    ambient_keep = None
     farm_ambient = None
 
     def __init__(self, *args, **kwargs):
@@ -77,9 +78,12 @@ class _Downwind:
         self.__class__.farm_ambient = ambient
         return xr.Dataset()
 
-    def calc_points(self, farm_results, points, outputs, ambient=False):
+    def calc_points(
+        self, farm_results, points, outputs, ambient=False, ambient_keep=False
+    ):
         self.__class__.outputs = outputs
         self.__class__.ambient = ambient
+        self.__class__.ambient_keep = ambient_keep
         return self.__class__.source_results
 
 
@@ -107,6 +111,7 @@ def _patch_source_evaluation(monkeypatch, source_results):
     _Downwind.source_results = source_results
     _Downwind.outputs = None
     _Downwind.ambient = None
+    _Downwind.ambient_keep = None
     _Downwind.farm_ambient = None
     monkeypatch.setattr(
         "foxes.input.states.binned._reduction.run_with_engine",
@@ -239,8 +244,9 @@ def test_binned_data_reduces_and_round_trips_artifact(
 
     states.load_data(_Algorithm(), loaded_data)
 
-    assert _Downwind.outputs == [FV.AMB_WS, FV.AMB_WD, FV.AMB_RHO]
+    assert _Downwind.outputs == [FV.WS, FV.WD, FV.RHO]
     assert _Downwind.ambient is True
+    assert _Downwind.ambient_keep is True
     assert _Downwind.farm_ambient is True
     assert states.mean_vars == [FV.RHO]
     assert states.output_point_vars(None) == [FV.WS, FV.WD, FV.RHO]

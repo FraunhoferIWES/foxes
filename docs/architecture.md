@@ -159,6 +159,15 @@ Algorithms own assembly and ordering of model chains. They prepare data,
 delegate chunk execution to an engine, and reconstruct ordered xarray results.
 Models must not select a parallel backend or depend on a concrete engine.
 
+`Downwind.calc_farm()` and `calc_points()` accept `ambient_keep=False`.
+Ambient-only calculations drop ordinary fields with `FV.AMB_*` counterparts
+unless retention is enabled; retained pairs contain the same unwaked values.
+Explicit output selections are not expanded, and waked calculations are
+unchanged. Iterative intermediate farm passes retain ordinary fields needed
+for convergence; final results use the caller's retention setting. Binned-state
+reduction and mean-field creation request retained ordinary point outputs
+directly instead of translating ambient variable names.
+
 Use `Engine` as a context manager for an explicit backend. `Engine.new()` maps
 established names to implementations. If no engine is active, FOXES creates a
 default engine; `DefaultEngine` chooses a single-chunk or process strategy from
@@ -225,6 +234,18 @@ loaded state data and reference points unchanged. `FarmLayoutOutput` accepts a
 figure-only boundary override through `bargs`, so diagnostics from temporary
 loading farms can show the original geometry without changing numerical farm
 bounds or loading behavior.
+
+`MesoMicroField` owns opt-in loading-time reference calibration smoothing through
+`ref_point_radius`. A positive finite radius in metres selects all distinct
+available CFD horizontal support points inside each closed reference disk.
+Samples use the reference point's height and equal node weights. WS/WD are
+converted to U/V before averaging and recovered from the mean vector; other
+micro variables use arithmetic means. Smoothed values determine reference
+sector directions and speedups, while turbine-target micro fields remain
+pointwise. Temporary loading bounds include the disks. Empty disks raise a
+contextual error; NaN checks and automatic reference filtering still apply.
+`None` retains exact-point calibration. See
+[ADR-0006](adr/0006-micro-reference-disk-averages.md).
 
 ### Sequential Plugins
 

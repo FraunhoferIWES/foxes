@@ -730,15 +730,20 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
+        outputs
+            The output variables, ``None`` for all calculated variables, or
+            ``"default"`` for the standard farm outputs. Explicit selections
+            are respected with ``ambient_keep=True``.
         calc_parameters
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        outputs
-            The output variables, or None for defaults
         ambient
-            Flag for ambient instead of waked calculation
+            Skip wake effects and calculate ambient results only.
         ambient_keep
-            Flag to keep non-ambient variables after an ambient calculation
+            Retain ordinary variables alongside their ``FV.AMB_*`` counterparts
+            when ``ambient=True``. Both contain the same unwaked values.
+            Otherwise ordinary variables with ambient counterparts are dropped.
+            This option has no effect when ``ambient=False``.
         finalize
             Flag for finalization after calculation
         clear_mem
@@ -918,6 +923,7 @@ class Downwind(Algorithm):
         chunked_results: bool = False,
         states_sel: list[Any] | None = None,
         clear_mem: bool = False,
+        ambient_keep: bool = False,
         **kwargs: Any,
     ) -> Dataset:
         """
@@ -945,13 +951,19 @@ class Downwind(Algorithm):
         finalize
             Flag for finalization after calculation
         ambient
-            Flag for ambient instead of waked calculation
+            Skip wake effects and calculate ambient results only.
         chunked_results
             Flag for chunked results
         states_sel
             Reduce to selected states
         clear_mem
             Clear idata memory after starting the run
+        ambient_keep
+            Retain ordinary variables alongside their ``FV.AMB_*`` counterparts
+            when ``ambient=True``. Both contain the same unwaked values.
+            Otherwise ordinary variables with ambient counterparts are dropped.
+            This option has no effect when ``ambient=False`` and does not expand
+            explicit ``outputs`` selections.
         kwargs
             Additional parameters for run_calculation
 
@@ -1057,7 +1069,7 @@ class Downwind(Algorithm):
             mlist.finalize(self, self.verbosity - 1)
             self.finalize()
 
-        if ambient:
+        if ambient and not ambient_keep:
             dvars = [v for v in point_results.data_vars.keys() if v in FV.var2amb]
             point_results = point_results.drop_vars(dvars)
 

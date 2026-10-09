@@ -17,6 +17,7 @@ all of them.
 | [0003](0003-compact-static-target-coordinates.md) | Accepted | Keep static target coordinates compact with a singleton state axis and broadcast them inside engine runners. |
 | [0004](0004-sphinx-design-token-adapter.md) | Accepted | Adapt authoritative IWES design tokens to Sphinx CSS and prevent token drift with a consistency test. |
 | [0005](0005-static-output-grid-coordinates.md) | Accepted | Store output slice grids without a state axis and pass them through the static-point calculation contract. |
+| [0006](0006-micro-reference-disk-averages.md) | Accepted | Average micro reference disks during loading with native support points and vector wind means. |
 
 ## When To Add An ADR
 

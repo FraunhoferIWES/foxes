@@ -184,6 +184,125 @@ def test_meso_micro_field_writes_support_point_plot(tmp_path):
     assert fpath.stat().st_size > 0
 
 
+@pytest.mark.parametrize("radius", [0.0, -1.0, np.nan, np.inf, True])
+def test_meso_micro_field_rejects_invalid_reference_radius(radius):
+    with pytest.raises(
+        ValueError, match="ref_point_radius must be positive and finite"
+    ):
+        _make_meso_micro_field(ref_point_radius=radius)
+
+
+def test_meso_micro_field_disk_samples_use_reference_heights():
+    states, _, loaded_data = _make_meso_micro_field(ref_point_radius=200.0)
+    states.ref_points[1, 2] = 80.0
+
+    samples, counts = states._get_ref_point_samples(loaded_data)
+
+    np.testing.assert_array_equal(counts, [1, 2])
+    np.testing.assert_allclose(
+        samples, [[200.0, 50.0, 100.0], [500.0, 50.0, 80.0], [500.0, 300.0, 80.0]]
+    )
+
+
+def test_meso_micro_field_rejects_empty_reference_disk():
+    states, _, loaded_data = _make_meso_micro_field(ref_point_radius=10.0)
+
+    with pytest.raises(ValueError, match="No micro support points.*reference point 1"):
+        states._get_ref_point_samples(loaded_data)
+
+
+def test_meso_micro_field_averages_reference_wind_vectors():
+    states, _, _ = _make_meso_micro_field()
+    results = {
+        FV.WS: np.array([[[1.0], [1.0], [2.0]]]),
+        FV.WD: np.array([[[350.0], [10.0], [90.0]]]),
+        FV.TI: np.array([[[2.0], [4.0], [9.0]]]),
+    }
+
+    averaged = states._average_ref_point_results(results, np.array([2, 1]))
+
+    np.testing.assert_allclose(averaged[FV.WS], [[[np.cos(np.deg2rad(10.0))], [2.0]]])
+    np.testing.assert_allclose(
+        foxes.utils.delta_wd(averaged[FV.WD], [[[0.0], [90.0]]]), 0.0, atol=1e-12
+    )
+    np.testing.assert_allclose(averaged[FV.TI], [[[3.0], [9.0]]])
+    np.testing.assert_array_equal(results[FV.WD], [[[350.0], [10.0], [90.0]]])
+
+
+@pytest.mark.parametrize("radius", [None, 100.0])
+def test_meso_micro_field_loads_local_reference_average(radius):
+    shape = (2, 2, 3, 3)
+    wind_speed = np.full(shape, 8.0)
+    wind_speed[:, 0] = 4.0
+    wind_speed[:, 1, 1, 1] = 20.0
+    wind_direction = np.zeros(shape)
+    wind_direction[..., 0] = 350.0
+    wind_direction[..., 2] = 10.0
+    wind_direction[1] = (wind_direction[1] + 180.0) % 360.0
+    turbulence = np.full(shape, 0.1)
+    turbulence[:, 1, 1, 1] = 0.2
+    dimensions = (FC.STATE, FV.H, FV.Y, FV.X)
+    dataset = xr.Dataset(
+        {
+            FV.WS: (dimensions, wind_speed),
+            FV.WD: (dimensions, wind_direction),
+            FV.TI: (dimensions, turbulence),
+        },
+        coords={
+            FC.STATE: [0, 1],
+            FV.H: [80.0, 100.0],
+            FV.X: [-100.0, 0.0, 100.0],
+            FV.Y: [-100.0, 0.0, 100.0],
+        },
+    )
+    micro_states = FieldData(
+        dataset,
+        output_vars=[FV.WS, FV.WD, FV.TI],
+        states_coord=FC.STATE,
+        x_coord=FV.X,
+        y_coord=FV.Y,
+        h_coord=FV.H,
+        time_format=None,
+        bounds_extra_space=0.0,
+        height_bounds=(80.0, 100.0),
+    )
+    states = MesoMicroField(
+        micro_states,
+        SingleStateStates(ws=8.0, wd=0.0, ti=0.1, rho=1.225),
+        ref_points=[[0.0, 0.0, 100.0]],
+        output_vars=[FV.WS, FV.WD, FV.TI],
+        ref_point_radius=radius,
+    )
+    farm = foxes.WindFarm()
+    farm.add_turbine(
+        foxes.Turbine([0.0, 0.0], H=100.0, D=100.0, turbine_models=["null_type"]),
+        verbosity=0,
+    )
+    algo = foxes.algorithms.Downwind(
+        farm, states, wake_models=[], rotor_model="centre", verbosity=0
+    )
+
+    with foxes.Engine.new("single", verbosity=0):
+        algo.initialize()
+
+    reference_vars = algo.loaded_data["coords"][states.REF_VARS]
+    reference_data = algo.loaded_data["data_vars"][states.REF_DATA][1]
+    expected_speed = (
+        20.0 if radius is None else (36.0 + 16.0 * np.cos(np.deg2rad(10.0))) / 5.0
+    )
+    np.testing.assert_allclose(
+        reference_data[:, 0, reference_vars.index(FV.WS)], expected_speed
+    )
+    np.testing.assert_allclose(
+        reference_data[:, 0, reference_vars.index(FV.TI)],
+        0.2 if radius is None else 0.12,
+    )
+    centres = algo.loaded_data["data_vars"][states.WD_BIN_DATA][1][:, 0, 0]
+    np.testing.assert_allclose(
+        foxes.utils.delta_wd(centres, [0.0, 180.0]), 0.0, atol=1e-12
+    )
+
+
 @pytest.mark.parametrize("fill_value", [None, np.nan])
 def test_binned_mean_flow_respects_cfd_support(fill_value, tmp_path):
     grid_shape = (1, 2, 4)
