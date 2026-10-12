@@ -117,7 +117,8 @@ class SectorManagement(TurbineModel):
         KeyError
             If turbine identification is ambiguous or a required column is missing.
         ValueError
-            If a rule names a turbine absent from the farm.
+            If a rule names a turbine absent from the farm. The message
+            identifies the unknown turbine and its input column.
 
         """
         loaded_data = super().initialize(
@@ -137,7 +138,14 @@ class SectorManagement(TurbineModel):
                 data.reset_index(inplace=True)
             elif self._col_i is None and self._col_t is not None:
                 tnames = algo.farm.turbine_names
-                inds = [tnames.index(name) for name in data[self._col_t]]
+                inds = []
+                for name in data[self._col_t]:
+                    try:
+                        inds.append(tnames.index(name))
+                    except ValueError as error:
+                        raise ValueError(
+                            f"{self.name}: Unknown turbine {name!r} in column {self._col_t!r}"
+                        ) from error
                 data[FC.TURBINE] = inds
                 self._col_i = FC.TURBINE
             else:

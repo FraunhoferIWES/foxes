@@ -1160,6 +1160,8 @@ This major version introduces the concept of `Engines` which handle the chunking
     passes while respecting the requested final output retention
   - `SectorManagement`: Kept rules attached to their original farm turbines
     after downwind reordering and respected state-turbine selections (#56)
+  - `SectorManagement`: Added contextual unknown-turbine errors independent
+    of Python's built-in exception wording, fixing the Python 3.14 regression
   - `PowerMask`: Smoothed near-rated boosts and bounded thrust at the Betz
     induction limit instead of producing discontinuous or nonfinite values (#26)
 

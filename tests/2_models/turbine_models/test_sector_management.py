@@ -141,7 +141,7 @@ def test_sector_management_rejects_invalid_rules(invalid):
     )
     if invalid == "unknown_turbine":
         rules["tname"] = "unknown"
-        error, message = ValueError, "unknown"
+        error, message = ValueError, "Unknown turbine 'unknown' in column 'tname'"
     else:
         rules = rules.drop(columns="WD_max")
         error, message = KeyError, "Missing column 'WD_max'"
