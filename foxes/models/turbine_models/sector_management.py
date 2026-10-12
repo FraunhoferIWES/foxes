@@ -19,7 +19,11 @@ if TYPE_CHECKING:
 
 class SectorManagement(TurbineModel):
     """
-    Changes variables based on variable range conditions.
+    Turbine-specific variable updates controlled by half-open ranges.
+
+    Rules identify turbines in their original farm order, independently of
+    the state-dependent downwind calculation order. Only selected entries
+    are updated.
     """
 
     def __init__(
@@ -34,20 +38,24 @@ class SectorManagement(TurbineModel):
         pd_file_read_pars: dict[str, Any] = {},
     ) -> None:
         """
+        Configure turbine rules and their range variables.
+
         Parameters
         ----------
         data_source
             The file path or data
         range_vars
             The variables for which (min, max) ranges
-            are specified in the data
+            are specified in the data. Lower bounds are inclusive and upper
+            bounds are exclusive; periodic ranges may cross the period boundary.
         target_vars
             The variables that change if range variables
             are within specified ranges
         col_tinds
-            The turbine index column name in the data
+            Column containing zero-based indices in the original farm order.
         col_tnames
-            The turbine name column name in the data
+            Column containing names from the original farm. Specify exactly
+            one of ``col_tinds`` and ``col_tnames``.
         colmap
             Mapping from expected to existing
             column names
@@ -80,7 +88,7 @@ class SectorManagement(TurbineModel):
         verbosity: int = 0,
     ) -> LoadedData:
         """
-        Initializes the model.
+        Load rules and resolve turbine names in the original farm order.
 
         Parameters
         ----------
@@ -103,6 +111,13 @@ class SectorManagement(TurbineModel):
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
+
+        Raises
+        ------
+        KeyError
+            If turbine identification is ambiguous or a required column is missing.
+        ValueError
+            If a rule names a turbine absent from the farm.
 
         """
         loaded_data = super().initialize(
@@ -196,10 +211,7 @@ class SectorManagement(TurbineModel):
         st_sel: slice | np.ndarray = slice(None),
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        Apply matching rules to selected turbines in one state chunk.
 
         Parameters
         ----------
@@ -208,16 +220,19 @@ class SectorManagement(TurbineModel):
         mdata
             The model data
         fdata
-            The farm data
-        st_sel: slice or array of bool
-            The state-turbine selection,
-            for shape: (n_states, n_turbines)
+            Farm data with leading dimensions ``(FC.STATE, FC.TURBINE)``.
+            ``FV.ORDER``, when present, maps each calculation column to its
+            original farm turbine index. Target arrays are mutated in place.
+        st_sel
+            State-turbine selection in calculation order, as a slice or a
+            boolean array with shape ``(n_states, n_turbines)``.
 
         Returns
         -------
         results
-            The resulting data, keys: output variable str.
-            Values
+            Target variable names mapped to the updated farm arrays, with
+            dimensions ``(FC.STATE, FC.TURBINE)``. Unselected entries and
+            entries outside the half-open ranges remain unchanged.
 
         """
         # prepare:
@@ -227,15 +242,18 @@ class SectorManagement(TurbineModel):
         tdata = self._tdata
         assert trbs is not None and rdata is not None and tdata is not None
         n_trbs = len(trbs)
-        if n_trbs == fdata.n_turbines and np.all(trbs == np.arange(fdata.n_turbines)):
-            tsel = np.s_[:]
+        states = np.arange(fdata.n_states)[:, None]
+        if FV.ORDER in fdata:
+            tsel = np.argsort(fdata[FV.ORDER], axis=1)[:, trbs]
         else:
-            tsel = trbs
+            tsel = np.broadcast_to(trbs, (fdata.n_states, n_trbs))
 
         # find state-turbine data that matches ranges:
-        rsel = np.ones((fdata.n_states, n_trbs), dtype=bool)
+        selected = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
+        selected[st_sel] = True
+        rsel = selected[states, tsel]
         for vi, v in enumerate(self._rvars):
-            d = fdata[v][:, tsel]
+            d = fdata[v][states, tsel]
             if v in self._perds:
                 d = np.mod(d, self._perds[v])
                 mi = rdata[:, vi, 0]
@@ -257,7 +275,7 @@ class SectorManagement(TurbineModel):
         # set target data:
         if np.any(rsel):
             sel = np.where(rsel)
-            selt = trbs[sel[1]]
+            selt = tsel[sel]
             for vi, v in enumerate(self._tvars):
                 fdata[v][sel[0], selt] = tdata[None, sel[1], vi]
 

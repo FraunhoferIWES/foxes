@@ -143,6 +143,18 @@ as `FV`. Avoid local string copies of established constants.
 
 ### Model Lifecycle
 
+`SectorManagement` rules identify turbines by their original farm index or
+name. Chunk-local evaluation maps those identities through `FV.ORDER` and
+honors the controller's state-turbine selection, including iterative passes.
+Range conditions use inclusive lower and exclusive upper bounds.
+
+`PowerMask` applies a cubic smoothstep boost transition over `P_lim` power
+units below nominal power. Its thrust calculation uses the low-induction
+momentum branch, saturating at induction `1/3` and thrust coefficient `8/9`
+when requested power exceeds the calibrated Betz maximum. Requested power is
+retained: this is an engineering thrust approximation, not an attainable-power
+or controller model. See [ADR-0007](adr/0007-smooth-power-mask-boosts.md).
+
 `Model.initialize()` recursively initializes submodels and calls `load_data()`.
 Execution is bracketed by `set_running()` and `unset_running()`, which may move
 large data through a stash. `finalize()` recursively releases initialized state
@@ -348,6 +360,9 @@ subprocess.
 - Public Python APIs follow [docstring conventions](docstrings.md): NumPy-style
 	docstrings expose the scientific and runtime contract while type information
 	remains in annotations.
+- Power-mask boosts use a smooth near-rated transition and bounded
+	low-induction thrust while preserving requested power. See
+	[ADR-0007](adr/0007-smooth-power-mask-boosts.md).
 - Static target coordinates use a singleton state axis during chunk transport
 	and are broadcast by engine runners. See
 	[ADR-0003](adr/0003-compact-static-target-coordinates.md).

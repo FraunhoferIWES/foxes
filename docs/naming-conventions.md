@@ -176,6 +176,11 @@ including intentionally unusual existing names such as `FV.p` and `FV.AMB_p`.
 farm and point calculations. Retained ordinary and `FV.AMB_*` counterparts
 both represent unwaked values; their names do not imply wake effects were run.
 
+`PowerMask.P_lim` is the boost-transition width in the same power units as
+`FV.P` and `FV.MAX_P`, not an absolute power cap. `SectorManagement` turbine
+indices refer to original farm order; `FV.ORDER` maps calculation columns to
+those original indices.
+
 - Coordinates: `FV.X`, `FV.Y`, `FV.H`, `FV.D`, and `FV.TXYH`.
 - Wind: `FV.WS`, `FV.WD`, `FV.UV`, `FV.U`, and `FV.V`.
 - Turbulence and atmosphere: `FV.TI`, `FV.TKE`, `FV.RHO`, `FV.T`, and `FV.p`.

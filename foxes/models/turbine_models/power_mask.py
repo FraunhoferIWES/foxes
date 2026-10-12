@@ -18,15 +18,17 @@ if TYPE_CHECKING:
 
 class PowerMask(TurbineModel):
     """
-    Invokes a maximal power value.
+    Power curtailment and smooth near-rated boosting with bounded thrust.
 
-    This may correspond to turbine derating, if
-    the maximal power value is below rated power.
-    For higher values, a boost is introduced.
+    Apply this model after the turbine type and after setting ``FV.MAX_P``.
+    Derating caps power directly. Boosting ramps from the unmodified power
+    to ``FV.MAX_P`` over the final ``P_lim`` power units below rated power.
+    NaN mask entries leave power and thrust unchanged.
 
-    The model updates the P and CT variables,
-    so it is wise to use it after calling the
-    turbine type model.
+    Thrust uses the low-induction momentum branch and saturates at the Betz
+    optimum when a boost exceeds its power-coefficient maximum. Requested
+    boosted power is retained; this is an engineering thrust approximation,
+    not a turbine controller or an attainable-power prediction.
     """
 
     def __init__(
@@ -37,6 +39,8 @@ class PowerMask(TurbineModel):
         induction: str | AxialInductionModel = "Betz",
     ) -> None:
         """
+        Configure the power mask and boost transition.
+
         Parameters
         ----------
         var_ws_P
@@ -44,12 +48,22 @@ class PowerMask(TurbineModel):
         factor_P
             The power unit factor, e.g. 1000 for kW
         P_lim
-            Threshold power delta for boosts
+            Nonnegative finite width of the smooth boost transition in the
+            same units as ``FV.P``. Zero enables an abrupt boost only above
+            rated power.
         induction
-            The induction model
+            Axial induction model or its model-book name, used to infer the
+            unmodified turbine's power efficiency from thrust.
+
+        Raises
+        ------
+        ValueError
+            If ``P_lim`` is negative or nonfinite.
         """
         super().__init__()
 
+        if not np.isfinite(P_lim) or P_lim < 0:
+            raise ValueError(f"{self.name}: P_lim must be finite and nonnegative")
         self.var_ws_P = var_ws_P
         self.factor_P = factor_P
         self.P_lim = P_lim
@@ -82,7 +96,7 @@ class PowerMask(TurbineModel):
 
     def sub_models(self) -> list[Model]:
         """
-        List of all sub-models
+        Return the axial induction submodel.
 
         Returns
         -------
@@ -100,7 +114,7 @@ class PowerMask(TurbineModel):
         verbosity: int = 0,
     ) -> LoadedData:
         """
-        Initializes the model.
+        Resolve axial induction and load rated powers from turbine types.
 
         Parameters
         ----------
@@ -123,6 +137,11 @@ class PowerMask(TurbineModel):
             Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
             "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and "extra_data", a dict with non-array additional data.
+
+        Raises
+        ------
+        ValueError
+            If a turbine type has a NaN nominal power.
 
         """
         if isinstance(self.induction, str):
@@ -152,10 +171,7 @@ class PowerMask(TurbineModel):
         st_sel: slice | np.ndarray = slice(None),
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        Apply the power mask to selected entries in one state chunk.
 
         Parameters
         ----------
@@ -164,16 +180,19 @@ class PowerMask(TurbineModel):
         mdata
             The model data
         fdata
-            The farm data
-        st_sel: slice or array of bool
-            The state-turbine selection,
-            for shape: (n_states, n_turbines)
+            Farm arrays with dimensions ``(FC.STATE, FC.TURBINE)``, including
+            ``FV.P``, ``FV.CT``, ``FV.MAX_P``, wind speed, density, and rotor
+            diameter. Power and thrust arrays are mutated in place.
+        st_sel
+            State-turbine selection in calculation order, as a slice or
+            boolean array with shape ``(n_states, n_turbines)``.
 
         Returns
         -------
         results
-            The resulting data, keys: output variable str.
-            Values
+            ``FV.P`` and ``FV.CT`` mapped to the updated farm arrays with
+            dimensions ``(FC.STATE, FC.TURBINE)``. Unselected entries and NaN
+            mask entries are unchanged.
 
         """
         # prepare:
@@ -209,6 +228,11 @@ class PowerMask(TurbineModel):
             r = fdata[FV.D][sel] / 2
             P = P[sel]
             ct = fdata[FV.CT][sel]
+            if self.P_lim > 0:
+                rated = np.broadcast_to(P_rated, sel.shape)[sel]
+                fraction = np.clip((P - rated + self.P_lim) / self.P_lim, 0.0, 1.0)
+                fraction = fraction**2 * (3.0 - 2.0 * fraction)
+                max_P = np.where(max_P > rated, P + fraction * (max_P - P), max_P)
 
             # calculate power efficiency e of turbine
             # e is the ratio of the cp derived from the power curve
@@ -227,11 +251,11 @@ class PowerMask(TurbineModel):
             a3: np.ndarray = np.full(N, 4.0, dtype=config.dtype_double)
             a2: np.ndarray = np.full(N, -8.0, dtype=config.dtype_double)
             a1: np.ndarray = np.full(N, 4.0, dtype=config.dtype_double)
-            a0 = -cp / e
+            a0 = -np.minimum(cp / e, 16.0 / 27.0)
             rts = cubic_roots(a0, a1, a2, a3)
             rts[np.isnan(rts)] = np.inf
-            rts[rts <= 0.0] = np.inf
-            a = np.min(rts, axis=1)
+            rts[rts < 0.0] = np.inf
+            a = np.minimum(np.min(rts, axis=1), 1.0 / 3.0)
             del a0, a1, a2, a3, rts
 
             # set results:

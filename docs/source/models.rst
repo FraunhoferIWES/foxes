@@ -284,6 +284,19 @@ The list of available turbine model classes can be found
 * :class:`Calculator<foxes.models.turbine_models.calculator.Calculator>`: Apply any user-written function that calculates values of farm variables.
 * :class:`LookupTable<foxes.models.turbine_models.lookup_table.LookupTable>`: Use a lookup-table for the computation of farm variables.
 
+``SectorManagement`` rules address original farm turbine indices or names,
+regardless of the changing downwind order. Rules modify only selected
+state-turbine entries whose values satisfy inclusive lower and exclusive upper
+range bounds; periodic direction ranges may cross north.
+
+``PowerMask`` boosts ramp smoothly across ``P_lim`` power units below rated
+power, reaching ``FV.MAX_P`` at rated power. ``P_lim`` must be finite and
+nonnegative; zero requests an abrupt boost above rated power. NaN masks leave
+power and thrust unchanged. Thrust saturates at the low-induction Betz optimum
+(``a = 1/3``, ``CT = 8/9``) when a boost exceeds the calibrated theoretical
+power maximum. Requested boosted power is retained, so this is an engineering
+thrust approximation rather than a prediction of attainable turbine power.
+
 .. _farm-controllers:
 
 Farm controllers

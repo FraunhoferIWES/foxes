@@ -1158,5 +1158,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bug fixes:
   - Iterative ambient calculations: Retained ordinary fields during intermediate
     passes while respecting the requested final output retention
+  - `SectorManagement`: Kept rules attached to their original farm turbines
+    after downwind reordering and respected state-turbine selections (#56)
+  - `PowerMask`: Smoothed near-rated boosts and bounded thrust at the Betz
+    induction limit instead of producing discontinuous or nonfinite values (#26)
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.8](https://github.com/FraunhoferIWES/foxes/commits/v1.9.8)

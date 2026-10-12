@@ -198,6 +198,16 @@ mean-field tests also cover internal use of retained ordinary point outputs.
 
 ### Model Coverage
 
+`tests/2_models/turbine_models/test_sector_management.py` covers original
+turbine identity, state-turbine selection, invalid rules, wrapped direction
+ranges, and shutdowns with changing downwind order and state chunking in both
+Downwind and Iterative. Its synthetic three-turbine runs also check that wake
+deficits remain on unmanaged turbines.
+
+`tests/2_models/turbine_models/test_power_mask.py` covers derating, boost
+continuity, Betz-limit thrust saturation, invalid transition widths, NaN masks,
+selection, zero-width transitions, and shutdown.
+
 `tests/2_models/test_ref_point_fields.py` covers meso/micro reference disk
 membership, per-reference heights, circular wind-vector means, scalar means,
 loading bounds, invalid radii, empty neighborhoods, and the exact-point default.
