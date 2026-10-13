@@ -68,6 +68,27 @@ an import of base `foxes` belongs in the main dependencies; an optional adapter
 must not make its package mandatory. `uv.lock` is currently ignored and is not a
 repository source of dependency versions.
 
+### Security Floors
+
+The 2026-10-13 audit checked all published, non-yanked stable versions admitted
+by direct build, runtime, and extra requirements against public OSV advisories.
+The following minimum versions exclude the affected releases identified by that
+audit:
+
+| Dependency | Minimum | Scope | Advisories |
+|---|---|---|---|
+| tqdm | 4.66.3 | Runtime | [GHSA-g7vv-2v7x-gj9p](https://github.com/advisories/GHSA-g7vv-2v7x-gj9p) |
+| Requests | 2.33.0 | `icon_dream` | [GHSA-9hjg-9r4m-mvj7](https://github.com/advisories/GHSA-9hjg-9r4m-mvj7), [GHSA-9wx4-h78v-vm56](https://github.com/advisories/GHSA-9wx4-h78v-vm56), [GHSA-gc5v-m9x4-r6x2](https://github.com/advisories/GHSA-gc5v-m9x4-r6x2) |
+| GeoPandas | 1.1.2 | `shp` | [GHSA-6497-prx7-gpmq](https://github.com/advisories/GHSA-6497-prx7-gpmq) |
+| Distributed | 2026.1.0 | `dask`, `doc` | [GHSA-c336-7962-wfj2](https://github.com/advisories/GHSA-c336-7962-wfj2) |
+| JupyterLab | 4.6.4 | `doc`, `test`, `dev` | [GHSA-3325-v43h-43rv](https://github.com/advisories/GHSA-3325-v43h-43rv), [GHSA-3jqq-pw4j-pqcj](https://github.com/advisories/GHSA-3jqq-pw4j-pqcj), [GHSA-6966-vjj6-99xv](https://github.com/advisories/GHSA-6966-vjj6-99xv) |
+| Tornado | 6.5.9 | `doc`, `test`, `dev` | [GHSA-3hv7-mjh2-fv65](https://github.com/advisories/GHSA-3hv7-mjh2-fv65), [GHSA-c2m8-h5v5-343r](https://github.com/advisories/GHSA-c2m8-h5v5-343r), [GHSA-chx6-46f5-w4vp](https://github.com/advisories/GHSA-chx6-46f5-w4vp) |
+
+Dask also requires >=2026.1.0 to align with the patched Distributed release.
+The existing setuptools >=84.0.0 build and extra requirements remain unchanged.
+These declarations do not replace an audit of a resolved environment: transitive
+dependencies, native libraries, and later advisories remain outside this check.
+
 ## Finding The Owning Code
 
 Start from the smallest behavior owner, then inspect one abstraction boundary
@@ -154,6 +175,10 @@ does not run the full runtime test suite, but it still runs its applicable
 documentation checks and all other closure gates.
 
 ## Test Structure
+
+Pytest tests must not read or depend on files under `docs/`. Documentation
+validation belongs to separate build and review workflows, not the runtime
+suite. See [ADR-0008](adr/0008-documentation-independent-tests.md).
 
 The numbered test directories encode intent:
 

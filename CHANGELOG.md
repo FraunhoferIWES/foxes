@@ -1147,6 +1147,10 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.8
 
+- Dependencies:
+  - Raised vulnerable minimum versions of tqdm, Requests, GeoPandas,
+    Distributed, JupyterLab, and Tornado to their patched releases; aligned
+    Dask with Distributed and documented the public advisory references
 - Inputs:
   - `MesoMicroField`: Added optional `ref_point_radius` disk averages of CFD
     reference fields during loading, using U/V wind-vector means before

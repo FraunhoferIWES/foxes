@@ -15,10 +15,11 @@ all of them.
 | [0001](0001-forward-only-development.md) | Accepted | Development is forward-only by default; code changes require tests, and every change requires pre-commit, current docstrings, a current-version changelog entry, and synchronized FOXES documentation. |
 | [0002](0002-corporate-design.md) | Accepted | Apply Fraunhofer corporate design to FOXES plots, animations, documentation, notebooks, and brand assets. |
 | [0003](0003-compact-static-target-coordinates.md) | Accepted | Keep static target coordinates compact with a singleton state axis and broadcast them inside engine runners. |
-| [0004](0004-sphinx-design-token-adapter.md) | Accepted | Adapt authoritative IWES design tokens to Sphinx CSS and prevent token drift with a consistency test. |
+| [0004](0004-sphinx-design-token-adapter.md) | Accepted; pytest requirement superseded by [0008](0008-documentation-independent-tests.md) | Adapt authoritative IWES design tokens to Sphinx CSS. |
 | [0005](0005-static-output-grid-coordinates.md) | Accepted | Store output slice grids without a state axis and pass them through the static-point calculation contract. |
 | [0006](0006-micro-reference-disk-averages.md) | Accepted | Average micro reference disks during loading with native support points and vector wind means. |
 | [0007](0007-smooth-power-mask-boosts.md) | Accepted | Smooth near-rated power-mask boosts and saturate low-induction thrust at the Betz optimum while retaining requested power. |
+| [0008](0008-documentation-independent-tests.md) | Accepted | Keep pytest independent of documentation files and review documentation separately. |
 
 ## When To Add An ADR
 

@@ -1,4 +1,4 @@
-/* Design-token adapter. tests/0_consistency/test_docs_design_tokens.py prevents drift. */
+/* Design-token adapter for Sphinx documentation. */
 :root {
   --iwes-color-green: #179c7d;
   --iwes-color-green-80: #45b097;

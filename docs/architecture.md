@@ -355,8 +355,14 @@ subprocess.
 	[ADR-0001](adr/0001-forward-only-development.md).
 - `pyproject.toml` is the source of package metadata, supported Python versions,
 	dependencies, extras, build configuration, console scripts, and mypy settings.
+- Runtime and extra dependency floors exclude the known vulnerable releases
+	listed in [development](development.md#security-floors). Dask and Distributed
+	share a >=2026.1.0 floor; this does not certify transitive or native libraries.
 - Production Python is type checked; tests, examples, notebooks, and docs are
 	not currently part of the mypy target.
+- Pytest tests do not read or depend on files under `docs/`; documentation
+	builds and review remain separate. See
+	[ADR-0008](adr/0008-documentation-independent-tests.md).
 - Public Python APIs follow [docstring conventions](docstrings.md): NumPy-style
 	docstrings expose the scientific and runtime contract while type information
 	remains in annotations.
@@ -375,7 +381,7 @@ subprocess.
 	to scientific plots, animations, examples, notebooks, documentation, and
 	brand assets. Sphinx HTML uses `iwes-tokens.css` as the adapter for the
 	authoritative `design-tokens.json` values and `iwes.css` as its
-	Sphinx-Immaterial theme layer; a consistency test prevents token drift. The
+	Sphinx-Immaterial theme layer; token parity is reviewed outside pytest. The
 	documentation remains white-dominant with a primary-green header, black
 	header text and focus indicators, and a light search surface. Its 20px rem
 	basis preserves theme control sizing; body and sidebar text explicitly use
