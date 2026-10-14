@@ -1147,9 +1147,6 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.8
 
-- Documentation:
-  - Corrected notebook engine installation, model selectors, and the Ray link;
-    aligned token-review guidance and the wake-comparison example description
 - Dependencies:
   - Raised vulnerable minimum versions of tqdm, Requests, GeoPandas,
     Distributed, JupyterLab, and Tornado to their patched releases; aligned
