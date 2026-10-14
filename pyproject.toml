@@ -2,7 +2,7 @@
 
 [project]
 name = "foxes"
-version = "1.9.8"
+version = "1.9.9"
 authors = [
   {name = "Jonas Schulte"},
 ]

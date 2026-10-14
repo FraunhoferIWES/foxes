@@ -1170,3 +1170,9 @@ This major version introduces the concept of `Engines` which handle the chunking
     induction limit instead of producing discontinuous or nonfinite values (#26)
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.8](https://github.com/FraunhoferIWES/foxes/commits/v1.9.8)
+
+## v1.9.9
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.9](https://github.com/FraunhoferIWES/foxes/commits/v1.9.9)
