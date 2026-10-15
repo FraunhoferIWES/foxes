@@ -1173,6 +1173,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.9
 
+- Documentation: Added the *Wind - Reallabor 70 GW Offshore Wind* (ZN4468)
+  funding acknowledgement to the README and Sphinx index.
 - Development: Limited pytest repository-file inputs to package code, examples,
   notebooks, and tests; the existing suite already follows this boundary.
 

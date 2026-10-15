@@ -128,3 +128,5 @@ Development of *FOXES* was supported by:
 - BMWK projects *Smart Wind Farms* (0325851B), *GW-Wakes* (0325397B), and *X-Wakes* (03EE3008A)
 - BMBF project *H2Digital* (03SF0635)
 - Horizon Europe projects *FLOW* (101084205) and *AIRE* (101083716)
+- Research platform *Wind - Reallabor 70 GW Offshore Wind* (ZN4468), funded by
+  the *zukunft.niedersachsen* program
