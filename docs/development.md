@@ -176,9 +176,11 @@ documentation checks and all other closure gates.
 
 ## Test Structure
 
-Pytest tests must not read or depend on files under `docs/`. Documentation
-validation belongs to separate build and review workflows, not the runtime
-suite. See [ADR-0008](adr/0008-documentation-independent-tests.md).
+Repository-file inputs to pytest tests must come only from `foxes/`,
+`examples/`, `notebooks/`, or `tests/`. Tests may create and read temporary
+outputs. Documentation, release metadata, CI configuration, and other repository
+files are validated separately, not by runtime tests. See
+[ADR-0009](adr/0009-test-file-dependency-boundary.md).
 
 The numbered test directories encode intent:
 

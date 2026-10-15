@@ -1173,6 +1173,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.9
 
-
+- Development: Limited pytest repository-file inputs to package code, examples,
+  notebooks, and tests; the existing suite already follows this boundary.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.9](https://github.com/FraunhoferIWES/foxes/commits/v1.9.9)

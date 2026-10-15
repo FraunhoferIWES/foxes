@@ -360,9 +360,10 @@ subprocess.
 	share a >=2026.1.0 floor; this does not certify transitive or native libraries.
 - Production Python is type checked; tests, examples, notebooks, and docs are
 	not currently part of the mypy target.
-- Pytest tests do not read or depend on files under `docs/`; documentation
-	builds and review remain separate. See
-	[ADR-0008](adr/0008-documentation-independent-tests.md).
+- Pytest repository-file inputs are limited to `foxes/`, `examples/`,
+	`notebooks/`, and `tests/`; temporary test outputs remain allowed.
+	Documentation, release metadata, and CI configuration are checked outside
+	pytest. See [ADR-0009](adr/0009-test-file-dependency-boundary.md).
 - Public Python APIs follow [docstring conventions](docstrings.md): NumPy-style
 	docstrings expose the scientific and runtime contract while type information
 	remains in annotations.

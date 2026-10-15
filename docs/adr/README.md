@@ -20,6 +20,7 @@ all of them.
 | [0006](0006-micro-reference-disk-averages.md) | Accepted | Average micro reference disks during loading with native support points and vector wind means. |
 | [0007](0007-smooth-power-mask-boosts.md) | Accepted | Smooth near-rated power-mask boosts and saturate low-induction thrust at the Betz optimum while retaining requested power. |
 | [0008](0008-documentation-independent-tests.md) | Accepted | Keep pytest independent of documentation files and review documentation separately. |
+| [0009](0009-test-file-dependency-boundary.md) | Accepted; supersedes the test-input boundary in 0008 | Limit pytest repository-file inputs to package code, examples, notebooks, and tests. |
 
 ## When To Add An ADR
 
