@@ -30,10 +30,12 @@ class _PlotTriggered(Exception):
     pass
 
 
-def _make_fake_downwind(loaded_data):
+def _make_fake_downwind(loaded_data, captured_farm=None):
     class _FakeDownwind:
         def __init__(self, *args, **kwargs):
             self.loaded_data = loaded_data
+            if captured_farm is not None:
+                captured_farm["farm"] = kwargs["farm"]
 
         def initialize(self, *args, **kwargs):
             pass
@@ -101,6 +103,7 @@ def test_sector_sim_ref_point_field_support_plot_requires_file_name():
 
 def test_sector_sim_ref_point_field_load_data_triggers_support_point_plot(monkeypatch):
     states, algo, _ = _make_ref_point_field(support_point_plot="support_points.png")
+    captured_farm = {}
     field_loaded_data = {
         "coords": {
             FC.STATE: np.array([0]),
@@ -118,7 +121,9 @@ def test_sector_sim_ref_point_field_load_data_triggers_support_point_plot(monkey
         raise _PlotTriggered
 
     monkeypatch.setattr(
-        ref_point_fields_module, "Downwind", _make_fake_downwind(field_loaded_data)
+        ref_point_fields_module,
+        "Downwind",
+        _make_fake_downwind(field_loaded_data, captured_farm),
     )
     monkeypatch.setattr(
         SectorSimRefPointField, "write_support_point_plot", _write_support_point_plot
@@ -126,6 +131,8 @@ def test_sector_sim_ref_point_field_load_data_triggers_support_point_plot(monkey
 
     with pytest.raises(_PlotTriggered):
         states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
+
+    assert captured_farm["farm"].turbines[-1].name == "reference point"
 
 
 def _make_meso_micro_field(support_point_plot=None, **kwargs):
@@ -557,6 +564,10 @@ def test_meso_micro_field_load_data_preserves_state_dependent_turbine_xy(
     assert helper_farm.turbines[0].xy.shape == (2, 2)
     assert helper_farm.turbines[1].xy.shape == (2, 2)
     assert all(t.xy.shape == (2,) for t in helper_farm.turbines[2:])
+    assert [t.name for t in helper_farm.turbines[2:]] == [
+        "reference point 1",
+        "reference point 2",
+    ]
     xy_min, xy_max = helper_farm.get_xy_bounds()
     np.testing.assert_array_equal(xy_min, [0.0, -50.0])
     np.testing.assert_array_equal(xy_max, [600.0, 200.0])
@@ -988,6 +999,7 @@ def test_meso_micro_field_uses_each_states_target_order(
     states.REF_VARS = states.var("ref_vars")
     states.REF_DATA = states.var("ref_data")
     states.WD_BIN_DATA = states.var("wd_bin_data")
+    states.WD_BIN_MAP = states.var("wd_bin_map")
     states.WD_BIN_DATA_VARS = states.var("wd_bin_data_vars")
 
     mdata = MData(
@@ -996,6 +1008,7 @@ def test_meso_micro_field_uses_each_states_target_order(
             states.REF_POINTS: np.array([[0.0, 0.0, 90.0]]),
             states.REF_VARS: np.array([FV.WS]),
             states.REF_DATA: (5.0 + 10.0 * np.arange(n_bins))[:, None, None],
+            states.WD_BIN_MAP: np.arange(n_bins)[:, None],
             states.WD_BIN_DATA: np.column_stack(
                 (
                     bin_directions,
@@ -1018,6 +1031,7 @@ def test_meso_micro_field_uses_each_states_target_order(
                 states.REF_POINT,
                 states.WD_BIN_DATA_VARS,
             ),
+            states.WD_BIN_MAP: (states.STATE0, states.REF_POINT),
         },
         extra_data={
             states.COORDS0: [],
@@ -1113,6 +1127,7 @@ def test_sector_sim_ref_point_field_uses_each_states_targets():
     states.REF_VARS = states.var("ref_vars")
     states.REF_DATA = states.var("ref_data")
     states.WD_BIN_DATA = states.var("wd_bin_data")
+    states.WD_BIN_MAP = states.var("wd_bin_map")
     states.WD_BIN_DATA_VARS = states.var("wd_bin_data_vars")
 
     mdata = MData(
@@ -1121,12 +1136,14 @@ def test_sector_sim_ref_point_field_uses_each_states_targets():
             states.REF_VARS: np.array([FV.WS]),
             states.REF_DATA: np.array([[8.0]]),
             states.WD_BIN_DATA: np.array([[270.0, -180.0, 180.0]]),
+            states.WD_BIN_MAP: np.array([0]),
         },
         dims={
             FC.STATE: (FC.STATE,),
             states.REF_VARS: (states.REF_VARS,),
             states.REF_DATA: (states.STATE0, states.REF_VARS),
             states.WD_BIN_DATA: (states.STATE0, states.WD_BIN_DATA_VARS),
+            states.WD_BIN_MAP: (states.STATE0,),
         },
         extra_data={
             states.COORDS0: [],

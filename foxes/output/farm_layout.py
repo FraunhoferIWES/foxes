@@ -322,7 +322,10 @@ class FarmLayoutOutput(Output):
             overrides the farm geometry for this figure only; ``None`` disables
             the boundary overlay without changing the farm or its bounds.
         legend_labels
-            Mapping from marker colors to labels for an upper-left legend
+            Mapping from marker colors to labels for an upper-left legend.
+            Temporary reference-point turbines named ``reference point`` (or
+            ``reference point N``) receive a distinct red marker by default,
+            with an empty title and a legend.
         anno_delx
             The annotation delta x
         anno_dely
@@ -385,6 +388,35 @@ class FarmLayoutOutput(Output):
 
             kw = {"c": "orange"}
             kw.update(**kwargs)
+            reference_points = np.array(
+                [
+                    t.name is not None
+                    and (
+                        t.name == "reference point"
+                        or t.name.startswith("reference point ")
+                    )
+                    for t in self.farm.turbines
+                ]
+            )
+            if (
+                np.any(reference_points)
+                and color_by is None
+                and "c" not in kwargs
+                and "color" not in kwargs
+            ):
+                kw["c"] = np.where(reference_points, "red", "orange")
+                if legend_labels is None:
+                    legend_labels = {}
+                    if np.any(~reference_points):
+                        legend_labels["orange"] = "farm turbines"
+                    label = (
+                        "reference point"
+                        if np.sum(reference_points) == 1
+                        else "reference points"
+                    )
+                    legend_labels["red"] = label
+                if title is None:
+                    title = ""
 
             if color_by is not None:
                 if self.fres is None:
@@ -514,18 +546,25 @@ class FarmLayoutOutput(Output):
             fig.colorbar(im, cax=cax)
 
         if legend_labels:
-            handles = [
-                Line2D(
-                    [],
-                    [],
-                    color=color,
-                    marker="o",
-                    linestyle="none",
-                    label=label,
+            handles, labels = ax.get_legend_handles_labels()
+            legend_entries = dict(zip(labels, handles))
+            for color, label in legend_labels.items():
+                legend_entries.setdefault(
+                    label,
+                    Line2D(
+                        [],
+                        [],
+                        color=color,
+                        marker="o",
+                        linestyle="none",
+                        label=label,
+                    ),
                 )
-                for color, label in legend_labels.items()
-            ]
-            ax.legend(handles=handles, loc="upper left")
+            ax.legend(
+                list(legend_entries.values()),
+                list(legend_entries),
+                loc="upper left",
+            )
 
         if ret_im:
             return ax, im

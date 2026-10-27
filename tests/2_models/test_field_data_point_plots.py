@@ -245,6 +245,43 @@ def test_dense_grid_points_have_small_markers_and_visible_boundary(
         close_figure(figure)
 
 
+def test_field_grid_plot_ignores_temporary_reference_points_for_plot_bounds(
+    monkeypatch, tmp_path
+):
+    states = _new_states(
+        FieldData,
+        grid_point_plot=tmp_path / "grid_points.png",
+    )
+    farm = foxes.WindFarm(name="farm plus ref points")
+    farm.add_turbine(
+        foxes.Turbine([20000.0, 20000.0], turbine_models=["null_type"]),
+        verbosity=0,
+    )
+    farm.add_turbine(
+        foxes.Turbine(
+            [70000.0, 70000.0],
+            turbine_models=["null_type"],
+            name="reference point 1",
+        ),
+        verbosity=0,
+    )
+    coordinates = np.arange(0.0, 80001.0, 1000.0)
+    data = xr.Dataset(coords={"UTMX": coordinates, "UTMY": coordinates})
+    monkeypatch.setattr(DatasetStates, "preproc_first", Mock())
+    monkeypatch.setattr(field_data_module.plt, "close", Mock())
+
+    states.preproc_first(SimpleNamespace(farm=farm), data)
+    figure = plt.gcf()
+    try:
+        grid_points = figure.axes[0].lines[0]
+        np.testing.assert_array_equal(grid_points.get_xdata(), [20000.0])
+        np.testing.assert_array_equal(grid_points.get_ydata(), [20000.0])
+        np.testing.assert_array_equal(data["UTMX"], coordinates)
+        np.testing.assert_array_equal(data["UTMY"], coordinates)
+    finally:
+        plt.close(figure)
+
+
 @pytest.mark.parametrize("mode", ["default", "override", "disabled"])
 def test_farm_boundary_override_changes_only_the_figure(mode):
     points = np.array([[0.0, 0.0], [1000.0, 0.0], [0.0, 1000.0]])

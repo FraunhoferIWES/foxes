@@ -326,6 +326,14 @@ class NEWAStates(DatasetStates):
                 **self.wrf_point_plot_farm_pars,
             }
             FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig, ax=ax, **layout_pars)
+            handles, labels = ax.get_legend_handles_labels()
+            legend_entries = dict(zip(labels, handles))
+            if legend_entries:
+                ax.legend(
+                    list(legend_entries.values()),
+                    list(legend_entries),
+                    loc="best",
+                )
             ax.set_xlabel(f"{FV.X} [m]")
             ax.set_ylabel(f"{FV.Y} [m]")
             ax.set_aspect("equal", adjustable="box")

@@ -20,6 +20,48 @@ from ._point_plot_utils import (
 )
 
 
+def _reference_farm_plot_bounds(
+    algo: Algorithm,
+    bounds_extra_space: float | str | None,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Return plot-only bounds excluding temporary reference turbines."""
+    farm = algo.farm
+    if not hasattr(farm, "turbines"):
+        return None
+    turbines = [
+        turbine
+        for turbine in farm.turbines
+        if turbine.name is None
+        or (
+            turbine.name != "reference point"
+            and not turbine.name.startswith("reference point ")
+        )
+    ]
+    if len(turbines) == farm.n_turbines or not turbines:
+        return None
+
+    xy_by_turbine = [
+        np.asarray(turbine.xy, dtype=config.dtype_double).reshape(-1, 2)
+        for turbine in turbines
+    ]
+    xy = np.concatenate(xy_by_turbine, axis=0)
+    if isinstance(bounds_extra_space, str):
+        factor = float(bounds_extra_space[:-1])
+        diameters = farm.get_rotor_diameters(algo)
+        margins = (
+            np.repeat(
+                diameters[: len(turbines)],
+                [len(points) for points in xy_by_turbine],
+            )
+            * factor
+        )
+    else:
+        margin = 0.0 if bounds_extra_space is None else float(bounds_extra_space)
+        margins = np.full(len(xy), margin)
+
+    return np.min(xy - margins[:, None], axis=0), np.max(xy + margins[:, None], axis=0)
+
+
 class FieldData(DatasetStates):
     """
     Heterogeneous ambient states on a regular
@@ -85,6 +127,8 @@ class FieldData(DatasetStates):
             axes. ``None`` preserves the default overlay. Use
             ``{"title": "", "alpha": 0, "annotate": 0}`` for a title-free,
             transparent turbine overlay. Caller dictionaries are copied.
+            When plotting a temporary layout containing named reference-point
+            turbines, their positions do not expand the support-grid plot bounds.
         grid_point_plot_stride
             Positive sampling step along each horizontal plot axis. The default
             1 draws all selected grid points. Larger values thin only the image,
@@ -193,6 +237,28 @@ class FieldData(DatasetStates):
                     data = data.isel(self.isel)
                 if self.sel is not None:
                     data = data.sel(self.sel)
+                plot_bounds = _reference_farm_plot_bounds(
+                    algo,
+                    bounds_extra_space
+                    if bounds_extra_space is not None
+                    else self.bounds_extra_space,
+                )
+                if plot_bounds is not None:
+                    x_min, x_max = plot_bounds
+                    x_values = data[self._cmap[FV.X]].to_numpy()
+                    y_values = data[self._cmap[FV.Y]].to_numpy()
+                    x_indices = np.flatnonzero(
+                        (x_values >= x_min[0]) & (x_values <= x_max[0])
+                    )
+                    y_indices = np.flatnonzero(
+                        (y_values >= x_min[1]) & (y_values <= x_max[1])
+                    )
+                    data = data.isel(
+                        {
+                            self._cmap[FV.X]: x_indices,
+                            self._cmap[FV.Y]: y_indices,
+                        }
+                    )
                 has_data = True
                 for c, s in data.sizes.items():
                     if s == 0:
