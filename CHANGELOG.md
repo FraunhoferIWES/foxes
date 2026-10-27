@@ -1183,5 +1183,5 @@ This major version introduces the concept of `Engines` which handle the chunking
   - `NEWAStates`: Preserved grid and farm labels in support-plot legends.
 - Bug fixes:
   - `MesoMicroField` and `SectorSimRefPointField`: Preserved CFD-sector identity and corrected weights when blending is disabled.
-  
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.9](https://github.com/FraunhoferIWES/foxes/commits/v1.9.9)
