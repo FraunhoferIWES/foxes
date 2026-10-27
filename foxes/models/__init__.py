@@ -16,5 +16,6 @@ from . import vertical_profiles as vertical_profiles
 from . import point_models as point_models
 from . import axial_induction as axial_induction
 from . import ground_models as ground_models
+from . import outputs as outputs
 
 from .model_book import ModelBook as ModelBook

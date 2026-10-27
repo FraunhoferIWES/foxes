@@ -22,6 +22,7 @@ from foxes.core import (
     AxialInductionModel,
     GroundModel,
     WakeDeflection,
+    Output,
 )
 
 if TYPE_CHECKING:
@@ -683,6 +684,11 @@ class ModelBook:
             example_vars={"height": 500},
         )
 
+        self.outputs = FDict(_name="outputs")
+        self.outputs["farm_results"] = fm.outputs.FarmResultsOutput(ambient_vars=True, waked_vars=True)
+        self.outputs["farm_results_amb"] = fm.outputs.FarmResultsOutput(ambient_vars=True, waked_vars=False)
+        self.outputs["farm_results_waked"] = fm.outputs.FarmResultsOutput(ambient_vars=False, waked_vars=True)
+
         self.sources = FDict(
             _name="sources",
             point_models=self.point_models,
@@ -698,6 +704,7 @@ class ModelBook:
             wake_models=self.wake_models,
             axial_induction=self.axial_induction,
             ground_models=self.ground_models,
+            outputs=self.outputs,
         )
         self.base_classes = FDict(
             _name="base_classes",
@@ -714,6 +721,7 @@ class ModelBook:
             wake_models=WakeModel,
             axial_induction=AxialInductionModel,
             ground_models=GroundModel,
+            outputs=Output,
         )
 
         for s in self.sources.values():

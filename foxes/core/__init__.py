@@ -20,6 +20,9 @@ from .vertical_profile import VerticalProfile as VerticalProfile
 from .axial_induction_model import AxialInductionModel as AxialInductionModel
 from .ground_model import GroundModel as GroundModel
 
+from .output import Output as Output
+from .output import OutputList as OutputList
+
 from .data import Data as Data
 from .data import MData as MData
 from .data import FData as FData
