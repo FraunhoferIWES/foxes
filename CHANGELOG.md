@@ -1185,3 +1185,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - `MesoMicroField` and `SectorSimRefPointField`: Preserved CFD-sector identity and corrected weights when blending is disabled.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.9](https://github.com/FraunhoferIWES/foxes/commits/v1.9.9)
+
+## v1.9.10
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.10](https://github.com/FraunhoferIWES/foxes/commits/v1.9.10)
