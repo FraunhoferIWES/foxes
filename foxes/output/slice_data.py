@@ -18,7 +18,12 @@ if TYPE_CHECKING:
 
 class SliceData(Output):
     """
-    Create data for horizontal or vertical 2D slices
+    Create data for horizontal or vertical 2D slices.
+
+    Returned grid data contains static coordinates with shape
+    ``(n_points, 3)``, shared by all selected states. Engine runners broadcast
+    them only over the active state chunk; calculated point results retain
+    their state dimension.
     """
 
     def __init__(
@@ -157,17 +162,6 @@ class SliceData(Output):
             kwargs.pop("states_sel", None),
             kwargs.pop("states_isel", None),
         )
-        farm_results = self.fres
-        if states_sel is not None:
-            farm_results = farm_results.sel({FC.STATE: states_sel})
-        if states_sel is not None:
-            all_states = self.fres.get_index(FC.STATE)
-            selected_indices = all_states.get_indexer(farm_results.get_index(FC.STATE))
-            full_g_pts = np.zeros(
-                (len(all_states), *g_pts.shape[1:]), dtype=g_pts.dtype
-            )
-            full_g_pts[selected_indices] = g_pts
-            g_pts = full_g_pts
 
         # calculate point results:
         point_results = grids.calc_point_results(
@@ -175,10 +169,9 @@ class SliceData(Output):
             farm_results=self.fres,
             g_pts=g_pts,
             verbosity=verbosity - self.verbosity_delta,
+            states_sel=states_sel,
             **kwargs,
         )
-        if states_sel is not None:
-            point_results = point_results.sel({FC.STATE: states_sel})
         states = point_results[FC.STATE].to_numpy()
         if variables is None:
             variables = list(point_results.data_vars.keys())

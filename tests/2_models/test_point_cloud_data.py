@@ -3,7 +3,10 @@ import pandas as pd
 import pytest
 import xarray as xr
 import foxes
+from types import SimpleNamespace
+from unittest.mock import Mock
 
+import foxes.input.states.point_cloud_data as point_cloud_module
 from foxes.core import MData, TData
 from foxes.input.states import FieldData, MesoMicroField
 from foxes.input.states.dataset_states import DatasetStates
@@ -18,6 +21,186 @@ import foxes.variables as FV
 
 class _AlgoMock:
     pass
+
+
+def _new_plot_states(states_type, **kwargs):
+    if states_type == "BinnedPointCloudData":
+        return foxes.input.states.BinnedPointCloudData("unused.nc", **kwargs)
+    if states_type == "WeibullPointCloud":
+        kwargs.update(wd_coord=FV.WD, ws_bins=[0.0, 10.0])
+    if states_type != "TurbinePointCloud":
+        kwargs.update(x_ncvar=FV.X, y_ncvar=FV.Y)
+    return getattr(foxes.input.states, states_type)(
+        data_source=xr.Dataset(), output_vars=[FV.WS, FV.WD], **kwargs
+    )
+
+
+@pytest.mark.parametrize(
+    "states_type",
+    [
+        "PointCloudData",
+        "WeibullPointCloud",
+        "BinnedPointCloudData",
+        "TurbinePointCloud",
+    ],
+)
+def test_point_cloud_grid_point_plot_parameters(states_type):
+    plot_pars = {"c": "darkblue", "alpha": 1.0}
+    farm_pars = {"title": "", "alpha": 0, "annotate": 0}
+    states = _new_plot_states(
+        states_type,
+        grid_point_plot_pars=plot_pars,
+        grid_point_plot_farm_pars=farm_pars,
+    )
+    assert states.grid_point_plot is None
+    assert states.grid_point_plot_pars == {
+        "color": "darkblue",
+        "alpha": 1.0,
+        "marker": ".",
+        "linestyle": "None",
+        "zorder": 5,
+    }
+    assert states.grid_point_plot_farm_pars == farm_pars
+    assert states.grid_point_plot_farm_pars is not farm_pars
+    assert plot_pars == {"c": "darkblue", "alpha": 1.0}
+
+
+@pytest.mark.parametrize(
+    "states_type",
+    [
+        "PointCloudData",
+        "WeibullPointCloud",
+        "BinnedPointCloudData",
+        "TurbinePointCloud",
+    ],
+)
+@pytest.mark.parametrize(
+    "parameter", ["grid_point_plot_pars", "grid_point_plot_farm_pars"]
+)
+def test_point_cloud_grid_point_plot_rejects_invalid_parameters(states_type, parameter):
+    with pytest.raises(TypeError, match=f"{parameter} must be a dictionary"):
+        _new_plot_states(states_type, **{parameter: []})
+
+
+@pytest.fixture
+def cloud_plot(monkeypatch):
+    fig, ax = Mock(), Mock()
+    monkeypatch.setattr(DatasetStates, "preproc_first", Mock())
+    monkeypatch.setattr(
+        point_cloud_module.plt, "subplots", Mock(return_value=(fig, ax))
+    )
+    monkeypatch.setattr(point_cloud_module.plt, "close", Mock())
+    layout = Mock()
+    monkeypatch.setattr(point_cloud_module, "FarmLayoutOutput", layout)
+    algo = SimpleNamespace(farm=SimpleNamespace(wind_farm_names=["farm"]))
+    return algo, fig, ax, layout
+
+
+@pytest.mark.parametrize("load_mode", ["preload", "lazy", "fly"])
+def test_point_cloud_grid_point_plot_selected_points(cloud_plot, tmp_path, load_mode):
+    algo, fig, ax, layout = cloud_plot
+    data = xr.Dataset(
+        {FV.X: (FC.POINT, [100.0, 200.0]), FV.Y: (FC.POINT, [300.0, 400.0])},
+        coords={FC.POINT: [10, 20]},
+    )
+    original = data.copy(deep=True)
+    states = _new_plot_states(
+        "PointCloudData",
+        load_mode=load_mode,
+        sel={FC.POINT: [20]},
+        grid_point_plot=tmp_path / "cloud.png",
+        grid_point_plot_farm_pars={"title": "", "alpha": 0, "annotate": 0},
+    )
+    states.preproc_first(algo, data)
+    np.testing.assert_array_equal(ax.plot.call_args.args[0], [200.0])
+    np.testing.assert_array_equal(ax.plot.call_args.args[1], [400.0])
+    assert ax.plot.call_args.kwargs == states.grid_point_plot_pars
+    assert layout.return_value.get_figure.call_args.kwargs == {
+        "fig": fig,
+        "ax": ax,
+        "annotate": 0,
+        "fontsize": 12,
+        "zorder": 10,
+        "title": "",
+        "alpha": 0,
+    }
+    fig.savefig.assert_called_once()
+    point_cloud_module.plt.close.assert_called_once_with(fig)
+    xr.testing.assert_identical(data, original)
+
+
+def test_point_cloud_grid_point_plot_closes_figure_on_write_error(cloud_plot, tmp_path):
+    algo, fig, ax, layout = cloud_plot
+    states = _new_plot_states("PointCloudData", grid_point_plot=tmp_path / "cloud.png")
+    fig.savefig.side_effect = OSError("cannot write plot")
+    data = xr.Dataset({FV.X: (FC.POINT, [1.0]), FV.Y: (FC.POINT, [2.0])})
+    with pytest.raises(OSError, match="cannot write plot"):
+        states.preproc_first(algo, data)
+    point_cloud_module.plt.close.assert_called_once_with(fig)
+
+
+def test_point_cloud_grid_point_plot_skips_empty_selection(cloud_plot, tmp_path):
+    algo, fig, ax, layout = cloud_plot
+    states = _new_plot_states(
+        "PointCloudData", isel={FC.POINT: []}, grid_point_plot=tmp_path / "cloud.png"
+    )
+    data = xr.Dataset({FV.X: (FC.POINT, [1.0]), FV.Y: (FC.POINT, [2.0])})
+    states.preproc_first(algo, data)
+    fig.savefig.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "states_type", ["PointCloudData", "WeibullPointCloud", "BinnedPointCloudData"]
+)
+@pytest.mark.parametrize("quiet", [False, True])
+def test_point_cloud_grid_point_plot_renders_default_and_quiet_overlays(
+    monkeypatch, tmp_path, states_type, quiet
+):
+    from matplotlib.figure import Figure
+
+    farm = foxes.WindFarm(name="Plot farm")
+    farm.add_turbine(
+        foxes.Turbine(xy=[0.0, 0.0], H=100.0, D=100.0, turbine_models=["null_type"]),
+        verbosity=0,
+    )
+    states = _new_plot_states(
+        states_type,
+        grid_point_plot=tmp_path / "cloud.png",
+        grid_point_plot_farm_pars={"title": "", "alpha": 0.0, "annotate": 0}
+        if quiet
+        else None,
+    )
+    data = xr.Dataset({FV.X: (FC.POINT, [10.0, 20.0]), FV.Y: (FC.POINT, [30.0, 40.0])})
+    saved = []
+    savefig = Figure.savefig
+
+    def capture_savefig(figure, *args, **kwargs):
+        saved.append(figure)
+        return savefig(figure, *args, **kwargs)
+
+    monkeypatch.setattr(Figure, "savefig", capture_savefig)
+    states.preproc_first(SimpleNamespace(farm=farm), data)
+    assert (tmp_path / "cloud.png").stat().st_size > 0
+    axis = saved[0].axes[0]
+    assert axis.get_title() == ("" if quiet else "Plot farm")
+    assert axis.collections[0].get_alpha() == (0.0 if quiet else None)
+    assert axis.lines[0].get_alpha() == 0.2
+    np.testing.assert_array_equal(axis.lines[0].get_xdata(), [10.0, 20.0])
+
+
+def test_turbine_point_cloud_grid_point_plot_uses_farm_locations(
+    monkeypatch, cloud_plot, tmp_path
+):
+    algo, fig, ax, layout = cloud_plot
+    algo.farm.turbines = [SimpleNamespace(xy=np.array([10.0, 20.0]))]
+    monkeypatch.setattr(DatasetStates, "load_data", Mock())
+    states = _new_plot_states(
+        "TurbinePointCloud", grid_point_plot=tmp_path / "turbines.png"
+    )
+    states.load_data(algo, {"coords": {}, "data_vars": {}, "extra_data": {}})
+    np.testing.assert_array_equal(ax.plot.call_args.args[0], [10.0])
+    np.testing.assert_array_equal(ax.plot.call_args.args[1], [20.0])
+    fig.savefig.assert_called_once()
 
 
 def test_default_state_indices_are_reconstructed_not_serialized():

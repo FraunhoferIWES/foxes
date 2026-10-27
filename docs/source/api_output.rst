@@ -1,17 +1,16 @@
 foxes.output
 ============
 Classes and functions that create output from *foxes* calculation results.
-``FarmResultsEval.calc_farm_capacity_factor`` returns the state-weighted mean
-farm power divided by total installed farm capacity.
 
-Farm layout rendering
----------------------
-``FarmLayoutOutput.get_figure`` uses scatter markers by default. Set
-``true_turbine_radii=True`` to render filled circles at the physical rotor
-radii in planar data coordinates. Direct colors and ``color_by`` values use
-the same fills, colormaps, limits, and opacity as scatter markers. Physical
-radii require finite positive turbine diameters and are unavailable for
-longitude/latitude plots.
+``SliceData`` and ``FlowPlots2D`` return grid-data tuples whose final item is a
+static coordinate array with shape ``(n_points, 3)``. XY, XZ, and YZ grids share
+those coordinates across all selected states. Point calculations use the active
+engine to broadcast coordinates over each state chunk; callers do not need to
+repeat the grid themselves.
+
+Mean slices still collect state-by-point results before applying their weights.
+Static coordinate storage removes grid replication, but does not make that
+result collection memory-bounded.
 
 .. toctree::
     :maxdepth: 2

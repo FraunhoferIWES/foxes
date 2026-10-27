@@ -1,8 +1,7 @@
 # Input parameter files
 
-Instead of running *foxes* via a Python script, it can also be run from input parameter
-files in [YAML](https://de.wikipedia.org/wiki/YAML) format. For this purpose the two
-command line applications `foxes_yaml` and `foxes_windio` have been added.
+FOXES can run from [YAML](https://yaml.org/) parameter files through the
+`foxes_yaml` and `foxes_windio` command-line tools.
 
 ## foxes\_yaml
 
@@ -15,14 +14,14 @@ structure, that will be described shortly. A file with the name `inputs.yaml` ca
 foxes_yaml inputs.yaml
 ```
 
-If the parameter file is located at a different location, the working directory will be set
-to the parent directory of the file. For example
+If the parameter file is located elsewhere, relative input paths are resolved
+from its parent directory. For example,
 
 ```console
 foxes_yaml path/to/inputs.yaml
 ```
 
-will have the working directory `path/to/`, i.e., all _relative_ file paths for reading and writing will be interpreted relative to that directory. However, _absolute_ file paths will not be altered.
+resolves relative input paths from `path/to/`. Absolute paths are unchanged.
 
 The `foxes_yaml` command has multiple options, which can be checked by
 
@@ -50,7 +49,7 @@ If you wish to modify the default output directory, you can do so by
 foxes_yaml inputs.yaml -o results
 ```
 
-which will then write all results files to a directory called `results`, relative to the working directory.
+which sets `results` as the output base directory for relative output paths.
 
 ### Input file structure
 
@@ -106,120 +105,49 @@ outputs:                          # this section is optional
 
 Any of the applicable *foxes* classes and functions can be added to the respective section of the input yaml file, together with the specific parameter choices.
 
-### Output evaluation with FarmResultsEval
+### Output evaluation
 
-`FarmResultsEval` is the main post-processing output class for state-turbine farm results. It supports weighted and unweighted reductions over states and turbines, and helper functions for energy-yield and efficiency metrics.
-
-Typical setup in yaml:
-
-```yaml
-outputs:
-  - output_type: FarmResultsEval
-    functions:
-      - function: add_capacity
-      - function: add_capacity
-        ambient: True
-      - function: add_efficiency
-      - function: calc_states_mean
-        vars: [P, AMB_P, CAP, AMB_CAP]
-```
-
-Common reduction rules in `reduce_states`, `reduce_turbines`, and `reduce_all` are:
-
-- `weights`: weighted contraction using `WEIGHT` from farm results
-- `mean_no_weights`: arithmetic mean without state weights
-- `sum`, `min`, `max`
-- `std`: available for `reduce_states`
-
-Frequently used methods:
-
-- `calc_states_mean(vars, use_weights=True)`: returns per-turbine means for selected variables
-- `calc_turbine_mean(vars)`: returns per-state means over turbines
-- `calc_farm_mean(vars)` and `calc_farm_sum(vars)`: fully contracted farm values
-- `add_capacity(...)`, `add_efficiency()`, `add_full_load_fraction(...)`: writes derived variables back to farm results
-- `calc_yield(...)` and `calc_farm_yield(...)`: computes turbine/farm yield, including optional P75/P90 in `calc_farm_yield(power_uncert=...)`
-
-Notes:
-
-- `calc_yield(...)` expects exactly one of `algo` or `P_unit_W`.
-- For non-timeseries states, set `hours=...` or `annual=True` in yield calculations.
-- Weighted reductions require `WEIGHT` in the farm results with dimensions `(state,)` or `(state, turbine)`.
-
-The yield helper methods are often easiest to run in Python scripts or notebooks, where `algo` can be passed directly.
-
-Whenever the outputs provided by the `foxes.output` package are sufficient for what you are planning to do, e.g. simple results writing to csv or NetCDF files, `foxes_yaml` might be the easiest way of running *foxes* for you.
+The `outputs` section can call FOXES output classes, including
+`FarmResultsEval` for reductions, efficiency, capacity, and yield. See the
+[output API](api_output.rst) for available methods and arguments. Calculations
+that need Python objects such as the algorithm are usually clearer in a script
+or notebook.
 
 ### Plot creation and variables
 
-For the purpose of more complex outputs, it is possible to store results of functions under _variables_, whose names are required to start with the `$` symbol.
-
-Here is an [example](https://github.com/FraunhoferIWES/foxes/blob/main/examples/yaml_input/inputs2.yaml) modification of the above input file which makes use of variables for the generation of a plot that is combined out of two sub-plots:
-
-```yaml
-outputs:
-  - output_type: plt
-    functions:
-      - function: figure
-        figsize: [10, 5]
-        result_labels: $fig   # store the result of the function under $fig
-  - object: $fig              # now run functions of the object behind $fig
-    functions:
-      - function: add_subplot
-        args: [1, 2, 1]
-        result_labels: $ax1   # store the pyplot.Axes object under $ax1
-      - function: add_subplot
-        args: [1, 2, 2]
-        polar: True           # this Axes object applies polar projection
-        result_labels: $ax2   # store the pyplot.Axes object under $ax2
-  - output_type: FarmLayoutOutput
-    functions:
-      - function: get_figure
-        fig: $fig             # pass the stored Figure object to the function
-        ax: $ax1              # pass the stored Axes object to the function
-  - output_type: RosePlotOutput
-    functions:
-      - function: get_figure
-        turbine: 0
-        ws_var: AMB_REWS
-        ws_bins: [0, 3, 6, 9, 12, 15, 18, 21]
-        add_inf: True
-        wd_sectors: 16
-        title: Wind rose
-        fig: $fig             # pass the stored Figure object to the function
-        ax: $ax2              # pass the stored Axes object to the function
-  - output_type: plt
-    functions:
-      - function: savefig     # save the created figure to file
-        fname: result.png     # file location will be relative to the yaml file
-      - function: show
-      - function: close
-```
-If a function returns more than one result, those can be associated with variables by providing corresponding lists of variable names, e.g. `result_labels: [$a, $b]` for a function that returns two objects.
-
-For objects that are array-like, it is additionally possible to use a syntax like `$data[0]` or `$data[0, 2, 5]`, etc, for passing sub elements of stored results to function arguments.
-
-Notice the line `object $fig` which starts a section that calls functions of the object behind the `$fig` variable, instead of an instance of an `output_type`.
-
-The above outputs create and save a figure that is composed of two sub plots, where the second is based on polar projection:
-
-![](parameter_files.png)
+Function results can be stored under names beginning with `$` and passed to
+later calls. Use `object: $name` to call methods on a stored object; array-like
+results also support index expressions such as `$data[0]`. See the
+[combined-plot example](https://github.com/FraunhoferIWES/foxes/blob/main/examples/yaml_input/inputs2.yaml)
+for a complete workflow.
 
 
 ## foxes\_windio
 
-The [windio](https://github.com/IEAWindTask37/windIO) framework is an attempt to unify input and output data of software tools in the wind energy community. This framework is also based on yaml files following a specific schema, which is still under development. Currently *foxes* is following a [windIO fork](https://github.com/EUFLOW/windIO), which can be installed by
+FOXES currently reads the schema from the
+[EUFLOW windIO fork](https://github.com/EUFLOW/windIO). Install its parser with:
 
 ```console
 pip install git+https://github.com/EUFLOW/windIO@master#egg=windIO
 ```
 
-_windio_ input can be interpreted and run by foxes via the `foxes_windio` command line tool:
+Run a WindIO file with:
 
 ```console
 foxes_windio path/to/windio_input.yaml
 ```
 
-The command line options are very similar to `foxes_yaml`, see above, and
+Use the example under `examples/windio` as the supported input reference. An
+explicit FOXES `wake_averaging` setting takes precedence over inferred WindIO
+rotor-averaging choices.
+
+Enabled WindIO blockage models automatically select the iterative algorithm and
+`ground_mirror` for their induction wakes. This applies to `RankineHalfBody`,
+`Rathmann`, `SelfSimilarityDeficit`, and `SelfSimilarityDeficit2020`. Selecting
+`None` or `none` leaves blockage disabled. TurbOPark wind deficits also enable
+ground mirroring; other per-wake ground settings remain unchanged.
+
+List all command options with:
 
 ```console
 foxes_windio -h

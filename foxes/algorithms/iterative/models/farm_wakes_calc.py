@@ -23,15 +23,22 @@ class FarmWakesCalculation(FarmDataModel):
     This model calculates wakes effects on farm data.
     """
 
-    def __init__(self, urelax: URelax | None = None) -> None:
+    def __init__(
+        self,
+        urelax: URelax | None = None,
+        reorder_mdata: bool = False,
+    ) -> None:
         """
         Parameters
         ----------
         urelax
-            The under-relaxation model
+            The under-relaxation model.
+        reorder_mdata
+            Reorder fresh model data to match downwind-ordered farm data.
         """
         super().__init__()
         self.urelax = urelax
+        self.reorder_mdata = reorder_mdata
 
     def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
@@ -90,6 +97,15 @@ class FarmWakesCalculation(FarmDataModel):
             Values with shape (n_states, n_turbines)
 
         """
+
+        if self.reorder_mdata:
+            order = fdata[FV.ORDER]
+            ssel = np.broadcast_to(np.arange(order.shape[0])[:, None], order.shape)
+            for variable in mdata.keys():
+                if tuple(mdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE) and np.any(
+                    mdata[variable] != mdata[variable][0, 0, None, None]
+                ):
+                    mdata[variable][:] = mdata[variable][ssel, order]
 
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model

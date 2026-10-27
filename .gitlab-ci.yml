@@ -15,6 +15,7 @@ variables:
 pre-commit:
   image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
   stage: pre-commit
+  tags: [asprunner]
   only:
     refs:
       - main
@@ -35,6 +36,7 @@ pre-commit:
 test:
   image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
   stage: tests
+  tags: [asprunner]
   cache:
     - key:
         files:
@@ -50,6 +52,7 @@ test:
 notebooks:
   image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
   stage: notebooks
+  tags: [asprunner]
   cache:
     - key:
         files:

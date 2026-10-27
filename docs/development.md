@@ -68,6 +68,27 @@ an import of base `foxes` belongs in the main dependencies; an optional adapter
 must not make its package mandatory. `uv.lock` is currently ignored and is not a
 repository source of dependency versions.
 
+### Security Floors
+
+The 2026-10-13 audit checked all published, non-yanked stable versions admitted
+by direct build, runtime, and extra requirements against public OSV advisories.
+The following minimum versions exclude the affected releases identified by that
+audit:
+
+| Dependency | Minimum | Scope | Advisories |
+|---|---|---|---|
+| tqdm | 4.66.3 | Runtime | [GHSA-g7vv-2v7x-gj9p](https://github.com/advisories/GHSA-g7vv-2v7x-gj9p) |
+| Requests | 2.33.0 | `icon_dream` | [GHSA-9hjg-9r4m-mvj7](https://github.com/advisories/GHSA-9hjg-9r4m-mvj7), [GHSA-9wx4-h78v-vm56](https://github.com/advisories/GHSA-9wx4-h78v-vm56), [GHSA-gc5v-m9x4-r6x2](https://github.com/advisories/GHSA-gc5v-m9x4-r6x2) |
+| GeoPandas | 1.1.2 | `shp` | [GHSA-6497-prx7-gpmq](https://github.com/advisories/GHSA-6497-prx7-gpmq) |
+| Distributed | 2026.1.0 | `dask`, `doc` | [GHSA-c336-7962-wfj2](https://github.com/advisories/GHSA-c336-7962-wfj2) |
+| JupyterLab | 4.6.4 | `doc`, `test`, `dev` | [GHSA-3325-v43h-43rv](https://github.com/advisories/GHSA-3325-v43h-43rv), [GHSA-3jqq-pw4j-pqcj](https://github.com/advisories/GHSA-3jqq-pw4j-pqcj), [GHSA-6966-vjj6-99xv](https://github.com/advisories/GHSA-6966-vjj6-99xv) |
+| Tornado | 6.5.9 | `doc`, `test`, `dev` | [GHSA-3hv7-mjh2-fv65](https://github.com/advisories/GHSA-3hv7-mjh2-fv65), [GHSA-c2m8-h5v5-343r](https://github.com/advisories/GHSA-c2m8-h5v5-343r), [GHSA-chx6-46f5-w4vp](https://github.com/advisories/GHSA-chx6-46f5-w4vp) |
+
+Dask also requires >=2026.1.0 to align with the patched Distributed release.
+The existing setuptools >=84.0.0 build and extra requirements remain unchanged.
+These declarations do not replace an audit of a resolved environment: transitive
+dependencies, native libraries, and later advisories remain outside this check.
+
 ## Finding The Owning Code
 
 Start from the smallest behavior owner, then inspect one abstraction boundary
@@ -155,6 +176,12 @@ documentation checks and all other closure gates.
 
 ## Test Structure
 
+Repository-file inputs to pytest tests must come only from `foxes/`,
+`examples/`, `notebooks/`, or `tests/`. Tests may create and read temporary
+outputs. Documentation, release metadata, CI configuration, and other repository
+files are validated separately, not by runtime tests. See
+[ADR-0009](adr/0009-test-file-dependency-boundary.md).
+
 The numbered test directories encode intent:
 
 | Area | Purpose |
@@ -188,7 +215,30 @@ developer-owned environment:
 uv run --no-sync --project ../foxes-opt pytest tests/2_models/test_point_cloud_data.py -k layout_optimization_population -q
 ```
 
+Static output-grid shape, memory, state selection, and serial chunking are
+covered by `tests/0_consistency/test_output_grids.py`.
+
+`tests/0_consistency/algorithms/test_downwind_ambient.py` covers ambient variable
+retention, defaults, explicit outputs, error handling, and unchanged wake effects
+for Downwind and Iterative using only the single engine. Binned-reduction and
+mean-field tests also cover internal use of retained ordinary point outputs.
+
 ### Model Coverage
+
+`tests/2_models/turbine_models/test_sector_management.py` covers original
+turbine identity, state-turbine selection, invalid rules, wrapped direction
+ranges, and shutdowns with changing downwind order and state chunking in both
+Downwind and Iterative. Its synthetic three-turbine runs also check that wake
+deficits remain on unmanaged turbines.
+
+`tests/2_models/turbine_models/test_power_mask.py` covers derating, boost
+continuity, Betz-limit thrust saturation, invalid transition widths, NaN masks,
+selection, zero-width transitions, and shutdown.
+
+`tests/2_models/test_ref_point_fields.py` covers meso/micro reference disk
+membership, per-reference heights, circular wind-vector means, scalar means,
+loading bounds, invalid radii, empty neighborhoods, and the exact-point default.
+The smoothing fixtures are synthetic CFD grids and run with a single engine.
 
 Public model-family tests use parametrized class paths and
 `tests/_model_smoke_helpers.py`. Extend that matrix when a new public model fits

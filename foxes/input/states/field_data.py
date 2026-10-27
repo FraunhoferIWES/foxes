@@ -12,7 +12,12 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 from .dataset_states import DatasetStates
-from ._point_plot_utils import line_plot_pars
+from ._point_plot_utils import (
+    farm_plot_pars,
+    grid_plot_axis,
+    line_plot_pars,
+    point_plot_stride,
+)
 
 
 class FieldData(DatasetStates):
@@ -46,9 +51,13 @@ class FieldData(DatasetStates):
         weight_ncvar: str | None = None,
         grid_point_plot: str | None = None,
         grid_point_plot_pars: dict[str, Any] | None = None,
+        grid_point_plot_farm_pars: dict[str, Any] | None = None,
+        grid_point_plot_stride: int = 1,
         **kwargs: Any,
     ) -> None:
         """
+        Initialize heterogeneous ambient states on a regular support grid.
+
         Parameters
         ----------
         args
@@ -71,8 +80,25 @@ class FieldData(DatasetStates):
         grid_point_plot_pars
             Additional parameters for `matplotlib.pyplot.plot` when drawing
             the grid points. Defaults to blue points with alpha 0.2.
+        grid_point_plot_farm_pars
+            Parameters for :meth:`FarmLayoutOutput.get_figure` on the point-plot
+            axes. ``None`` preserves the default overlay. Use
+            ``{"title": "", "alpha": 0, "annotate": 0}`` for a title-free,
+            transparent turbine overlay. Caller dictionaries are copied.
+        grid_point_plot_stride
+            Positive sampling step along each horizontal plot axis. The default
+            1 draws all selected grid points. Larger values thin only the image,
+            retain the outermost coordinates, and do not change loaded data.
         kwargs
             Additional parameters for the base class
+
+        Raises
+        ------
+        TypeError
+            If a plot-parameter mapping is not a dictionary or ``None``, or the
+            plot stride is not an integer.
+        ValueError
+            If the plot stride is less than 1.
         """
         kwargs.pop("time_format", None)
         kwargs["time_format"] = time_format
@@ -83,6 +109,12 @@ class FieldData(DatasetStates):
         self.h_coord = h_coord
         self.weight_ncvar = weight_ncvar
         self.grid_point_plot = grid_point_plot
+        self.grid_point_plot_stride = point_plot_stride(
+            grid_point_plot_stride, "grid_point_plot_stride"
+        )
+        self.grid_point_plot_farm_pars = farm_plot_pars(
+            grid_point_plot_farm_pars, "grid_point_plot_farm_pars"
+        )
         self.grid_point_plot_pars = line_plot_pars(
             {
                 "color": "blue",
@@ -175,8 +207,14 @@ class FieldData(DatasetStates):
                     print(f"States '{self.name}': Writing grid point plot to '{fpath}'")
                 fig, ax = plt.subplots(figsize=(8, 8))
                 xx, yy = np.meshgrid(
-                    data[self._cmap[FV.X]].values.flatten(),
-                    data[self._cmap[FV.Y]].values.flatten(),
+                    grid_plot_axis(
+                        data[self._cmap[FV.X]].values.flatten(),
+                        self.grid_point_plot_stride,
+                    ),
+                    grid_plot_axis(
+                        data[self._cmap[FV.Y]].values.flatten(),
+                        self.grid_point_plot_stride,
+                    ),
                 )
                 ax.plot(
                     xx,
@@ -186,8 +224,14 @@ class FieldData(DatasetStates):
                 wind_farm_names = algo.farm.wind_farm_names
                 assert wind_farm_names is not None
                 anno = 3 if len(wind_farm_names) > 1 else 0
+                layout_pars = {
+                    "annotate": anno,
+                    "fontsize": 12,
+                    "zorder": 10,
+                    **self.grid_point_plot_farm_pars,
+                }
                 FarmLayoutOutput(farm=algo.farm).get_figure(
-                    fig=fig, ax=ax, annotate=anno, fontsize=12, zorder=10
+                    fig=fig, ax=ax, **layout_pars
                 )
                 ax.set_xlabel(f"{FV.X} [m]")
                 ax.set_ylabel(f"{FV.Y} [m]")
@@ -213,9 +257,12 @@ class LatLonFieldData(DatasetStates):
         grid_point_plot: str | None = None,
         utm_zone: Any = None,
         grid_point_plot_pars: dict[str, Any] | None = None,
+        grid_point_plot_farm_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """
+        Initialize heterogeneous ambient states on a longitude/latitude grid.
+
         Parameters
         ----------
         data_source
@@ -245,8 +292,18 @@ class LatLonFieldData(DatasetStates):
         grid_point_plot_pars
             Additional parameters for `matplotlib.pyplot.plot` when drawing
             the grid points. Defaults to blue points with alpha 0.2.
+        grid_point_plot_farm_pars
+            Parameters for :meth:`FarmLayoutOutput.get_figure` on the point-plot
+            axes. ``None`` preserves the default overlay. Caller dictionaries
+            are copied; ``title=""``, ``alpha=0``, and ``annotate=0`` suppress
+            the title and make turbines transparent.
         kwargs
             Additional parameters for the base class
+
+        Raises
+        ------
+        TypeError
+            If a plot-parameter mapping is not a dictionary or ``None``.
         """
         kwargs.pop("time_format", None)
         super().__init__(
@@ -260,6 +317,9 @@ class LatLonFieldData(DatasetStates):
         self.lon_coord = lon_coord
         self.h_coord = h_coord
         self.grid_point_plot = grid_point_plot
+        self.grid_point_plot_farm_pars = farm_plot_pars(
+            grid_point_plot_farm_pars, "grid_point_plot_farm_pars"
+        )
         self.grid_point_plot_pars = line_plot_pars(
             {
                 "color": "blue",
@@ -415,8 +475,13 @@ class LatLonFieldData(DatasetStates):
                 wind_farm_names = algo.farm.wind_farm_names
                 assert wind_farm_names is not None
                 anno = 3 if len(wind_farm_names) > 1 else 0
+                layout_pars = {
+                    "annotate": anno,
+                    "fontsize": 12,
+                    **self.grid_point_plot_farm_pars,
+                }
                 FarmLayoutOutput(farm=algo.farm).get_figure(
-                    fig=fig, ax=ax, annotate=anno, fontsize=12
+                    fig=fig, ax=ax, **layout_pars
                 )
                 ax.set_xlabel(f"{FV.X} [m]")
                 ax.set_ylabel(f"{FV.Y} [m]")

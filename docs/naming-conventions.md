@@ -50,6 +50,7 @@ configuration keys, and xarray fields are compatibility-sensitive.
 | farm results | The xarray dataset returned by `calc_farm()` | `FData`, which is an internal chunk container |
 | point results | The xarray dataset returned by `calc_points()` | `TData`, which is an internal target container |
 | ambient | The unwaked/reference value, represented by established `FV.AMB_*` variables | Inflow when a specific input source is meant |
+| reference disk | Closed horizontal neighborhood of a meso/micro reference point, controlled by `ref_point_radius` in metres for loading-time micro calibration averages | Turbine-target smoothing or a three-dimensional neighborhood |
 | wake model | A model for wake deficits or related wake effects | Wake frame, wake deflection, or superposition |
 | wake frame | The coordinate/order representation used to locate wakes | Wake model |
 | wake superposition | The rule that combines multiple wake contributions | Partial-wake model |
@@ -153,6 +154,11 @@ calculations use these target dimensions internally;
 `FC.POINT` in the returned xarray dataset. Keep dimensions as tuples of
 constants. Do not substitute array shape comments for dimension metadata.
 
+Output grid coordinates (`g_pts` in grid-data tuples) are static arrays with
+shape `(n_points, 3)`, not state-by-point arrays. Grid bounds may depend on the
+selected farm states, but the resulting plane is shared by those states. See
+[ADR-0005](adr/0005-static-output-grid-coordinates.md).
+
 Use established count and chunk names: `n_states`, `n_turbines`, `n_targets`,
 `n_tpoints`, `chunk_size_states`, `chunk_size_points`, `chunki_states`,
 `chunki_points`, `n_chunks_states`, `n_chunks_points`, and `states_i0`. Use
@@ -165,6 +171,15 @@ Import `foxes.variables as FV`. Use constants such as `FV.WS`, `FV.WD`,
 `FV.TI`, `FV.RHO`, `FV.P`, and `FV.CT` instead of string literals. Use the
 corresponding `FV.AMB_*` constant for unwaked values. Preserve canonical case,
 including intentionally unusual existing names such as `FV.p` and `FV.AMB_p`.
+
+`ambient_keep` names the opt-in retention of ordinary fields in ambient-only
+farm and point calculations. Retained ordinary and `FV.AMB_*` counterparts
+both represent unwaked values; their names do not imply wake effects were run.
+
+`PowerMask.P_lim` is the boost-transition width in the same power units as
+`FV.P` and `FV.MAX_P`, not an absolute power cap. `SectorManagement` turbine
+indices refer to original farm order; `FV.ORDER` maps calculation columns to
+those original indices.
 
 - Coordinates: `FV.X`, `FV.Y`, `FV.H`, `FV.D`, and `FV.TXYH`.
 - Wind: `FV.WS`, `FV.WD`, `FV.UV`, `FV.U`, and `FV.V`.
@@ -225,6 +240,14 @@ available alternatives.
 	caller may supply; do not use those suffixes interchangeably.
 - Error messages name the relevant model or container and the expected versus
 	actual variable, dimensions, shape, key, or backend.
+- State support-point diagnostics use `grid_point_plot`, `wrf_point_plot`, or
+	`support_point_plot` for the output path. Their `_pars` suffix names support
+	marker options; `_farm_pars` names the separate `FarmLayoutOutput.get_figure`
+	overlay options. Use the same grid-point names for regular, scattered,
+	Weibull, binned, and turbine-backed states.
+- The `grid_point_plot_stride` and `support_point_plot_stride` options name
+	positive per-axis sampling steps for diagnostic rendering only. They do not
+	select or reduce scientific input data or reference points.
 
 ## Documentation Names
 

@@ -19,7 +19,10 @@ if TYPE_CHECKING:
 
 class FlowPlots2D(SliceData):
     """
-    Class for horizontal or vertical 2D flow plots
+    Create horizontal or vertical 2D flow plots.
+
+    Grid-data tuples contain static grid coordinates with shape
+    ``(n_points, 3)``, shared by all selected states.
     """
 
     def get_mean_data_xy(  # type: ignore[override]
@@ -31,14 +34,12 @@ class FlowPlots2D(SliceData):
         **kwargs: Any,
     ) -> tuple[dict[str, Any], Any, Any]:
         """
-        Generates 2D farm flow figure in a horizontal xy-plane.
+        Calculate mean flow data in a horizontal xy-plane.
 
         Parameters
         ----------
         var
             The variable name
-        x_direction
-            The direction of the x axis, 0 = north
         vmin
             The minimal variable value
         vmax
@@ -55,7 +56,8 @@ class FlowPlots2D(SliceData):
         data
             The gridded data
         grid_data
-            The grid data (x_pos, y_pos, z_pos, g_pts)
+            The grid data ``(x_pos, y_pos, z_pos, g_pts)``, with static
+            ``g_pts`` coordinates of shape ``(n_points, 3)``.
 
         """
         variables = list(set([var] + [FV.WD, FV.WS]))
@@ -90,7 +92,7 @@ class FlowPlots2D(SliceData):
         **kwargs: Any,
     ) -> tuple[dict[str, Any], Any, Any]:
         """
-        Generates 2D farm flow figure in a horizontal yz-plane.
+        Calculate mean flow data in a vertical yz-plane.
 
         Parameters
         ----------
@@ -114,7 +116,8 @@ class FlowPlots2D(SliceData):
         data
             The gridded data
         grid_data
-            The grid data (x_pos, y_pos, z_pos, g_pts)
+            The grid data ``(x_pos, y_pos, z_pos, g_pts)``, with static
+            ``g_pts`` coordinates of shape ``(n_points, 3)``.
 
         """
         variables = list(set([var] + [FV.WD, FV.WS]))
@@ -151,7 +154,7 @@ class FlowPlots2D(SliceData):
         **kwargs: Any,
     ) -> tuple[dict[str, Any], Any, Any]:
         """
-        Generates 2D farm flow figure in a horizontal xz-plane.
+        Calculate mean flow data in a vertical xz-plane.
 
         Parameters
         ----------
@@ -175,7 +178,8 @@ class FlowPlots2D(SliceData):
         data
             The gridded data
         grid_data
-            The grid data (x_pos, y_pos, z_pos, g_pts)
+            The grid data ``(x_pos, y_pos, z_pos, g_pts)``, with static
+            ``g_pts`` coordinates of shape ``(n_points, 3)``.
 
         """
         variables = list(set([var] + [FV.WD, FV.WS]))
@@ -669,7 +673,8 @@ class FlowPlots2D(SliceData):
         states
             The states indices
         grid_data
-            The grid data (x_pos, y_pos, z_pos, g_pts)
+            The grid data ``(x_pos, y_pos, z_pos, g_pts)``, with static
+            ``g_pts`` coordinates of shape ``(n_points, 3)``.
 
         """
         variables = list(set([var] + [FV.WD, FV.WS]))
@@ -730,7 +735,8 @@ class FlowPlots2D(SliceData):
         states
             The states indices
         grid_data
-            The grid data (x_pos, y_pos, z_pos, g_pts)
+            The grid data ``(x_pos, y_pos, z_pos, g_pts)``, with static
+            ``g_pts`` coordinates of shape ``(n_points, 3)``.
 
         """
         variables = list(set([var] + [FV.WD, FV.WS]))
@@ -793,7 +799,8 @@ class FlowPlots2D(SliceData):
         states
             The states indices
         grid_data
-            The grid data (x_pos, y_pos, z_pos, g_pts)
+            The grid data ``(x_pos, y_pos, z_pos, g_pts)``, with static
+            ``g_pts`` coordinates of shape ``(n_points, 3)``.
 
         """
         variables = list(set([var] + [FV.WD, FV.WS]))
@@ -1294,7 +1301,8 @@ class FlowPlots2D(SliceData):
         sinds
             The state indices
         gdata
-            The grid data
+            The grid data ``(x_pos, y_pos, z_pos, g_pts)``, with static
+            ``g_pts`` coordinates of shape ``(n_points, 3)``.
 
         """
         gdata = get_grid_xy(
@@ -1312,7 +1320,9 @@ class FlowPlots2D(SliceData):
 
         mlist, mpars = self.algo._collect_point_models()
         mlist.initialize(self.algo, verbosity=0, force=True)
-        htdata = TData.from_points(gdata[-1], mdata=mdata)
+        assert mdata.n_states is not None
+        points = np.broadcast_to(gdata[-1], (mdata.n_states, *gdata[-1].shape))
+        htdata = TData.from_points(points, mdata=mdata)
 
         sinds = mdata[FC.STATE]
         data = mlist.calculate(self.algo, mdata, fdata, htdata, **mpars[0])

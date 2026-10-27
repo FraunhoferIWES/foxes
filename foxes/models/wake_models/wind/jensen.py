@@ -196,9 +196,12 @@ class JensenTurbOParkWake(TopHatWakeModel):
         c1: float = 1.5,
         c2: float = 0.8,
         induction: str = "Betz",
+        amb_ti: float | None = None,
         **wake_k: Any,
     ) -> None:
         """
+        Initialize Jensen deficits with TurbOPark-like wake growth.
+
         Parameters
         ----------
         superposition
@@ -211,10 +214,27 @@ class JensenTurbOParkWake(TopHatWakeModel):
             Factor from Frandsen turbulence model
         induction
             The induction model
+        amb_ti
+            Constant ambient turbulence intensity, expressed as a fraction,
+            used only when wake-source farm data lacks ``FV.AMB_TI``.
+            Must be finite and strictly positive when provided. ``None``
+            requires ambient turbulence intensity from farm data. This
+            constant does not populate farm data for other models.
         wake_k
-            Parameters for the WakeK class
+            Parameters for ``WakeK``. Set ``ti_var=FV.AMB_TI`` to use the
+            same ambient turbulence intensity for the wake coefficient.
+
+        Raises
+        ------
+        ValueError
+            If ``amb_ti`` is provided but is not finite and strictly positive.
         """
         super().__init__(wind_superposition=superposition, induction=induction)
+        if amb_ti is not None and (not np.isfinite(amb_ti) or amb_ti <= 0):
+            raise ValueError(
+                "JensenTurbOParkWake: amb_ti must be finite and strictly positive"
+            )
+        setattr(self, FV.AMB_TI, amb_ti)
         self.sbeta_factor = sbeta_factor
         self.c1 = c1
         self.c2 = c2
@@ -299,15 +319,13 @@ class JensenTurbOParkWake(TopHatWakeModel):
             ati = self.get_data(
                 FV.AMB_TI,
                 FC.STATE_TARGET,
-                lookup="w",
+                lookup="ws",
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
                 upcast=True,
             )
-            ati = ati[st_sel]
-
             k = self.wake_k(
                 FC.STATE_TARGET,
                 algo=algo,
@@ -319,6 +337,7 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 selection=st_sel,
             )
 
+            ati = ati[st_sel]
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct[st_sel])
 

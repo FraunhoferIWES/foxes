@@ -730,15 +730,20 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
+        outputs
+            The output variables, ``None`` for all calculated variables, or
+            ``"default"`` for the standard farm outputs. Explicit selections
+            are respected with ``ambient_keep=True``.
         calc_parameters
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        outputs
-            The output variables, or None for defaults
         ambient
-            Flag for ambient instead of waked calculation
+            Skip wake effects and calculate ambient results only.
         ambient_keep
-            Flag to keep non-ambient variables after an ambient calculation
+            Retain ordinary variables alongside their ``FV.AMB_*`` counterparts
+            when ``ambient=True``. Both contain the same unwaked values.
+            Otherwise ordinary variables with ambient counterparts are dropped.
+            This option has no effect when ``ambient=False``.
         finalize
             Flag for finalization after calculation
         clear_mem
@@ -918,6 +923,7 @@ class Downwind(Algorithm):
         chunked_results: bool = False,
         states_sel: list[Any] | None = None,
         clear_mem: bool = False,
+        ambient_keep: bool = False,
         **kwargs: Any,
     ) -> Dataset:
         """
@@ -929,11 +935,13 @@ class Downwind(Algorithm):
             The farm results. The calculated variables have
             dimensions (state, turbine)
         points
-            The points of interest, shape: (n_states, n_points, 3)
-        outputs
-            The output variables, or None for defaults
+            Static points with shape ``(n_points, 3)`` or state-dependent
+            points with shape ``(n_states, n_points, 3)``. Static coordinates
+            are broadcast to each engine state chunk.
         point_models
             Additional point models to be executed
+        outputs
+            The output variables, or None for defaults
         calc_parameters
             Parameters for model calculation.
             Key: model name str, value: parameter dict
@@ -943,13 +951,19 @@ class Downwind(Algorithm):
         finalize
             Flag for finalization after calculation
         ambient
-            Flag for ambient instead of waked calculation
+            Skip wake effects and calculate ambient results only.
         chunked_results
             Flag for chunked results
         states_sel
             Reduce to selected states
         clear_mem
             Clear idata memory after starting the run
+        ambient_keep
+            Retain ordinary variables alongside their ``FV.AMB_*`` counterparts
+            when ``ambient=True``. Both contain the same unwaked values.
+            Otherwise ordinary variables with ambient counterparts are dropped.
+            This option has no effect when ``ambient=False`` and does not expand
+            explicit ``outputs`` selections.
         kwargs
             Additional parameters for run_calculation
 
@@ -969,7 +983,7 @@ class Downwind(Algorithm):
 
         # welcome:
         points = np.asarray(points)
-        self.print_deco("calc_points", n_points=points.shape[1])
+        self.print_deco("calc_points", n_points=points.shape[-2])
 
         # collect models and initialize:
         mlist, calc_pars = self._collect_point_models(
@@ -1055,7 +1069,7 @@ class Downwind(Algorithm):
             mlist.finalize(self, self.verbosity - 1)
             self.finalize()
 
-        if ambient:
+        if ambient and not ambient_keep:
             dvars = [v for v in point_results.data_vars.keys() if v in FV.var2amb]
             point_results = point_results.drop_vars(dvars)
 

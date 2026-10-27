@@ -1260,12 +1260,11 @@ class _BinnedStateReduction:
             results = source_algo.calc_points(
                 farm_results,
                 support,
-                outputs=[FV.var2amb.get(var, var) for var in calculation_vars],
+                outputs=calculation_vars,
                 ambient=True,
+                ambient_keep=True,
             )
-            return results.rename(
-                {var: FV.amb2var[var] for var in results if var in FV.amb2var}
-            )
+            return results
 
         source_results = run_with_engine(_calc_source)
         n_source_states = self.states.size()

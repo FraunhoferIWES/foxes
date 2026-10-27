@@ -527,6 +527,20 @@ class ModelBook:
             induction="Betz",
         )
 
+        self.wake_models["TurbOPark"] = fm.wake_models.wind.TurbOParkWake(
+            superposition="ws_quadratic_amb_target",
+            ka=0.04,
+            ti_var=FV.AMB_TI,
+            induction="Betz",
+        )
+
+        self.wake_models["TurbOPark0045"] = fm.wake_models.wind.TurbOParkWake(
+            superposition="ws_quadratic_amb_target",
+            ka=0.045,
+            ti_var=FV.AMB_TI,
+            induction="Betz",
+        )
+
         self.wake_models["JensenTurbOPark"] = fm.wake_models.wind.JensenTurbOParkWake(
             superposition="ws_quadratic_amb_target",
             ka=0.6,
@@ -804,8 +818,6 @@ class ModelBook:
         """
         if isinstance(wake_model, TurbineInductionModel):
             return "grid9"
-        elif isinstance(wake_model, fm.wake_models.wind.TurbOParkWake):
-            return "gaussian"
         elif isinstance(wake_model, fm.wake_models.TopHatWakeModel):
             return "top_hat"
         elif isinstance(wake_model, fm.wake_models.GaussianWakeModel):

@@ -128,6 +128,10 @@ as `FV`. Avoid local string copies of established constants.
 	Engine runners broadcast that axis to the active state chunk immediately
 	before model calculation; state-dependent targets retain their full state
 	axis.
+- Output slice grids use static `(n_points, 3)` coordinates. `SliceData` and
+	`FlowPlots2D` pass these directly to point calculation without repeating them
+	over states. Returned grid-data tuples use the same static representation;
+	calculated point-result dimensions and mean weights are unchanged.
 - `LoadedData` separates `coords`, dimensioned `data_vars`, and non-array
 	`extra_data` during initialization.
 - The public boundary of `Algorithm.calc_farm()` and `calc_points()` is xarray.
@@ -138,6 +142,18 @@ as `FV`. Avoid local string copies of established constants.
 	dimension before returning its dataset.
 
 ### Model Lifecycle
+
+`SectorManagement` rules identify turbines by their original farm index or
+name. Chunk-local evaluation maps those identities through `FV.ORDER` and
+honors the controller's state-turbine selection, including iterative passes.
+Range conditions use inclusive lower and exclusive upper bounds.
+
+`PowerMask` applies a cubic smoothstep boost transition over `P_lim` power
+units below nominal power. Its thrust calculation uses the low-induction
+momentum branch, saturating at induction `1/3` and thrust coefficient `8/9`
+when requested power exceeds the calibrated Betz maximum. Requested power is
+retained: this is an engineering thrust approximation, not an attainable-power
+or controller model. See [ADR-0007](adr/0007-smooth-power-mask-boosts.md).
 
 `Model.initialize()` recursively initializes submodels and calls `load_data()`.
 Execution is bracketed by `set_running()` and `unset_running()`, which may move
@@ -155,6 +171,15 @@ Algorithms own assembly and ordering of model chains. They prepare data,
 delegate chunk execution to an engine, and reconstruct ordered xarray results.
 Models must not select a parallel backend or depend on a concrete engine.
 
+`Downwind.calc_farm()` and `calc_points()` accept `ambient_keep=False`.
+Ambient-only calculations drop ordinary fields with `FV.AMB_*` counterparts
+unless retention is enabled; retained pairs contain the same unwaked values.
+Explicit output selections are not expanded, and waked calculations are
+unchanged. Iterative intermediate farm passes retain ordinary fields needed
+for convergence; final results use the caller's retention setting. Binned-state
+reduction and mean-field creation request retained ordinary point outputs
+directly instead of translating ambient variable names.
+
 Use `Engine` as a context manager for an explicit backend. `Engine.new()` maps
 established names to implementations. If no engine is active, FOXES creates a
 default engine; `DefaultEngine` chooses a single-chunk or process strategy from
@@ -168,6 +193,13 @@ of replacing it with a secondary incomplete-chunk assertion.
 ## Extension Points
 
 ### Models And Registries
+
+`JensenTurbOParkWake` accepts a model-local `amb_ti` constant (a finite,
+strictly positive fraction) as a fallback when wake-source farm data lacks
+`FV.AMB_TI`. Farm ambient TI takes precedence. With `ti_var=FV.AMB_TI`, the
+same full state-target field feeds `WakeK` before wake selection and the
+TurbOPark growth terms after selection. The constant does not populate farm
+data for other models.
 
 `ModelBook` owns named `FDict` collections for point models, rotor models,
 turbine types and models, farm models and controllers, partial-wake models, wake
@@ -200,6 +232,39 @@ States implementations normalize ambient conditions for algorithms. Input
 adapters own parsing and boundary validation; core models should not parse file
 formats. `DataBook` and `StaticData` locate packaged or user-supplied data by
 logical category. Keep resource lookup separate from scientific calculation.
+
+The WindIO adapter selects the iterative algorithm and per-wake `ground_mirror`
+for every enabled blockage (induction wake) model. It also enables ground
+mirroring for TurbOPark wind deficits, preserving other per-wake ground settings.
+
+State support-point diagnostics are opt-in loading-time outputs. Regular,
+scattered, Weibull, binned, and turbine-backed spatial states expose
+`grid_point_plot`; NEWA and meso/micro states use their existing WRF and support
+plot hooks. Point-cloud variants share the rendering helper in
+`foxes/input/states/point_cloud_data.py`, including cleanup after failed writes.
+Separate `*_point_plot_farm_pars` dictionaries customize the farm overlay without
+changing support/reference markers or normal visible-turbine/title defaults.
+Turbine-backed diagnostics show the current farm layout, not later
+state-dependent or optimization coordinates. These plots do not select an
+engine or configure global matplotlib state.
+Regular CFD and meso/micro support diagnostics support opt-in per-axis plot
+strides, owned by shared point-plot helpers. They preserve grid edges and leave
+loaded state data and reference points unchanged. `FarmLayoutOutput` accepts a
+figure-only boundary override through `bargs`, so diagnostics from temporary
+loading farms can show the original geometry without changing numerical farm
+bounds or loading behavior.
+
+`MesoMicroField` owns opt-in loading-time reference calibration smoothing through
+`ref_point_radius`. A positive finite radius in metres selects all distinct
+available CFD horizontal support points inside each closed reference disk.
+Samples use the reference point's height and equal node weights. WS/WD are
+converted to U/V before averaging and recovered from the mean vector; other
+micro variables use arithmetic means. Smoothed values determine reference
+sector directions and speedups, while turbine-target micro fields remain
+pointwise. Temporary loading bounds include the disks. Empty disks raise a
+contextual error; NaN checks and automatic reference filtering still apply.
+`None` retains exact-point calibration. See
+[ADR-0006](adr/0006-micro-reference-disk-averages.md).
 
 ### Sequential Plugins
 
@@ -242,6 +307,9 @@ state/target product merely to slice it per engine chunk.
 - Let engines choose and propagate chunk metadata.
 - Keep static target coordinates compact until engine runners broadcast them to
 	the active state chunk.
+- Slice means currently collect point results before reducing over states.
+	Static output grids avoid state-expanded coordinate storage, but do not bound
+	the memory used by complete state-by-point result arrays.
 - Dataset-backed states reconstruct interpolated point and height ordering with
 	paired state/point index gathers, without a field-state/target-state
 	cross-product. This includes fixed locations permuted by downwind order.
@@ -255,6 +323,8 @@ state/target product merely to slice it per engine chunk.
 	order.
 - Avoid sending unnecessary algorithm state or large caches to every process.
 - Preserve state and turbine ordering when collecting parallel results.
+- Reduced iterative passes keep farm data in downwind order and reorder fresh
+	model data by `FV.ORDER` before evaluating turbine models and controllers.
 - Compare serial and parallel numerical results when changing engine-facing
 	code; speed alone is not correctness.
 - Measure representative state, turbine, and target sizes before accepting a
@@ -292,20 +362,41 @@ subprocess.
 	[ADR-0001](adr/0001-forward-only-development.md).
 - `pyproject.toml` is the source of package metadata, supported Python versions,
 	dependencies, extras, build configuration, console scripts, and mypy settings.
+- Runtime and extra dependency floors exclude the known vulnerable releases
+	listed in [development](development.md#security-floors). Dask and Distributed
+	share a >=2026.1.0 floor; this does not certify transitive or native libraries.
 - Production Python is type checked; tests, examples, notebooks, and docs are
 	not currently part of the mypy target.
+- Pytest repository-file inputs are limited to `foxes/`, `examples/`,
+	`notebooks/`, and `tests/`; temporary test outputs remain allowed.
+	Documentation, release metadata, and CI configuration are checked outside
+	pytest. See [ADR-0009](adr/0009-test-file-dependency-boundary.md).
 - Public Python APIs follow [docstring conventions](docstrings.md): NumPy-style
 	docstrings expose the scientific and runtime contract while type information
 	remains in annotations.
+- Power-mask boosts use a smooth near-rated transition and bounded
+	low-induction thrust while preserving requested power. See
+	[ADR-0007](adr/0007-smooth-power-mask-boosts.md).
 - Static target coordinates use a singleton state axis during chunk transport
 	and are broadcast by engine runners. See
 	[ADR-0003](adr/0003-compact-static-target-coordinates.md).
+- Output slice grids have no state axis and use the existing static-point
+	calculation contract. See
+	[ADR-0005](adr/0005-static-output-grid-coordinates.md).
 - Ruff formatting/linting and mypy run through pre-commit. Pytest is the test
 	runner; Sphinx with AutoAPI, numpydoc, and MyST-NB builds the documentation.
-- FOXES follows the Fraunhofer corporate design. The repository has no browser
-	UI and no design-token adapter; corporate requirements apply to scientific
-	plots, animations, examples, notebooks, documentation, and brand assets. See
-	[ADR-0002](adr/0002-corporate-design.md).
+- FOXES follows the Fraunhofer corporate design. Corporate requirements apply
+	to scientific plots, animations, examples, notebooks, documentation, and
+	brand assets. Sphinx HTML uses `iwes-tokens.css` as the adapter for the
+	authoritative `design-tokens.json` values and `iwes.css` as its
+	Sphinx-Immaterial theme layer; token parity is reviewed outside pytest. The
+	documentation remains white-dominant with a primary-green header, black
+	header text and focus indicators, and a light search surface. Its 20px rem
+	basis preserves theme control sizing; body and sidebar text explicitly use
+	16px type with 24px line spacing. FOXES still has no browser application
+	frontend. See
+	[ADR-0002](adr/0002-corporate-design.md) and
+	[ADR-0004](adr/0004-sphinx-design-token-adapter.md).
 
 ## ADR Triggers
 

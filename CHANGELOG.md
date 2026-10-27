@@ -1100,39 +1100,85 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.9.7
 
 - Python versions:
-  - Re-added support for Python 3.14
+  - Restored Python 3.14 support
+- Documentation:
+  - Streamlined user guides, corrected stale guidance, and repaired API and
+    example navigation
+  - Applied IWES design tokens to Sphinx with responsive, accessible styling
+    and an automated drift check
+- Inputs:
+  - Spatial state classes: Added consistent support-point diagnostics,
+    configurable farm overlays, and plotting strides for dense grids
 - Core:
-  - Static point coordinates now retain a singleton state axis during chunk
-    transport and are broadcast inside engine runners, avoiding repeated target
-    arrays without changing point-result dimensions
-  - Downwind ordering now derives transient state selectors and inverse
-    permutations locally instead of storing them in farm data
+  - Point calculations: Reduced memory use for static targets without changing
+    public result dimensions
+  - Downwind calculations: Kept temporary state selection and ordering data out
+    of farm results
 - Output:
-  - Added opt-in true turbine radius rendering to `FarmLayoutOutput`, including
-    scatter-equivalent fill colors and `color_by` support; automatically sized
-    figures keep the smallest rotor diameter at least four pixels wide
-    scatter-equivalent fill colors and `color_by` support
+  - `FarmLayoutOutput`: Added true turbine-radius rendering and figure-only
+    boundary overrides without changing numerical farm geometry
+  - `SliceData` and `FlowPlots2D`: Store XY, XZ, and YZ grid coordinates once
+    with shape `(n_points, 3)` instead of repeating them across all states;
+    selected-state output uses the same static grids and engine broadcasting
 - Bug fixes:
-  - Fixed `AreaIntersection.add_to_figure` to render intersection boundaries
-    and forward their plotting parameters
-  - Internal state subsets now use coordinate labels consistently, supporting
-    timestamps and other non-default state indices
-  - Fixed `Circle.points_distance` nearest-boundary coordinates for query
-    batches containing the circle centre
-  - Engine cleanup now preserves active worker exceptions instead of replacing
-    them with incomplete-chunk assertions; point-cloud support errors suggest
-    the nearest-neighbor fallback configuration
-  - Wind-farm bounds now include turbine coordinates from every state, enabling
-    `MesoMicroField` with vectorized population layouts
-  - Population states now preserve target-dependent weights from wrapped states
-    instead of replacing spatial binned-state frequencies with uniform weights
-  - Dataset-backed states now reconstruct point and height ordering without
-    quadratic cross-state temporaries, including fixed locations permuted by
-    downwind order
-  - `MesoMicroField` now gathers selected micro-bin/point pairs directly instead
-    of reconstructing every micro bin at every state's target layout
+  - WindIO and Gaussian partial wakes: Applied declared rotor averaging and
+    consistent lookup-based defaults, including `TurbOPark`
+  - WindIO blockage models: Automatically enabled ground mirroring for
+    induction wakes
+  - `AreaIntersection`: Restored boundary rendering and plot parameters
+  - `Circle`: Corrected nearest-boundary coordinates for centre-point queries
+  - State indexing: Preserved coordinate labels such as timestamps in subsets
+  - Engine execution: Preserved worker exceptions during cleanup
+  - Point-cloud states: Added actionable nearest-neighbor fallback diagnostics
+  - `MesoMicroField`: Supported state-dependent farm bounds and reduced
+    temporary data for selected micro points
+  - Population states: Preserved target-dependent spatial weights
+  - Dataset-backed states: Corrected reordered point and height data while
+    reducing cross-state temporary allocations
+  - Iterative algorithms: Kept turbine models and operating flags aligned after
+    downwind reordering
 - Development:
-  - Adding Agents.md and related files for agentic coding
-  - Recorded Fraunhofer corporate design for FOXES visual surfaces
+  - Contributor guidance: Added `AGENTS.md` and recorded the Fraunhofer design
+    policy for FOXES visual surfaces
+  - Tests: Added serial regressions for CFD extrapolation, NaN masking, and
+    binned meso/micro plots
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.7](https://github.com/FraunhoferIWES/foxes/commits/v1.9.7)
+
+## v1.9.8
+
+- Dependencies:
+  - Raised vulnerable minimum versions of tqdm, Requests, GeoPandas,
+    Distributed, JupyterLab, and Tornado to their patched releases; aligned
+    Dask with Distributed and documented the public advisory references
+- Inputs:
+  - `MesoMicroField`: Added optional `ref_point_radius` disk averages of CFD
+    reference fields during loading, using U/V wind-vector means before
+    recovering WS/WD and constructing reference sector calibrations
+- Core:
+  - Ambient calculations: Extended `ambient_keep=False` to point results so
+    ordinary and ambient variable pairs can both be retained without wakes;
+    binned reduction and mean-field creation now request ordinary outputs directly
+- Bug fixes:
+  - Iterative ambient calculations: Retained ordinary fields during intermediate
+    passes while respecting the requested final output retention
+  - `SectorManagement`: Kept rules attached to their original farm turbines
+    after downwind reordering and respected state-turbine selections (#56)
+  - `SectorManagement`: Added contextual unknown-turbine errors independent
+    of Python's built-in exception wording, fixing the Python 3.14 regression
+  - `PowerMask`: Smoothed near-rated boosts and bounded thrust at the Betz
+    induction limit instead of producing discontinuous or nonfinite values (#26)
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.8](https://github.com/FraunhoferIWES/foxes/commits/v1.9.8)
+
+## v1.9.9
+
+- Models: Added an optional model-local `amb_ti` fallback to
+  `JensenTurbOParkWake`; farm ambient TI takes precedence. Fixed premature
+  ambient-TI selection before `WakeK` calculation for partially active wakes.
+- Documentation: Added the *Wind - Reallabor 70 GW Offshore Wind* (ZN4468)
+  funding acknowledgement to the README and Sphinx index.
+- Development: Limited pytest repository-file inputs to package code, examples,
+  notebooks, and tests; the existing suite already follows this boundary.
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.9](https://github.com/FraunhoferIWES/foxes/commits/v1.9.9)

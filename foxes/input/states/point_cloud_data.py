@@ -1,16 +1,53 @@
 import numpy as np
 import xarray as xr
+import matplotlib.pyplot as plt
+from pathlib import Path
 from typing import Any, cast
 from foxes.core import Algorithm, FData, LoadedData, MData, TData
 from scipy.interpolate import griddata
 from scipy.spatial import Delaunay, QhullError
 
-from foxes.config import config
+from foxes.config import config, get_output_path
+from foxes.output import FarmLayoutOutput
 from foxes.utils import weibull_weights
 import foxes.variables as FV
 import foxes.constants as FC
 
 from .dataset_states import DatasetStates
+from ._point_plot_utils import farm_plot_pars, line_plot_pars
+
+
+def _write_point_cloud_plot(
+    states: "PointCloudData | TurbinePointCloud",
+    algo: Algorithm,
+    points: np.ndarray,
+    verbosity: int,
+) -> None:
+    """Write horizontal support coordinates with the current farm layout."""
+    if states.grid_point_plot is None or points.size == 0:
+        return
+    fpath = get_output_path(states.grid_point_plot)
+    if verbosity > 0:
+        print(f"States '{states.name}': Writing grid point plot to '{fpath}'")
+    fig, ax = plt.subplots(figsize=(8, 8))
+    try:
+        ax.plot(points[:, 0], points[:, 1], **states.grid_point_plot_pars)
+        wind_farm_names = algo.farm.wind_farm_names
+        assert wind_farm_names is not None
+        layout_pars = {
+            "annotate": 3 if len(wind_farm_names) > 1 else 0,
+            "fontsize": 12,
+            "zorder": 10,
+            **states.grid_point_plot_farm_pars,
+        }
+        FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig, ax=ax, **layout_pars)
+        ax.set_xlabel(f"{FV.X} [m]")
+        ax.set_ylabel(f"{FV.Y} [m]")
+        ax.set_aspect("equal", adjustable="box")
+        ax.autoscale_view(tight=True)
+        fig.savefig(fpath, bbox_inches="tight")
+    finally:
+        plt.close(fig)
 
 
 class _SupportHull:
@@ -219,9 +256,14 @@ class PointCloudData(DatasetStates):
         y_ncvar: str = "y",
         h_ncvar: str | None = None,
         weight_ncvar: str | None = None,
+        grid_point_plot: str | Path | None = None,
+        grid_point_plot_pars: dict[str, Any] | None = None,
+        grid_point_plot_farm_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """
+        Initialize ambient states on scattered support points.
+
         Parameters
         ----------
         args
@@ -238,8 +280,24 @@ class PointCloudData(DatasetStates):
             The height variable name in the data
         weight_ncvar
             The name of the weights variable in the data
+        grid_point_plot
+            Output path for selected support points and the farm layout.
+            Written during first-dataset preprocessing; ``None`` disables it.
+        grid_point_plot_pars
+            Parameters for :meth:`matplotlib.axes.Axes.plot`, merged with blue
+            point markers, alpha ``0.2``, and no connecting line.
+        grid_point_plot_farm_pars
+            Parameters for :meth:`FarmLayoutOutput.get_figure` on the same axes.
+            ``None`` preserves the usual farm overlay. For a title-free,
+            transparent overlay, use ``{"title": "", "alpha": 0, "annotate": 0}``.
+            Caller parameter dictionaries are copied rather than mutated.
         kwargs
             Additional parameters for the base class
+
+        Raises
+        ------
+        TypeError
+            If a plot-parameter mapping is not a dictionary or ``None``.
         """
         kwargs["bounds_extra_space"] = None
         super().__init__(*args, **kwargs)
@@ -250,6 +308,21 @@ class PointCloudData(DatasetStates):
         self.y_ncvar = y_ncvar
         self.h_ncvar = h_ncvar
         self.weight_ncvar = weight_ncvar
+        self.grid_point_plot = grid_point_plot
+        self.grid_point_plot_pars = line_plot_pars(
+            {
+                "color": "blue",
+                "alpha": 0.2,
+                "marker": ".",
+                "linestyle": "None",
+                "zorder": 5,
+            },
+            grid_point_plot_pars,
+            "grid_point_plot_pars",
+        )
+        self.grid_point_plot_farm_pars = farm_plot_pars(
+            grid_point_plot_farm_pars, "grid_point_plot_farm_pars"
+        )
 
         self.variables = [FV.X, FV.Y]
         self.variables += [v for v in self.ovars if v not in self.fixed_vars]
@@ -283,6 +356,57 @@ class PointCloudData(DatasetStates):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(n_pt={self._n_pt}, n_wd={self._n_wd}, n_ws={self._n_ws})"
+
+    def preproc_first(
+        self,
+        algo: Algorithm,
+        data: xr.Dataset,
+        bounds_extra_space: float | str | None = None,
+        height_bounds: tuple[float, float] | None = None,
+        loaded_data: LoadedData | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """
+        Preprocess the first dataset and optionally plot its support points.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm and farm layout.
+        data
+            The first input dataset, preprocessed in place by the base class.
+        bounds_extra_space
+            Horizontal bounds in meters; unused for scattered point clouds.
+        height_bounds
+            Height bounds in meters forwarded to dataset preprocessing.
+        loaded_data
+            Model-scoped initialization data extended by preprocessing.
+        verbosity
+            The verbosity level, where ``0`` is silent.
+
+        Notes
+        -----
+        The plot uses ``isel`` and ``sel`` selections and projects selected
+        heights onto the horizontal plane. Missing selections or empty datasets
+        do not produce a plot. Plotting does not change the dataset.
+        """
+        super().preproc_first(
+            algo, data, bounds_extra_space, height_bounds, loaded_data, verbosity
+        )
+        if self.grid_point_plot is not None:
+            try:
+                if self.isel is not None:
+                    data = data.isel(self.isel)
+                if self.sel is not None:
+                    data = data.sel(self.sel)
+            except KeyError:
+                return
+            if any(size == 0 for size in data.sizes.values()):
+                return
+            points = np.column_stack(
+                (data[self.x_ncvar].values.ravel(), data[self.y_ncvar].values.ravel())
+            )
+            _write_point_cloud_plot(self, algo, points, verbosity)
 
     def get_grid_points(
         self,
@@ -834,9 +958,14 @@ class TurbinePointCloud(DatasetStates):
         states_coord: str = FC.STATE,
         turbine_coord: str = FC.TURBINE,
         weight_ncvar: str | None = None,
+        grid_point_plot: str | Path | None = None,
+        grid_point_plot_pars: dict[str, Any] | None = None,
+        grid_point_plot_farm_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """
+        Initialize point-cloud states supported at farm turbine locations.
+
         Parameters
         ----------
         args
@@ -847,8 +976,23 @@ class TurbinePointCloud(DatasetStates):
             The turbine coordinate name in the data
         weight_ncvar
             The name of the weights variable in the data
+        grid_point_plot
+            Output path for current farm turbine locations and layout.
+            Written during loading; ``None`` disables it. The plot does not
+            represent later state-dependent or optimization coordinates.
+        grid_point_plot_pars
+            Parameters for :meth:`matplotlib.axes.Axes.plot`, merged with blue
+            point markers, alpha ``0.2``, and no connecting line.
+        grid_point_plot_farm_pars
+            Parameters for :meth:`FarmLayoutOutput.get_figure` on the same axes.
+            ``None`` preserves the usual overlay. Parameter dictionaries are copied.
         kwargs
             Keyword arguments for the base class
+
+        Raises
+        ------
+        TypeError
+            If a plot-parameter mapping is not a dictionary or ``None``.
         """
         # Turbine-point-cloud data is indexed by turbine, not by global X/Y grids.
         # Disable XY-bound filtering from DatasetStates to avoid requiring X/Y cmap.
@@ -858,6 +1002,21 @@ class TurbinePointCloud(DatasetStates):
 
         self.states_coord = states_coord
         self.turbine_coord = turbine_coord
+        self.grid_point_plot = grid_point_plot
+        self.grid_point_plot_pars = line_plot_pars(
+            {
+                "color": "blue",
+                "alpha": 0.2,
+                "marker": ".",
+                "linestyle": "None",
+                "zorder": 5,
+            },
+            grid_point_plot_pars,
+            "grid_point_plot_pars",
+        )
+        self.grid_point_plot_farm_pars = farm_plot_pars(
+            grid_point_plot_farm_pars, "grid_point_plot_farm_pars"
+        )
 
         if weight_ncvar is not None:
             self.var2ncvar[FV.WEIGHT] = weight_ncvar
@@ -933,30 +1092,28 @@ class TurbinePointCloud(DatasetStates):
         verbosity: int = 0,
     ) -> None:
         """
-        Load and/or create all model data that is subject to chunking.
-
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
+        Load turbine-backed data and optionally plot the current farm locations.
 
         Parameters
         ----------
         algo
             The calculation algorithm
         loaded_data
-            Data that has already been loaded, to be extended by this function.
+            Initialization data extended with ``coords``, dimensioned
+            ``data_vars``, and non-array ``extra_data`` entries.
+        force
+            Overwrite existing loaded data.
         bounds_extra_space
             Extra horizontal bounds; unsupported for turbine point-cloud data.
         height_bounds
             Height bounds; unsupported for turbine point-cloud data.
-            Keys are "coords", a dict with entries `dim_name_str -> dim_array`;
-            "data_vars", a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and "extra_data", a dict with non-array additional data.
-        force
-            Overwrite existing data
         verbosity
-            The verbosity level, 0 = silent
+            The verbosity level, where ``0`` is silent.
 
+        Notes
+        -----
+        ``grid_point_plot`` writes current turbine locations after loading.
+        Empty farms do not produce a plot.
         """
         super().load_data(
             algo,
@@ -965,6 +1122,9 @@ class TurbinePointCloud(DatasetStates):
             bounds_extra_space=None,
             verbosity=verbosity,
         )
+        if self.grid_point_plot is not None:
+            points = np.asarray([turbine.xy for turbine in algo.farm.turbines])
+            _write_point_cloud_plot(self, algo, points, verbosity)
 
     def _update_dims(
         self,

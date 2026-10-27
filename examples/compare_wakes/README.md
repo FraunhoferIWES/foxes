@@ -1,6 +1,6 @@
-# foxes example: _compare\_rotor\_pwakes_
+# foxes example: _compare\_wakes_
 
-Comparison of different partial wake models, by moving a probe rotor along a line orthogonal to the wake of a turbine.
+Comparison of wake-model profiles across a turbine wake at several downstream distances.
 
 ## Check options
 Check options by
@@ -9,7 +9,7 @@ python3 run.py -h
 ```
 
 ## Run command
-For 30 states and 5 turbines, run
+Run the default wake-model comparison:
 ```
 python3 run.py
 ```

@@ -8,11 +8,13 @@ directory rather than keeping it as advice — see `AGENTS.md`, "UI Design Polic
 
 ### FOXES Scope
 
-FOXES currently has no browser frontend and no design-token adapter. Its visual
-surface consists mainly of matplotlib plots, animations, notebook output,
-documentation, and project/brand assets. Apply the chart, colour, typography,
-image, logo, and accessibility rules here when those surfaces change. Do not
-apply web component requirements to non-visual numerical code.
+FOXES has no browser application frontend. Sphinx documentation uses
+`docs/source/_static/iwes-tokens.css` as its design-token adapter and
+`docs/source/_static/iwes.css` as its theme layer. Its other visual surfaces
+consist mainly of matplotlib plots, animations, notebook output, and
+project/brand assets. Apply the chart, colour, typography, image, logo, and
+accessibility rules here when those surfaces change. Do not apply web component
+requirements to non-visual numerical code.
 
 Plotting is also a public Python API. Preserve caller-supplied matplotlib axes,
 styles, colours, labels, and output options unless the API explicitly promises a
@@ -41,13 +43,11 @@ technology without changing their values.
 
 **Reading token values.** Once the project has a token adapter for its technology
 and has recorded it in `docs/architecture.md`, read values from that adapter. It
-carries every consumable token with references resolved, at a fraction of the
-source document's size, and is either generated from `design-tokens.json` or
-hand-maintained with a test that compares it against that document, as
-`AGENTS.md` requires. That guarantee covers values, not review status, so
-`design-tokens.json` stays the source for which values still need review. Open it
-also while no adapter exists, when adding, changing, or reviewing tokens, or when
-a value is genuinely absent from the adapter.
+resolves consumable token references. Verify parity against `design-tokens.json`
+when changing an adapter; documentation adapters are reviewed outside pytest.
+Parity does not approve values marked for review: `design-tokens.json` remains
+authoritative for review status. Read it when no adapter exists, when adding,
+changing, or reviewing tokens, or when a value is absent from the adapter.
 
 ## Visual Direction
 

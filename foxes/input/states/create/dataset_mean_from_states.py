@@ -338,7 +338,6 @@ def _evaluate_mean(
         if vname_main_wd is None
         else np.full(len(points), np.nan, dtype=config.dtype_double)
     )
-    ambient_vars = [FV.var2amb.get(var, var) for var in variables]
     algo = _new_algorithm(states, axes, verbosity)
 
     def _calculate() -> None:
@@ -359,17 +358,12 @@ def _evaluate_mean(
                     results = algo.calc_points(
                         farm_results,
                         points[point_slice],
-                        outputs=ambient_vars + [FV.WEIGHT],
+                        outputs=variables + [FV.WEIGHT],
                         ambient=True,
+                        ambient_keep=True,
                         finalize=False,
                         states_sel=state_index[state_start:state_stop].tolist(),
                     )
-                    rename = {
-                        ambient: var
-                        for var, ambient in zip(variables, ambient_vars)
-                        if ambient != var and ambient in results
-                    }
-                    results = results.rename(rename)
                     missing = [var for var in variables if var not in results]
                     if missing:
                         raise KeyError(
