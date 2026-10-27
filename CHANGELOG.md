@@ -1173,23 +1173,15 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.9
 
-- Bug fixes: Preserve original CFD-sector identity after local wind-direction
-  sorting in `MesoMicroField` and `SectorSimRefPointField`, including distinct
-  reference-point orders across north and original numeric state coordinates
-  across engine chunks. Correct MEMI reference-weight
-  broadcasting with blending disabled. Affected populations and results require
-  recalculation.
-- Output: CFD and meso/micro loading plots distinguish temporary reference
-  points with red markers, an empty title, and a legend by default; labeled
-  support-grid artists are included in that legend. NEWA support-point plots
-  preserve grid and farm labels in a legend. Meso/micro CFD-grid plots keep
-  plot bounds aligned with the farm when reference points extend farther.
-- Models: Added an optional model-local `amb_ti` fallback to
-  `JensenTurbOParkWake`; farm ambient TI takes precedence. Fixed premature
-  ambient-TI selection before `WakeK` calculation for partially active wakes.
-- Documentation: Added the *Wind - Reallabor 70 GW Offshore Wind* (ZN4468)
-  funding acknowledgement to the README and Sphinx index.
-- Development: Limited pytest repository-file inputs to package code, examples,
-  notebooks, and tests; the existing suite already follows this boundary.
-
+- Models:
+  - `JensenTurbOParkWake`: Added a model-local ambient-TI fallback, with farm
+    ambient TI taking precedence; corrected ambient-TI selection for partially
+    active wakes.
+- Output:
+  - `FarmLayoutOutput`: Distinguished temporary reference points in loading
+    layouts and improved support-point legends.
+  - `NEWAStates`: Preserved grid and farm labels in support-plot legends.
+- Bug fixes:
+  - `MesoMicroField` and `SectorSimRefPointField`: Preserved CFD-sector identity and corrected weights when blending is disabled.
+  
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.9](https://github.com/FraunhoferIWES/foxes/commits/v1.9.9)
