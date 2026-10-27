@@ -1184,6 +1184,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   support-grid artists are included in that legend. NEWA support-point plots
   preserve grid and farm labels in a legend. Meso/micro CFD-grid plots keep
   plot bounds aligned with the farm when reference points extend farther.
+- Models: Added an optional model-local `amb_ti` fallback to
+  `JensenTurbOParkWake`; farm ambient TI takes precedence. Fixed premature
+  ambient-TI selection before `WakeK` calculation for partially active wakes.
 - Documentation: Added the *Wind - Reallabor 70 GW Offshore Wind* (ZN4468)
   funding acknowledgement to the README and Sphinx index.
 - Development: Limited pytest repository-file inputs to package code, examples,

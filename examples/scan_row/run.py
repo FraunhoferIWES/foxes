@@ -41,6 +41,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-cm", "--calc_mean", help="Calculate states mean", action="store_true"
     )
+    parser.add_argument(
+        "-it", "--iterative", help="Use iterative algorithm", action="store_true"
+    )
     parser.add_argument("-e", "--engine", help="The engine", default="process")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
@@ -94,7 +97,9 @@ if __name__ == "__main__":
         turbine_models=args.tmodels + [ttype.name],
     )
 
-    algo = foxes.algorithms.Downwind(
+    Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+    algo_kwargs = {"max_it": None} if args.iterative else {}
+    algo = Algo(
         farm,
         states,
         rotor_model=args.rotor,

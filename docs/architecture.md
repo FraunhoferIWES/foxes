@@ -194,6 +194,13 @@ of replacing it with a secondary incomplete-chunk assertion.
 
 ### Models And Registries
 
+`JensenTurbOParkWake` accepts a model-local `amb_ti` constant (a finite,
+strictly positive fraction) as a fallback when wake-source farm data lacks
+`FV.AMB_TI`. Farm ambient TI takes precedence. With `ti_var=FV.AMB_TI`, the
+same full state-target field feeds `WakeK` before wake selection and the
+TurbOPark growth terms after selection. The constant does not populate farm
+data for other models.
+
 `ModelBook` owns named `FDict` collections for point models, rotor models,
 turbine types and models, farm models and controllers, partial-wake models, wake
 frames and deflections, wake superpositions and models, induction models, and
