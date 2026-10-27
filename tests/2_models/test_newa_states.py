@@ -60,6 +60,11 @@ def test_newa_forwards_wrf_point_plot_pars(monkeypatch, tmp_path, farm_pars):
     algo = SimpleNamespace(farm=SimpleNamespace(wind_farm_names=["farm"]))
     fig = Mock()
     ax = Mock()
+    legend_handles = [Mock(), Mock()]
+    ax.get_legend_handles_labels.return_value = (
+        legend_handles,
+        ["WRF grid points", "farm turbines"],
+    )
     monkeypatch.setattr(DatasetStates, "preproc_first", Mock())
     monkeypatch.setattr(newa_states_module, "from_lonlat", lambda values: values)
     monkeypatch.setattr(
@@ -81,6 +86,11 @@ def test_newa_forwards_wrf_point_plot_pars(monkeypatch, tmp_path, farm_pars):
     assert (
         newa_states_module.FarmLayoutOutput.return_value.get_figure.call_args.kwargs
         == layout_pars
+    )
+    ax.legend.assert_called_once_with(
+        legend_handles,
+        ["WRF grid points", "farm turbines"],
+        loc="best",
     )
     fig.savefig.assert_called_once_with(plot_file, bbox_inches="tight")
 

@@ -101,6 +101,8 @@ class MesoMicroField(States):
         support_point_plot
             Path to a plot file, e.g. ``support_points.png``, to visualize the
             selected micro_states support points, reference points, and farm layout.
+            Temporary loading layouts distinguish reference points by color,
+            omit the title, and include a legend by default.
         support_point_plot_pars
             Additional parameters for ``matplotlib.pyplot.plot`` when drawing
             the micro-state support points. Defaults to blue points with
@@ -558,6 +560,7 @@ class MesoMicroField(States):
             self.REF_POINT = self.var("ref_point")
             self.REF_VARS = self.var("ref_vars")
             self.WD_BIN_DATA = self.var("wd_bin_data")
+            self.WD_BIN_MAP = self.var("wd_bin_map")
             self.WD_BIN_DATA_VARS = self.var("wd_bin_data_vars")
 
             # update ref points:
@@ -597,18 +600,27 @@ class MesoMicroField(States):
                     Turbine(xy=t.xy, turbine_models=["null_type"]),
                     verbosity=verbosity - 1,
                 )
+            n_reference_turbines = 0
             for rp in self.ref_points:
                 farm.add_turbine(
-                    Turbine(xy=rp[:2], turbine_models=["null_type"], H=self.ref_height),
+                    Turbine(
+                        xy=rp[:2],
+                        turbine_models=["null_type"],
+                        H=self.ref_height,
+                        name=f"reference point {n_reference_turbines + 1}",
+                    ),
                     verbosity=verbosity - 1,
                 )
+                n_reference_turbines += 1
                 if self.ref_point_radius is not None:
                     for offset in (-self.ref_point_radius, self.ref_point_radius):
+                        n_reference_turbines += 1
                         farm.add_turbine(
                             Turbine(
                                 xy=rp[:2] + offset,
                                 turbine_models=["null_type"],
                                 H=rp[2],
+                                name=f"reference point {n_reference_turbines}",
                             ),
                             verbosity=verbosity - 1,
                         )
@@ -733,6 +745,7 @@ class MesoMicroField(States):
             wd_bin_data: np.ndarray = np.zeros(
                 (n_states, n_points, 3), dtype=config.dtype_double
             )  #  centre, minus, plus
+            wd_bin_map = np.empty((n_states, n_points), dtype=config.dtype_int)
             for pi in range(n_points):
                 wd_sorted, wd_map, wd_imap = np.unique(
                     results[FV.WD][:, pi, 0], return_index=True, return_inverse=True
@@ -754,6 +767,7 @@ class MesoMicroField(States):
                 wdm = np.insert(wd_sorted, 0, wd_sorted[-1] - 360.0)
                 wdm = (wdm[:-1] - wdm[1:]) / 2
                 wd_bin_data[:, pi, :] = np.stack([wd_sorted, wdm, wdp], axis=-1)
+                wd_bin_map[:, pi] = wd_map
 
                 del wdp, wdm, wd_sorted, wd_map, wd_imap
             del results[FV.WD]
@@ -766,6 +780,10 @@ class MesoMicroField(States):
             loaded_data_vars[self.WD_BIN_DATA] = (
                 (self.STATE0, self.REF_POINT, self.WD_BIN_DATA_VARS),
                 wd_bin_data,
+            )
+            loaded_data_vars[self.WD_BIN_MAP] = (
+                (self.STATE0, self.REF_POINT),
+                wd_bin_map,
             )
             del wd_bin_data
 
@@ -998,7 +1016,9 @@ class MesoMicroField(States):
         -----
         Select micro bin and point pairs directly before applying reference
         speedups and mixing weights, without reconstructing every micro bin
-        at every state's target layout.
+        at every state's target layout. Map each locally sorted direction bin
+        back to its original micro state before evaluating target fields;
+        reference-point sector orders may differ.
 
         """
         if len(data) != 3:
@@ -1114,22 +1134,33 @@ class MesoMicroField(States):
 
         # map meso to micro states:
         micro_ref_results = micro_ref_results[fstates, :, :]
-        n_bins = len(fstates)
+        bin_map = mdata[self.WD_BIN_MAP][fstates]
+        raw_sector_maps = [
+            [bin_map[fs2s[pi], pi] for pi in range(n_points)] for fs2s in sector_maps
+        ]
+        micro_fstates = np.unique(np.concatenate(raw_sector_maps, axis=None))
+        target_sector_maps = [
+            [np.searchsorted(micro_fstates, indices) for indices in mapping]
+            for mapping in raw_sector_maps
+        ]
+        n_bins = len(micro_fstates)
 
         # create mdata:
-        mdata_dict: dict[str, np.ndarray] = {c: mdata[c] for c in micro_coords0}
+        mdata_dict: dict[str, np.ndarray] = {
+            c: mdata[self.STATE0 if c == FC.STATE else c] for c in micro_coords0
+        }
         mdata_dims: dict[str, tuple[str, ...]] = {c: (c,) for c in micro_coords0}
         mdata_dict.update({v: mdata[v] for v in micro_vars0})
         mdata_dims.update({v: mdata.dims[v] for v in micro_vars0})
         if FC.STATE in mdata_dict:
-            mdata_dict[FC.STATE] = mdata_dict[FC.STATE][fstates]
+            mdata_dict[FC.STATE] = mdata_dict[FC.STATE][micro_fstates]
         else:
-            mdata_dict[FC.STATE] = fstates
+            mdata_dict[FC.STATE] = micro_fstates
         mdata_dims[FC.STATE] = (FC.STATE,)
         for k in mdata_dims.keys():
             if len(mdata_dims[k]) > 0 and mdata_dims[k][0] == self.STATE0:
                 mdata_dims[k] = (FC.STATE,) + mdata_dims[k][1:]
-                mdata_dict[k] = mdata_dict[k][fstates, ...]
+                mdata_dict[k] = mdata_dict[k][micro_fstates, ...]
         hmdata = MData(
             data=mdata_dict,
             dims=mdata_dims,
@@ -1201,7 +1232,7 @@ class MesoMicroField(States):
         mires: np.ndarray = np.zeros(
             (n_states, n_tpts, n_points, n_vrs), dtype=config.dtype_double
         )
-        for bi, fs2s in enumerate(sector_maps):
+        for bi, (fs2s, target_map) in enumerate(zip(sector_maps, target_sector_maps)):
             # sector weight:
             weight = bf0 if bi == 0 else (1.0 - bf0)
 
@@ -1229,10 +1260,10 @@ class MesoMicroField(States):
             for i, v in enumerate(micro_results_vrs):
                 d = micro_results[..., i]
                 for pi in range(n_points):
-                    a = d[fs2s[pi][:, None], point_map]
+                    a = d[target_map[pi][:, None], point_map]
                     if v in speedups.keys():
                         a *= speedups[v][pi][:, None]
-                    w = weight[:, pi, None] if self.apply_blending else weight
+                    w = weight[:, pi, None]
                     mires[:, :, pi, i] += w * a
                     del a, w
                 del d

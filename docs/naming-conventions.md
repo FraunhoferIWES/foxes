@@ -165,6 +165,11 @@ Use established count and chunk names: `n_states`, `n_turbines`, `n_targets`,
 `sel` for label/value selections and `isel` for positional selections where the
 API follows xarray terminology.
 
+For reference-calibrated sector fields, `wd_bin_map` maps sorted local
+wind-direction bin positions to original field-state positions. Keep bin
+positions distinct from field-state indices; MEMI mappings are reference-point
+dependent.
+
 ## Physical Variables
 
 Import `foxes.variables as FV`. Use constants such as `FV.WS`, `FV.WD`,
@@ -245,6 +250,9 @@ available alternatives.
 	marker options; `_farm_pars` names the separate `FarmLayoutOutput.get_figure`
 	overlay options. Use the same grid-point names for regular, scattered,
 	Weibull, binned, and turbine-backed states.
+- Temporary loading-farm reference turbines use the names `reference point`
+	and `reference point <n>` so layout plots can distinguish them from farm
+	turbines and provide a reference-point legend entry.
 - The `grid_point_plot_stride` and `support_point_plot_stride` options name
 	positive per-axis sampling steps for diagnostic rendering only. They do not
 	select or reduce scientific input data or reference points.

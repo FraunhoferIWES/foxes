@@ -240,6 +240,14 @@ changing support/reference markers or normal visible-turbine/title defaults.
 Turbine-backed diagnostics show the current farm layout, not later
 state-dependent or optimization coordinates. These plots do not select an
 engine or configure global matplotlib state.
+Temporary loading layouts label appended reference turbines distinctly; their
+default plot uses a contrasting red marker, an empty title, and a legend that
+preserves labels from plotted support points.
+NEWA WRF support-point plots likewise preserve labeled grid and farm markers
+in a legend. CFD grid plots in temporary meso/micro loading layouts crop the
+displayed grid to the farm turbines, so distant reference points do not expand
+the support-grid domain; the loaded grid and calculation bounds remain
+unchanged.
 Regular CFD and meso/micro support diagnostics support opt-in per-axis plot
 strides, owned by shared point-plot helpers. They preserve grid edges and leave
 loaded state data and reference points unchanged. `FarmLayoutOutput` accepts a
@@ -258,6 +266,16 @@ pointwise. Temporary loading bounds include the disks. Empty disks raise a
 contextual error; NaN checks and automatic reference filtering still apply.
 `None` retains exact-point calibration. See
 [ADR-0006](adr/0006-micro-reference-disk-averages.md).
+
+`MesoMicroField` and `SectorSimRefPointField` store a `wd_bin_map` alongside
+sorted local direction bins. It maps each bin back to its original micro/field
+state; MEMI stores a separate mapping per reference point. Reference scaling
+uses sorted calibration data, while target evaluation uses the mapped original
+states. Sector blending and spatial mixing remain normalized independently of
+state probabilities. Numeric micro-state coordinates come from the preserved
+micro-state axis, never from the active meso-state chunk.
+Recompute populations, fitted wake parameters, and final
+results produced with misaligned sectors before using them for evaluation.
 
 ### Sequential Plugins
 

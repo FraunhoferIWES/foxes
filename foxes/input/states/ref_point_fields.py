@@ -73,6 +73,8 @@ class SectorSimRefPointField(States):
         support_point_plot
             Path to a plot file, e.g. support_points.png, to visualize the
             selected field_states support points, reference point, and farm layout.
+            Temporary loading layouts distinguish the reference point by color,
+            omit the title, and include a legend by default.
         support_point_plot_pars
             Additional parameters for `matplotlib.pyplot.plot` when drawing
             the field-state support points. Defaults to blue points with
@@ -343,6 +345,7 @@ class SectorSimRefPointField(States):
             self.STATE0 = self.var(FC.STATE + "0")
             self.REF_VARS = self.var("ref_vars")
             self.WD_BIN_DATA = self.var("wd_bin_data")
+            self.WD_BIN_MAP = self.var("wd_bin_map")
             self.WD_BIN_DATA_VARS = self.var("wd_bin_data_vars")
 
             assert self.field_states.load_mode == "preload", (
@@ -365,7 +368,11 @@ class SectorSimRefPointField(States):
                     verbosity=verbosity - 1,
                 )
             farm.add_turbine(
-                Turbine(xy=self.ref_point[:2], turbine_models=["null_type"]),
+                Turbine(
+                    xy=self.ref_point[:2],
+                    turbine_models=["null_type"],
+                    name="reference point",
+                ),
                 verbosity=verbosity - 1,
             )
             halgo = Downwind(
@@ -500,6 +507,10 @@ class SectorSimRefPointField(States):
                 (self.STATE0, self.WD_BIN_DATA_VARS),
                 wd_bins,
             )
+            loaded_data["data_vars"][self.WD_BIN_MAP] = (
+                (self.STATE0,),
+                wd_map,
+            )
             del wd_sorted, wd_plus, wd_minus, wd_bins
 
             # store ref point results in loaded_data:
@@ -541,36 +552,43 @@ class SectorSimRefPointField(States):
     def calculate(
         self, algo: Algorithm, *data: Any, **parameters: Any
     ) -> dict[str, np.ndarray]:
+        """
+        Calculate reference-scaled sector fields at target points.
+
+        Map sorted local direction bins to original field states before
+        evaluating targets, preserving sector identity across north.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data
+            Three positional chunk containers: model data, farm data, and
+            target data. Target coordinates have shape
+            ``(n_states, n_targets, n_tpoints, 3)`` in metres.
+            Reference-state weights are written to the target data.
+        parameters
+            Additional keyword parameters, unused by this implementation.
+
+        Returns
+        -------
+        results
+            Output variables mapped to arrays with shape
+            ``(n_states, n_targets, n_tpoints)``.
+
+        Raises
+        ------
+        TypeError
+            If three positional chunk containers are not provided.
+        ValueError
+            If checked reference fields contain NaNs or a reference direction
+            matches zero or multiple sectors.
+        """
         if len(data) != 3:
             raise TypeError(
                 f"States '{self.name}': Expecting 3 data arguments (mdata, fdata, tdata), got {len(data)}"
             )
         mdata, fdata, tdata = data
-        """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
-
-        Parameters
-        ----------
-        algo
-            The calculation algorithm
-        mdata
-            The model data
-        fdata
-            The farm data
-        tdata
-            The target point data
-
-        Returns
-        -------
-        results
-            The resulting data, keys: output variable str.
-            Values
-            (n_states, n_targets, n_tpoints)
-
-        """
 
         # prepare
         super().calculate(algo, mdata, fdata, tdata)
@@ -717,17 +735,19 @@ class SectorSimRefPointField(States):
                     axis=0,
                     return_inverse=True,
                 )
-                field_state_sel = fstates[eval_pairs[:, 1]]
+                field_state_sel = mdata[self.WD_BIN_MAP][fstates[eval_pairs[:, 1]]]
                 field_target_sel = eval_pairs[:, 0]
                 field_result_maps = np.split(result_map, len(sector_maps))
             else:
-                field_state_sel = fstates
+                field_state_sel = mdata[self.WD_BIN_MAP][fstates]
                 field_target_sel = np.zeros(field_n_states, dtype=config.dtype_int)
                 field_result_maps = sector_maps
             field_n_states = len(field_state_sel)
 
             # create mdata:
-            mdict: dict[str, np.ndarray] = {c: mdata[c] for c in field_coords0}
+            mdict: dict[str, np.ndarray] = {
+                c: mdata[self.STATE0 if c == FC.STATE else c] for c in field_coords0
+            }
             mdims: dict[str, tuple[str, ...]] = {c: (c,) for c in field_coords0}
             mdict.update({v: mdata[v] for v in field_vars0})
             mdims.update({v: cast(tuple[str, ...], mdata.dims[v]) for v in field_vars0})

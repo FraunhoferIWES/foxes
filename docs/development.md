@@ -132,6 +132,12 @@ uv run pre-commit run --files foxes/path.py tests/path/test_module.py
 
 Before closure, broaden to the repository gates:
 
+Reference-calibrated sector-field changes should include
+`tests/2_models/test_sector_field_mapping.py` and
+`tests/2_models/test_ref_point_fields.py`. These cover original field-state
+identity across locally sorted directions, north wraparound, blending choices,
+and chunk boundaries.
+
 ```console
 # Full Python test suite, required when code files changed
 uv run pytest tests

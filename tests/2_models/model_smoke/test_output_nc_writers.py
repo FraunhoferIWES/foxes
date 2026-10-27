@@ -380,6 +380,69 @@ def test_farm_layout_output_auto_figsize_and_colors():
     plt.close(ax.get_figure())
 
 
+@pytest.mark.parametrize(
+    ("reference_names", "reference_label"),
+    [
+        (["reference point"], "reference point"),
+        (["reference point 1", "reference point 2"], "reference points"),
+    ],
+)
+def test_farm_layout_output_reference_point_defaults(reference_names, reference_label):
+    farm = foxes.WindFarm(name="farm plus ref point")
+    farm.add_turbine(foxes.Turbine([0.0, 0.0], turbine_models=[]))
+    for index, name in enumerate(reference_names, start=1):
+        farm.add_turbine(
+            foxes.Turbine(
+                [1000.0 * index, 0.0],
+                turbine_models=[],
+                name=name,
+            )
+        )
+
+    fig, ax = plt.subplots()
+    ax.plot([0.0, 2000.0], [100.0, 100.0], label="CFD grid points")
+    ax = FarmLayoutOutput(farm=farm).get_figure(
+        fig=fig,
+        ax=ax,
+        annotate=0,
+    )
+    legend = ax.get_legend()
+
+    assert ax.get_title() == ""
+    assert [text.get_text() for text in legend.get_texts()] == [
+        "CFD grid points",
+        "farm turbines",
+        reference_label,
+    ]
+    ax.figure.canvas.draw()
+    colors = ax.collections[0].get_facecolors()[:, :3]
+    np.testing.assert_allclose(
+        colors,
+        [[1.0, 0.64705882, 0.0]] + [[1.0, 0.0, 0.0]] * len(reference_names),
+    )
+    plt.close(ax.get_figure())
+
+
+def test_farm_layout_output_reference_point_custom_color_is_preserved():
+    farm = foxes.WindFarm(name="farm plus ref point")
+    farm.add_turbine(foxes.Turbine([0.0, 0.0], turbine_models=[]))
+    farm.add_turbine(
+        foxes.Turbine(
+            [1000.0, 0.0],
+            turbine_models=[],
+            name="reference point",
+        )
+    )
+
+    ax = FarmLayoutOutput(farm=farm).get_figure(
+        annotate=0, title="custom title", c="green"
+    )
+
+    assert ax.get_title() == "custom title"
+    assert ax.get_legend() is None
+    plt.close(ax.get_figure())
+
+
 def test_farm_layout_output_true_turbine_radii_are_opt_in():
     farm = foxes.WindFarm()
     farm.add_turbine(foxes.Turbine([0.0, 0.0], turbine_models=[], D=100.0, H=90.0))
