@@ -362,6 +362,31 @@ class Algorithm(Model):
             verbosity=self.verbosity - 1,
         )
 
+    def init_model(
+        self, model: Model, verbosity: int | None = None, **kwargs: Any
+    ) -> None:
+        """
+        Initialize a specific model.
+
+        Parameters
+        ----------
+        model
+            The model to initialize
+        verbosity
+            The verbosity level for initialization
+        kwargs
+            Additional parameters for model initialization
+
+        """
+        if verbosity is None:
+            verbosity = self.verbosity - 1
+        self.__loaded_data = model.initialize(
+            algo=self,
+            loaded_data=self.__loaded_data,
+            verbosity=verbosity,
+            **kwargs,
+        )
+
     def update_n_turbines(self) -> None:
         """
         Reset the number of turbines,

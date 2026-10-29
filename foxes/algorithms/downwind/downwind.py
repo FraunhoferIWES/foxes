@@ -774,7 +774,7 @@ class Downwind(Algorithm):
 
         # initialize models:
         if not mlist.initialized:
-            mlist.initialize(self, verbosity=self.verbosity - 1)
+            self.init_model(mlist)
             self._calc_farm_vars(mlist)
         self._print_model_oder(mlist, calc_pars)
 
@@ -992,7 +992,7 @@ class Downwind(Algorithm):
 
         # initialize models:
         if not mlist.initialized:
-            mlist.initialize(self, self.loaded_data, verbosity=self.verbosity - 1)
+            self.init_model(mlist)
 
         if "states_isel" in kwargs:
             raise TypeError(
