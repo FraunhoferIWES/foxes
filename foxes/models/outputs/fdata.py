@@ -42,6 +42,19 @@ class FarmOrderedFData(Output):
         self.ambient_vars = ambient_vars
         self.waked_vars = waked_vars
 
+    def __repr__(self) -> str:
+        vrs = "[all variables]"
+        if self.variables is not None:
+            vrs = []
+            for v in self.variables:
+                if not self.ambient_vars and v in FV.amb2var:
+                    continue
+                if not self.waked_vars and v in FV.var2amb:
+                    continue
+                vrs.append(v)
+            vrs = "[" + ", ".join(vrs) + "]"
+        return f"{type(self).__name__}() " + vrs
+
     def calculate(
         self,
         algo: Algorithm,

@@ -471,7 +471,10 @@ class Downwind(Algorithm):
             self.farm_controller.collect_models(self)
 
     def print_deco(
-        self, func_name: str | None = None, n_points: int | None = None
+        self,
+        func_name: str | None = None,
+        n_points: int | None = None,
+        outputs: Output | None = None,
     ) -> None:
         """
         Helper function for printing model names
@@ -482,6 +485,8 @@ class Downwind(Algorithm):
             Name of the calling function
         n_points
             The number of points
+        outputs
+            The outputs to be considered for printing
 
         """
         if self.verbosity > 0:
@@ -530,12 +535,22 @@ class Downwind(Algorithm):
                     f"    {i + len(self.farm_controller.pre_rotor_models.models)}) {m.name}: {m}"
                 )
             print(deco)
+            if outputs is not None:
+                print("  outputs:")
+                if isinstance(outputs, OutputList):
+                    outputs = outputs.outputs
+                else:
+                    outputs = [outputs]
+                for i, output in enumerate(outputs):
+                    print(f"    {i}) {output}")
+                print(deco)
             print()
 
     def _print_model_oder(
         self,
         mlist: FarmDataModelList,
         calc_pars: list[dict[str, Any]],
+        outputs: Any | None = None,
     ) -> None:
         """
         Helper function for printing model names
@@ -557,6 +572,13 @@ class Downwind(Algorithm):
                         assert m.post_rotor_models is not None
                         for j, mm in enumerate(m.post_rotor_models.models):
                             print(f"  {i:02d}.{j}) Post-rotor: {mm.name}")
+            if outputs is not None:
+                if isinstance(outputs, OutputList):
+                    outputs = outputs.outputs
+                else:
+                    outputs = [outputs]
+                for j, output in enumerate(outputs):
+                    print(f"    {i + j}) {output.name}")
 
             print(deco)
             print()
@@ -756,28 +778,8 @@ class Downwind(Algorithm):
         if not self.initialized:
             self.initialize()
 
-        # welcome:
-        self.print_deco("calc_farm")
-
         # collect models:
         mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient)
-        print("HERE DWD")
-        quit()
-
-        # initialize models:
-        if not mlist.initialized:
-            self.init_model(mlist)
-            self._calc_farm_vars(mlist)
-        self._print_model_oder(mlist, calc_pars)
-
-        # get input model data:
-        model_data, extra_data = self.get_model_data(pop=clear_mem)
-        self.print("\nInput data:\n\n", model_data, "\n")
-        if len(extra_data) > 0:
-            self.print("Extra data:")
-            for v, d in extra_data.items():
-                self.print(f"  {v}: {type(d).__name__}")
-        self.print("\nFarm variables:", ", ".join(self.farm_vars))
 
         # collect outputs:
         if isinstance(outputs, list):
@@ -787,11 +789,25 @@ class Downwind(Algorithm):
             ]
             outputs = outputs[0] if len(outputs) == 1 else OutputList(outputs)
 
-        # initialize outputs:
+        # initialize models:
+        if not mlist.initialized:
+            self.init_model(mlist)
+            self._calc_farm_vars(mlist)
         if outputs is not None:
-            outputs_data = outputs.initialize(algo=self, verbosity=self.verbosity - 1)
+            self.init_model(outputs)
 
-        self.print("\nOutput variables:", ", ".join(outputs))
+        # welcome:
+        self.print_deco("calc_farm", outputs=outputs)
+        self._print_model_oder(mlist, calc_pars, outputs)
+
+        # get input model data:
+        model_data, extra_data = self.get_model_data(pop=clear_mem)
+        self.print("\nInput data:\n\n", model_data, "\n")
+        if len(extra_data) > 0:
+            self.print("Extra data:")
+            for v, d in extra_data.items():
+                self.print(f"  {v}: {type(d).__name__}")
+        self.print("\nFarm variables:", ", ".join(self.farm_vars))
 
         # run main calculation:
         farm_results = super().calc_farm(
