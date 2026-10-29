@@ -2,10 +2,11 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 import numpy as np
+from copy import deepcopy
 from xarray import Dataset
 from typing import TYPE_CHECKING, Any
 
-from foxes.core import Algorithm, FarmDataModelList
+from foxes.core import Algorithm, FarmDataModelList, Output, OutputList
 from foxes.core import PointDataModel, PointDataModelList, FarmController
 from foxes.config import config
 import foxes.models as fm
@@ -622,7 +623,6 @@ class Downwind(Algorithm):
 
     def _collect_farm_models(
         self,
-        outputs: list[str] | bool | None,
         calc_parameters: dict[str, dict[str, Any]],
         ambient: bool,
     ) -> tuple[FarmDataModelList, list[dict[str, Any]]]:
@@ -661,11 +661,6 @@ class Downwind(Algorithm):
         # 5) calculate wake effects:
         if not ambient:
             mlist.models.append(self.get_model("FarmWakesCalculation")())
-            calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-
-        # 6) reorder back to state-turbine dimensions:
-        if not isinstance(outputs, bool) or outputs:
-            mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         return mlist, calc_pars
@@ -717,7 +712,7 @@ class Downwind(Algorithm):
 
     def calc_farm(
         self,
-        outputs: list[str] | str | None = None,
+        outputs: Output | list[str | Output] | None = ["farm_results"],
         calc_parameters: dict[str, dict[str, Any]] = {},
         ambient: bool = False,
         ambient_keep: bool = False,
@@ -731,9 +726,8 @@ class Downwind(Algorithm):
         Parameters
         ----------
         outputs
-            The output variables, ``None`` for all calculated variables, or
-            ``"default"`` for the standard farm outputs. Explicit selections
-            are respected with ``ambient_keep=True``.
+            The output variables, an instance of ``Output``,
+            or a list of outputs or output names from the model book
         calc_parameters
             Parameters for model calculation.
             Key: model name str, value: parameter dict
@@ -766,23 +760,15 @@ class Downwind(Algorithm):
         self.print_deco("calc_farm")
 
         # collect models:
-        if outputs == "default":
-            outputs = self.DEFAULT_FARM_OUTPUTS
-        if isinstance(outputs, str):
-            outputs = [outputs]
-        mlist, calc_pars = self._collect_farm_models(outputs, calc_parameters, ambient)
+        mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient)
+        print("HERE DWD")
+        quit()
 
         # initialize models:
         if not mlist.initialized:
             mlist.initialize(self, verbosity=self.verbosity - 1)
             self._calc_farm_vars(mlist)
         self._print_model_oder(mlist, calc_pars)
-
-        # update outputs:
-        if outputs is None:
-            outputs = self.farm_vars
-        else:
-            outputs = sorted(list(set(outputs).intersection(self.farm_vars)))
 
         # get input model data:
         model_data, extra_data = self.get_model_data(pop=clear_mem)
@@ -792,6 +778,19 @@ class Downwind(Algorithm):
             for v, d in extra_data.items():
                 self.print(f"  {v}: {type(d).__name__}")
         self.print("\nFarm variables:", ", ".join(self.farm_vars))
+
+        # collect outputs:
+        if isinstance(outputs, list):
+            outputs = [
+                deepcopy(self.mbook.outputs[o]) if isinstance(o, str) else o
+                for o in outputs
+            ]
+            outputs = outputs[0] if len(outputs) == 1 else OutputList(outputs)
+
+        # initialize outputs:
+        if outputs is not None:
+            outputs_data = outputs.initialize(algo=self, verbosity=self.verbosity - 1)
+
         self.print("\nOutput variables:", ", ".join(outputs))
 
         # run main calculation:

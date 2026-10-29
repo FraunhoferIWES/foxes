@@ -1,16 +1,11 @@
 from __future__ import annotations
-# mypy: disable-error-code=override
 
-from abc import abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 import pandas as pd
-import numpy as np
 
 from foxes.config import config, get_output_path
-from foxes.utils import PandasFileHelper, new_instance, all_subclasses
-import foxes.variables as FV
-import foxes.constants as FC
+from foxes.utils import PandasFileHelper, new_instance, all_subclasses, Dict
 
 from .data_calc_model import DataCalcModel
 
@@ -18,6 +13,7 @@ if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData, TData
     from foxes.core.model import Model
+
 
 class Output(DataCalcModel):
     """
@@ -69,14 +65,14 @@ class Output(DataCalcModel):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def calculate(
         self,
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
         tdata: TData,
-    ) -> dict[str, Any]:
+        results: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
         """
         The chunk based output calculation.
 
@@ -93,21 +89,25 @@ class Output(DataCalcModel):
             The farm data
         tdata
             The target point data
+        results
+            Existing chunk results, keys: output names
 
         Returns
         -------
         results
-            The resulting data, keys: output names
+            The updated chunk results, keys: output names
 
         """
-        pass
+        if results is None:
+            k = (mdata.chunki_states, mdata.chunki_points)
+            results = Dict(_name=f"chunk_results_{k}")
+        return results
 
-    @abstractmethod
     def update(
-        self, 
+        self,
         algo: Algorithm,
-        new_chunk_results: dict[tuple[int, int], dict[str, Any]], 
-        all_chunk_results: dict[tuple[int, int], dict[str, Any]], 
+        new_chunk_results: Dict[tuple[int, int], Dict[str, Any]],
+        all_chunk_results: Dict[tuple[int, int], Dict[str, Any]],
     ) -> None:
         """
         Update all chunk results with latest new chunk results.
@@ -120,19 +120,18 @@ class Output(DataCalcModel):
             New chunk results, keys: (states_chunk_index, target_chunk_index),
             values: dict with output names as keys
         all_chunk_results
-            Existing chunk results to be updated, 
+            Existing chunk results to be updated,
             keys: (states_chunk_index, target_chunk_index),
             values: dict with output names as keys
 
         """
         pass
 
-    @abstractmethod
     def aggregate(
-        self, 
-        algo: Algorithm, 
-        all_chunk_results: dict[tuple[int, int], dict[str, Any]], 
-        output_results: dict[str, Any],
+        self,
+        algo: Algorithm,
+        all_chunk_results: Dict[tuple[int, int], Dict[str, Any]],
+        output_results: Dict[str, Any],
     ) -> None:
         """
         Final aggregation of the collected results.
@@ -151,12 +150,12 @@ class Output(DataCalcModel):
         pass
 
     def find_chunk_ranges(
-        self, 
-        chunk_results: dict[tuple[int, int], dict[str, Any]],
-    ) -> tuple[(int, int)]:
+        self,
+        chunk_results: Dict[tuple[int, int], Dict[str, Any]],
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
         """
         Find start and end of states and target chunk indices
-        
+
         Parameters
         ----------
         chunk_results
@@ -267,12 +266,12 @@ class Output(DataCalcModel):
 
 
 class OutputList(Output):
-    """ A list of outputs """
+    """A list of outputs"""
 
     def __init__(
-        self, 
+        self,
         *args: Any,
-        outputs: list[Output] = [], 
+        outputs: list[Output] = [],
         **kwargs: Any,
     ) -> None:
         """
@@ -291,7 +290,7 @@ class OutputList(Output):
     def add_output(self, output: Output):
         """
         Adds an output to the list
-        
+
         Parameters
         ----------
         output
@@ -312,11 +311,61 @@ class OutputList(Output):
         """
         return self.outputs
 
-    def update(
-        self, 
+    def calculate(
+        self,
         algo: Algorithm,
-        new_chunk_results: dict[tuple[int, int], dict[str, Any]], 
-        all_chunk_results: dict[tuple[int, int], dict[str, Any]], 
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        results: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """
+        The chunk based output calculation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm
+        mdata
+            The model data
+        fdata
+            The farm data
+        tdata
+            The target point data
+        results
+            Existing chunk results, keys: output names
+
+        Returns
+        -------
+        results
+            The updated chunk results, keys: output names
+
+        """
+        results = super().calculate(
+            algo=algo,
+            mdata=mdata,
+            fdata=fdata,
+            tdata=tdata,
+            results=results,
+        )
+        for o in self.outputs:
+            results = o.calculate(
+                algo=algo,
+                mdata=mdata,
+                fdata=fdata,
+                tdata=tdata,
+                results=results,
+            )
+        return results
+
+    def update(
+        self,
+        algo: Algorithm,
+        new_chunk_results: Dict[tuple[int, int], dict[str, Any]],
+        all_chunk_results: Dict[tuple[int, int], dict[str, Any]],
     ) -> None:
         """
         Update all chunk results with latest new chunk results.
@@ -329,7 +378,7 @@ class OutputList(Output):
             New chunk results, keys: (states_chunk_index, target_chunk_index),
             values: dict with output names as keys
         all_chunk_results
-            Existing chunk results to be updated, 
+            Existing chunk results to be updated,
             keys: (states_chunk_index, target_chunk_index),
             values: dict with output names as keys
 
@@ -338,10 +387,10 @@ class OutputList(Output):
             o.update(algo, new_chunk_results, all_chunk_results)
 
     def aggregate(
-        self, 
-        algo: Algorithm, 
-        all_chunk_results: dict[tuple[int, int], dict[str, Any]], 
-        output_results: dict[str, Any],
+        self,
+        algo: Algorithm,
+        all_chunk_results: Dict[tuple[int, int], dict[str, Any]],
+        output_results: Dict[str, Any],
     ) -> None:
         """
         Final aggregation of the collected results.

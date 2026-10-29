@@ -128,13 +128,17 @@ BLOCK_CONVERGENCE = "block_convergence"
 """Identifier for convergence blocking signal
 """
 
-PREV_FARM_RESULTS = "prev_farm_results"
-"""Identifier for previous iteration farm results
-"""
 
+FDATA_FARM_ORDERED = "fdata_farmo"
+"""Identifier for farm ordered calculation data
+"""
 
 FARM_RESULTS = "farm_results"
 """Identifier for farm results dataset
+"""
+
+PREV_FARM_RESULTS = "prev_farm_results"
+"""Identifier for previous iteration farm results
 """
 
 
