@@ -157,13 +157,14 @@ def add_from_eww(
             j = 0
 
         ttype = data.loc[i, "turbine_type"]
+        P_rated = data.loc[i, "rated_power"] * 1000
         if ttype not in ttypes:
             ttype = ttype.replace(" ", "_").replace("/", "_")
         if csv_dir is not None and model_book.turbine_types[ttype] is None:
             u = ttypes.index(ttype)
             if verbosity > 0:
                 print(f"Creating turbine type: {ttype} from file {csv_map[u].name}")
-            pars: dict[str, Any] = dict(col_P="power")
+            pars: dict[str, Any] = dict(col_P="power", P_nominal=P_rated)
             if pct_pars is not None:
                 pars.update(pct_pars)
             model_book.turbine_types[ttype] = PCtFile(str(csv_map[u]), rho=rho, **pars)

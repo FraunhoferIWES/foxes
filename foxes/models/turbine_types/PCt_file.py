@@ -55,6 +55,7 @@ class PCtFile(TurbineType):
         var_ws_P
             The wind speed variable for power lookup
         pd_file_read_pars
+            Additional parameters for reading the pandas file
         parameters
             Additional parameters for TurbineType class
         """

@@ -1188,4 +1188,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Bug fixes:
+  - Bug fixed that prevented turbine models from using their loaded data during run time
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.10](https://github.com/FraunhoferIWES/foxes/commits/v1.9.10)
