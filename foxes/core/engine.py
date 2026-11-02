@@ -3,9 +3,8 @@ from __future__ import annotations
 import os
 import numpy as np
 from abc import ABC, abstractmethod
-from tqdm.autonotebook import tqdm
 from xarray import Dataset
-from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from foxes.config import config, get_output_path
 from foxes.utils import new_instance
@@ -152,18 +151,6 @@ class EngineRunner(ABC):
             ),
         )
         return fdata, True
-
-    @staticmethod
-    def _merge_prev_farm_results(
-        has_prev_farm_results: bool,
-        fdata: FData,
-        results: dict[str, Any] | None,
-    ) -> dict[str, Any]:
-        """Merge reconstructed farm-data fields into model results for downstream use."""
-        merged_results = {} if results is None else results
-        if has_prev_farm_results:
-            merged_results = {**fdata, **merged_results}
-        return merged_results
 
     @abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> Any:
@@ -615,7 +602,6 @@ class Engine(ABC):
         point_data: Dataset | None,
         states_i0_i1: tuple[int, int],
         targets_i0_i1: tuple[int, int],
-        out_vars: list[str],
         chunki_states: int,
         chunki_points: int,
         n_chunks_states: int,
@@ -638,8 +624,6 @@ class Engine(ABC):
             The start and end indices of the state slice.
         targets_i0_i1
             The start and end indices of the target slice.
-        out_vars
-            Names of the output variables.
         chunki_states
             The index of the states chunk.
         chunki_points

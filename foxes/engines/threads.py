@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from .process import ProcessEngine, ProcessEngineRunner
 
 if TYPE_CHECKING:
-    from foxes.core import Algorithm, DataCalcModel, FData, MData, TData
+    from foxes.core import Algorithm, DataCalcModel, FData, MData, TData, Output
 
 
 class ThreadsEngineRunner(ProcessEngineRunner):
@@ -21,6 +21,7 @@ class ThreadsEngineRunner(ProcessEngineRunner):
         mdata: MData,
         fdata: FData,
         tdata: TData | None = None,
+        output: Output | None = None,
         *,
         shared: Any,
         chunk_store: dict[Any, Any],
@@ -31,27 +32,35 @@ class ThreadsEngineRunner(ProcessEngineRunner):
         utm_zone: tuple[int, str] | None = None,
         **cpars: Any,
     ) -> tuple[dict[str, Any] | None, dict[Any, Any]]:
-        """Helper function for running in a single process"""
+        """Helper function for running in a single thread"""
         mdata = self._recombine_mdata_with_shared(mdata, shared)
 
         fdata, has_prev_farm_results = self._apply_prev_farm_results(algo, mdata, fdata)
         if tdata is not None:
             tdata.expand_targets()
 
-        results: dict[str, Any] | None
+        model_results: dict[str, Any] | None
         if tdata is None:
-            results = model.calculate(algo, mdata, fdata, **cpars)
+            model_results = model.calculate(algo, mdata, fdata, **cpars)
         else:
-            results = model.calculate(algo, mdata, fdata, tdata, **cpars)
-        results = self._merge_prev_farm_results(has_prev_farm_results, fdata, results)
+            model_results = model.calculate(algo, mdata, fdata, tdata, **cpars)
 
         cstore = (
             {chunk_key: algo.chunk_store[chunk_key]}
             if chunk_key in algo.chunk_store
             else {}
         )
-        self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)
-        results = self._write_chunk_results(algo, results, write_nc, out_dims, mdata)
+
+        if output is None:
+            results = None
+        else:
+            results = output.calculate(
+                algo=algo,
+                mdata=mdata,
+                fdata=fdata,
+                tdata=tdata,
+                model_results=model_results,
+            )
 
         return results, cstore
 

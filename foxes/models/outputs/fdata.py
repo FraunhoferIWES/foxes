@@ -61,8 +61,9 @@ class FarmOrderedFData(Output):
         mdata: MData,
         fdata: FData,
         tdata: TData,
-        results: Dict[str, Any] | None = None,
-    ) -> Dict[str, Any]:
+        model_results: Any,
+        chunk_results: Dict | None = None,
+    ) -> Dict:
         """
         The chunk based output calculation.
 
@@ -79,23 +80,27 @@ class FarmOrderedFData(Output):
             The farm data
         tdata
             The target point data
-        results
-            Existing chunk results, keys: output names
+        model_results
+            The results from the model calculation for this chunk
+        chunk_results
+            Existing chunk results
 
         Returns
         -------
-        results
-            The updated chunk results, keys: output names
+        chunk_results
+            The updated chunk results
 
         """
-        results = super().calculate(
+        chunk_results = super().calculate(
             algo=algo,
             mdata=mdata,
             fdata=fdata,
             tdata=tdata,
-            results=results,
+            model_results=model_results,
+            chunk_results=chunk_results,
         )
-        if FC.FDATA_FARM_ORDERED not in results:
+        if FC.FDATA_FARM_ORDERED not in chunk_results:
+            print("HERE CALC FDATA", mdata.chunki_states)
             order = fdata[FV.ORDER]
             ssel = np.broadcast_to(np.arange(order.shape[0])[:, None], order.shape)
             order_inv = np.empty_like(order)
@@ -112,6 +117,7 @@ class FarmOrderedFData(Output):
                     continue
                 if (
                     v != FV.ORDER
+                    and fdata.dims[v][:2] == (FC.STATE, FC.TURBINE)
                     and fdata[v].shape[1] > 1
                     and np.any(fdata[v] != fdata[v][0, 0, None, None])
                 ):
@@ -119,9 +125,9 @@ class FarmOrderedFData(Output):
                 else:
                     data[v] = fdata[v]
 
-            results[FC.FDATA_FARM_ORDERED] = FData(
+            chunk_results[FC.FDATA_FARM_ORDERED] = FData(
                 data=data,
                 dims={v: fdata.dims[v] for v in data},
             )
 
-        return results
+        return chunk_results

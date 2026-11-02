@@ -71,8 +71,9 @@ class Output(DataCalcModel):
         mdata: MData,
         fdata: FData,
         tdata: TData,
-        results: Dict[str, Any] | None = None,
-    ) -> Dict[str, Any]:
+        model_results: Any,
+        chunk_results: Dict | None = None,
+    ) -> Dict:
         """
         The chunk based output calculation.
 
@@ -89,93 +90,73 @@ class Output(DataCalcModel):
             The farm data
         tdata
             The target point data
-        results
-            Existing chunk results, keys: output names
+        model_results
+            The results from the model calculation for this chunk
+        chunk_results
+            Existing chunk results
 
         Returns
         -------
-        results
-            The updated chunk results, keys: output names
+        chunk_results
+            The updated chunk results
 
         """
-        if results is None:
+        if chunk_results is None:
             k = (mdata.chunki_states, mdata.chunki_points)
-            results = Dict(_name=f"chunk_results_{k}")
-        return results
+            chunk_results = Dict(_name=f"chunk_results_{k}")
+        return chunk_results
 
-    def update(
+    def update_results(
         self,
         algo: Algorithm,
-        new_chunk_results: Dict[tuple[int, int], Dict[str, Any]],
-        all_chunk_results: Dict[tuple[int, int], Dict[str, Any]],
+        n_chunks_states: int,
+        n_chunks_targets: int,
+        new_chunk_results: Dict[tuple[int, int], Dict],
+        output_results: Dict,
     ) -> None:
         """
-        Update all chunk results with latest new chunk results.
+        Update output results with latest new chunk results.
 
         Parameters
         ----------
         algo
             The algorithm
+        n_chunks_states
+            The number of state chunks
+        n_chunks_targets
+            The number of target chunks
         new_chunk_results
             New chunk results, keys: (states_chunk_index, target_chunk_index),
-            values: dict with output names as keys
-        all_chunk_results
-            Existing chunk results to be updated,
-            keys: (states_chunk_index, target_chunk_index),
-            values: dict with output names as keys
+            values: dict with chunk results
+        output_results
+            Existing output results to be updated
 
         """
         pass
 
-    def aggregate(
+    def finalize_results(
         self,
         algo: Algorithm,
-        all_chunk_results: Dict[tuple[int, int], Dict[str, Any]],
-        output_results: Dict[str, Any],
+        n_chunks_states: int,
+        n_chunks_targets: int,
+        output_results: Dict,
     ) -> None:
         """
-        Final aggregation of the collected results.
+        Final update of the output results, after all chunks have been processed.
 
         Parameters
         ----------
         algo
             The algorithm
-        all_chunk_results
-            All chunk results, keys: (states_chunk_index, target_chunk_index),
-            values: dict with output names as keys
+        n_chunks_states
+            The number of state chunks
+        n_chunks_targets
+            The number of target chunks
         output_results
-            Existing aggregated output results to be updated, keys: Results names
+            Existing output results to be updated
 
         """
         pass
-
-    def find_chunk_ranges(
-        self,
-        chunk_results: Dict[tuple[int, int], Dict[str, Any]],
-    ) -> tuple[tuple[int, int], tuple[int, int]]:
-        """
-        Find start and end of states and target chunk indices
-
-        Parameters
-        ----------
-        chunk_results
-            The chunk results, keys: (states_chunk_index, target_chunk_index),
-            values: dict with output names as keys
-
-        Returns
-        -------
-        i0_i1
-            Tuple with start and end indices of states chunks
-        j0_j1
-            Tuple with start and end indices of target chunks
-
-        """
-        a = list(zip(*chunk_results.keys()))
-        i0 = min(a[0])
-        i1 = max(a[0]) + 1
-        j0 = min(a[1])
-        j1 = max(a[1]) + 1
-        return (i0, i1), (j0, j1)
 
     def get_fpath(self, fname: str | Path) -> Path:
         """
@@ -317,8 +298,9 @@ class OutputList(Output):
         mdata: MData,
         fdata: FData,
         tdata: TData,
-        results: Dict[str, Any] | None = None,
-    ) -> Dict[str, Any]:
+        model_results: Any,
+        chunk_results: Dict | None = None,
+    ) -> Dict:
         """
         The chunk based output calculation.
 
@@ -335,76 +317,97 @@ class OutputList(Output):
             The farm data
         tdata
             The target point data
-        results
-            Existing chunk results, keys: output names
+        model_results
+            The results from the model calculation for this chunk
+        chunk_results
+            Existing chunk results
 
         Returns
         -------
-        results
-            The updated chunk results, keys: output names
+        chunk_results
+            The updated chunk results
 
         """
-        results = super().calculate(
+        chunk_results = super().calculate(
             algo=algo,
             mdata=mdata,
             fdata=fdata,
             tdata=tdata,
-            results=results,
+            model_results=model_results,
+            chunk_results=chunk_results,
         )
         for o in self.outputs:
-            results = o.calculate(
+            chunk_results = o.calculate(
                 algo=algo,
                 mdata=mdata,
                 fdata=fdata,
                 tdata=tdata,
-                results=results,
+                model_results=model_results,
+                chunk_results=chunk_results,
             )
-        return results
+        return chunk_results
 
-    def update(
+    def update_results(
         self,
         algo: Algorithm,
-        new_chunk_results: Dict[tuple[int, int], dict[str, Any]],
-        all_chunk_results: Dict[tuple[int, int], dict[str, Any]],
+        n_chunks_states: int,
+        n_chunks_targets: int,
+        new_chunk_results: Dict[tuple[int, int], Dict],
+        output_results: Dict,
     ) -> None:
         """
-        Update all chunk results with latest new chunk results.
+        Update output results with latest new chunk results.
 
         Parameters
         ----------
         algo
             The algorithm
+        n_chunks_states
+            The number of state chunks
+        n_chunks_targets
+            The number of target chunks
         new_chunk_results
             New chunk results, keys: (states_chunk_index, target_chunk_index),
-            values: dict with output names as keys
-        all_chunk_results
-            Existing chunk results to be updated,
-            keys: (states_chunk_index, target_chunk_index),
-            values: dict with output names as keys
+            values: dict with chunk results
+        output_results
+            Existing output results to be updated
 
         """
         for o in self.outputs:
-            o.update(algo, new_chunk_results, all_chunk_results)
+            o.update_results(
+                algo,
+                n_chunks_states,
+                n_chunks_targets,
+                new_chunk_results,
+                output_results,
+            )
 
-    def aggregate(
+    def finalize_results(
         self,
         algo: Algorithm,
-        all_chunk_results: Dict[tuple[int, int], dict[str, Any]],
-        output_results: Dict[str, Any],
+        n_chunks_states: int,
+        n_chunks_targets: int,
+        output_results: Dict,
     ) -> None:
         """
-        Final aggregation of the collected results.
+        Final update of the output results, after all chunks have been processed.
 
         Parameters
         ----------
         algo
             The algorithm
-        all_chunk_results
-            All chunk results, keys: (states_chunk_index, target_chunk_index),
-            values: dict with output names as keys
+        n_chunks_states
+            The number of state chunks
+        n_chunks_targets
+            The number of target chunks
         output_results
-            Existing aggregated output results to be updated, keys: Results names
+            Existing output results to be updated
 
         """
         for o in self.outputs:
-            o.aggregate(algo, all_chunk_results, output_results)
+            o.finalize_results(
+                algo,
+                n_chunks_states,
+                n_chunks_targets,
+                output_results,
+            )

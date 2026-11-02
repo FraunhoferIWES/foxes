@@ -695,7 +695,7 @@ class Downwind(Algorithm):
         self,
         mlist: FarmDataModelList,
         model_data: Dataset,
-        outputs: list[str] | None = None,
+        output: Output | None = None,
         normalize: bool = False,
         **kwargs: Any,
     ) -> Dataset:
@@ -708,8 +708,8 @@ class Downwind(Algorithm):
             The model list
         model_data
             The initial model data
-        outputs
-            The output variables, or None for defaults
+        output
+            The output object
         normalize
             Normalize the weights to 1 wrt sum over states
         kwargs
@@ -722,9 +722,8 @@ class Downwind(Algorithm):
             dimensions (state, turbine)
 
         """
-        out_vars = self.farm_vars if outputs is None else outputs
         farm_results = super()._launch_parallel_farm_calc(
-            mlist, model_data, out_vars=out_vars, **kwargs
+            mlist, model_data, output=output, **kwargs
         )
 
         if normalize:
@@ -815,7 +814,7 @@ class Downwind(Algorithm):
             model_data,
             extra_data=extra_data,
             parameters=calc_pars,
-            outputs=outputs,
+            output=outputs,
             clear_mem=clear_mem,
             **kwargs,
         )
