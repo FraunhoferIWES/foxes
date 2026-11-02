@@ -28,11 +28,23 @@ class Output(DataCalcModel):
         out_dir: str | Path | None = None,
         out_fname_fun: Callable[[Path], Path] | None = None,
         nofig: bool = False,
+        mdata_variables: list[str] | None = [],
+        fdata_variables: list[str] | None = None,
+        tdata_variables: list[str] | None = None, 
         **kwargs: Any,
     ) -> None:
         """
         Parameters
         ----------
+        mdata_variables
+            The required variables from mdata during calculate,
+            None means all
+        fdata_variables
+            The required variables from fdata during calculate,
+            None means all
+        tdata_variables
+            The required variables from tdata during calculate,
+            None means all
         out_dir
             The output file directory
         out_fname_fun
@@ -48,11 +60,29 @@ class Output(DataCalcModel):
         )
         self.out_fname_fun = out_fname_fun
         self.nofig = nofig
+        self._mdata_variables = mdata_variables
+        self._fdata_variables = fdata_variables
+        self._tdata_variables = tdata_variables
 
         if not self.out_dir.is_dir():
             print(f"{type(self).__name__}: Creating output dir {self.out_dir}")
             self.out_dir.mkdir(parents=True)
 
+    @property
+    def mdata_variables(self):
+        """ The required variables from mdata during calculate """
+        return self._mdata_variables
+
+    @property
+    def fdata_variables(self):
+        """ The required variables from fdata during calculate """
+        return self._fdata_variables
+
+    @property
+    def tdata_variables(self):
+        """ The required variables from tdata during calculate """
+        return self._tdata_variables
+    
     def output_coords(self) -> tuple[str, ...]:
         """
         Gets the coordinates of all output arrays
@@ -72,8 +102,8 @@ class Output(DataCalcModel):
         fdata: FData,
         tdata: TData,
         model_results: Any,
-        chunk_results: Dict | None = None,
-    ) -> Dict:
+        chunk_results: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
         """
         The chunk based output calculation.
 
@@ -93,12 +123,12 @@ class Output(DataCalcModel):
         model_results
             The results from the model calculation for this chunk
         chunk_results
-            Existing chunk results
+            Existing chunk results, keys are result object names
 
         Returns
         -------
         chunk_results
-            The updated chunk results
+            The updated chunk results, keys are result object names
 
         """
         if chunk_results is None:
@@ -111,8 +141,8 @@ class Output(DataCalcModel):
         algo: Algorithm,
         n_chunks_states: int,
         n_chunks_targets: int,
-        new_chunk_results: Dict[tuple[int, int], Dict],
-        output_results: Dict,
+        new_chunk_results: Dict[str, Dict[tuple[int, int], Any]],
+        output_results: Dict[str, Any],
     ) -> None:
         """
         Update output results with latest new chunk results.
@@ -126,10 +156,10 @@ class Output(DataCalcModel):
         n_chunks_targets
             The number of target chunks
         new_chunk_results
-            New chunk results, keys: (states_chunk_index, target_chunk_index),
-            values: dict with chunk results
+            New chunk results, keys are result object names.
+            Values are dicts with keys (states_chunk_index, target_chunk_index)
         output_results
-            Existing output results to be updated
+            Output results to be updated, keys are result object names
 
         """
         pass
@@ -139,7 +169,7 @@ class Output(DataCalcModel):
         algo: Algorithm,
         n_chunks_states: int,
         n_chunks_targets: int,
-        output_results: Dict,
+        output_results: Dict[str, Any],
     ) -> None:
         """
         Final update of the output results, after all chunks have been processed.
@@ -153,7 +183,7 @@ class Output(DataCalcModel):
         n_chunks_targets
             The number of target chunks
         output_results
-            Existing output results to be updated
+            Output results to be updated, keys are result object names
 
         """
         pass
@@ -266,8 +296,37 @@ class OutputList(Output):
             Additional parameters for the base class
         """
         super().__init__(*args, **kwargs)
-        self.outputs = outputs
+        self._outputs = outputs
+        self._update_variables()
 
+    def _update_variables(self):
+        """ Updatest the variables based on outputs """
+        for vrs in ["_mdata_variables", "_fdata_variables", "_tdata_variables"]:
+            v: list[str] | None = []
+            for o in self._outputs:
+                vrs0 = getattr(o, vrs)
+                if vrs0 is None:
+                    v = None
+                    break
+                else: 
+                    v += vrs0
+            if v is not None:
+                v = list(set(v))
+            setattr(self, vrs, v)
+
+    @property
+    def outputs(self):
+        """
+        The outputs
+        
+        Returns
+        -------
+        outputs
+            The outputs
+        
+        """
+        return self._outputs
+    
     def add_output(self, output: Output):
         """
         Adds an output to the list
@@ -278,7 +337,8 @@ class OutputList(Output):
             The output to be added
 
         """
-        self.outputs.append(output)
+        self._outputs.append(output)
+        self._update_variables()
 
     def sub_models(self) -> list[Model]:
         """
@@ -299,8 +359,8 @@ class OutputList(Output):
         fdata: FData,
         tdata: TData,
         model_results: Any,
-        chunk_results: Dict | None = None,
-    ) -> Dict:
+        chunk_results: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
         """
         The chunk based output calculation.
 
@@ -320,12 +380,12 @@ class OutputList(Output):
         model_results
             The results from the model calculation for this chunk
         chunk_results
-            Existing chunk results
+            Existing chunk results, keys are result object names
 
         Returns
         -------
         chunk_results
-            The updated chunk results
+            The updated chunk results, keys are result object names
 
         """
         chunk_results = super().calculate(
@@ -352,8 +412,8 @@ class OutputList(Output):
         algo: Algorithm,
         n_chunks_states: int,
         n_chunks_targets: int,
-        new_chunk_results: Dict[tuple[int, int], Dict],
-        output_results: Dict,
+        new_chunk_results: Dict[str, Dict[tuple[int, int], Any]],
+        output_results: Dict[str, Any],
     ) -> None:
         """
         Update output results with latest new chunk results.
@@ -367,10 +427,10 @@ class OutputList(Output):
         n_chunks_targets
             The number of target chunks
         new_chunk_results
-            New chunk results, keys: (states_chunk_index, target_chunk_index),
-            values: dict with chunk results
+            New chunk results, keys are result object names.
+            Values are dicts with keys (states_chunk_index, target_chunk_index)
         output_results
-            Existing output results to be updated
+            Output results to be updated, keys are result object names
 
         """
         for o in self.outputs:
@@ -387,7 +447,7 @@ class OutputList(Output):
         algo: Algorithm,
         n_chunks_states: int,
         n_chunks_targets: int,
-        output_results: Dict,
+        output_results: Dict[str, Any],
     ) -> None:
         """
         Final update of the output results, after all chunks have been processed.
@@ -401,7 +461,7 @@ class OutputList(Output):
         n_chunks_targets
             The number of target chunks
         output_results
-            Existing output results to be updated
+            Output results to be updated, keys are result object names
 
         """
         for o in self.outputs:

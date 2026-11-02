@@ -2,7 +2,6 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 import numpy as np
-from copy import deepcopy
 from xarray import Dataset
 from typing import TYPE_CHECKING, Any
 
@@ -647,6 +646,7 @@ class Downwind(Algorithm):
         self,
         calc_parameters: dict[str, dict[str, Any]],
         ambient: bool,
+        output: Output | None = None,
     ) -> tuple[FarmDataModelList, list[dict[str, Any]]]:
         """
         Helper function that creates model list
@@ -684,6 +684,10 @@ class Downwind(Algorithm):
         if not ambient:
             mlist.models.append(self.get_model("FarmWakesCalculation")())
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+
+        # 6) prepare for output:
+        mlist.models.append(self.get_model("PrepareForOutput")(output=output))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         return mlist, calc_pars
 
@@ -777,23 +781,23 @@ class Downwind(Algorithm):
         if not self.initialized:
             self.initialize()
 
-        # collect models:
-        mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient)
-
         # collect outputs:
         if isinstance(outputs, list):
             outputs = [
-                deepcopy(self.mbook.outputs[o]) if isinstance(o, str) else o
+                self.mbook.outputs[o] if isinstance(o, str) else o
                 for o in outputs
             ]
             outputs = outputs[0] if len(outputs) == 1 else OutputList(outputs)
+        if outputs is not None:
+            self.init_model(outputs)
+
+        # collect models:
+        mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient, output=outputs)
 
         # initialize models:
         if not mlist.initialized:
             self.init_model(mlist)
             self._calc_farm_vars(mlist)
-        if outputs is not None:
-            self.init_model(outputs)
 
         # welcome:
         self.print_deco("calc_farm", outputs=outputs)
