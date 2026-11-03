@@ -135,6 +135,8 @@ if __name__ == "__main__":
 
     print("\nCalc time =", time1 - time0, "\n")
 
+    quit()
+
     o = foxes.output.FarmResultsEval(farm_results, algo=algo)
     o.add_capacity_factor(ambient=False)
     o.add_capacity_factor(ambient=True)

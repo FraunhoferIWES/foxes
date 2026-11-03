@@ -684,10 +684,84 @@ class ModelBook:
             example_vars={"height": 500},
         )
 
+        FARM_OUTPUTS_MAP = {
+            "all": None,
+            "default": [
+                FV.X,
+                FV.Y,
+                FV.H,
+                FV.D,
+                FV.AMB_WD,
+                FV.YAW,
+                FV.AMB_RHO,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_P,
+                FV.P,
+            ],
+            "P": [
+                FV.AMB_P,
+                FV.P,
+            ],
+            "wsP": [
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_P,
+                FV.P,
+            ],
+            "wstiP": [
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_P,
+                FV.P,
+            ],
+            "rhowstiP": [
+                FV.AMB_RHO,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_P,
+                FV.P,
+            ],
+        }
+
         self.outputs = FDict(_name="outputs")
-        self.outputs["farm_results"] = fm.outputs.FarmResultsOutput(ambient_vars=True, waked_vars=True)
-        self.outputs["farm_results_amb"] = fm.outputs.FarmResultsOutput(ambient_vars=True, waked_vars=False)
-        self.outputs["farm_results_waked"] = fm.outputs.FarmResultsOutput(ambient_vars=False, waked_vars=True)
+        self.outputs["farm_results"] = fm.outputs.FarmResultsOutput(
+            ambient_vars=True, 
+            waked_vars=True, 
+            variables=FARM_OUTPUTS_MAP["default"],
+        )
+        self.outputs["farm_results_amb"] = fm.outputs.FarmResultsOutput(
+            ambient_vars=True, 
+            waked_vars=False, 
+            variables=FARM_OUTPUTS_MAP["default"],
+        )
+        self.outputs.add_factory(
+            fm.outputs.FarmResultsOutput,
+            "farm_results_amb_<variables>",
+            variables=lambda v: FARM_OUTPUTS_MAP[v],
+            hints={"variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"},
+            kwargs=dict(ambient_vars=True, waked_vars=False),
+        )
+        self.outputs.add_factory(
+            fm.outputs.FarmResultsOutput,
+            "farm_results_waked_<variables>",
+            variables=lambda v: FARM_OUTPUTS_MAP[v],
+            hints={"variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"},
+            kwargs=dict(ambient_vars=False, waked_vars=True),
+        )
+        self.outputs.add_factory(
+            fm.outputs.FarmResultsOutput,
+            "farm_results_<variables>",
+            variables=lambda v: FARM_OUTPUTS_MAP[v],
+            hints={"variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"},
+            kwargs=dict(ambient_vars=True, waked_vars=True),
+        )
 
         self.sources = FDict(
             _name="sources",

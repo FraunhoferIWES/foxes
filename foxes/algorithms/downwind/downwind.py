@@ -38,25 +38,6 @@ class Downwind(Algorithm):
     object.
     """
 
-    DEFAULT_FARM_OUTPUTS = [
-        FV.X,
-        FV.Y,
-        FV.H,
-        FV.D,
-        FV.AMB_WD,
-        FV.AMB_REWS,
-        FV.AMB_TI,
-        FV.AMB_RHO,
-        FV.AMB_CT,
-        FV.AMB_P,
-        FV.WD,
-        FV.REWS,
-        FV.YAW,
-        FV.TI,
-        FV.CT,
-        FV.P,
-    ]
-
     def __init__(
         self,
         farm: WindFarm,
@@ -737,10 +718,9 @@ class Downwind(Algorithm):
 
     def calc_farm(
         self,
-        outputs: Output | list[str | Output] | None = ["farm_results"],
+        outputs: str | Output | list[str | Output] | None = "farm_results",
         calc_parameters: dict[str, dict[str, Any]] = {},
         ambient: bool = False,
-        ambient_keep: bool = False,
         finalize: bool = True,
         clear_mem: bool = False,
         **kwargs: Any,
@@ -758,11 +738,6 @@ class Downwind(Algorithm):
             Key: model name str, value: parameter dict
         ambient
             Skip wake effects and calculate ambient results only.
-        ambient_keep
-            Retain ordinary variables alongside their ``FV.AMB_*`` counterparts
-            when ``ambient=True``. Both contain the same unwaked values.
-            Otherwise ordinary variables with ambient counterparts are dropped.
-            This option has no effect when ``ambient=False``.
         finalize
             Flag for finalization after calculation
         clear_mem
@@ -782,12 +757,18 @@ class Downwind(Algorithm):
             self.initialize()
 
         # collect outputs:
-        if isinstance(outputs, list):
+        if isinstance(outputs, Output):
+            oneout = True
+        elif isinstance(outputs, str):
+            outputs = self.mbook.outputs[outputs]
+            oneout = True
+        elif isinstance(outputs, list):
             outputs = [
                 self.mbook.outputs[o] if isinstance(o, str) else o
                 for o in outputs
             ]
-            outputs = outputs[0] if len(outputs) == 1 else OutputList(outputs)
+            oneout = len(outputs) == 1
+            outputs = outputs[0] if oneout else OutputList(outputs)
         if outputs is not None:
             self.init_model(outputs)
 
@@ -813,7 +794,7 @@ class Downwind(Algorithm):
         self.print("\nFarm variables:", ", ".join(self.farm_vars))
 
         # run main calculation:
-        farm_results = super().calc_farm(
+        results = super().calc_farm(
             mlist,
             model_data,
             extra_data=extra_data,
@@ -822,10 +803,8 @@ class Downwind(Algorithm):
             clear_mem=clear_mem,
             **kwargs,
         )
-        if farm_results is not None:
-            farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-            if FV.ORDER in farm_results:
-                farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(config.dtype_int)
+        if results is not None and oneout and len(results) == 1:
+            results = next(iter(results.values()))
         del model_data
 
         # finalize models:
@@ -834,11 +813,7 @@ class Downwind(Algorithm):
             mlist.finalize(self, self.verbosity - 1)
             self.finalize(clear_mem=clear_mem)
 
-        if ambient and farm_results and not ambient_keep:
-            dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]
-            farm_results = farm_results.drop_vars(dvars)
-
-        return farm_results
+        return results
 
     def _collect_point_models(
         self,

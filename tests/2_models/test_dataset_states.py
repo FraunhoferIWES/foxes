@@ -3,7 +3,7 @@ import xarray as xr
 
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.algorithms.downwind.models.reorder_farm_output import ReorderFarmOutput
+from foxes.algorithms.downwind.models.prepare_for_output import ReorderFarmOutput
 from foxes.core import FData, MData
 from foxes.input.states import DatasetStates
 

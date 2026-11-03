@@ -483,7 +483,7 @@ class WindFarm:
 
         """
         return [
-            t.wind_farm_name if t.wind_farm_name is not None else self.name
+            t.wind_farm_name
             for t in self.__turbines
         ]
 
@@ -539,7 +539,7 @@ class WindFarm:
 
         """
         return [
-            t.cluster_name if t.cluster_name is not None else None
+            t.cluster_name
             for t in self.__turbines
         ]
 

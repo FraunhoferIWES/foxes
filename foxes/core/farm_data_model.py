@@ -296,9 +296,12 @@ class FarmDataModelList(FarmDataModel):
                 f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
             )
 
+        out = {}
+        ovars = self.output_farm_vars(algo)
         for mi, m in enumerate(self.models):
             # print("MLIST VARS BEFORE",m.name,list(fdata.keys()),parameters[mi])
             res = m.calculate(algo, mdata, fdata, **parameters[mi])
+            out.update({v: res[v] for v in ovars if v in res})
             fdata.update(res)
 
-        return {v: fdata[v] for v in self.output_farm_vars(algo)}
+        return out

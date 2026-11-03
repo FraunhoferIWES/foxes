@@ -5,25 +5,29 @@ from typing import TYPE_CHECKING, Any
 from xarray import Dataset
 
 from foxes.utils import Dict
+from foxes.core import Output
+from foxes.config import config
 import foxes.constants as FC
 import foxes.variables as FV
-
-from .fdata import FarmOrderedFData
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData, TData
 
 
-class FarmResultsOutput(FarmOrderedFData):
+class FarmResultsOutput(Output):
     """
     Creates the farm results dataset
     """
 
     def __init__(
         self,
-        *args: tuple[Any, ...],
-        turbine_names: bool = True,
+        variables: list[str] | None = None,
+        ambient_vars: bool = True,
+        waked_vars: bool = True,
+        add_turbine_names: bool = True,
+        add_farm_names: bool = True,
+        add_cluster_names: bool = True,
         **kwargs: Any,
     ):
         """
@@ -31,13 +35,33 @@ class FarmResultsOutput(FarmOrderedFData):
         ----------
         *args
             Additional positional arguments for the base class
-        turbine_names
+        variables
+            List of variables to include in the results. 
+            If None, all variables are included.
+        ambient_vars
+            Include ambient variables in the results
+        waked_vars
+            Include waked variables in the results
+        add_turbine_names
             Add turbine names to results
+        add_farm_names
+            Add farm names to results
+        add_cluster_names
+            Add cluster names to results
         **kwargs
             Additional parameters for the base class
         """
-        super().__init__(*args, **kwargs)
-        self.turbine_names = turbine_names
+        super().__init__(
+            mdata_variables=[FC.STATE],
+            fdata_variables=variables, 
+            tdata_variables=[],
+            **kwargs,
+        )
+        self.ambient_vars = ambient_vars
+        self.waked_vars = waked_vars
+        self.add_turbine_names = add_turbine_names
+        self.add_farm_names = add_farm_names
+        self.add_cluster_names = add_cluster_names
 
     def calculate(
         self,
@@ -46,8 +70,8 @@ class FarmResultsOutput(FarmOrderedFData):
         fdata: FData,
         tdata: TData,
         model_results: Any,
-        chunk_results: Dict | None = None,
-    ) -> Dict:
+        chunk_results: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
         """
         The chunk based output calculation.
 
@@ -67,12 +91,12 @@ class FarmResultsOutput(FarmOrderedFData):
         model_results
             The results from the model calculation for this chunk
         chunk_results
-            Existing chunk results
+            Existing chunk results, keys are result object names
 
         Returns
         -------
         chunk_results
-            The updated chunk results
+            The updated chunk results, keys are result object names
 
         """
         chunk_results = super().calculate(
@@ -84,25 +108,28 @@ class FarmResultsOutput(FarmOrderedFData):
             chunk_results=chunk_results,
         )
         if FC.FARM_RESULTS not in chunk_results:
-            fdata = chunk_results[FC.FDATA_FARM_ORDERED]
 
             i0 = mdata.states_i0(counter=True)
             i1 = i0 + mdata.n_states
-            attrs: dict[str, Any] = dict(
-                chunki_states=mdata.chunki_states,
-                chunki_points=mdata.chunki_points,
-                states_i0=i0,
-            )
+            attrs: dict[str, Any] = {}
 
-            vrs: list[str] = (
-                self.variables if self.variables is not None else list(fdata.keys())
-            )
+            vrs = self.fdata_variables
+            if vrs is None:
+                vrs = list(fdata.keys())
             coords: dict[str, np.ndarray] = {}
             dvars: dict[str, np.ndarray] = {}
             if FC.STATE in mdata and not np.all(mdata[FC.STATE] == np.arange(i0, i1)):
                 coords[FC.STATE] = mdata[FC.STATE]
             for v in vrs:
-                if v in [FC.STATE, FC.TURBINE, FC.XYH, FV.TXYH]:
+                if v in [
+                    FC.STATE, 
+                    FC.TURBINE, 
+                    FC.FARM,
+                    FC.CLUSTER,
+                    FC.XYH, 
+                    FV.TXYH, 
+                    FC.TNAME,
+                ]:
                     continue
                 if not self.ambient_vars and v in FV.amb2var:
                     continue
@@ -120,13 +147,6 @@ class FarmResultsOutput(FarmOrderedFData):
                 else:
                     dvars[v] = ((FC.STATE, FC.TURBINE), data)
 
-            if attrs["chunki_states"] == 0 and attrs["chunki_points"] == 0:
-                if self.turbine_names:
-                    dvars[FC.TNAME] = (
-                        (FC.TURBINE,),
-                        [t.name for t in algo.farm.turbines],
-                    )
-
             chunk_results[FC.FARM_RESULTS] = dict(
                 coords=coords,
                 data_vars=dvars,
@@ -140,8 +160,8 @@ class FarmResultsOutput(FarmOrderedFData):
         algo: Algorithm,
         n_chunks_states: int,
         n_chunks_targets: int,
-        new_chunk_results: Dict[tuple[int, int], Dict],
-        output_results: Dict,
+        new_chunk_results: Dict[str, Dict[tuple[int, int], Any]],
+        output_results: Dict[str, Any],
     ) -> None:
         """
         Update output results with latest new chunk results.
@@ -155,30 +175,24 @@ class FarmResultsOutput(FarmOrderedFData):
         n_chunks_targets
             The number of target chunks
         new_chunk_results
-            New chunk results, keys: (states_chunk_index, target_chunk_index),
-            values: dict with chunk results
+            New chunk results, keys are result object names.
+            Values are dicts with keys (states_chunk_index, target_chunk_index)
         output_results
-            Existing output results to be updated
+            Output results to be updated, keys are result object names
 
         """
-        for k, nr in new_chunk_results.items():
-            if FC.FARM_RESULTS in nr:
-                fr = nr.pop(FC.FARM_RESULTS)
-                if FC.FARM_RESULTS not in output_results:
-                    output_results[FC.FARM_RESULTS] = Dict(_name=FC.FARM_RESULTS)
-                    output_results[FC.FARM_RESULTS][k] = fr
-                elif k not in output_results[FC.FARM_RESULTS]:
-                    output_results[FC.FARM_RESULTS][k] = fr
-                else:
-                    for s in list(fr.keys()):
-                        output_results[FC.FARM_RESULTS][k][s].update(fr[s])
+        fr = new_chunk_results.pop(FC.FARM_RESULTS)
+        if FC.FARM_RESULTS not in output_results:
+            output_results[FC.FARM_RESULTS] = Dict(fr, _name=FC.FARM_RESULTS)
+        else:
+            output_results[FC.FARM_RESULTS].update(fr)
 
     def finalize_results(
         self,
         algo: Algorithm,
         n_chunks_states: int,
         n_chunks_targets: int,
-        output_results: Dict,
+        output_results: Dict[str, Any],
     ) -> None:
         """
         Final update of the output results, after all chunks have been processed.
@@ -192,7 +206,7 @@ class FarmResultsOutput(FarmOrderedFData):
         n_chunks_targets
             The number of target chunks
         output_results
-            Existing output results to be updated
+            Output results to be updated, keys are result object names
 
         """
         assert n_chunks_targets == 1, (
@@ -251,4 +265,17 @@ class FarmResultsOutput(FarmOrderedFData):
 
         # create dataset:
         ds = Dataset(data_vars=dvars, coords=coords, attrs=attrs)
+        if self.add_turbine_names:
+            ds[FC.TNAME] = ((FC.TURBINE,), algo.farm.turbine_names)
+        if self.add_farm_names:
+            fnames = algo.farm.wind_farm_list
+            if set(fnames) != set([None]):
+                ds[FC.FARM] = ((FC.TURBINE,), fnames)
+        if self.add_cluster_names:
+            cnames = algo.farm.cluster_list
+            if set(cnames) != set([None]):
+                ds[FC.CLUSTER] = ((FC.TURBINE,), cnames)
+        if FV.ORDER in ds:
+            ds[FV.ORDER] = ds[FV.ORDER].astype(config.dtype_int)
+
         output_results[FC.FARM_RESULTS] = ds

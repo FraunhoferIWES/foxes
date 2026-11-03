@@ -13,11 +13,9 @@ import foxes.constants as FC
 if TYPE_CHECKING:
     from foxes.core import Algorithm, DataCalcModel, MData, Output
 
-
 def _run_map(func: Any, inputs: Any, *args: Any, **kwargs: Any) -> list[Any]:
     """Helper function for running map func on proc"""
     return [func(x, *args, **kwargs) for x in inputs]
-
 
 class PoolEngine(Engine):
     """
@@ -273,6 +271,28 @@ class PoolEngine(Engine):
         )
         print("HERE POOL START")
 
+        def _handle_new_results(k, new_results, chunk_results, new_chunk_store):
+            """ Helper function for new chunk results """
+            res, cs = new_results
+            for rname, r in res.items():
+                if rname not in chunk_results:
+                    chunk_results[rname] = {k: r}
+                elif k not in chunk_results[rname]:
+                    chunk_results[rname][k] = r
+                else:
+                    chunk_results[rname][k].update(r)
+            if k in new_chunk_store:
+                new_chunk_store[k].update(cs)
+            else:
+                new_chunk_store[k] = cs
+            output.update_results(
+                algo,
+                n_chunks_states=n_chunks_states,
+                n_chunks_targets=n_chunks_targets,
+                new_chunk_results=chunk_results,
+                output_results=output_results,
+            )
+
         # start calculation:
         futures = {}
         runner = self.new_runner()
@@ -366,16 +386,9 @@ class PoolEngine(Engine):
 
                     while len(futures) > self.n_workers * 3:
                         k = next(iter(futures))
-                        chunk_results[k], cs = self.await_result(futures.pop(k))
-                        new_chunk_store[k].update(cs)
-                        output.update_results(
-                            algo,
-                            n_chunks_states=n_chunks_states,
-                            n_chunks_targets=n_chunks_targets,
-                            new_chunk_results=chunk_results,
-                            output_results=output_results,
-                        )
-                        del k, cs
+                        print("HERE POOL A", k)
+                        new_results = self.await_result(futures.pop(k))
+                        _handle_new_results(k, new_results, chunk_results, new_chunk_store)
 
                     i0_targets = i1_targets
                 i0_states = i1_states
@@ -383,17 +396,9 @@ class PoolEngine(Engine):
 
             fkeys = list(futures.keys())
             for k in fkeys:
-                print("HERE POOL", k)
-                chunk_results[k], cs = self.await_result(futures.pop(k))
-                new_chunk_store[k].update(cs)
-                output.update_results(
-                    algo,
-                    n_chunks_states=n_chunks_states,
-                    n_chunks_targets=n_chunks_targets,
-                    new_chunk_results=chunk_results,
-                    output_results=output_results,
-                )
-                del k, cs
+                print("HERE POOL B", k)
+                new_results = self.await_result(futures.pop(k))
+                _handle_new_results(k, new_results, chunk_results, new_chunk_store)
 
             output.finalize_results(
                 algo=algo,

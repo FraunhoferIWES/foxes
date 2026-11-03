@@ -129,10 +129,6 @@ BLOCK_CONVERGENCE = "block_convergence"
 """
 
 
-FDATA_FARM_ORDERED = "fdata_farmo"
-"""Identifier for farm ordered calculation data
-"""
-
 FARM_RESULTS = "farm_results"
 """Identifier for farm results dataset
 """
