@@ -4,7 +4,7 @@ import numpy as np
 from typing import TYPE_CHECKING, Any
 from xarray import Dataset
 
-from foxes.utils import Dict
+from foxes.utils import Dict, write_nc
 from foxes.core import Output
 from foxes.config import config
 import foxes.constants as FC
@@ -13,6 +13,7 @@ import foxes.variables as FV
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData, TData
+    from pathlib import Path
 
 
 class FarmResultsOutput(Output):
@@ -187,6 +188,23 @@ class FarmResultsOutput(Output):
         else:
             output_results[FC.FARM_RESULTS].update(fr)
 
+    def _create_dataset(self, algo, coords, dvars, attrs):
+        """ Create dataset from data """
+        ds = Dataset(data_vars=dvars, coords=coords, attrs=attrs)
+        if self.add_turbine_names:
+            ds[FC.TNAME] = ((FC.TURBINE,), algo.farm.turbine_names)
+        if self.add_farm_names:
+            fnames = algo.farm.wind_farm_list
+            if set(fnames) != set([None]):
+                ds[FC.FARM] = ((FC.TURBINE,), fnames)
+        if self.add_cluster_names:
+            cnames = algo.farm.cluster_list
+            if set(cnames) != set([None]):
+                ds[FC.CLUSTER] = ((FC.TURBINE,), cnames)
+        if FV.ORDER in ds:
+            ds[FV.ORDER] = ds[FV.ORDER].astype(config.dtype_int)
+        return ds
+
     def finalize_results(
         self,
         algo: Algorithm,
@@ -264,18 +282,159 @@ class FarmResultsOutput(Output):
                     )
 
         # create dataset:
-        ds = Dataset(data_vars=dvars, coords=coords, attrs=attrs)
-        if self.add_turbine_names:
-            ds[FC.TNAME] = ((FC.TURBINE,), algo.farm.turbine_names)
-        if self.add_farm_names:
-            fnames = algo.farm.wind_farm_list
-            if set(fnames) != set([None]):
-                ds[FC.FARM] = ((FC.TURBINE,), fnames)
-        if self.add_cluster_names:
-            cnames = algo.farm.cluster_list
-            if set(cnames) != set([None]):
-                ds[FC.CLUSTER] = ((FC.TURBINE,), cnames)
-        if FV.ORDER in ds:
-            ds[FV.ORDER] = ds[FV.ORDER].astype(config.dtype_int)
-
+        ds = self._create_dataset(algo, coords=coords, dvars=dvars, attrs=attrs)
         output_results[FC.FARM_RESULTS] = ds
+
+
+class FarmResultsChunkWriter(FarmResultsOutput):
+    """
+    Writes NetCDF files from chunks.
+    """
+
+    def __init__(
+        self, 
+        base_name: str | Path, 
+        write_nc_pars: dict | None = None,
+        **kwargs: Any,
+    ):
+        """
+        Parameters
+        ----------
+        base_name
+            Base name for the NetCDF files.
+        write_nc_pars
+            Parameters to pass to the `write_nc` function.
+        **kwargs
+            Additional keyword arguments passed to the parent class.
+        """
+        self.base_name = base_name
+        self.write_nc_pars = write_nc_pars or {}
+        super().__init__(**kwargs)
+
+    def calculate(
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData,
+        model_results: Any,
+        chunk_results: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """
+        The chunk based output calculation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm
+        mdata
+            The model data
+        fdata
+            The farm data
+        tdata
+            The target point data
+        model_results
+            The results from the model calculation for this chunk
+        chunk_results
+            Existing chunk results, keys are result object names
+
+        Returns
+        -------
+        chunk_results
+            The updated chunk results, keys are result object names
+
+        """
+        fres = super().calculate(
+            algo=algo,
+            mdata=mdata,
+            fdata=fdata,
+            tdata=tdata,
+            model_results=model_results,
+            chunk_results=None,
+        )
+
+        coords = fres[FC.FARM_RESULTS]["coords"]
+        dvars = fres[FC.FARM_RESULTS]["data_vars"]
+        attrs = fres[FC.FARM_RESULTS]["attrs"]
+        del fres
+
+        attrs["base_name"] = str(self.base_name)
+        attrs["chunki_states"] = mdata.chunki_states
+        attrs["chunki_points"] = mdata.chunki_points
+        attrs["n_chunks_states"] = mdata.n_chunks_states
+        attrs["n_chunks_points"] = mdata.n_chunks_points
+
+        ds = self._create_dataset(algo, coords=coords, dvars=dvars, attrs=attrs)
+
+        fname = f"{self.base_name}_{mdata.chunki_states:06d}.nc"
+        fpath = self.get_fpath(fname)
+        write_nc(
+            ds=ds,
+            fpath=fpath,
+            **self.write_nc_pars,
+        )
+
+        return Output.calculate(
+            self,
+            algo=algo,
+            mdata=mdata,
+            fdata=fdata,
+            tdata=tdata,
+            model_results=model_results,
+            chunk_results=chunk_results,
+        )
+
+    def update_results(
+        self,
+        algo: Algorithm,
+        n_chunks_states: int,
+        n_chunks_targets: int,
+        new_chunk_results: Dict[str, Dict[tuple[int, int], Any]],
+        output_results: Dict[str, Any],
+    ) -> None:
+        """
+        Update output results with latest new chunk results.
+
+        Parameters
+        ----------
+        algo
+            The algorithm
+        n_chunks_states
+            The number of state chunks
+        n_chunks_targets
+            The number of target chunks
+        new_chunk_results
+            New chunk results, keys are result object names.
+            Values are dicts with keys (states_chunk_index, target_chunk_index)
+        output_results
+            Output results to be updated, keys are result object names
+
+        """
+        pass
+
+    def finalize_results(
+        self,
+        algo: Algorithm,
+        n_chunks_states: int,
+        n_chunks_targets: int,
+        output_results: Dict[str, Any],
+    ) -> None:
+        """
+        Final update of the output results, after all chunks have been processed.
+
+        Parameters
+        ----------
+        algo
+            The algorithm
+        n_chunks_states
+            The number of state chunks
+        n_chunks_targets
+            The number of target chunks
+        output_results
+            Output results to be updated, keys are result object names
+
+        """
+        pass

@@ -762,6 +762,12 @@ class ModelBook:
             hints={"variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"},
             kwargs=dict(ambient_vars=True, waked_vars=True),
         )
+        self.outputs["farm_results_write_chunks"] = fm.outputs.FarmResultsChunkWriter(
+            base_name="farm_results",
+            ambient_vars=True, 
+            waked_vars=True, 
+            variables=FARM_OUTPUTS_MAP["default"],
+        )
 
         self.sources = FDict(
             _name="sources",
