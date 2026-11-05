@@ -732,40 +732,81 @@ class ModelBook:
 
         self.outputs = FDict(_name="outputs")
         self.outputs["farm_results"] = fm.outputs.FarmResultsOutput(
-            ambient_vars=True, 
-            waked_vars=True, 
+            ambient_vars=True,
+            waked_vars=True,
             variables=FARM_OUTPUTS_MAP["default"],
         )
         self.outputs["farm_results_amb"] = fm.outputs.FarmResultsOutput(
-            ambient_vars=True, 
-            waked_vars=False, 
+            ambient_vars=True,
+            waked_vars=False,
             variables=FARM_OUTPUTS_MAP["default"],
         )
         self.outputs.add_factory(
             fm.outputs.FarmResultsOutput,
             "farm_results_amb_<variables>",
             variables=lambda v: FARM_OUTPUTS_MAP[v],
-            hints={"variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"},
+            hints={
+                "variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"
+            },
             kwargs=dict(ambient_vars=True, waked_vars=False),
         )
         self.outputs.add_factory(
             fm.outputs.FarmResultsOutput,
             "farm_results_waked_<variables>",
             variables=lambda v: FARM_OUTPUTS_MAP[v],
-            hints={"variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"},
+            hints={
+                "variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"
+            },
             kwargs=dict(ambient_vars=False, waked_vars=True),
+        )
+        self.outputs.add_factory(
+            fm.outputs.FarmResultsCountWriter,
+            "farm_results_write_n<n_states_per_file>",
+            n_states_per_file=lambda n: int(n),
+            hints={"states_per_file": "(Number of states per file)"},
+            kwargs=dict(base_name="farm_results", ambient_vars=True, waked_vars=True),
         )
         self.outputs.add_factory(
             fm.outputs.FarmResultsOutput,
             "farm_results_<variables>",
             variables=lambda v: FARM_OUTPUTS_MAP[v],
-            hints={"variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"},
+            hints={
+                "variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"
+            },
             kwargs=dict(ambient_vars=True, waked_vars=True),
         )
         self.outputs["farm_results_write_chunks"] = fm.outputs.FarmResultsChunkWriter(
             base_name="farm_results",
-            ambient_vars=True, 
-            waked_vars=True, 
+            ambient_vars=True,
+            waked_vars=True,
+            variables=FARM_OUTPUTS_MAP["default"],
+        )
+        self.outputs["farm_results_write_day"] = fm.outputs.FarmResultsPeriodWriter(
+            base_name="farm_results",
+            period="day",
+            ambient_vars=True,
+            waked_vars=True,
+            variables=FARM_OUTPUTS_MAP["default"],
+        )
+        self.outputs["farm_results_write_week"] = fm.outputs.FarmResultsPeriodWriter(
+            base_name="farm_results",
+            period="week",
+            ambient_vars=True,
+            waked_vars=True,
+            variables=FARM_OUTPUTS_MAP["default"],
+        )
+        self.outputs["farm_results_write_month"] = fm.outputs.FarmResultsPeriodWriter(
+            base_name="farm_results",
+            period="month",
+            ambient_vars=True,
+            waked_vars=True,
+            variables=FARM_OUTPUTS_MAP["default"],
+        )
+        self.outputs["farm_results_write_year"] = fm.outputs.FarmResultsPeriodWriter(
+            base_name="farm_results",
+            period="year",
+            ambient_vars=True,
+            waked_vars=True,
             variables=FARM_OUTPUTS_MAP["default"],
         )
 

@@ -147,7 +147,7 @@ scratch/
 *.mp4
 submodules/
 results/
-result*.*
+*result*.*
 area.png
 binned_data.nc
 

@@ -30,7 +30,7 @@ class NumpyEngine(ThreadsEngine):
             The future object
 
         """
-        return {"f": f, "args": args, "kwargs": kwargs, "result": None, "done": False}
+        return {"result": f(*args, **kwargs), "done": True}
 
     def await_result(self, future: dict[str, Any]) -> Any:
         """
@@ -47,11 +47,6 @@ class NumpyEngine(ThreadsEngine):
             The calculation result
 
         """
-        if not future["done"]:
-            f, args, kwargs = future.pop("f"), future.pop("args"), future.pop("kwargs")
-            future["result"] = f(*args, **kwargs)
-            future["done"] = True
-
         return future["result"]
 
     def future_is_done(self, future: dict[str, Any]) -> bool:

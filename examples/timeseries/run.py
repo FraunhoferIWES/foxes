@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     with engine:
         time0 = time.time()
-        farm_results = algo.calc_farm(outputs="farm_results_write_chunks")
+        farm_results = algo.calc_farm(outputs="farm_results_write_month")
         time1 = time.time()
 
     print("\nFarm results:\n")
