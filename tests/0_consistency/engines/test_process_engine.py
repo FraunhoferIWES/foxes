@@ -44,6 +44,12 @@ class _SharedMemoryMutatingModel:
         }
 
 
+class _ReturnOutput:
+    def calculate(self, algo, mdata, fdata, tdata, model_results):
+        # Request raw model returns explicitly under the new output contract.
+        return model_results
+
+
 def _new_empty_chunk_mdata():
     return MData(
         data={"B": np.array([1, 2], dtype=np.int32)},
@@ -256,7 +262,6 @@ def test_process_engine_get_chunk_input_data_uses_min_size_threshold_for_split()
         point_data=None,
         states_i0_i1=(0, 3),
         targets_i0_i1=(0, 0),
-        out_vars=[],
         chunki_states=0,
         chunki_points=0,
         n_chunks_states=1,
@@ -300,7 +305,6 @@ def test_point_chunks_keep_static_targets_compact_until_worker():
         point_data=point_data,
         states_i0_i1=(1, 4),
         targets_i0_i1=(2, 6),
-        out_vars=[],
         chunki_states=0,
         chunki_points=0,
         n_chunks_states=1,
@@ -582,23 +586,12 @@ def test_process_engine_rejects_invalid_shared_entries():
         )
 
 
-def test_chunk_results_manager_preserves_active_exception():
+def test_engine_context_preserves_active_exception():
     engine = ProcessEngine(n_procs=2, verbosity=0)
-    manager = engine.new_chunk_results_manager(
-        algo=_DummyAlgo(),
-        chunk_store={},
-        goal_data=Dataset(),
-        n_chunks_states=1,
-        n_chunks_targets=1,
-        out_vars=[],
-        out_dims=(),
-        coords={},
-        iterative=False,
-        write_nc=None,
-    )
 
+    # Shutdown must release resources without masking an active worker exception.
     with pytest.raises(ValueError, match="worker failure"):
-        with manager:
+        with engine:
             raise ValueError("worker failure")
 
 
@@ -630,6 +623,7 @@ def test_process_engine_pool_run_shares_memory_but_keeps_extra_data_local():
                 mdata,
                 fdata,
                 None,
+                output=_ReturnOutput(),
                 shared=handle,
                 chunk_store={},
                 chunk_key=(0, 0),
@@ -648,6 +642,7 @@ def test_process_engine_pool_run_shares_memory_but_keeps_extra_data_local():
                 mdata,
                 fdata,
                 None,
+                output=_ReturnOutput(),
                 shared=handle,
                 chunk_store={},
                 chunk_key=(0, 1),

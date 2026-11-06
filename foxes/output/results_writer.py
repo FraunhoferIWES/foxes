@@ -8,7 +8,7 @@ from foxes.config import config
 from foxes.utils import write_nc as write_nc_file
 import foxes.constants as FC
 
-from .output import Output
+from foxes.core import Output
 
 
 class ResultsWriter(Output):

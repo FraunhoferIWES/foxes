@@ -5,6 +5,7 @@ import xarray as xr
 import foxes
 import foxes.constants as FC
 import foxes.variables as FV
+from foxes.models.outputs import FarmResultsOutput
 
 
 @pytest.fixture(params=[foxes.algorithms.Downwind, foxes.algorithms.Iterative])
@@ -30,7 +31,12 @@ def ambient_algorithm(request):
 def test_ambient_variable_retention(ambient_algorithm, calculation, ambient_keep):
     options = {} if ambient_keep is None else {"ambient_keep": ambient_keep}
     with foxes.Engine.new("single", verbosity=0):
-        results = ambient_algorithm.calc_farm(ambient=True, **options)
+        results = ambient_algorithm.calc_farm(
+            ambient=True,
+            outputs=FarmResultsOutput(waked_vars=bool(ambient_keep))
+            if calculation == "farm"
+            else "farm_results",
+        )
         if calculation == "points":
             results = ambient_algorithm.calc_points(
                 results, np.array([[800.0, 0.0, 90.0]]), ambient=True, **options
@@ -61,7 +67,7 @@ def test_ambient_keep_respects_outputs(ambient_algorithm, calculation):
     with foxes.Engine.new("single", verbosity=0):
         if calculation == "farm":
             results = ambient_algorithm.calc_farm(
-                ambient=True, ambient_keep=True, outputs=[FV.P, FV.AMB_P]
+                ambient=True, outputs=FarmResultsOutput(variables=[FV.P, FV.AMB_P])
             )
             assert FV.P in results and FV.AMB_P in results
             assert FV.WS not in results and FV.AMB_WS not in results
@@ -81,8 +87,12 @@ def test_ambient_keep_respects_outputs(ambient_algorithm, calculation):
 @pytest.mark.parametrize("calculation", ["farm", "points"])
 def test_ambient_keep_does_not_disable_wakes(ambient_algorithm, calculation):
     with foxes.Engine.new("single", verbosity=0):
-        farm_results = ambient_algorithm.calc_farm()
-        kept_results = ambient_algorithm.calc_farm(ambient_keep=True)
+        farm_results = ambient_algorithm.calc_farm(
+            outputs="farm_results_all" if calculation == "points" else "farm_results"
+        )
+        kept_results = ambient_algorithm.calc_farm(
+            outputs="farm_results_all" if calculation == "points" else "farm_results"
+        )
         if calculation == "farm":
             assert (farm_results[FV.P] < farm_results[FV.AMB_P]).any()
         else:

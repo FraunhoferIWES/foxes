@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 from foxes.algorithms import Iterative
 from foxes.config import config
 from foxes.core import Algorithm, get_engine
+from foxes.models.outputs import FarmResultsOutput
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -89,7 +90,7 @@ class Sequential(Iterative):
         self.states0 = self._seq_state().states
         self.points = points
         self.plugins = plugins
-        self.outputs = outputs if outputs is not None else self.DEFAULT_FARM_OUTPUTS
+        self.outputs = outputs
 
         self._verbo0 = self.verbosity + 1
         self.verbosity -= 1
@@ -149,8 +150,9 @@ class Sequential(Iterative):
             self._counter = 0
 
             self._it = cast(Any, 0)
+            self._final_run = False
             mlist, __ = self._collect_farm_models(
-                None, self.calc_pars, ambient=self.ambient
+                self.calc_pars, ambient=self.ambient, output=FarmResultsOutput()
             )
             self._calc_farm_vars(mlist)
             self._it = cast(Any, None)
@@ -210,7 +212,7 @@ class Sequential(Iterative):
             fres, fres_dnwnd = cast(
                 tuple[Dataset, Dataset],
                 super().calc_farm(
-                    outputs=self.farm_vars,
+                    outputs=FarmResultsOutput(variables=self.farm_vars),
                     finalize=False,
                     ret_dwnd_order=True,
                     **self.calc_pars,

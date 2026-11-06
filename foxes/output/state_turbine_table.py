@@ -7,7 +7,7 @@ from foxes.config import config
 from foxes.utils import write_nc
 import foxes.constants as FC
 
-from .output import Output
+from foxes.core import Output
 
 
 class StateTurbineTable(Output):

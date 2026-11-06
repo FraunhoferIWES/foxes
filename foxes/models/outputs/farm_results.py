@@ -689,8 +689,7 @@ class FarmResultsCountWriter(FarmResultsOutput):
         engine = get_engine(error=False)
         if engine is None:
             raise RuntimeError(f"{self.name}: File writing requires an active engine")
-        for future in results["futures"]:
-            engine.await_result(future)
+        engine.await_results(results["futures"])
 
 
 class FarmResultsPeriodWriter(FarmResultsCountWriter):

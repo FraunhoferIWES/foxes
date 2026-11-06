@@ -40,7 +40,7 @@ class _FakeRay:
             return [self._store[r] for r in ref]
         return self._store.get(ref, ref)
 
-    def wait(self, futures):
+    def wait(self, futures, timeout=None):
         return futures, []
 
     def remote(self, f):

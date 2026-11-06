@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
+from foxes.models.outputs import FarmResultsOutput
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -129,7 +130,7 @@ if __name__ == "__main__":
 
     with engine:
         time0 = time.time()
-        farm_results = algo.calc_farm(outputs=outputs)
+        farm_results = algo.calc_farm(outputs=FarmResultsOutput(variables=outputs))
         time1 = time.time()
 
     print("\nCalc time =", time1 - time0, "\n")

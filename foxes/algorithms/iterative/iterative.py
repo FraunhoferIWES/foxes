@@ -8,7 +8,9 @@ from typing import Any
 from typing import TYPE_CHECKING
 
 from foxes.algorithms.downwind.downwind import Downwind
-from foxes.core import FarmDataModelList
+from foxes.algorithms.downwind.models.prepare_for_output import PrepareForOutput
+from foxes.core import FarmDataModelList, Output
+from foxes.models.outputs import FarmResultsOutput
 from foxes.utils import Dict
 import foxes.constants as FC
 
@@ -113,6 +115,8 @@ class Iterative(Downwind):
             The previous iteration farm results, or ``None`` if not available
 
         """
+        if mdata is not None:
+            return super().prev_farm_results(mdata)
         if self.__prev_farm_results is not None:
             return self.__prev_farm_results
         else:
@@ -195,19 +199,28 @@ class Iterative(Downwind):
 
     def _collect_farm_models(
         self,
-        outputs: list[str] | bool | None,
         calc_parameters: dict[str, dict[str, Any]],
         ambient: bool,
+        output: Output | None = None,
     ) -> tuple[FarmDataModelList, list[dict[str, Any]]]:
         """
         Helper function that creates model list
         """
+        # Final output preparation is independent of the intermediate wake chain.
+        if self._final_run:
+            model = self.get_model("PrepareForOutput")(output=output)
+            return FarmDataModelList(models=[model]), [{}]
+
+        # Keep every physical field in downwind order between iterations.
         if self._it == 0:
             self._mlist0, self._calc_pars0 = super()._collect_farm_models(
-                outputs=False,
                 calc_parameters=calc_parameters,
                 ambient=ambient,
+                output=output,
             )
+            preparation = self._mlist0.models[-1]
+            assert isinstance(preparation, PrepareForOutput)
+            preparation.reorder = False
 
             n = 0
             if self._urelax is not None:
@@ -273,7 +286,7 @@ class Iterative(Downwind):
 
             # rotate back from downwind order:
             else:
-                mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
+                mlist.models.append(self.get_model("PrepareForOutput")(output=output))
                 calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
             return mlist, calc_pars
@@ -307,8 +320,8 @@ class Iterative(Downwind):
         else:
             sel = None
 
-        self.__prev_farm_results = None
-        fres = super()._launch_parallel_farm_calc(
+        # Pass previous data through chunk metadata without mutating running models.
+        return super()._launch_parallel_farm_calc(
             mlist,
             *data,
             farm_data=prev_fres,
@@ -316,9 +329,6 @@ class Iterative(Downwind):
             sel=sel,
             **kwargs,
         )
-        self.__prev_farm_results = prev_fres
-
-        return fres
 
     @property
     def final_iteration(self) -> bool:
@@ -335,27 +345,26 @@ class Iterative(Downwind):
 
     def calc_farm(
         self,
-        outputs: list[str] | str | None = None,
+        outputs: str | Output | list[str | Output] | None = "farm_results",
         finalize: bool = True,
         ret_dwnd_order: bool = False,
         **kwargs: Any,
-    ) -> Dataset | tuple[Dataset, Dataset | None]:
+    ) -> Any:
         """
         Calculate farm data.
 
         Parameters
         ----------
         outputs
-            The output variables, ``None`` for all calculated variables, or
-            ``"default"`` for the standard farm outputs.
+            Output models or model-book names, as in ``Downwind.calc_farm``.
+            ``None`` disables final output, not intermediate convergence data.
         finalize
             Flag for finalization after calculation
         ret_dwnd_order
             Also return the results in downwind order
         kwargs
-            Arguments for ``Downwind.calc_farm``, including ``ambient`` and
-            ``ambient_keep``. Intermediate iterations retain ordinary fields;
-            the final results respect the caller's ``ambient_keep`` setting.
+            Arguments for ``Downwind.calc_farm``, including ``ambient``.
+            Intermediate iterations retain all ordinary and ambient fields.
 
         Returns
         -------
@@ -364,14 +373,12 @@ class Iterative(Downwind):
             dimensions (state, turbine)
 
         """
-        if outputs == "default":
-            outputs = self.DEFAULT_FARM_OUTPUTS
-
+        # Convergence always needs full datasets, even for writer-only final output.
         fres = None
         self._it = -1
         self._final_run = False
         fres_dwnd = None
-        iteration_kwargs = {**kwargs, "ambient_keep": True}
+        iteration_kwargs = kwargs
         assert self._it is not None
         while self._it < self.max_it:
             self._it += 1
@@ -383,9 +390,17 @@ class Iterative(Downwind):
                 chunk_store0 = deepcopy(self.chunk_store)
 
             self.__prev_farm_results = fres
-            fres = super().calc_farm(
-                outputs=None, finalize=False, clear_mem=False, **iteration_kwargs
+            iteration_results = super().calc_farm(
+                outputs=FarmResultsOutput(),
+                finalize=False,
+                clear_mem=False,
+                **iteration_kwargs,
             )
+            if not isinstance(iteration_results, Dataset):
+                raise TypeError(
+                    f"{self.name}: Convergence requires collected farm results"
+                )
+            fres = iteration_results
             if np.any(np.isnan(fres["REWS"].values)):
                 raise Exception("NaN encountered in REWS during iteration")
 
@@ -432,6 +447,7 @@ class Iterative(Downwind):
         # final run, recovers farm order of results:
         self.print("Starting final run", vlim=0)
         self._final_run = True
+        self.__prev_farm_results = fres
         if self.conv_crit is not None:
             self.conv_crit._conv_states = None
         fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)

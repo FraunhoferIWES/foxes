@@ -144,8 +144,8 @@ as `FV`. Avoid local string copies of established constants.
 - `Downwind.calc_farm()` defaults to an xarray farm dataset. A single output
 	with exactly one returned result is unwrapped; multiple outputs return a
 	result-name keyed mapping. Writer-only or disabled collection returns an
-	empty mapping. `calc_points()` retains its dataset-facing contract, but
-	point-output execution has not yet been migrated to the new engine hooks.
+	empty mapping. `calc_points()` collects state/target tiles through
+	`PointResultsOutput`, retaining its dataset-facing contract.
 - Concrete output models consume NumPy data in workers and construct xarray
 	only when collecting a full dataset or writing an individual file.
 - Point calculations use target dimensions internally. `calc_points()` selects
@@ -199,10 +199,10 @@ its `ambient_vars` and `waked_vars` flags. `ambient=True` still controls the
 scientific calculation, independently of output selection.
 
 `calc_points()` retains `ambient_keep=False` for its point-facing contract.
-The Iterative, Sequential, single-chunk and distributed execution paths still
-contain pre-output-migration callers and are not certified by the farm-output
-tests. No compatibility path is introduced for them in the focused farm-output
-change.
+Iterative and Sequential use explicit intermediate collectors. Iterative keeps
+all convergence fields in downwind order and restores farm order only for final
+outputs. The `"default"` field set is unchanged; point callers needing all wake
+inputs select `"farm_results_all"` explicitly.
 
 Use `Engine` as a context manager for an explicit backend. `Engine.new()` maps
 established names to implementations. If no engine is active, FOXES creates a
@@ -210,10 +210,23 @@ default engine; `DefaultEngine` chooses a single-chunk or process strategy from
 the problem size. Engine changes therefore require both numerical-equivalence
 tests and coverage of chunk boundaries and cleanup.
 
-For the implemented NumPy/thread farm path, the engine passes ordered worker
+Across engine backends, the engine passes ordered worker
 payloads to output `update_results()` hooks and calls `finalize_results()` after
 all chunks have arrived. Writers await submitted file jobs so worker exceptions
 propagate to the caller.
+
+`Engine.await_results()` resolves ordered batches. Local Dask schedules complete
+batches using a process scheduler by default, rather than computing each chunk
+serially. Distributed submissions disable task deduplication for writer side
+effects. Shared storage outlives outstanding tasks. Distributed contexts restore
+the caller's configuration and release partial startup resources.
+
+Progress is parent-owned: `progress_bar=True` uses adaptive tqdm bars for terminals
+and notebooks, with Unicode when supported, and bounded newline-only snapshots
+for redirected logs. `False` forces snapshots; `None` or verbosity zero suppresses
+progress. Displays use stderr, identify output finalization, and distinguish
+failure from completion. Labels use `Engine [model] - status`, without repeated
+colon separators. See [ADR-0011](adr/0011-engine-output-execution-and-progress.md).
 
 ### Chunk-Based Farm Outputs
 
@@ -449,6 +462,10 @@ subprocess.
 	`foxes.models.outputs`; farm files use explicit count limits or calendar
 	periods, including ISO week years. See
 	[ADR-0010](adr/0010-chunk-based-farm-outputs.md).
+- Engine output execution uses ordered batches and parent-owned adaptive progress;
+	point collection and iterative callers use the same output lifecycle. Corporate
+	design remains confirmed for progress displays. See
+	[ADR-0011](adr/0011-engine-output-execution-and-progress.md).
 - [AGENTS.md](../AGENTS.md) keeps critical contributor guardrails and routes
 	detailed requirements to their owning guides. Code style is detailed in
 	[development](development.md#code-quality), lifecycle and parallelization in

@@ -3,7 +3,7 @@ from __future__ import annotations
 from matplotlib import pyplot
 from typing import Any
 
-from .output import Output
+from foxes.core import Output
 
 
 class plt(Output):

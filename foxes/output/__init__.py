@@ -2,7 +2,6 @@
 Output tools and functions.
 """
 
-from .output import Output as Output
 from .farm_layout import FarmLayoutOutput as FarmLayoutOutput
 from .farm_results_eval import FarmResultsEval as FarmResultsEval
 from .results_writer import ResultsWriter as ResultsWriter

@@ -53,11 +53,14 @@ class _EchoModel:
         return {"model_marker": np.array([1], dtype=np.int32)}
 
 
+class _ReturnOutput:
+    def calculate(self, algo, mdata, fdata, tdata, model_results):
+        # Output consumers can explicitly retain both prepared data and model returns.
+        return {**fdata, **model_results}
+
+
 def _patch_writer_hooks(runner):
     runner._write_ani = lambda *args, **kwargs: None
-    runner._write_chunk_results = lambda algo, results, write_nc, out_dims, mdata: (
-        results
-    )
 
 
 def _patch_fdata_from_dataset(monkeypatch):
@@ -94,6 +97,7 @@ def test_process_family_runners_rebuild_and_merge_prev_farm_results(
         mdata,
         input_fdata,
         None,
+        output=_ReturnOutput(),
         shared=None,
         chunk_store={},
         chunk_key=(0, 0),
@@ -104,7 +108,7 @@ def test_process_family_runners_rebuild_and_merge_prev_farm_results(
     )
 
     assert cstore == {}
-    assert algo.prev_calls == 1
+    assert algo.prev_calls == (0 if runner_cls is DaskProcessRunner else 1)
     assert set(model.last_fdata.keys()) == {"prev_marker"}
     assert np.array_equal(
         model.last_fdata["prev_marker"], np.array([7], dtype=np.int32)
@@ -137,6 +141,8 @@ def test_single_runner_rebuilds_and_merges_prev_farm_results(monkeypatch):
         model,
         mdata,
         input_fdata,
+        output=_ReturnOutput(),
+        chunk_store={},
         shared=None,
         chunk_key=(0, 0),
         out_dims=("x",),
@@ -159,7 +165,7 @@ def test_single_runner_rebuilds_and_merges_prev_farm_results(monkeypatch):
     assert kwargs["s_states"] == slice(4, 7, None)
 
 
-def test_single_runner_requires_farm_data_if_prev_results_present(monkeypatch):
+def test_single_runner_uses_previous_farm_data_without_output(monkeypatch):
     _patch_fdata_from_dataset(monkeypatch)
 
     runner = SingleChunkEngineRunner()
@@ -169,14 +175,19 @@ def test_single_runner_requires_farm_data_if_prev_results_present(monkeypatch):
     model = _EchoModel()
     mdata = _DummyMData()
 
-    with pytest.raises(ValueError, match="Missing farm data"):
-        runner.run(
-            algo,
-            model,
-            mdata,
-            shared=None,
-            chunk_key=(0, 0),
-            out_dims=("x",),
-            write_nc=None,
-            write_chunk_ani=None,
-        )
+    # Prepared farm data remains required, while selecting an output is optional.
+    results, cstore = runner.run(
+        algo,
+        model,
+        mdata,
+        {},
+        shared=None,
+        chunk_store={},
+        chunk_key=(0, 0),
+        out_dims=("x",),
+        write_nc=None,
+        write_chunk_ani=None,
+    )
+    assert results is None
+    assert cstore == {}
+    assert "prev_marker" in model.last_fdata

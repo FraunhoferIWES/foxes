@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
+from foxes.models.outputs import FarmResultsOutput
 
 
 if __name__ == "__main__":
@@ -158,7 +159,7 @@ if __name__ == "__main__":
 
     # run calculation with power mask:
     with engine:
-        farm_results = algo.calc_farm(outputs=outputs)
+        farm_results = algo.calc_farm(outputs=FarmResultsOutput(variables=outputs))
 
         fr = farm_results.to_dataframe()
         print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.MAX_P]])
@@ -175,7 +176,7 @@ if __name__ == "__main__":
             t.models.remove("set_Pmax")
             t.models.remove("PMask")
 
-        farm_results = algo.calc_farm(outputs=outputs)
+        farm_results = algo.calc_farm(outputs=FarmResultsOutput(variables=outputs))
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.MAX_P]])

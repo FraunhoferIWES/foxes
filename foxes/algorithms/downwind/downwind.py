@@ -897,7 +897,7 @@ class Downwind(Algorithm):
         self,
         mlist: PointDataModelList,
         *data: Dataset,
-        outputs: list[str] | None = None,
+        output: Output,
         **kwargs: Any,
     ) -> Dataset:
         """
@@ -909,8 +909,8 @@ class Downwind(Algorithm):
             The model list
         data
             The (mdata, fdata) inputs
-        outputs
-            The output variables, or None for defaults
+        output
+            Initialized point-results collector.
         kwargs
             Additional parameters for running
 
@@ -921,11 +921,12 @@ class Downwind(Algorithm):
             dimensions (state, point)
 
         """
+        # Collect target chunks through the same Output lifecycle as farm chunks.
+        results = super()._launch_parallel_points_calc(
+            mlist, *data, output=output, **kwargs
+        )
         return (
-            super()
-            ._launch_parallel_points_calc(mlist, *data, out_vars=outputs, **kwargs)
-            .sel({FC.TPOINT: 0})
-            .rename({FC.TARGET: FC.POINT})
+            results[FC.POINT_RESULTS].sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
         )
 
     def calc_points(
@@ -1066,6 +1067,8 @@ class Downwind(Algorithm):
         # check vars:
         ovars = mlist.output_point_vars(self) if outputs is None else outputs
         self.print("\nOutput point variables:", ", ".join(ovars))
+        output = fm.outputs.PointResultsOutput(variables=ovars)
+        self.init_model(output)
 
         # calculate:
         point_results = super().calc_points(
@@ -1074,7 +1077,7 @@ class Downwind(Algorithm):
             farm_results,
             point_data,
             extra_data=extra_data,
-            outputs=ovars,
+            output=output,
             parameters=calc_pars,
             sel=sel,
             **kwargs,

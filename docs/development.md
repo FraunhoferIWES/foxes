@@ -72,6 +72,30 @@ additional packages. MPI still requires a system MPI runtime, and Slurm-backed
 Dask clusters require an available Slurm installation; the extra installs Python
 packages, not external execution infrastructure.
 
+### Engine Validation And Progress
+
+Run engine, algorithm and farm-output checks together:
+
+```console
+uv run pytest tests/0_consistency/engines tests/0_consistency/algorithms tests/2_models/test_farm_results_outputs.py
+```
+
+Real Ray/MPI parity tests are opt-in with `FOXES_TEST_CLUSTER_ENGINES=1`.
+Use only a configured runtime and bounded worker counts; Slurm lifecycle checks
+use synthetic infrastructure rather than submitting jobs. Local Dask defaults to
+process scheduling and resolves bounded batches concurrently.
+
+Engine `progress_bar=True` automatically uses tqdm for terminals/notebooks and
+newline-only snapshots for logs. Unicode terminal bars are selected when the
+stream supports them. Use `False` for explicit snapshots, `None` for no progress,
+or `verbosity=0` for a quiet engine. Progress goes to stderr; a full chunk counter
+is followed by output finalization before success is reported. No notebook widget
+dependency is required: tqdm selects the available notebook/text renderer.
+
+The engine migration's focused checks do not certify unrelated unfinished branch
+migrations. The full-suite gate currently exposes removed state-provider exports;
+do not hide these failures with aliases or claim full-suite success.
+
 Put a new dependency in the narrowest justified extra. A dependency required by
 an import of base `foxes` belongs in the main dependencies; an optional adapter
 must not make its package mandatory. `uv.lock` is currently ignored and is not a

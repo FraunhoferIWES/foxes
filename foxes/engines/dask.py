@@ -4,6 +4,8 @@ import numpy as np
 import xarray as xr
 from copy import deepcopy
 from collections.abc import Mapping, MutableMapping
+from contextlib import ExitStack
+import sys
 from typing import TYPE_CHECKING, Any
 
 from foxes.core import Engine, MData
@@ -16,30 +18,24 @@ from foxes.utils.shared_data import (
 from .process import ProcessEngine, ProcessEngineRunner
 
 if TYPE_CHECKING:
-    from foxes.core import Algorithm, DataCalcModel, FData, TData
+    from foxes.core import Algorithm, DataCalcModel, FData, TData, Output
 
 
 dask = None
 distributed = None
-ProgressBar: Any = None
 
 
-def delayed(func: Any) -> Any:
-    """A dummy decorator"""
-    return func
+def delayed(func: Any, **kwargs: Any) -> Any:
+    """Create a lazy task after loading the optional Dask package."""
+    # Keep module import independent of the optional backend.
+    return _get_dask().delayed(func, **kwargs)
 
 
 def load_dask() -> None:
     """On-demand loading of the dask package"""
-    global dask, ProgressBar, delayed
+    global dask
     if dask is None:
         dask = import_module("dask")
-        ProgressBar = import_module(
-            "dask.diagnostics",
-            pip_hint="pip install dask",
-            conda_hint="conda install dask -c conda-forge",
-        ).ProgressBar
-        delayed = dask.delayed
 
 
 def load_distributed() -> None:
@@ -63,14 +59,6 @@ def _get_distributed() -> Any:
     return distributed
 
 
-def _get_progress_bar_cls() -> Any:
-    """Get ProgressBar class with non-None type for static checkers."""
-    load_dask()
-    assert ProgressBar is not None
-    return ProgressBar
-
-
-@delayed
 def _run_map(func: Any, inputs: Any, *args: Any, **kwargs: Any) -> list[Any]:
     """Helper function for running map func on proc"""
     return [func(x, *args, **kwargs) for x in inputs]
@@ -198,6 +186,7 @@ class DaskProcessRunner(ProcessEngineRunner):
         mdata: MData,
         fdata: FData,
         tdata: TData | None = None,
+        output: Output | None = None,
         *,
         shared: dict[str, Any] | None,
         chunk_store: dict[Any, Any],
@@ -209,6 +198,8 @@ class DaskProcessRunner(ProcessEngineRunner):
         **cpars: Any,
     ) -> tuple[dict[str, Any] | None, dict[Any, Any]]:
         """Run one chunk while resolving future-like payloads before calculate."""
+        # Distributed workers may run several tasks in one process or thread pool.
+        algo = deepcopy(algo)
         if utm_zone is not None:
             config.set_utm_zone(*utm_zone)
 
@@ -220,18 +211,21 @@ class DaskProcessRunner(ProcessEngineRunner):
         if tdata is not None:
             tdata.expand_targets()
         cpars = self._resolve_nested_value(cpars)
-        fdata, has_prev_farm_results = self._apply_prev_farm_results(algo, mdata, fdata)
+        fdata, _ = self._apply_prev_farm_results(algo, mdata, fdata)
 
-        results: dict[str, Any] | None
+        model_results: dict[str, Any] | None
         if tdata is None:
-            results = model.calculate(algo, mdata, fdata, **cpars)
+            model_results = model.calculate(algo, mdata, fdata, **cpars)
         else:
-            results = model.calculate(algo, mdata, fdata, tdata, **cpars)
-        results = self._merge_prev_farm_results(has_prev_farm_results, fdata, results)
+            model_results = model.calculate(algo, mdata, fdata, tdata, **cpars)
         chunk_store = algo.reset_chunk_store()
         cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
         self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)
-        results = self._write_chunk_results(algo, results, write_nc, out_dims, mdata)
+        results = (
+            output.calculate(algo, mdata, fdata, tdata, model_results)
+            if output is not None
+            else None
+        )
 
         return results, cstore
 
@@ -247,7 +241,7 @@ class DaskEngine(ProcessEngine):
         dask_config: dict[str, Any] | None = None,
         supports_shared_data: bool = True,
         min_shared_array_bytes: int = 0,
-        progress_bar: bool = True,
+        progress_bar: bool | None = True,
         **kwargs: Any,
     ) -> None:
         """
@@ -265,33 +259,23 @@ class DaskEngine(ProcessEngine):
             *args,
             supports_shared_data=supports_shared_data,
             min_shared_array_bytes=min_shared_array_bytes,
-            progress_bar=None,
+            progress_bar=progress_bar,
             **kwargs,
         )
-        self.dask_config = {} if dask_config is None else dask_config
-        self._dask_progress_bar = progress_bar
-        self._pbar: Any | None = None
+        self.dask_config = {"scheduler": "processes"}
+        self.dask_config.update({} if dask_config is None else dask_config)
 
     def __enter__(self) -> DaskEngine:
-        dask_mod = _get_dask()
-        if self._dask_progress_bar:
-            progress_bar_cls = _get_progress_bar_cls()
-            self._pbar = progress_bar_cls(minimum=2)
-            self._pbar.__enter__()
-        dask_mod.config.set(**self.dask_config)
+        # Apply scheduler configuration only around this engine's own graphs.
         Engine.__enter__(self)
         return self
 
     def __exit__(self, *args: Any) -> None:
-        dask_mod = _get_dask()
-        if self._dask_progress_bar and self._pbar is not None:
-            self._pbar.__exit__(*args)
-        dask_mod.config.refresh()
         Engine.__exit__(self, *args)
 
     def submit(self, f: Any, *args: Any, **kwargs: Any) -> Any:
         """Submits a job to worker, obtaining a future."""
-        return delayed(f)(*args, **kwargs)
+        return delayed(f, pure=False)(*args, **kwargs)
 
     def future_is_done(self, future: Any) -> bool:
         """Checks if a future is done."""
@@ -299,7 +283,29 @@ class DaskEngine(ProcessEngine):
 
     def await_result(self, future: Any) -> Any:
         """Waits for result from a future."""
-        return future.compute()
+        return self.await_results([future])[0]
+
+    def await_results(self, futures: list[Any]) -> list[Any]:
+        """Schedule ordered lazy graphs together using the configured scheduler.
+
+        Parameters
+        ----------
+        futures
+            Pending chunk graphs.
+
+        Returns
+        -------
+        results
+            Chunk results in submission order, irrespective of completion order.
+        """
+        # A process scheduler isolates algorithm chunk stores across tasks.
+        with _get_dask().config.set(self.dask_config):
+            return list(_get_dask().compute(*futures, num_workers=self.n_workers))
+
+    def _drain_failed_tasks(self, futures: dict[Any, Any]) -> None:
+        """Discard lazy graphs after the scheduler has stopped a failed batch."""
+        # Recomputing a failed graph would repeat successful writer side effects.
+        futures.clear()
 
     def new_runner(self) -> DaskProcessRunner:
         """Creates a dask-aware runner for ProcessEngine chunk execution."""
@@ -400,12 +406,13 @@ class DaskEngine(ProcessEngine):
         elif len(inputs) == 1:
             return [func(inputs[0], *args, **kwargs)]
         else:
-            dask_mod = _get_dask()
             inptl = np.array_split(inputs, min(self.n_workers, len(inputs)))
             futures = []
             for subi in inptl:
-                futures.append(_run_map(func, subi, *args, **kwargs))
-            results = dask_mod.compute(futures)[0]
+                futures.append(
+                    delayed(_run_map, pure=False)(func, subi, *args, **kwargs)
+                )
+            results = self.await_results(futures)
             out = []
             for r in results:
                 out += r
@@ -453,50 +460,51 @@ class LocalClusterEngine(ProcessEngine):
 
         load_distributed()
 
-        self.cluster_pars = {} if cluster_pars is None else cluster_pars
-        self.client_pars = {} if client_pars is None else client_pars
-        self.dask_config = {} if dask_config is None else dask_config
+        self.cluster_pars = {} if cluster_pars is None else dict(cluster_pars)
+        self.client_pars = {} if client_pars is None else dict(client_pars)
+        self.dask_config = {} if dask_config is None else dict(dask_config)
         self.min_submit_array_bytes = int(min_submit_array_bytes)
 
-        self.dask_config["scheduler"] = "distributed"
         self.dask_config["distributed.scheduler.worker-ttl"] = None
 
         self._cluster: Any | None = None
         self._client: Any | None = None
+        self._contexts: ExitStack | None = None
+
+    def _create_cluster(self) -> Any:
+        """Create this backend's distributed cluster before opening its client."""
+        # Keep cluster selection separate from common lifecycle and cleanup.
+        parameters = {"n_workers": self.n_workers, **self.cluster_pars}
+        return _get_distributed().LocalCluster(**parameters)
 
     def __enter__(self) -> LocalClusterEngine:
-        distributed_mod = _get_distributed()
-        dask_mod = _get_dask()
-        self.print("Launching local dask cluster..")
-        self._cluster = distributed_mod.LocalCluster(
-            n_workers=self.n_workers, **self.cluster_pars
-        ).__enter__()
-        self._client = distributed_mod.Client(
-            self._cluster, **self.client_pars
-        ).__enter__()
-        self.print(self._cluster)
-        client = self._client
-        assert client is not None
-        self.print(f"Dashboard: {client.dashboard_link}\n")
-        dask_mod.config.set(**self.dask_config)
+        # Claim ownership before starting workers; unwind partial startup failures.
         Engine.__enter__(self)
+        try:
+            with ExitStack() as contexts:
+                contexts.enter_context(_get_dask().config.set(self.dask_config))
+                self._cluster = contexts.enter_context(self._create_cluster())
+                self._client = contexts.enter_context(
+                    _get_distributed().Client(self._cluster, **self.client_pars)
+                )
+                self.print(self._cluster)
+                self.print(f"Dashboard: {self._client.dashboard_link}\n")
+                self._contexts = contexts.pop_all()
+        except BaseException:
+            Engine.__exit__(self, *sys.exc_info())
+            raise
         return self
 
     def __exit__(self, *args: Any) -> None:
-        dask_mod = _get_dask()
-        self.print(f"Shutting down {type(self._cluster).__name__}")
-        # self._client.retire_workers()
-        # from time import sleep
-        # sleep(1)
-        # self._client.shutdown()
-        client = self._client
-        cluster = self._cluster
-        if client is not None:
-            client.__exit__(*args)
-        if cluster is not None:
-            cluster.__exit__(*args)
-        dask_mod.config.refresh()
-        Engine.__exit__(self, *args)
+        # Close client, cluster and exact config context in reverse startup order.
+        try:
+            if self._contexts is not None:
+                self._contexts.__exit__(*args)
+        finally:
+            self._contexts = None
+            self._client = None
+            self._cluster = None
+            Engine.__exit__(self, *args)
 
     def init_shared_memory(
         self,
@@ -667,7 +675,8 @@ class LocalClusterEngine(ProcessEngine):
         args, kwargs = self._prepare_submit_payload(args, kwargs)
         client = self._client
         assert client is not None
-        return client.submit(f, *args, **kwargs)
+        # Output writers are side effects and must never be scheduler-deduplicated.
+        return client.submit(f, *args, pure=False, **kwargs)
 
     def future_is_done(self, future: Any) -> bool:
         """
@@ -713,8 +722,9 @@ class SlurmClusterEngine(LocalClusterEngine):
     The dask engine for foxes calculations on a SLURM cluster.
     """
 
-    def __enter__(self) -> LocalClusterEngine:
-        distributed_mod = _get_distributed()
+    def _create_cluster(self) -> Any:
+        """Create and scale a Slurm cluster using the common distributed lifecycle."""
+        # Start exactly one scheduler, preserving the shared client cleanup path.
         self.print("Launching dask cluster on HPC using SLURM..")
         cargs = deepcopy(self.cluster_pars)
         nodes = cargs.pop("nodes", 1)
@@ -725,19 +735,11 @@ class SlurmClusterEngine(LocalClusterEngine):
             conda_hint="conda install setuptools dask-jobqueue -c conda-forge",
         )
 
-        self._cluster = dask_jobqueue.SLURMCluster(**cargs)
-        self._cluster.scale(futures=nodes)
-        self._cluster = self._cluster.__enter__()
-        self._client = distributed_mod.Client(
-            self._cluster, **self.client_pars
-        ).__enter__()
-
-        cluster = self._cluster
-        client = self._client
-        assert cluster is not None
-        assert client is not None
-        self.print(cluster)
-        self.print(f"Dashboard: {client.dashboard_link}\n")
-        print(cluster.job_script())
-
-        return LocalClusterEngine.__enter__(self)
+        cluster = dask_jobqueue.SLURMCluster(**cargs)
+        try:
+            cluster.scale(jobs=nodes)
+        except BaseException:
+            cluster.close()
+            raise
+        self.print(cluster.job_script(), level=2)
+        return cluster

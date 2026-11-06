@@ -18,7 +18,7 @@ from foxes.utils import plot_wind_rose_bars
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .output import Output
+from foxes.core import Output
 
 
 class RosePlotOutput(Output):
@@ -109,7 +109,7 @@ class RosePlotOutput(Output):
 
         return dname, dname
 
-    def get_data(
+    def get_data(  # type: ignore[override]
         self,
         wd_sectors: int,
         ws_var: str,
@@ -404,7 +404,7 @@ class WindRoseBinPlot(Output):
         super().__init__(**kwargs)
         self.farm_results = farm_results
 
-    def get_data(
+    def get_data(  # type: ignore[override]
         self,
         variable: str,
         ws_bins: Any,

@@ -1188,6 +1188,19 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Engines:
+  - Unified synchronous and parallel execution around the core output lifecycle;
+    restored chunk animation hooks and corrected chunk-store merging.
+  - Restored shared terminal/notebook progress with adaptive Unicode bars,
+    readable labels, quiet modes, newline-only logs and failure cleanup.
+  - Schedule local Dask chunks and buffered writes in ordered batches; prevent
+    distributed writer deduplication and restore cluster/configuration cleanup.
+  - Fixed Slurm startup to create only its selected cluster.
+- Algorithms:
+  - Added explicit point-output collection and updated Iterative/Sequential
+    callers while preserving intermediate downwind order.
+  - Kept the default farm field selection unchanged; callers requiring all
+    wake inputs explicitly request the existing all-fields output.
 - Dependencies:
   - Added the `engines` extra combining all optional engine packages through
     the existing Dask, MPI, multiprocess and Ray extras.

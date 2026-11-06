@@ -112,49 +112,6 @@ class PointDataModel(DataCalcModel):
         self.ensure_output_vars(algo, tdata)
         return super().calculate(algo, mdata, fdata, tdata)
 
-    def run_calculation(
-        self,
-        algo: Algorithm,
-        *data: tuple[Any, ...],
-        out_vars: list[str],
-        **calc_pars: Any,
-    ) -> Any:
-        """
-        Starts the model calculation in parallel.
-
-        Typically this function is called by algorithms.
-
-        Parameters
-        ----------
-        algo
-            The calculation algorithm
-        *data
-            The input data
-        out_vars
-            The calculation output variables
-        **calc_pars
-            Additional arguments for the `calculate` function
-
-        Returns
-        -------
-        results
-            The calculation results
-
-        """
-        results = super().run_calculation(  # type: ignore[misc]
-            algo,
-            *data,
-            out_vars=out_vars,
-            loop_dims=[FC.STATE, FC.TARGET],
-            out_core_vars=[FC.TPOINT, FC.VARS],
-            **calc_pars,
-        )
-        if results.sizes[FC.TPOINT] != 1:
-            raise ValueError(
-                f"PointDataModel '{self.name}': Expecting dimension '{FC.TPOINT}' of size 1, found {results.sizes[FC.TPOINT]}"
-            )
-        return results.sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
-
     def __add__(self, m: Any) -> PointDataModelList:
         if isinstance(m, list):
             return PointDataModelList([self] + m)

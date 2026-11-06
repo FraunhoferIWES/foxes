@@ -127,15 +127,13 @@ if __name__ == "__main__":
 
     with engine:
         time0 = time.time()
-        farm_results = algo.calc_farm(outputs="farm_results_write_month")
+        farm_results = algo.calc_farm(outputs="farm_results")
         time1 = time.time()
 
     print("\nFarm results:\n")
     print(farm_results)
 
     print("\nCalc time =", time1 - time0, "\n")
-
-    quit()
 
     o = foxes.output.FarmResultsEval(farm_results, algo=algo)
     o.add_capacity_factor(ambient=False)

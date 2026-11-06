@@ -3,7 +3,8 @@ import xarray as xr
 
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.algorithms.downwind.models.prepare_for_output import ReorderFarmOutput
+from foxes.algorithms.downwind.models.prepare_for_output import PrepareForOutput
+from foxes.models.outputs import FarmResultsOutput
 from foxes.core import FData, MData
 from foxes.input.states import DatasetStates
 
@@ -20,12 +21,12 @@ def test_reorder_farm_output_derives_inverse_order():
             FV.WS: (FC.STATE, FC.TURBINE),
         },
     )
-    model = ReorderFarmOutput(outputs=[FV.WS])
+    model = PrepareForOutput(output=FarmResultsOutput(variables=[FV.WS]))
 
-    results = model.calculate(algo=None, mdata={}, fdata=fdata)
+    model.calculate(algo=None, mdata=MData(), fdata=fdata)
 
     np.testing.assert_allclose(
-        results[FV.WS],
+        fdata[FV.WS],
         [[10.0, 20.0, 30.0], [40.0, 50.0, 60.0]],
     )
 

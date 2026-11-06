@@ -24,6 +24,7 @@ class DefaultEngine(Engine):
             n_procs=self.n_procs,
             chunk_size_states=self.chunk_size_states,
             chunk_size_points=self.chunk_size_points,
+            progress_bar=self.progress_bar,
             verbosity=self.verbosity,
         )
         self._delegate_process_engine.__enter__()
@@ -53,6 +54,7 @@ class DefaultEngine(Engine):
             n_procs=self.n_procs,
             chunk_size_states=self.chunk_size_states,
             chunk_size_points=self.chunk_size_points,
+            progress_bar=self.progress_bar,
             verbosity=self.verbosity,
         )
         e.__enter__()
@@ -270,6 +272,7 @@ class DefaultEngine(Engine):
                 n_procs=self.n_procs,
                 chunk_size_states=self.chunk_size_states,
                 chunk_size_points=self.chunk_size_points,
+                progress_bar=self.progress_bar,
                 verbosity=self.verbosity,
             ) as e:
                 results = e.run_calculation(

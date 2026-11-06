@@ -9,7 +9,7 @@ from foxes.utils import write_nc
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .output import Output
+from foxes.core import Output
 from . import grids
 
 if TYPE_CHECKING:

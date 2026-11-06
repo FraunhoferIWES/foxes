@@ -15,7 +15,7 @@ from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .output import Output
+from foxes.core import Output
 
 
 class TurbineTypeCurves(Output):

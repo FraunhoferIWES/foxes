@@ -9,7 +9,7 @@ from foxes.utils import write_nc
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .output import Output
+from foxes.core import Output
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm
@@ -35,7 +35,7 @@ class PointCalculator(Output):
         self.algo = algo
         self.farm_results = farm_results
 
-    def calculate(
+    def calculate(  # type: ignore[override]
         self,
         points: np.ndarray,
         *args: Any,

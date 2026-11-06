@@ -35,7 +35,7 @@ class ThreadsEngineRunner(ProcessEngineRunner):
         """Helper function for running in a single thread"""
         mdata = self._recombine_mdata_with_shared(mdata, shared)
 
-        fdata, has_prev_farm_results = self._apply_prev_farm_results(algo, mdata, fdata)
+        fdata, _ = self._apply_prev_farm_results(algo, mdata, fdata)
         if tdata is not None:
             tdata.expand_targets()
 
@@ -44,6 +44,9 @@ class ThreadsEngineRunner(ProcessEngineRunner):
             model_results = model.calculate(algo, mdata, fdata, **cpars)
         else:
             model_results = model.calculate(algo, mdata, fdata, tdata, **cpars)
+
+        # Render requested chunk diagnostics before prepared data leaves the worker.
+        self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)
 
         cstore = (
             {chunk_key: algo.chunk_store[chunk_key]}

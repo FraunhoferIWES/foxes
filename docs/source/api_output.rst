@@ -71,16 +71,34 @@ NumPy farm path:
         results = algo.calc_farm(outputs=outputs)
     assert results[FC.FARM_RESULTS].sizes[FC.STATE] == 3
 
-The NumPy and thread farm paths are covered by regression tests. Other engines,
-Iterative, Sequential and point-output integration still require migration.
+Engine parity tests cover single, NumPy, threads, process, multiprocess, local
+Dask and distributed local clusters. MPI runtime checks are opt-in and have
+also been exercised locally; Ray runtime parity remains unverified here.
+Iterative and Sequential use explicit intermediate collectors.
 ``normalize=True`` normalizes collected farm weights after finalization and
 requires a collected weighted dataset; it does not rewrite output files.
+
+Point collection
+----------------
+``PointResultsOutput`` assembles state/target tiles under ``FC.POINT_RESULTS``.
+``calc_points()`` retains the public ``(state, point)`` dataset interface.
+The model-book default farm field set is unchanged. For a downstream wake-point
+calculation, request ``algo.calc_farm(outputs="farm_results_all")`` to retain
+all required wake inputs instead of expanding the default selection.
+
+All engines share parent-side progress. ``progress_bar=True`` chooses terminal
+or notebook tqdm bars, including Unicode terminal bars where supported, and
+newline-only snapshots for redirected logs. ``False`` forces snapshots;
+``None`` or verbosity zero disables progress. Output finalization and failures
+are distinguished from completed chunk counts.
 
 Existing consumers awaiting adoption
 ------------------------------------
 The remaining ``foxes.output`` classes have not been adopted into the new
-chunk-output structure. They are not newly supported chunk models, and this
-branch's existing import paths still require migration work.
+chunk-output structure. They are not newly supported chunk models; their
+existing import paths use the core base directly. Evaluation methods
+with names such as ``calculate`` or ``get_data`` remain consumer APIs, not
+chunk hooks; passing such consumers to ``calc_farm(outputs=...)`` is unsupported.
 
 ``SliceData`` and ``FlowPlots2D`` return grid-data tuples whose final item is a
 static coordinate array with shape ``(n_points, 3)``. XY, XZ, and YZ grids share

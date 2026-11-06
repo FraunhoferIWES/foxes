@@ -38,7 +38,7 @@ def test_downwind_calc_points_respects_states_sel_subset():
     points = np.array([[[0.0, 0.0, 100.0], [100.0, 0.0, 100.0]]], dtype=float)
 
     with foxes.Engine.new(engine_type=None):
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs="farm_results_all")
         point_results = algo.calc_points(
             farm_results,
             points=points,

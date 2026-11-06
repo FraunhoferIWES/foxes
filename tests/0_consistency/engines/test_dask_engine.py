@@ -27,6 +27,12 @@ class _DummyModel:
         return {"out": np.array([mdata["A"].sum()], dtype=np.float64)}
 
 
+class _ReturnOutput:
+    def calculate(self, algo, mdata, fdata, tdata, model_results):
+        # Explicit output selection replaces the removed raw-result engine path.
+        return model_results
+
+
 class _FakeFuture:
     def __init__(self, value):
         self._value = value
@@ -124,6 +130,7 @@ def test_dask_runner_resolves_nested_future_payloads():
         mdata,
         fdata,
         None,
+        output=_ReturnOutput(),
         shared=None,
         chunk_store={},
         chunk_key=(0, 0),

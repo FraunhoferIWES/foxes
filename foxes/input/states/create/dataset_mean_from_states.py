@@ -343,6 +343,10 @@ def _evaluate_mean(
     def _calculate() -> None:
         try:
             farm_results = algo.calc_farm(ambient=True, finalize=False)
+            if not isinstance(farm_results, xr.Dataset):
+                raise TypeError(
+                    "Mean-field calculation requires collected farm results"
+                )
             n_states = farm_results.sizes[FC.STATE]
             state_index = farm_results.get_index(FC.STATE)
             if not state_index.is_unique:

@@ -123,45 +123,6 @@ class FarmDataModel(DataCalcModel):
         """
         pass
 
-    def run_calculation(
-        self,
-        algo: Algorithm,
-        *data: tuple[Any, ...],
-        out_vars: list[str],
-        **calc_pars: Any,
-    ) -> Any:
-        """
-        Starts the model calculation in parallel, via
-        xarray's `apply_ufunc`.
-
-        Typically this function is called by algorithms.
-
-        Parameters
-        ----------
-        algo
-            The calculation algorithm
-        *data
-            The input data
-        out_vars
-            The calculation output variables
-        **calc_pars
-            Additional arguments for the `calculate` function
-
-        Returns
-        -------
-        results
-            The calculation results
-
-        """
-        return super().run_calculation(  # type: ignore[misc]
-            algo,
-            *data,
-            out_vars=out_vars,
-            loop_dims=[FC.STATE],
-            out_core_vars=[FC.TURBINE, FC.VARS],
-            **calc_pars,
-        )
-
     def __add__(self, m: Any) -> FarmDataModelList:
         if isinstance(m, list):
             return FarmDataModelList([self] + m)

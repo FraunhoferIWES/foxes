@@ -93,6 +93,11 @@ use `model.var(FC.FARM_RESULTS)` as their private result key. A writer's file
 `index` is distinct from the engine's `chunki_states`: count/period intervals
 can span chunks or split a single chunk.
 
+`FC.POINT_RESULTS` names point-output buffers and the unified internal target
+dataset. Public point results rename `FC.TARGET` to `FC.POINT`. The model-book
+`"default"` field selection is not an implicit list of every wake input; request
+`"farm_results_all"` explicitly when all farm variables are required.
+
 Count/chunk filenames use six-digit zero-padded indices. Calendar files use
 `YYYY-MM-DD`, `YYYY-Www`, `YYYY-MM` or `YYYY` suffixes. Weekly `YYYY` is the ISO
 week year (`iso_year`), not necessarily the sample's calendar `year`. See

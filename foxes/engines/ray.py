@@ -177,15 +177,12 @@ class RayEngine(PoolEngine):
         ray_mod = _get_ray()
         refs = list(shared_handle.get("data", {}).values())
         refs.extend(shared_handle.get("extra_arrays", {}).values())
-        try:
-            if (
-                len(refs)
-                and hasattr(ray_mod, "internal")
-                and hasattr(ray_mod.internal, "free")
-            ):
-                ray_mod.internal.free(refs)
-        except Exception:
-            pass
+        if (
+            len(refs)
+            and hasattr(ray_mod, "internal")
+            and hasattr(ray_mod.internal, "free")
+        ):
+            ray_mod.internal.free(refs)
         shared_memory.clear()
 
     def _create_pool(self) -> None:
@@ -239,7 +236,7 @@ class RayEngine(PoolEngine):
 
         """
         ray_mod = _get_ray()
-        ready, __ = ray_mod.wait([future])
+        ready, __ = ray_mod.wait([future], timeout=0)
         return len(ready) > 0
 
     def await_result(self, future: Any) -> Any:

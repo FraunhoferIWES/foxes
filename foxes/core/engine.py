@@ -189,8 +189,10 @@ class Engine(ABC):
             The number of processes to be used, or ``None`` for automatic
             selection.
         progress_bar
-            Use a progress bar instead of printing reached-percent lines. If
-            ``None``, neither the progress bar nor progress prints are used.
+            True selects a terminal/notebook progress bar, falling back to
+            bounded newline-only progress snapshots in redirected logs.
+            False always uses snapshots; ``None`` disables progress.
+            Verbosity zero suppresses progress in every mode.
         verbosity
             The verbosity level, where ``0`` is silent.
         """
@@ -215,11 +217,11 @@ class Engine(ABC):
             raise ValueError(
                 f"Engine '{self.name}': Enter called for already entered engine"
             )
-        self.__entered = True
         if has_engine():
             raise ValueError(
                 f"Cannot enter engine '{self.name}', since engine already set to '{type(get_engine()).__name__}'"
             )
+        self.__entered = True
         __global_engine_data__["engine"] = self
         return self
 
@@ -389,6 +391,22 @@ class Engine(ABC):
         """
         pass
 
+    def await_results(self, futures: list[Any]) -> list[Any]:
+        """Resolve a batch of tasks in submission order.
+
+        Parameters
+        ----------
+        futures
+            Submitted tasks. Lazy backends may schedule this batch together.
+
+        Returns
+        -------
+        results
+            Task results in the same order, with worker exceptions propagated.
+        """
+        # Preserve deterministic output order on every eager backend.
+        return [self.await_result(future) for future in futures]
+
     @abstractmethod
     def map(
         self,
@@ -430,7 +448,7 @@ class Engine(ABC):
             The loop dimensions, possibly chunked.
 
         """
-        if self.chunk_size_states is None and self.chunk_size_states is None:
+        if self.chunk_size_states is None and self.chunk_size_points is None:
             return []
         elif self.chunk_size_states is None:
             return [FC.TARGET]

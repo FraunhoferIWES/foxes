@@ -691,7 +691,7 @@ class ModelBook:
                 FV.Y,
                 FV.H,
                 FV.D,
-                FV.AMB_WD,
+                FV.WD,
                 FV.YAW,
                 FV.AMB_RHO,
                 FV.AMB_REWS,
@@ -700,16 +700,19 @@ class ModelBook:
                 FV.TI,
                 FV.AMB_P,
                 FV.P,
+                FV.WEIGHT,
             ],
             "P": [
                 FV.AMB_P,
                 FV.P,
+                FV.WEIGHT,
             ],
             "wsP": [
                 FV.AMB_REWS,
                 FV.REWS,
                 FV.AMB_P,
                 FV.P,
+                FV.WEIGHT,
             ],
             "wstiP": [
                 FV.AMB_REWS,
@@ -718,6 +721,7 @@ class ModelBook:
                 FV.TI,
                 FV.AMB_P,
                 FV.P,
+                FV.WEIGHT,
             ],
             "rhowstiP": [
                 FV.AMB_RHO,
@@ -727,6 +731,7 @@ class ModelBook:
                 FV.TI,
                 FV.AMB_P,
                 FV.P,
+                FV.WEIGHT,
             ],
         }
 

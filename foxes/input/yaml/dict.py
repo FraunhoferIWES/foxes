@@ -9,7 +9,7 @@ from typing import Any
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
 from foxes.models import ModelBook
-from foxes.output import Output
+from foxes.core import Output
 from foxes.utils import Dict, new_cls
 from foxes.config import config
 import foxes.constants as FC

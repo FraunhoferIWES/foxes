@@ -22,7 +22,7 @@ from xarray import Dataset
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.config import config
-from foxes.output.output import Output
+from foxes.core import Output
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, WindFarm

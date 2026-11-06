@@ -10,6 +10,12 @@ class NumpyEngine(ThreadsEngine):
     The numpy engine for foxes calculations.
     """
 
+    def _create_pool(self) -> None:
+        """Synchronous execution needs no worker resources."""
+
+    def _shutdown_pool(self) -> None:
+        """Synchronous execution has no worker resources to release."""
+
     def submit(self, f: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """
         Submits a job to worker, obtaining a future

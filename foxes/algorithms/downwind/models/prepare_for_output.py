@@ -20,15 +20,19 @@ class PrepareForOutput(DataCalcModel):
     and re-orders variables from downwind to farm order.
     """
 
-    def __init__(self, output: Output | None) -> None:
+    def __init__(self, output: Output | None, reorder: bool = True) -> None:
         """
         Parameters
         ----------
         output
-            The output object
+            The output object.
+        reorder
+            Restore farm order. Disable only for intermediate iterative results,
+            which feed the next wake calculation in downwind order.
         """
         super().__init__()
         self.output = output
+        self.reorder = reorder
 
     def output_coords(self) -> tuple[str, ...]:
         """
@@ -124,6 +128,7 @@ class PrepareForOutput(DataCalcModel):
                         # reoreder to farm order, if needed:
                         if (
                             v != FV.ORDER
+                            and self.reorder
                             and dta.shape[1] > 1
                             and np.any(dta != dta[0, 0, None, None])
                         ):

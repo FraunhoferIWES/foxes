@@ -11,7 +11,7 @@ from xarray import Dataset
 from matplotlib.lines import Line2D
 from typing import TYPE_CHECKING
 
-from .output import Output
+from foxes.core import Output
 from foxes.config import config
 from foxes.utils import write_nc
 import foxes.variables as FV

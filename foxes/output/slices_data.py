@@ -5,7 +5,7 @@ from typing import Any
 import foxes.constants as FC
 from foxes.core import Algorithm
 
-from .output import Output
+from foxes.core import Output
 from .slice_data import SliceData
 
 

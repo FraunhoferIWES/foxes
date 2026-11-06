@@ -191,7 +191,7 @@ class ProcessEngineRunner(EngineRunner):
 
         mdata = self._recombine_mdata_with_shared(mdata, shared)
 
-        fdata, has_prev_farm_results = self._apply_prev_farm_results(algo, mdata, fdata)
+        fdata, _ = self._apply_prev_farm_results(algo, mdata, fdata)
         if tdata is not None:
             tdata.expand_targets()
 
@@ -200,6 +200,9 @@ class ProcessEngineRunner(EngineRunner):
             model_results = model.calculate(algo, mdata, fdata, **cpars)
         else:
             model_results = model.calculate(algo, mdata, fdata, tdata, **cpars)
+
+        # Keep chunk-local animation diagnostics available on process backends.
+        self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)
 
         chunk_store = algo.reset_chunk_store()
         cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}

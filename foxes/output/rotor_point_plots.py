@@ -13,7 +13,7 @@ from foxes.input.states import SingleStateStates
 from foxes.core import WindFarm
 from foxes.algorithms import Downwind
 
-from .output import Output
+from foxes.core import Output
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, RotorModel

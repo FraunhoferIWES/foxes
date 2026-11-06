@@ -9,6 +9,9 @@ from foxes.config import config
 from foxes.core import Engine
 from foxes.utils import Dict
 import foxes.constants as FC
+from .progress import CalculationProgress
+import sys
+import warnings
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, DataCalcModel, MData, Output
@@ -95,13 +98,35 @@ class PoolEngine(Engine):
             print()
 
     def __enter__(self) -> PoolEngine:
-        self._create_pool()
+        # Claim the engine slot before allocating backend resources.
         super().__enter__()
+        try:
+            self._create_pool()
+        except BaseException:
+            super().__exit__(*sys.exc_info())
+            raise
         return self
 
     def __exit__(self, *exit_args: Any) -> None:
-        self._shutdown_pool()
-        super().__exit__(*exit_args)
+        # Release the global slot even when backend shutdown reports an error.
+        try:
+            self._shutdown_pool()
+        finally:
+            super().__exit__(*exit_args)
+
+    def _drain_failed_tasks(self, futures: dict[Any, Any]) -> None:
+        """Finish outstanding workers before releasing their shared input storage."""
+        # Report secondary failures without replacing the original calculation error.
+        for key, future in futures.items():
+            try:
+                self.await_result(future)
+            except Exception as error:
+                warnings.warn(
+                    f"{self.name}: Pending chunk {key} also failed during cleanup: "
+                    f"{type(error).__name__}: {error}",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
 
     def map(
         self,
@@ -291,10 +316,8 @@ class PoolEngine(Engine):
                         chunk_results[rname][k].update(r)
 
             # Merge stateful model data independently of output result collection.
-            if k in new_chunk_store:
-                new_chunk_store[k].update(cs)
-            else:
-                new_chunk_store[k] = cs
+            for key, entry in cs.items():
+                new_chunk_store.setdefault(key, {}).update(entry)
 
             # Invoke output hooks only when an output model was selected.
             if output is not None:
@@ -306,6 +329,9 @@ class PoolEngine(Engine):
                     output_results=output_results,
                 )
 
+            # Report only chunks whose calculations and result updates succeeded.
+            progress.update()
+
         # start calculation:
         futures = {}
         runner = self.new_runner()
@@ -315,6 +341,13 @@ class PoolEngine(Engine):
             _name="chunk_results"
         )
         output_results: Dict = Dict(_name="output_results")
+        progress = CalculationProgress(
+            f"{self.name} [{model.name}]",
+            n_chunks_states * n_chunks_targets,
+            self.progress_bar,
+            self.verbosity,
+        )
+        failed = True
         try:
             i0_states = 0
             for chunki_states in range(n_chunks_states):
@@ -397,23 +430,28 @@ class PoolEngine(Engine):
                     )
                     del data, mdata_chunk, fdata_chunk, tdata_chunk
 
-                    while len(futures) > self.n_workers * 3:
-                        k = next(iter(futures))
-                        new_results = self.await_result(futures.pop(k))
-                        _handle_new_results(
-                            k, new_results, chunk_results, new_chunk_store
-                        )
+                    if len(futures) >= self.n_workers * 3:
+                        # Schedule lazy backends in batches while preserving order.
+                        keys = list(futures)
+                        batch = self.await_results(list(futures.values()))
+                        for k, new_results in zip(keys, batch):
+                            del futures[k]
+                            _handle_new_results(
+                                k, new_results, chunk_results, new_chunk_store
+                            )
 
                     i0_targets = i1_targets
                 i0_states = i1_states
             del calc_pars, farm_data
 
-            fkeys = list(futures.keys())
-            for k in fkeys:
-                new_results = self.await_result(futures.pop(k))
+            fkeys = list(futures)
+            batch = self.await_results(list(futures.values()))
+            for k, new_results in zip(fkeys, batch):
+                del futures[k]
                 _handle_new_results(k, new_results, chunk_results, new_chunk_store)
 
             # Finalize the selected output chain after all worker payloads arrive.
+            progress.finalizing()
             if output is not None:
                 output.finalize_results(
                     algo=algo,
@@ -421,10 +459,18 @@ class PoolEngine(Engine):
                     n_chunks_targets=n_chunks_targets,
                     output_results=output_results,
                 )
+            failed = False
 
         finally:
-            self.release_shared_memory(shared_memory, shared_handle)
-            del shared_memory, shared_handle, futures, chunk_results
+            # Workers must stop reading shared arrays before their storage is freed.
+            try:
+                if failed:
+                    self._drain_failed_tasks(futures)
+            finally:
+                try:
+                    self.release_shared_memory(shared_memory, shared_handle)
+                finally:
+                    progress.close(error=failed or sys.exc_info()[0] is not None)
 
         # update chunk store:
         chunk_store.update(new_chunk_store)

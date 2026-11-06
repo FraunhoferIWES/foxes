@@ -208,3 +208,4 @@ NC_ENGINE = "nc_engine"
 UTM_ZONE = "utm_zone"
 """Identifier for the UTM zone (number, letter) tuple
 """
+POINT_RESULTS = "point_results"

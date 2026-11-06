@@ -12,7 +12,7 @@ from typing import Any
 
 import foxes.constants as FC
 
-from .output import Output
+from foxes.core import Output
 
 
 class StateTurbineMap(Output):

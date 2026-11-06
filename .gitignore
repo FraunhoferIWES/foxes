@@ -152,6 +152,7 @@ area.png
 binned_data.nc
 
 # exceptions:
+!foxes/models/outputs/*.py
 !foxes/output/results_writer.py
 !tests/**/results*
 !tests/**/test_*.py
