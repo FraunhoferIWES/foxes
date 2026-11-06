@@ -154,3 +154,4 @@ binned_data.nc
 # exceptions:
 !foxes/output/results_writer.py
 !tests/**/results*
+!tests/**/test_*.py

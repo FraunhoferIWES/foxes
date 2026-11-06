@@ -34,8 +34,9 @@ the conflict and update the record in the same change.
 
 FOXES serves wind-energy researchers, engineers, and developers. A typical
 caller supplies ambient conditions (`States`), a `WindFarm`, and model choices;
-an `Algorithm` coordinates model execution through an `Engine`; the public
-result is an xarray `Dataset` for evaluation, plotting, or export.
+an `Algorithm` coordinates model execution through an `Engine`. Chunk-based
+output models unify selected farm results into datasets or write files; point
+calculations expose xarray datasets.
 
 ```mermaid
 flowchart LR
@@ -43,8 +44,9 @@ flowchart LR
     ModelBook[ModelBook and registered models] --> Algorithm
     Algorithm --> Engine[Chunking and execution engine]
     Engine --> Models[Farm, rotor, wake, and point models]
-    Models --> Results[xarray farm and point results]
-    Results --> Output[foxes.output, files, plots]
+    Models --> Output[foxes.core.Output / foxes.models.outputs]
+    Output --> Results[Unified datasets or files]
+    Results --> Evaluation[foxes.output consumers awaiting migration]
 ```
 
 - Runtime: Python 3.10 through 3.14 on operating-system-independent Python
@@ -53,6 +55,9 @@ flowchart LR
 	h5netcdf/h5py, PyYAML, tqdm, and utm.
 - Optional integrations are isolated behind extras, including `foxes-opt`,
 	ERA5/metpy, geospatial shapefiles, MPI, Ray, multiprocess, and Dask.
+	The aggregate `engines` extra combines the existing `dask`, `mpi`,
+	`multiprocess` and `ray` extras without duplicating package requirements;
+	system MPI and scheduler infrastructure remain external prerequisites.
 - FOXES is an in-process library and command-line toolkit. It has no application
 	server, authentication boundary, database, or browser frontend.
 - Parallel execution can be local or distributed. Engine implementations own
@@ -67,8 +72,10 @@ flowchart LR
 4. Construct `Downwind`, `Iterative`, or `Sequential` with the farm, states, and
 	model selections.
 5. Call `calc_farm()` and optionally `calc_points()`.
-6. Evaluate, plot, or write the resulting xarray datasets through
-	`foxes.output` or downstream scientific code.
+6. Select farm collection or writing through `ModelBook.outputs` or concrete
+	`foxes.models.outputs` instances. Evaluate collected datasets with downstream
+	scientific code. Existing `foxes.output` consumers await adoption into the
+	new output structure; they are not new chunk-output implementations.
 
 YAML parameter files mirror this object graph. The YAML reader constructs the
 states, model book, farm, engine, and algorithm, then invokes the same runtime
@@ -79,12 +86,12 @@ contracts as Python callers.
 | Module | Owns | Main interfaces and dependencies |
 |---|---|---|
 | `foxes.config` | Global numeric types, work/input/output paths, NetCDF engine, UTM settings | `config`, `get_path`; standard library and NumPy-facing settings |
-| `foxes.core` | Abstract model, algorithm, engine, state, farm, turbine, and data-container contracts | `Model`, `DataCalcModel`, `Algorithm`, `Engine`, `States`, `WindFarm`, `MData`, `FData`, `TData` |
-| `foxes.models` | Concrete farm, rotor, turbine, wake, ground, and point models | `ModelBook`, concrete implementations; depends on core contracts and utilities |
+| `foxes.core` | Abstract model, algorithm, engine, output, state, farm, turbine, and data-container contracts | `Model`, `DataCalcModel`, `Algorithm`, `Engine`, `Output`, `OutputList`, `States`, `WindFarm`, `MData`, `FData`, `TData` |
+| `foxes.models` | Concrete farm, rotor, turbine, wake, ground, point, and adopted output models | `ModelBook`, `foxes.models.outputs`, concrete implementations; depends on core contracts and utilities |
 | `foxes.algorithms` | Simulation orchestration and model-chain assembly | `Downwind`, `Iterative`, `Sequential`; depends on core contracts and registered models |
 | `foxes.engines` | Serial, process, thread, Dask, MPI, Ray, and related execution backends | `Engine` implementations and runners; optional backend dependencies stay here |
 | `foxes.input` | States, farm-layout readers, YAML/WindIO loading, and data-conversion CLIs | Produces core `States`, `WindFarm`, and algorithm inputs |
-| `foxes.output` | Result evaluation, writing, plotting, animation, and sequential plugins | Consumes xarray calculation results; must not own simulation state |
+| `foxes.output` | Existing evaluation, plotting, animation, writing and sequential consumers awaiting adoption | Not the destination for new adopted classes; migration remains incomplete |
 | `foxes.data` | Discovery and registration of packaged static farm, state, curve, and model data | `StaticData`, `DataBook` entries; package resources and filesystem inputs |
 | `foxes.utils` | Shared factories, dictionaries, geometry, interpolation, subclass lookup, and data access | Infrastructure used across modules; avoid domain orchestration here |
 | `examples` and `notebooks` | Executable user workflows and documentation examples | Public APIs only wherever practical |
@@ -134,9 +141,13 @@ as `FV`. Avoid local string copies of established constants.
 	calculated point-result dimensions and mean weights are unchanged.
 - `LoadedData` separates `coords`, dimensioned `data_vars`, and non-array
 	`extra_data` during initialization.
-- The public boundary of `Algorithm.calc_farm()` and `calc_points()` is xarray.
-	Convert at that boundary rather than making every chunk-local model xarray
-	aware.
+- `Downwind.calc_farm()` defaults to an xarray farm dataset. A single output
+	with exactly one returned result is unwrapped; multiple outputs return a
+	result-name keyed mapping. Writer-only or disabled collection returns an
+	empty mapping. `calc_points()` retains its dataset-facing contract, but
+	point-output execution has not yet been migrated to the new engine hooks.
+- Concrete output models consume NumPy data in workers and construct xarray
+	only when collecting a full dataset or writing an individual file.
 - Point calculations use target dimensions internally. `calc_points()` selects
 	the single target-point axis and renames `FC.TARGET` to the public `FC.POINT`
 	dimension before returning its dataset.
@@ -160,6 +171,16 @@ Execution is bracketed by `set_running()` and `unset_running()`, which may move
 large data through a stash. `finalize()` recursively releases initialized state
 and cannot run while the model is marked running.
 
+For all FOXES models, between `set_running()` and `unset_running()`, instance
+state is treated as read-only.
+Avoid both attribute assignment and mutation of objects referenced by `self`.
+Threads may share model instances; process workers receive separate copies.
+Chunk-local working data belongs in `mdata`, `fdata`, `tdata` or local variables, while
+run-level aggregation, counters, buffers and futures belong in engine-owned
+chunk stores or explicit result mappings. Persistent configuration is prepared
+before execution. Necessary lifecycle-managed mutations must account for
+ownership, synchronization, worker copies and cleanup.
+
 Do not manually set lifecycle flags, calculate with an uninitialized model, or
 hide large persistent arrays outside the loading/stashing contract. A
 `DataCalcModel.calculate()` implementation operates on one engine chunk and
@@ -171,14 +192,17 @@ Algorithms own assembly and ordering of model chains. They prepare data,
 delegate chunk execution to an engine, and reconstruct ordered xarray results.
 Models must not select a parallel backend or depend on a concrete engine.
 
-`Downwind.calc_farm()` and `calc_points()` accept `ambient_keep=False`.
-Ambient-only calculations drop ordinary fields with `FV.AMB_*` counterparts
-unless retention is enabled; retained pairs contain the same unwaked values.
-Explicit output selections are not expanded, and waked calculations are
-unchanged. Iterative intermediate farm passes retain ordinary fields needed
-for convergence; final results use the caller's retention setting. Binned-state
-reduction and mean-field creation request retained ordinary point outputs
-directly instead of translating ambient variable names.
+`Downwind.calc_farm(outputs=...)` accepts an `Output`, a name from
+`ModelBook.outputs`, or a list of models and names. Variable selections belong
+to `FarmResultsOutput(variables=...)`; ambient/ordinary filtering belongs to
+its `ambient_vars` and `waked_vars` flags. `ambient=True` still controls the
+scientific calculation, independently of output selection.
+
+`calc_points()` retains `ambient_keep=False` for its point-facing contract.
+The Iterative, Sequential, single-chunk and distributed execution paths still
+contain pre-output-migration callers and are not certified by the farm-output
+tests. No compatibility path is introduced for them in the focused farm-output
+change.
 
 Use `Engine` as a context manager for an explicit backend. `Engine.new()` maps
 established names to implementations. If no engine is active, FOXES creates a
@@ -186,9 +210,38 @@ default engine; `DefaultEngine` chooses a single-chunk or process strategy from
 the problem size. Engine changes therefore require both numerical-equivalence
 tests and coverage of chunk boundaries and cleanup.
 
-Chunk result managers assert completeness after normal execution. During
-exception unwinding they preserve the active worker or model exception instead
-of replacing it with a secondary incomplete-chunk assertion.
+For the implemented NumPy/thread farm path, the engine passes ordered worker
+payloads to output `update_results()` hooks and calls `finalize_results()` after
+all chunks have arrived. Writers await submitted file jobs so worker exceptions
+propagate to the caller.
+
+### Chunk-Based Farm Outputs
+
+All adopted output classes derive from `foxes.core.Output` and live in
+`foxes.models.outputs`. `OutputList` merges input-variable requirements and
+executes children in declaration order. An empty requirement requests no fields;
+`None` requests all available fields.
+
+The implemented farm family is:
+
+- `FarmResultsOutput`: retain ordered chunks and construct one dataset under
+	`FC.FARM_RESULTS`, preserving state/turbine coordinates and optional names.
+- `FarmResultsChunkWriter`: write one file in each state-chunk worker.
+- `FarmResultsCountWriter`: buffer ordered chunks and write fixed-size state
+	intervals, including multiple files from the final engine chunk.
+- `FarmResultsPeriodWriter`: buffer chronological datetime states and write
+	calendar days, Monday-based ISO weeks, months or years.
+
+Writers select their own fields. Buffered writers use model-private keys so
+they can run before or after a dataset collector without consuming its result.
+Farm field arrays keep state/turbine dimensions during chunk processing;
+uniform weights are reduced to state-only dimensions only at dataset creation.
+Writer options and standard path transformations apply to every file. Count
+limits must be positive integers; period states must be chronological datetime
+values without `NaT`. See [ADR-0010](adr/0010-chunk-based-farm-outputs.md).
+
+`normalize=True` normalizes the collected weighted farm dataset after output
+finalization. It does not rewrite files or renormalize each file independently.
 
 ## Extension Points
 
@@ -204,7 +257,7 @@ data for other models.
 `ModelBook` owns named `FDict` collections for point models, rotor models,
 turbine types and models, farm models and controllers, partial-wake models, wake
 frames and deflections, wake superpositions and models, induction models, and
-ground models.
+ground models, and outputs.
 
 Model-book factories parse parameterized names such as rotor-grid variants and
 cache the resulting model. There is no universal `Model.new()` constructor;
@@ -392,6 +445,15 @@ subprocess.
 - Public Python APIs follow [docstring conventions](docstrings.md): NumPy-style
 	docstrings expose the scientific and runtime contract while type information
 	remains in annotations.
+- Adopted outputs use the core chunk lifecycle and live in
+	`foxes.models.outputs`; farm files use explicit count limits or calendar
+	periods, including ISO week years. See
+	[ADR-0010](adr/0010-chunk-based-farm-outputs.md).
+- [AGENTS.md](../AGENTS.md) keeps critical contributor guardrails and routes
+	detailed requirements to their owning guides. Code style is detailed in
+	[development](development.md#code-quality), lifecycle and parallelization in
+	this document, vocabulary in [naming conventions](naming-conventions.md),
+	and public Python documentation in [docstrings](docstrings.md).
 - Power-mask boosts use a smooth near-rated transition and bounded
 	low-induction thrust while preserving requested power. See
 	[ADR-0007](adr/0007-smooth-power-mask-boosts.md).

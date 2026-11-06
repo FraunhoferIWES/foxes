@@ -13,9 +13,11 @@ import foxes.constants as FC
 if TYPE_CHECKING:
     from foxes.core import Algorithm, DataCalcModel, MData, Output
 
+
 def _run_map(func: Any, inputs: Any, *args: Any, **kwargs: Any) -> list[Any]:
     """Helper function for running map func on proc"""
     return [func(x, *args, **kwargs) for x in inputs]
+
 
 class PoolEngine(Engine):
     """
@@ -158,7 +160,7 @@ class PoolEngine(Engine):
         write_nc: dict[str, Any] | None = None,
         write_chunk_ani: dict[str, Any] | None = None,
         **calc_pars: Any,
-    ) -> Dataset:
+    ) -> Dict[str, Any]:
         """
         Runs the model calculation
 
@@ -210,8 +212,9 @@ class PoolEngine(Engine):
 
         Returns
         -------
-        results
-            The model results
+        output_results
+            Unified results keyed by output result name. An absent output model
+            returns an empty mapping while preserving model chunk-store updates.
 
         """
         # prepare data:
@@ -251,7 +254,6 @@ class PoolEngine(Engine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = Dataset()
-        goal_data = farm_data if point_data is None else point_data
 
         # DEBUG objec mem sizes:
         # from foxes.utils import print_mem
@@ -269,36 +271,47 @@ class PoolEngine(Engine):
             f"{type(self).__name__}: Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
             level=2,
         )
-        print("HERE POOL START")
 
-        def _handle_new_results(k, new_results, chunk_results, new_chunk_store):
-            """ Helper function for new chunk results """
+        def _handle_new_results(
+            k: tuple[int, int],
+            new_results: tuple[dict[str, Any] | None, dict[Any, Any]],
+            chunk_results: Dict[str, Dict[tuple[int, int], Any]],
+            new_chunk_store: dict[Any, Any],
+        ) -> None:
+            """Collect a worker's payloads and update the selected output chain."""
+            # Preserve the worker chunk store even when no output is requested.
             res, cs = new_results
-            for rname, r in res.items():
-                if rname not in chunk_results:
-                    chunk_results[rname] = {k: r}
-                elif k not in chunk_results[rname]:
-                    chunk_results[rname][k] = r
-                else:
-                    chunk_results[rname][k].update(r)
+            if res is not None:
+                for rname, r in res.items():
+                    if rname not in chunk_results:
+                        chunk_results[rname] = Dict({k: r})
+                    elif k not in chunk_results[rname]:
+                        chunk_results[rname][k] = r
+                    else:
+                        chunk_results[rname][k].update(r)
+
+            # Merge stateful model data independently of output result collection.
             if k in new_chunk_store:
                 new_chunk_store[k].update(cs)
             else:
                 new_chunk_store[k] = cs
-            output.update_results(
-                algo,
-                n_chunks_states=n_chunks_states,
-                n_chunks_targets=n_chunks_targets,
-                new_chunk_results=chunk_results,
-                output_results=output_results,
-            )
+
+            # Invoke output hooks only when an output model was selected.
+            if output is not None:
+                output.update_results(
+                    algo,
+                    n_chunks_states=n_chunks_states,
+                    n_chunks_targets=n_chunks_targets,
+                    new_chunk_results=chunk_results,
+                    output_results=output_results,
+                )
 
         # start calculation:
         futures = {}
         runner = self.new_runner()
         shared_memory: list[Any] = []
         shared_handle = None
-        chunk_results: Dict[tuple[int, int], dict[str, Any]] = Dict(
+        chunk_results: Dict[str, Dict[tuple[int, int], Any]] = Dict(
             _name="chunk_results"
         )
         output_results: Dict = Dict(_name="output_results")
@@ -386,9 +399,10 @@ class PoolEngine(Engine):
 
                     while len(futures) > self.n_workers * 3:
                         k = next(iter(futures))
-                        print("HERE POOL A", k)
                         new_results = self.await_result(futures.pop(k))
-                        _handle_new_results(k, new_results, chunk_results, new_chunk_store)
+                        _handle_new_results(
+                            k, new_results, chunk_results, new_chunk_store
+                        )
 
                     i0_targets = i1_targets
                 i0_states = i1_states
@@ -396,16 +410,17 @@ class PoolEngine(Engine):
 
             fkeys = list(futures.keys())
             for k in fkeys:
-                print("HERE POOL B", k)
                 new_results = self.await_result(futures.pop(k))
                 _handle_new_results(k, new_results, chunk_results, new_chunk_store)
 
-            output.finalize_results(
-                algo=algo,
-                n_chunks_states=n_chunks_states,
-                n_chunks_targets=n_chunks_targets,
-                output_results=output_results,
-            )
+            # Finalize the selected output chain after all worker payloads arrive.
+            if output is not None:
+                output.finalize_results(
+                    algo=algo,
+                    n_chunks_states=n_chunks_states,
+                    n_chunks_targets=n_chunks_targets,
+                    output_results=output_results,
+                )
 
         finally:
             self.release_shared_memory(shared_memory, shared_handle)

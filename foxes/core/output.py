@@ -1,5 +1,8 @@
+"""Output model lifecycle, chunk result composition and file path helpers."""
+
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 import pandas as pd
@@ -16,11 +19,12 @@ if TYPE_CHECKING:
 
 
 class Output(DataCalcModel):
-    """
-    Base class for foxes output.
+    """Base contract for chunk-local output and unified calculation results.
 
-    The job of this class is to provide handy
-    helper functions.
+    Engine workers call ``calculate`` on prepared NumPy data. The engine then
+    calls ``update_results`` with ordered chunk payloads and ``finalize_results``
+    after all chunks have been processed. Outputs share result mappings and must
+    consume only their own pending keys.
     """
 
     def __init__(
@@ -28,61 +32,90 @@ class Output(DataCalcModel):
         out_dir: str | Path | None = None,
         out_fname_fun: Callable[[Path], Path] | None = None,
         nofig: bool = False,
-        mdata_variables: list[str] | None = [],
+        mdata_variables: Sequence[str] | None = (),
         fdata_variables: list[str] | None = None,
-        tdata_variables: list[str] | None = None, 
+        tdata_variables: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
-        """
+        """Configure input requirements and output file paths.
+
         Parameters
         ----------
-        mdata_variables
-            The required variables from mdata during calculate,
-            None means all
-        fdata_variables
-            The required variables from fdata during calculate,
-            None means all
-        tdata_variables
-            The required variables from tdata during calculate,
-            None means all
         out_dir
-            The output file directory
+            Output directory, resolved relative to the configured output path.
+            ``None`` uses ``config.output_dir``. Missing directories are created.
         out_fname_fun
-            Modifies file names by f(fname)
+            Transform each filename before joining it to the output directory.
         nofig
-            Do not show figures
+            Suppress figure display for outputs that create figures.
+        mdata_variables
+            Required model variables during ``calculate``; ``None`` requests all,
+            and an empty sequence requests none. The sequence is copied.
+        fdata_variables
+            Required farm variables; ``None`` requests all. The list is copied.
+        tdata_variables
+            Required target variables; ``None`` requests all. The list is copied.
         kwargs
-            Additional parameters for the base class
+            Additional parameters for ``DataCalcModel``.
         """
+        # Resolve paths and copy input requirements for this output instance.
         super().__init__(**kwargs)
         self.out_dir = (
             get_output_path(out_dir) if out_dir is not None else config.output_dir
         )
         self.out_fname_fun = out_fname_fun
         self.nofig = nofig
-        self._mdata_variables = mdata_variables
-        self._fdata_variables = fdata_variables
-        self._tdata_variables = tdata_variables
+        self._mdata_variables = (
+            None if mdata_variables is None else list(mdata_variables)
+        )
+        self._fdata_variables = (
+            None if fdata_variables is None else list(fdata_variables)
+        )
+        self._tdata_variables = (
+            None if tdata_variables is None else list(tdata_variables)
+        )
 
+        # Create the requested output directory without changing global configuration.
         if not self.out_dir.is_dir():
             print(f"{type(self).__name__}: Creating output dir {self.out_dir}")
             self.out_dir.mkdir(parents=True)
 
     @property
-    def mdata_variables(self):
-        """ The required variables from mdata during calculate """
+    def mdata_variables(self) -> list[str] | None:
+        """The required model variables.
+
+        Returns
+        -------
+        variables
+            Model variable names, or ``None`` to request all variables.
+        """
+        # Expose the requirements consumed by output preparation.
         return self._mdata_variables
 
     @property
-    def fdata_variables(self):
-        """ The required variables from fdata during calculate """
+    def fdata_variables(self) -> list[str] | None:
+        """The required farm variables.
+
+        Returns
+        -------
+        variables
+            Farm variable names, or ``None`` to request all variables.
+        """
+        # Expose the requirements consumed by output preparation.
         return self._fdata_variables
 
     @property
-    def tdata_variables(self):
-        """ The required variables from tdata during calculate """
+    def tdata_variables(self) -> list[str] | None:
+        """The required target variables.
+
+        Returns
+        -------
+        variables
+            Target variable names, or ``None`` to request all variables.
+        """
+        # Expose the requirements consumed by output preparation.
         return self._tdata_variables
-    
+
     def output_coords(self) -> tuple[str, ...]:
         """
         Gets the coordinates of all output arrays
@@ -95,20 +128,19 @@ class Output(DataCalcModel):
         """
         raise NotImplementedError
 
-    def calculate(
+    def calculate(  # type: ignore[override]
         self,
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
-        tdata: TData,
+        tdata: TData | None,
         model_results: Any,
         chunk_results: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        """
-        The chunk based output calculation.
+        """Create or preserve the shared result mapping for one chunk.
 
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        Overrides calculate output from prepared NumPy arrays rather than the
+        variadic scientific-model inputs of ``DataCalcModel.calculate``.
 
         Parameters
         ----------
@@ -119,7 +151,7 @@ class Output(DataCalcModel):
         fdata
             The farm data
         tdata
-            The target point data
+            The target data, or ``None`` for farm calculations.
         model_results
             The results from the model calculation for this chunk
         chunk_results
@@ -131,6 +163,7 @@ class Output(DataCalcModel):
             The updated chunk results, keys are result object names
 
         """
+        # Preserve existing output results when chaining multiple output models.
         if chunk_results is None:
             k = (mdata.chunki_states, mdata.chunki_points)
             chunk_results = Dict(_name=f"chunk_results_{k}")
@@ -277,30 +310,36 @@ class Output(DataCalcModel):
 
 
 class OutputList(Output):
-    """A list of outputs"""
+    """An ordered output chain with merged chunk input requirements."""
 
     def __init__(
         self,
         *args: Any,
-        outputs: list[Output] = [],
+        outputs: list[Output] | None = None,
         **kwargs: Any,
     ) -> None:
-        """
+        """Configure an independent list of outputs.
+
         Parameters
         ----------
         args
             Additional parameters for the base class constructor
         outputs
-            The outputs
+            Outputs to execute in order, copied into an owned list.
+            ``None`` creates an empty chain.
         kwargs
             Additional parameters for the base class
         """
+        # Initialize common output options before collecting child requirements.
         super().__init__(*args, **kwargs)
-        self._outputs = outputs
+
+        # Own the list so separate output chains cannot share mutable state.
+        self._outputs = [] if outputs is None else list(outputs)
         self._update_variables()
 
-    def _update_variables(self):
-        """ Updatest the variables based on outputs """
+    def _update_variables(self) -> None:
+        """Combine child variable requirements, with ``None`` requesting all."""
+        # Merge requirements in declaration order rather than set iteration order.
         for vrs in ["_mdata_variables", "_fdata_variables", "_tdata_variables"]:
             v: list[str] | None = []
             for o in self._outputs:
@@ -308,28 +347,30 @@ class OutputList(Output):
                 if vrs0 is None:
                     v = None
                     break
-                else: 
+                else:
                     v += vrs0
             if v is not None:
-                v = list(set(v))
+                v = list(dict.fromkeys(v))
             setattr(self, vrs, v)
 
     @property
-    def outputs(self):
+    def outputs(self) -> list[Output]:
         """
-        The outputs
-        
+        The ordered child outputs.
+
         Returns
         -------
         outputs
-            The outputs
-        
+            The owned list of output instances. Use ``add_output`` when adding
+            a child so the combined variable requirements are recalculated.
+
         """
+        # Expose the child order used by the engine output hooks.
         return self._outputs
-    
-    def add_output(self, output: Output):
+
+    def add_output(self, output: Output) -> None:
         """
-        Adds an output to the list
+        Add an output and recompute the combined input requirements.
 
         Parameters
         ----------
@@ -337,6 +378,7 @@ class OutputList(Output):
             The output to be added
 
         """
+        # Keep preparation requirements synchronized with the output chain.
         self._outputs.append(output)
         self._update_variables()
 
@@ -350,14 +392,15 @@ class OutputList(Output):
             All sub-models.
 
         """
-        return self.outputs
+        # Return child models for initialization and running-state propagation.
+        return [output for output in self.outputs]
 
-    def calculate(
+    def calculate(  # type: ignore[override]
         self,
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
-        tdata: TData,
+        tdata: TData | None,
         model_results: Any,
         chunk_results: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
@@ -376,7 +419,7 @@ class OutputList(Output):
         fdata
             The farm data
         tdata
-            The target point data
+            The target point data, or ``None`` for farm calculations.
         model_results
             The results from the model calculation for this chunk
         chunk_results
@@ -388,6 +431,7 @@ class OutputList(Output):
             The updated chunk results, keys are result object names
 
         """
+        # Create one result mapping shared by all outputs in this chunk.
         chunk_results = super().calculate(
             algo=algo,
             mdata=mdata,
@@ -396,6 +440,7 @@ class OutputList(Output):
             model_results=model_results,
             chunk_results=chunk_results,
         )
+        # Execute children in declaration order while retaining earlier payloads.
         for o in self.outputs:
             chunk_results = o.calculate(
                 algo=algo,
@@ -433,6 +478,7 @@ class OutputList(Output):
             Output results to be updated, keys are result object names
 
         """
+        # Let each child consume only its own pending output key.
         for o in self.outputs:
             o.update_results(
                 algo,
@@ -464,6 +510,7 @@ class OutputList(Output):
             Output results to be updated, keys are result object names
 
         """
+        # Complete child unification and outstanding writes in declaration order.
         for o in self.outputs:
             o.finalize_results(
                 algo,

@@ -1,117 +1,122 @@
+"""Chunk-local farm result collection and NetCDF output models."""
+
 from __future__ import annotations
 
+from collections.abc import Sequence
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
+
 import numpy as np
-from typing import TYPE_CHECKING, Any
 from xarray import Dataset
 
-from foxes.utils import Dict, write_nc
-from foxes.core import Output, get_engine
 from foxes.config import config
+from foxes.core import Output, get_engine
+from foxes.utils import Dict, write_nc
 import foxes.constants as FC
 import foxes.variables as FV
 
 if TYPE_CHECKING:
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData, TData
-    from pathlib import Path
+
+
+class _FarmResults(TypedDict):
+    coords: dict[str, np.ndarray]
+    data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]]
+    attrs: dict[str, Any]
+
+
+def _combine_chunks(chunks: list[_FarmResults]) -> _FarmResults:
+    """Join ordered farm payloads without mutating the source chunks."""
+    # Validate variable schemas before concatenating state arrays.
+    first = chunks[0]
+    for chunk in chunks[1:]:
+        if chunk["data_vars"].keys() != first["data_vars"].keys():
+            raise ValueError("Farm results: Variable selections differ between chunks")
+        for variable, (dims, _) in chunk["data_vars"].items():
+            if dims != first["data_vars"][variable][0]:
+                raise ValueError(
+                    f"Farm results: Dimensions differ between chunks for '{variable}'"
+                )
+
+    # Preserve static coordinates and concatenate along the state axis.
+    coords = first["coords"].copy()
+    coords[FC.STATE] = np.concatenate([chunk["coords"][FC.STATE] for chunk in chunks])
+    data_vars = {
+        variable: (
+            dims,
+            np.concatenate(
+                [chunk["data_vars"][variable][1] for chunk in chunks], axis=0
+            ),
+        )
+        for variable, (dims, _) in first["data_vars"].items()
+    }
+    return dict(coords=coords, data_vars=data_vars, attrs=first["attrs"].copy())
+
+
+def _select_states(payload: _FarmResults, start: int, stop: int) -> _FarmResults:
+    """Select a state interval while retaining static turbine coordinates."""
+    # Slice each state-dependent array without modifying the full payload.
+    return dict(
+        coords={
+            name: values[start:stop] if name == FC.STATE else values
+            for name, values in payload["coords"].items()
+        },
+        data_vars={
+            name: (dims, values[start:stop])
+            for name, (dims, values) in payload["data_vars"].items()
+        },
+        attrs=payload["attrs"].copy(),
+    )
 
 
 def _create_dataset(
-    coords,
-    dvars,
-    attrs,
-    turbine_names=None,
-    wind_farm_list=None,
-    cluster_list=None,
-):
-    """
-    Create dataset from data arrays
+    payload: _FarmResults,
+    turbine_names: Sequence[str] | None,
+    wind_farm_list: Sequence[str | None] | None,
+    cluster_list: Sequence[str | None] | None,
+) -> Dataset:
+    """Create a dataset with farm metadata and compact uniform state weights."""
+    # Create the dataset and attach only requested, populated metadata.
+    dataset = Dataset(
+        data_vars=payload["data_vars"],
+        coords=payload["coords"],
+        attrs=payload["attrs"],
+    )
+    for name, values in [
+        (FC.TNAME, turbine_names),
+        (FC.FARM, wind_farm_list),
+        (FC.CLUSTER, cluster_list),
+    ]:
+        if values is not None and any(value is not None for value in values):
+            dataset[name] = ((FC.TURBINE,), values)
 
-    Parameters
-    ----------
-    coords
-        The coordinates for the dataset
-    dvars
-        The data variables for the dataset
-    attrs
-        The attributes for the dataset
-    turbine_names
-        The turbine names to include in the dataset
-    wind_farm_list
-        The wind farm list to include in the dataset
-    cluster_list
-        The cluster list to include in the dataset
-
-    Returns
-    -------
-    Dataset
-        The created xarray Dataset
-
-    """
-    ds = Dataset(data_vars=dvars, coords=coords, attrs=attrs)
-    if turbine_names is not None:
-        ds[FC.TNAME] = ((FC.TURBINE,), turbine_names)
-    if wind_farm_list is not None:
-        if set(wind_farm_list) != set([None]):
-            ds[FC.FARM] = ((FC.TURBINE,), wind_farm_list)
-    if cluster_list is not None:
-        if set(cluster_list) != set([None]):
-            ds[FC.CLUSTER] = ((FC.TURBINE,), cluster_list)
-    if FV.ORDER in ds:
-        ds[FV.ORDER] = ds[FV.ORDER].astype(config.dtype_int)
-    return ds
+    # Compress weights only after all states for this dataset are available.
+    if FV.WEIGHT in dataset:
+        weights = dataset[FV.WEIGHT].to_numpy()
+        if weights.shape[1] > 0 and np.all(weights == weights[:, :1]):
+            dataset[FV.WEIGHT] = ((FC.STATE,), weights[:, 0])
+    if FV.ORDER in dataset:
+        dataset[FV.ORDER] = dataset[FV.ORDER].astype(config.dtype_int)
+    return dataset
 
 
 def _data_to_nc(
-    fpath,
-    coords,
-    dvars,
-    attrs,
-    turbine_names=None,
-    wind_farm_list=None,
-    cluster_list=None,
-    write_nc_pars={},
-):
-    """Write data arrays to a NetCDF file
-
-    Parameters
-    ----------
-    fpath
-        The file path to write the NetCDF file to
-    coords
-        The coordinates for the dataset
-    dvars
-        The data variables for the dataset
-    attrs
-        The attributes for the dataset
-    turbine_names
-        The turbine names to include in the dataset
-    wind_farm_list
-        The wind farm list to include in the dataset
-    cluster_list
-        The cluster list to include in the dataset
-    write_nc_pars
-        Additional parameters for the write_nc function
-    """
-    ds = _create_dataset(
-        coords=coords,
-        dvars=dvars,
-        attrs=attrs,
-        turbine_names=turbine_names,
-        wind_farm_list=wind_farm_list,
-        cluster_list=cluster_list,
-    )
-    write_nc(
-        ds=ds,
-        fpath=fpath,
-        **write_nc_pars,
-    )
+    fpath: Path,
+    payload: _FarmResults,
+    turbine_names: Sequence[str] | None,
+    wind_farm_list: Sequence[str | None] | None,
+    cluster_list: Sequence[str | None] | None,
+    write_nc_pars: dict[str, Any],
+) -> None:
+    """Create and write one farm dataset in the engine's worker context."""
+    # Use the same dataset construction for all writer variants.
+    dataset = _create_dataset(payload, turbine_names, wind_farm_list, cluster_list)
+    write_nc(ds=dataset, fpath=fpath, **write_nc_pars)
 
 
 class FarmResultsOutput(Output):
-    """
-    Creates the farm results dataset
-    """
+    """Farm results collected from NumPy chunks into one xarray dataset."""
 
     def __init__(
         self,
@@ -122,28 +127,28 @@ class FarmResultsOutput(Output):
         add_farm_names: bool = True,
         add_cluster_names: bool = True,
         **kwargs: Any,
-    ):
-        """
+    ) -> None:
+        """Configure the farm result selection and metadata.
+
         Parameters
         ----------
-        *args
-            Additional positional arguments for the base class
         variables
-            List of variables to include in the results.
-            If None, all variables are included.
+            Farm variables to collect, or ``None`` for all available fields.
+            Physical fields must have dimensions ``(FC.STATE, FC.TURBINE)``.
         ambient_vars
-            Include ambient variables in the results
+            Include requested ambient fields such as ``FV.AMB_P``.
         waked_vars
-            Include waked variables in the results
+            Include requested ordinary fields that have ambient counterparts.
         add_turbine_names
-            Add turbine names to results
+            Attach turbine names along ``FC.TURBINE``.
         add_farm_names
-            Add farm names to results
+            Attach wind-farm names when the farm contains named memberships.
         add_cluster_names
-            Add cluster names to results
-        **kwargs
-            Additional parameters for the base class
+            Attach cluster names when the farm contains named memberships.
+        kwargs
+            Additional parameters for :class:`foxes.core.Output`.
         """
+        # Declare the chunk input requirements and retain selection flags.
         super().__init__(
             mdata_variables=[FC.STATE],
             fdata_variables=variables,
@@ -156,95 +161,107 @@ class FarmResultsOutput(Output):
         self.add_farm_names = add_farm_names
         self.add_cluster_names = add_cluster_names
 
-    def calculate(
+    def _collect_chunk(self, mdata: MData, fdata: FData) -> _FarmResults:
+        """Collect farm-ordered arrays and preserve explicit state coordinates."""
+        # Retain dimensions even when all physical fields are filtered out.
+        coords = {
+            FC.STATE: mdata[FC.STATE] if FC.STATE in mdata else fdata[FC.STATE],
+            FC.TURBINE: fdata[FC.TURBINE],
+        }
+        data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {}
+        variables = (
+            list(fdata) if self.fdata_variables is None else self.fdata_variables
+        )
+        excluded = {
+            FC.STATE,
+            FC.TURBINE,
+            FC.FARM,
+            FC.CLUSTER,
+            FC.XYH,
+            FV.TXYH,
+            FC.TNAME,
+        }
+
+        # Filter physical variables without changing chunk-local weight dimensions.
+        for variable in variables:
+            if variable in excluded:
+                continue
+            if not self.ambient_vars and variable in FV.amb2var:
+                continue
+            if not self.waked_vars and variable in FV.var2amb:
+                continue
+            if variable not in fdata:
+                raise KeyError(
+                    f"{self.name}: Missing requested farm variable '{variable}'"
+                )
+            dims = fdata.dims[variable]
+            if dims != (FC.STATE, FC.TURBINE):
+                raise ValueError(
+                    f"{self.name}: Expecting dimensions {(FC.STATE, FC.TURBINE)} "
+                    f"for '{variable}', got {dims}"
+                )
+            # Expand broadcast farm fields before creating dimensioned output arrays.
+            shape = (len(coords[FC.STATE]), len(coords[FC.TURBINE]))
+            data_vars[variable] = (dims, np.broadcast_to(fdata[variable], shape))
+        return dict(coords=coords, data_vars=data_vars, attrs={})
+
+    def _metadata(
+        self, algo: Algorithm
+    ) -> tuple[
+        Sequence[str] | None, Sequence[str | None] | None, Sequence[str | None] | None
+    ]:
+        """Select farm metadata consistently for datasets and files."""
+        # Resolve metadata only when the corresponding output flag is enabled.
+        return (
+            algo.farm.turbine_names if self.add_turbine_names else None,
+            algo.farm.wind_farm_list if self.add_farm_names else None,
+            algo.farm.cluster_list if self.add_cluster_names else None,
+        )
+
+    def calculate(  # type: ignore[override]
         self,
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
-        tdata: TData,
+        tdata: TData | None,
         model_results: Any,
         chunk_results: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        """
-        The chunk based output calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        """Collect the farm dataset payload for one chunk.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The calculation algorithm.
         mdata
-            The model data
+            Chunk metadata and state coordinates.
         fdata
-            The farm data
+            Farm-ordered data with leading state and turbine dimensions.
         tdata
-            The target point data
+            Target data, unused by this output; may be ``None``.
         model_results
-            The results from the model calculation for this chunk
+            Model return values, unused because arrays are read from ``fdata``.
         chunk_results
-            Existing chunk results, keys are result object names
+            Shared output payloads to update, or ``None`` to create a mapping.
 
         Returns
         -------
         chunk_results
-            The updated chunk results, keys are result object names
+            The shared mapping with a NumPy payload under ``FC.FARM_RESULTS``.
 
+        Raises
+        ------
+        KeyError
+            If a requested farm variable is unavailable.
+        ValueError
+            If a selected physical variable does not have state/turbine dimensions.
         """
+        # Add the dataset payload without discarding other outputs' results.
         chunk_results = super().calculate(
-            algo=algo,
-            mdata=mdata,
-            fdata=fdata,
-            tdata=tdata,
-            model_results=model_results,
-            chunk_results=chunk_results,
+            algo, mdata, fdata, tdata, model_results, chunk_results
         )
         if FC.FARM_RESULTS not in chunk_results:
-            i0 = mdata.states_i0(counter=True)
-            i1 = i0 + mdata.n_states
-            attrs: dict[str, Any] = {}
-
-            vrs = self.fdata_variables
-            if vrs is None:
-                vrs = list(fdata.keys())
-            coords: dict[str, np.ndarray] = {}
-            dvars: dict[str, np.ndarray] = {}
-            if FC.STATE in mdata and not np.all(mdata[FC.STATE] == np.arange(i0, i1)):
-                coords[FC.STATE] = mdata[FC.STATE]
-            for v in vrs:
-                if v in [
-                    FC.STATE,
-                    FC.TURBINE,
-                    FC.FARM,
-                    FC.CLUSTER,
-                    FC.XYH,
-                    FV.TXYH,
-                    FC.TNAME,
-                ]:
-                    continue
-                if not self.ambient_vars and v in FV.amb2var:
-                    continue
-                if not self.waked_vars and v in FV.var2amb:
-                    continue
-                data = fdata[v]
-                dims = fdata.dims[v]
-                assert dims == (FC.STATE, FC.TURBINE), (
-                    f"{self.name}: Expecting dims {(FC.STATE, FC.TURBINE)} for variable '{v}', got {dims}"
-                )
-                if v == FV.WEIGHT and np.all(
-                    np.min(data, axis=1) == np.max(data, axis=1)
-                ):
-                    dvars[v] = ((FC.STATE,), data[:, 0])
-                else:
-                    dvars[v] = ((FC.STATE, FC.TURBINE), data)
-
-            chunk_results[FC.FARM_RESULTS] = dict(
-                coords=coords,
-                data_vars=dvars,
-                attrs=attrs,
-            )
-
+            chunk_results[FC.FARM_RESULTS] = self._collect_chunk(mdata, fdata)
         return chunk_results
 
     def update_results(
@@ -255,29 +272,24 @@ class FarmResultsOutput(Output):
         new_chunk_results: Dict[str, Dict[tuple[int, int], Any]],
         output_results: Dict[str, Any],
     ) -> None:
-        """
-        Update output results with latest new chunk results.
+        """Retain new farm payloads by chunk index for final state-order assembly.
 
         Parameters
         ----------
         algo
-            The algorithm
+            The calculation algorithm.
         n_chunks_states
-            The number of state chunks
+            The total number of state chunks.
         n_chunks_targets
-            The number of target chunks
+            The total number of target chunks.
         new_chunk_results
-            New chunk results, keys are result object names.
-            Values are dicts with keys (states_chunk_index, target_chunk_index)
+            Shared pending payloads. This output consumes ``FC.FARM_RESULTS``.
         output_results
-            Output results to be updated, keys are result object names
-
+            The result mapping updated with indexed farm payloads.
         """
-        fr = new_chunk_results.pop(FC.FARM_RESULTS)
-        if FC.FARM_RESULTS not in output_results:
-            output_results[FC.FARM_RESULTS] = Dict(fr, _name=FC.FARM_RESULTS)
-        else:
-            output_results[FC.FARM_RESULTS].update(fr)
+        # Consume only the dataset output's pending result key.
+        chunks = new_chunk_results.pop(FC.FARM_RESULTS)
+        output_results.setdefault(FC.FARM_RESULTS, Dict()).update(chunks)
 
     def finalize_results(
         self,
@@ -286,204 +298,119 @@ class FarmResultsOutput(Output):
         n_chunks_targets: int,
         output_results: Dict[str, Any],
     ) -> None:
-        """
-        Final update of the output results, after all chunks have been processed.
+        """Replace collected farm payloads with one state-ordered dataset.
 
         Parameters
         ----------
         algo
-            The algorithm
+            The algorithm supplying turbine, farm and cluster metadata.
         n_chunks_states
-            The number of state chunks
+            The total number of state chunks.
         n_chunks_targets
-            The number of target chunks
+            Must be one for farm output.
         output_results
-            Output results to be updated, keys are result object names
+            Updated in place with the dataset under ``FC.FARM_RESULTS``.
+            State labels and turbine coordinates are retained. Uniform weights
+            have dimensions ``(FC.STATE,)``; other fields have dimensions
+            ``(FC.STATE, FC.TURBINE)``.
 
+        Raises
+        ------
+        ValueError
+            If target chunks or farm payload schemas are incompatible.
         """
-        assert n_chunks_targets == 1, (
-            f"{self.name}: Expected exactly one target chunk, got {n_chunks_targets}"
+        # Assemble chunks in global state order rather than completion order.
+        if n_chunks_targets != 1:
+            raise ValueError(
+                f"{self.name}: Expected one target chunk, got {n_chunks_targets}"
+            )
+        chunks = output_results[FC.FARM_RESULTS]
+        payload = _combine_chunks(
+            [chunks[(index, 0)] for index in range(n_chunks_states)]
         )
-
-        # combine results:
-        coords: dict[str, np.ndarray] = {}
-        dvars: dict[str, np.ndarray] = {}
-        attrs: dict[str, Any] = {}
-        for i in range(n_chunks_states):
-            fr = output_results[FC.FARM_RESULTS].pop((i, 0))
-
-            # update coords:
-            if i == 0:
-                attrs.update(fr.pop("attrs"))
-                coords.update(fr.pop("coords"))
-                if FC.STATE in coords:
-                    coords[FC.STATE] = [coords[FC.STATE]]
-            elif FC.STATE in coords:
-                coords[FC.STATE].append(fr.pop("coords")[FC.STATE])
-
-            # update data_vars:
-            if i == 0:
-                for v, (dms, d) in fr.pop("data_vars").items():
-                    if FC.STATE in dms:
-                        dvars[v] = (dms, [d])
-                    else:
-                        dvars[v] = (dms, d)
-            else:
-                for v, (dms, d) in fr.pop("data_vars").items():
-                    if FC.STATE in dms:
-                        assert dms == dvars[v][0], (
-                            f"{self.name}: Dimensions mismatch for variable '{v}', expected {dvars[v][0]} got {dms}"
-                        )
-                        dvars[v][1].append(d)
-
-        # combine states:
-        if n_chunks_states == 1:
-            if FC.STATE in coords:
-                coords[FC.STATE] = coords[FC.STATE][0]
-            for v in list(dvars.keys()):
-                dms = dvars[v][0]
-                if FC.STATE in dms:
-                    dvars[v] = (dms, dvars[v][1][0])
-        else:
-            if FC.STATE in coords:
-                coords[FC.STATE] = np.concatenate(coords[FC.STATE], axis=0)
-            for v in list(dvars.keys()):
-                dms = dvars[v][0]
-                if FC.STATE in dms:
-                    dvars[v] = (
-                        dms,
-                        np.concatenate(dvars[v][1], axis=dms.index(FC.STATE)),
-                    )
-
-        # create dataset:
-        tnames = algo.farm.turbine_names if self.add_turbine_names else None
-        wfnames = algo.farm.wind_farm_list if self.add_farm_names else None
-        cnames = algo.farm.cluster_list if self.add_cluster_names else None
-        ds = _create_dataset(
-            coords=coords,
-            dvars=dvars,
-            attrs=attrs,
-            turbine_names=tnames,
-            wind_farm_list=wfnames,
-            cluster_list=cnames,
+        output_results[FC.FARM_RESULTS] = _create_dataset(
+            payload, *self._metadata(algo)
         )
-        output_results[FC.FARM_RESULTS] = ds
 
 
 class FarmResultsChunkWriter(FarmResultsOutput):
-    """
-    Writes one NetCDF file with farm results per chunk.
-    """
+    """One NetCDF file per engine state chunk, without a returned dataset."""
 
     def __init__(
         self,
         base_name: str | Path,
-        write_nc_pars: dict | None = None,
+        write_nc_pars: dict[str, Any] | None = None,
         **kwargs: Any,
-    ):
-        """
+    ) -> None:
+        """Configure per-chunk farm files.
+
         Parameters
         ----------
         base_name
-            Base name for the NetCDF files.
+            File prefix; filenames append ``_<state chunk index:06d>.nc``.
         write_nc_pars
-            Parameters to pass to the `write_nc` function.
-        **kwargs
-            Additional keyword arguments passed to the parent class.
+            Keyword arguments forwarded to ``foxes.utils.write_nc``.
+        kwargs
+            Farm selection, metadata and path options for ``FarmResultsOutput``.
         """
+        # Retain independent file options for this writer.
         self.base_name = base_name
-        self.write_nc_pars = write_nc_pars or {}
+        self.write_nc_pars = {} if write_nc_pars is None else dict(write_nc_pars)
         super().__init__(**kwargs)
 
-    def calculate(
+    def calculate(  # type: ignore[override]
         self,
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
-        tdata: TData,
+        tdata: TData | None,
         model_results: Any,
         chunk_results: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        """
-        The chunk based output calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        """Write this chunk's selected farm arrays and preserve shared results.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The calculation algorithm and farm metadata.
         mdata
-            The model data
+            Chunk indices, counts and state coordinates.
         fdata
-            The farm data
+            Farm-ordered arrays to select and write.
         tdata
-            The target point data
+            Unused target data; may be ``None``.
         model_results
-            The results from the model calculation for this chunk
+            Unused model return values.
         chunk_results
-            Existing chunk results, keys are result object names
+            Shared results, returned unchanged or created when ``None``.
 
         Returns
         -------
         chunk_results
-            The updated chunk results, keys are result object names
+            The shared mapping, without an additional in-memory farm dataset.
 
+        Notes
+        -----
+        Write failures propagate from the worker. Files contain the base name,
+        chunk indices and total chunk counts as attributes.
         """
-        fres = super().calculate(
-            algo=algo,
-            mdata=mdata,
-            fdata=fdata,
-            tdata=tdata,
-            model_results=model_results,
-            chunk_results=None,
+        # Build this writer's selection independently of in-memory outputs.
+        payload = self._collect_chunk(mdata, fdata)
+        payload["attrs"].update(
+            base_name=str(self.base_name),
+            chunki_states=mdata.chunki_states,
+            chunki_points=mdata.chunki_points,
+            n_chunks_states=mdata.n_chunks_states,
+            n_chunks_points=mdata.n_chunks_points,
         )
 
-        coords = fres[FC.FARM_RESULTS]["coords"]
-        dvars = fres[FC.FARM_RESULTS]["data_vars"]
-        attrs = fres[FC.FARM_RESULTS]["attrs"]
-        del fres
-
-        attrs["base_name"] = str(self.base_name)
-        attrs["chunki_states"] = mdata.chunki_states
-        attrs["chunki_points"] = mdata.chunki_points
-        attrs["n_chunks_states"] = mdata.n_chunks_states
-        attrs["n_chunks_points"] = mdata.n_chunks_points
-
-        if FC.STATE not in coords:
-            i0 = mdata.states_i0(counter=True)
-            i1 = i0 + mdata.n_states
-            coords[FC.STATE] = np.arange(i0, i1)
-
-        tnames = algo.farm.turbine_names if self.add_turbine_names else None
-        wfnames = algo.farm.wind_farm_list if self.add_farm_names else None
-        cnames = algo.farm.cluster_list if self.add_cluster_names else None
-        ds = _create_dataset(
-            coords=coords,
-            dvars=dvars,
-            attrs=attrs,
-            turbine_names=tnames,
-            wind_farm_list=wfnames,
-            cluster_list=cnames,
-        )
-
-        fname = f"{self.base_name}_{mdata.chunki_states:06d}.nc"
-        fpath = self.get_fpath(fname)
-        write_nc(
-            ds=ds,
-            fpath=fpath,
-            **self.write_nc_pars,
-        )
-
+        # Write in the chunk worker before returning other outputs' payloads.
+        if mdata.chunki_states is None:
+            raise ValueError(f"{self.name}: Missing state chunk index")
+        fpath = self.get_fpath(f"{self.base_name}_{mdata.chunki_states:06d}.nc")
+        _data_to_nc(fpath, payload, *self._metadata(algo), self.write_nc_pars)
         return Output.calculate(
-            self,
-            algo=algo,
-            mdata=mdata,
-            fdata=fdata,
-            tdata=tdata,
-            model_results=model_results,
-            chunk_results=chunk_results,
+            self, algo, mdata, fdata, tdata, model_results, chunk_results
         )
 
     def update_results(
@@ -494,52 +421,14 @@ class FarmResultsChunkWriter(FarmResultsOutput):
         new_chunk_results: Dict[str, Dict[tuple[int, int], Any]],
         output_results: Dict[str, Any],
     ) -> None:
-        """
-        Update output results with latest new chunk results.
-
-        Parameters
-        ----------
-        algo
-            The algorithm
-        n_chunks_states
-            The number of state chunks
-        n_chunks_targets
-            The number of target chunks
-        new_chunk_results
-            New chunk results, keys are result object names.
-            Values are dicts with keys (states_chunk_index, target_chunk_index)
-        output_results
-            Output results to be updated, keys are result object names
-
-        """
-
-    def update_results(
-        self,
-        algo: Algorithm,
-        n_chunks_states: int,
-        n_chunks_targets: int,
-        new_chunk_results: Dict[str, Dict[tuple[int, int], Any]],
-        output_results: Dict[str, Any],
-    ) -> None:
-        """
-        Update output results with latest new chunk results.
-
-        Parameters
-        ----------
-        algo
-            The algorithm
-        n_chunks_states
-            The number of state chunks
-        n_chunks_targets
-            The number of target chunks
-        new_chunk_results
-            New chunk results, keys are result object names.
-            Values are dicts with keys (states_chunk_index, target_chunk_index)
-        output_results
-            Output results to be updated, keys are result object names
-
-        """
-        pass
+        return Output.update_results(
+            self,
+            algo,
+            n_chunks_states,
+            n_chunks_targets,
+            new_chunk_results,
+            output_results,
+        )
 
     def finalize_results(
         self,
@@ -548,168 +437,155 @@ class FarmResultsChunkWriter(FarmResultsOutput):
         n_chunks_targets: int,
         output_results: Dict[str, Any],
     ) -> None:
-        """
-        Final update of the output results, after all chunks have been processed.
-
-        Parameters
-        ----------
-        algo
-            The algorithm
-        n_chunks_states
-            The number of state chunks
-        n_chunks_targets
-            The number of target chunks
-        output_results
-            Output results to be updated, keys are result object names
-
-        """
-        pass
+        return Output.finalize_results(
+            self, algo, n_chunks_states, n_chunks_targets, output_results
+        )
 
 
 class FarmResultsCountWriter(FarmResultsOutput):
-    """
-    Writes farm results to multiple NetCDF files based on the number of states per file.
-    """
+    """Farm files with a fixed state limit, independent of engine chunk sizes."""
 
     def __init__(
         self,
         base_name: str | Path,
         n_states_per_file: int,
-        write_nc_pars: dict | None = None,
+        write_nc_pars: dict[str, Any] | None = None,
         **kwargs: Any,
-    ):
-        """
+    ) -> None:
+        """Configure count-limited farm files.
+
         Parameters
         ----------
         base_name
-            Base name for the NetCDF files.
+            File prefix; filenames append ``_<file index:06d>.nc``.
         n_states_per_file
-            Number of states per NetCDF file.
+            Positive integer limit. Every file except the last has this many states.
         write_nc_pars
-            Parameters to pass to the `write_nc` function.
-        **kwargs
-            Additional keyword arguments passed to the parent class.
+            Keyword arguments forwarded to ``foxes.utils.write_nc`` for every file.
+        kwargs
+            Farm selection, metadata and path options for ``FarmResultsOutput``.
+
+        Raises
+        ------
+        ValueError
+            If ``n_states_per_file`` is not a positive integer.
         """
+        # Validate the public file limit before initializing model state.
+        if (
+            isinstance(n_states_per_file, bool)
+            or not isinstance(n_states_per_file, (int, np.integer))
+            or n_states_per_file <= 0
+        ):
+            raise ValueError("n_states_per_file must be a positive integer")
         self.base_name = base_name
         self.n_states_per_file = n_states_per_file
-        self.write_nc_pars = write_nc_pars or {}
+        self.write_nc_pars = {} if write_nc_pars is None else dict(write_nc_pars)
         super().__init__(**kwargs)
 
+        # Keep writer buffers separate from the in-memory farm dataset output.
         self.FARM_RESULTS = self.var(FC.FARM_RESULTS)
 
-    def calculate(
+    def calculate(  # type: ignore[override]
         self,
         algo: Algorithm,
         mdata: MData,
         fdata: FData,
-        tdata: TData,
+        tdata: TData | None,
         model_results: Any,
         chunk_results: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        """
-        The chunk based output calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        """Collect an independent farm payload for this writer.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The calculation algorithm.
         mdata
-            The model data
+            Chunk metadata and state coordinates.
         fdata
-            The farm data
+            Farm-ordered arrays selected for this writer.
         tdata
-            The target point data
+            Unused target data; may be ``None``.
         model_results
-            The results from the model calculation for this chunk
+            Unused model return values.
         chunk_results
-            Existing chunk results, keys are result object names
+            Shared payloads to update, or ``None`` to create a mapping.
 
         Returns
         -------
         chunk_results
-            The updated chunk results, keys are result object names
-
+            The shared mapping with this model's private farm payload key.
         """
-        chunk_results = super().calculate(
-            algo=algo,
-            mdata=mdata,
-            fdata=fdata,
-            tdata=tdata,
-            model_results=model_results,
-            chunk_results=chunk_results,
+        # Collect independent variables even when another farm output ran first.
+        chunk_results = Output.calculate(
+            self, algo, mdata, fdata, tdata, model_results, chunk_results
         )
-
-        coords = chunk_results[FC.FARM_RESULTS]["coords"]
-        if FC.STATE not in coords:
-            i0 = mdata.states_i0(counter=True)
-            i1 = i0 + mdata.n_states
-            coords[FC.STATE] = np.arange(i0, i1)
-
-        attrs = chunk_results[FC.FARM_RESULTS]["attrs"]
-        attrs["base_name"] = str(self.base_name)
-        if self.n_states_per_file > 0:
-            attrs["n_states_per_file"] = self.n_states_per_file
-
+        payload = self._collect_chunk(mdata, fdata)
+        payload["attrs"].update(base_name=str(self.base_name))
+        chunk_results[self.FARM_RESULTS] = payload
         return chunk_results
 
-    def _init_output_results(self, first_chunk_results):
-        """Helper function to initialize output results for farm results"""
-        output_results = Dict({}, _name=self.FARM_RESULTS)
-        output_results["key"] = (0, 0)
-        output_results["index"] = 0
-        output_results["futures"] = []
-        return output_results
+    def _ready(self, chunks: list[_FarmResults]) -> bool:
+        """Check whether enough states are buffered for a complete file."""
+        # Count buffered states without concatenating physical fields.
+        return (
+            sum(len(chunk["coords"][FC.STATE]) for chunk in chunks)
+            >= self.n_states_per_file
+        )
 
-    def _write_criteria(self, results) -> bool:
-        """Helper function for determining the write criteria"""
-        return results["attrs"]["n_states"] >= self.n_states_per_file
+    def _file_size(self, states: np.ndarray) -> int:
+        """Select at most the configured number of states."""
+        # Apply the limit to final chunks as well as intermediate chunks.
+        return min(self.n_states_per_file, len(states))
 
-    def _reduce_and_select(
-        self,
-        key,
-        n_chunks_states,
-        results,
-        coords,
-        dvars,
-        attrs,
-        hstates=None,
-    ):
-        """Helper function for reducing and selecting farm results"""
-        if key[0] < n_chunks_states - 1:
-            if hstates is None:
-                hstates = min(self.n_states_per_file, len(coords[FC.STATE]))
+    def _get_fpath(self, attrs: dict[str, Any]) -> Path:
+        """Resolve the next count-limited filename."""
+        # Apply the standard output-directory and filename transformation.
+        return self.get_fpath(f"{self.base_name}_{attrs['index']:06d}.nc")
 
-            # reduce accumulated results:
-            results["coords"][FC.STATE] = [coords[FC.STATE][hstates:]]
-            for v in list(dvars.keys()):
-                dms, d = dvars[v]
-                if FC.STATE in dms:
-                    results["data_vars"][v] = (dms, [d[hstates:, ...]])
+    def _flush(self, algo: Algorithm, results: dict[str, Any]) -> None:
+        """Submit complete files and retain only the incomplete state interval."""
+        # Combine buffered chunks only when a file is ready or the run ends.
+        engine = get_engine(error=False)
+        if engine is None:
+            raise RuntimeError(f"{self.name}: File writing requires an active engine")
+        payload = _combine_chunks(results["chunks"])
+        n_states = len(payload["coords"][FC.STATE])
+        start = 0
+        while start < n_states:
+            remaining = payload["coords"][FC.STATE][start:]
+            size = self._file_size(remaining)
+            if (
+                not results["last"]
+                and size == len(remaining)
+                and not self._ready([_select_states(payload, start, n_states)])
+            ):
+                break
 
-            # select the first n_states_per_file states from the accumulated results:
-            coords = {c: d if c != FC.STATE else d[:hstates] for c, d in coords.items()}
-            dvars = {
-                v: (dms, d if FC.STATE not in dms else d[:hstates])
-                for v, (dms, d) in dvars.items()
-            }
+            # Submit an independent selection with accurate per-file metadata.
+            selected = _select_states(payload, start, start + size)
+            selected["attrs"].update(index=results["index"], n_states=size)
+            self._file_attrs(selected)
+            future = engine.submit(
+                _data_to_nc,
+                self._get_fpath(selected["attrs"]),
+                selected,
+                *self._metadata(algo),
+                self.write_nc_pars,
+            )
+            results["futures"].append(future)
+            results["index"] += 1
+            start += size
 
-        index = results["index"]
-        hstates = len(coords[FC.STATE])
-        attrs = results["attrs"].copy()
-        attrs["n_states"] = hstates
-        attrs["index"] = index
-        results["attrs"]["n_states"] -= hstates
+        # Retain the unfinished period or count interval for the next chunk.
+        results["chunks"] = (
+            [_select_states(payload, start, n_states)] if start < n_states else []
+        )
 
-        return coords, dvars, attrs
-
-    def _get_fpath(self, attrs):
-        """Helper function to get the file path for farm results"""
-        index = attrs["index"]
-        fname = f"{self.base_name}_{index:06d}.nc"
-        return self.get_fpath(fname)
+    def _file_attrs(self, payload: _FarmResults) -> None:
+        """Attach writer-specific file attributes to a selected state interval."""
+        # Record the configured count independently of the final file's size.
+        payload["attrs"]["n_states_per_file"] = self.n_states_per_file
 
     def update_results(
         self,
@@ -719,113 +595,61 @@ class FarmResultsCountWriter(FarmResultsOutput):
         new_chunk_results: Dict[str, Dict[tuple[int, int], Any]],
         output_results: Dict[str, Any],
     ) -> None:
-        """
-        Update output results with latest new chunk results.
+        """Buffer ordered chunks and submit every complete file interval.
 
         Parameters
         ----------
         algo
-            The algorithm
+            The calculation algorithm and farm metadata.
         n_chunks_states
-            The number of state chunks
+            The total number of state chunks; the last chunk flushes the remainder.
         n_chunks_targets
-            The number of target chunks
+            Must be one for farm output.
         new_chunk_results
-            New chunk results, keys are result object names.
-            Values are dicts with keys (states_chunk_index, target_chunk_index)
+            Shared pending payloads. Only this writer's private key is consumed.
         output_results
-            Output results to be updated, keys are result object names
+            Updated with private buffers and write futures, not a full dataset.
 
+        Raises
+        ------
+        ValueError
+            If target chunks are present or state chunks arrive out of order.
         """
-        engine = get_engine()
+        # Require ordered farm chunks and initialize run-local writer buffers.
+        if n_chunks_targets != 1:
+            raise ValueError(
+                f"{self.name}: Expected one target chunk, got {n_chunks_targets}"
+            )
+        chunks = new_chunk_results.pop(self.FARM_RESULTS)
+        results = output_results.setdefault(
+            self.FARM_RESULTS,
+            dict(
+                chunks=[],
+                index=0,
+                next_chunk=0,
+                futures=[],
+                last=False,
+                last_state=None,
+            ),
+        )
 
-        fr = new_chunk_results[FC.FARM_RESULTS]
-        if self.FARM_RESULTS not in output_results:
-            output_results[self.FARM_RESULTS] = self._init_output_results(fr[(0, 0)])
-
-        results = output_results[self.FARM_RESULTS]
-        for k in list(fr.keys()):
-            key = results["key"]
-            assert k == key, f"{self.name}: unexpected key {k}, expected {key}"
-            chunk_results = fr.pop(k)
-
-            # add initial results:
-            if key == (0, 0):
-                results["coords"] = chunk_results["coords"].copy()
-                results["data_vars"] = chunk_results["data_vars"].copy()
-                results["attrs"] = chunk_results["attrs"].copy()
-
-                results["attrs"]["n_states"] = len(chunk_results["coords"][FC.STATE])
-                results["coords"][FC.STATE] = [chunk_results["coords"][FC.STATE]]
-                for v in list(chunk_results["data_vars"].keys()):
-                    dms, d = chunk_results["data_vars"][v]
-                    if FC.STATE in dms:
-                        assert dms.index(FC.STATE) == 0, (
-                            f"{self.name}: expected {FC.STATE} to be the first dimension in {v}, got {dms.index(FC.STATE)}"
-                        )
-                        results["data_vars"][v] = (dms, [d])
-
-            # add subsequent results:
-            else:
-                results["attrs"]["n_states"] += len(chunk_results["coords"][FC.STATE])
-                results["coords"][FC.STATE].append(chunk_results["coords"][FC.STATE])
-                for v in list(chunk_results["data_vars"].keys()):
-                    dms, d = chunk_results["data_vars"][v]
-                    if FC.STATE in dms:
-                        assert dms == results["data_vars"][v][0], (
-                            f"{self.name}: expected dimensions {results['data_vars'][v][0]} for {v}, got {dms}"
-                        )
-                        results["data_vars"][v][1].append(d)
-
-            while self._write_criteria(results) or (
-                key[0] == n_chunks_states - 1 and results["attrs"]["n_states"] > 0
-            ):
-                # concat results:
-                coords = {
-                    c: d if c != FC.STATE else np.concatenate(results["coords"][c])
-                    for c, d in results["coords"].items()
-                }
-                dvars = {
-                    v: (dms, d)
-                    if FC.STATE not in dms
-                    else (dms, np.concatenate(results["data_vars"][v][1], axis=0))
-                    for v, (dms, d) in results["data_vars"].items()
-                }
-                attrs = results["attrs"].copy()
-
-                coords, dvars, attrs = self._reduce_and_select(
-                    key, n_chunks_states, results, coords, dvars, attrs
+        # Emit all complete intervals, including multiple files in the last chunk.
+        for key, chunk in chunks.items():
+            expected = (results["next_chunk"], 0)
+            if key != expected:
+                raise ValueError(
+                    f"{self.name}: Unexpected chunk {key}, expected {expected}"
                 )
+            self._validate_chunk(chunk, results["last_state"])
+            results["last_state"] = chunk["coords"][FC.STATE][-1]
+            results["chunks"].append(chunk)
+            results["next_chunk"] += 1
+            results["last"] = results["next_chunk"] == n_chunks_states
+            if self._ready(results["chunks"]) or results["last"]:
+                self._flush(algo, results)
 
-                # write dataset:
-                fpath = self._get_fpath(attrs)
-                tnames = algo.farm.turbine_names if self.add_turbine_names else None
-                wfnames = algo.farm.wind_farm_list if self.add_farm_names else None
-                cnames = algo.farm.cluster_list if self.add_cluster_names else None
-                results["futures"].append(
-                    engine.submit(
-                        _data_to_nc,
-                        fpath,
-                        coords,
-                        dvars,
-                        attrs,
-                        tnames,
-                        wfnames,
-                        cnames,
-                    )
-                )
-
-                results["index"] += 1
-            results["key"] = (key[0] + 1, 0)
-
-            if results["key"][0] == n_chunks_states:
-                results.pop("coords")
-                results.pop("data_vars")
-                results.pop("attrs")
-                results.pop("key")
-                results.pop("index")
-
-        return output_results
+    def _validate_chunk(self, chunk: _FarmResults, previous: np.generic | None) -> None:
+        """Validate writer-specific state requirements before buffering a chunk."""
 
     def finalize_results(
         self,
@@ -834,157 +658,144 @@ class FarmResultsCountWriter(FarmResultsOutput):
         n_chunks_targets: int,
         output_results: Dict[str, Any],
     ) -> None:
-        """
-        Final update of the output results, after all chunks have been processed.
+        """Wait for all submitted files and remove this writer's private buffers.
 
         Parameters
         ----------
         algo
-            The algorithm
+            The calculation algorithm.
         n_chunks_states
-            The number of state chunks
+            Expected number of processed state chunks.
         n_chunks_targets
-            The number of target chunks
+            The total number of target chunks.
         output_results
-            Output results to be updated, keys are result object names
+            Shared results; other outputs' values are left untouched.
 
+        Raises
+        ------
+        ValueError
+            If not all expected state chunks were delivered.
+
+        Notes
+        -----
+        Worker write errors propagate when their futures are awaited.
         """
-        engine = get_engine()
-        fr = output_results.pop(self.FARM_RESULTS)
-        futures = fr.pop("futures")
-        for f in futures:
-            engine.await_result(f)
+        # Ensure every state chunk was handled before resolving file writes.
+        results = output_results.pop(self.FARM_RESULTS)
+        if results["next_chunk"] != n_chunks_states:
+            raise ValueError(f"{self.name}: Missing farm result chunks")
+
+        # Resolve worker failures before reporting that file output has finished.
+        engine = get_engine(error=False)
+        if engine is None:
+            raise RuntimeError(f"{self.name}: File writing requires an active engine")
+        for future in results["futures"]:
+            engine.await_result(future)
 
 
 class FarmResultsPeriodWriter(FarmResultsCountWriter):
-    """
-    Writes farm results per time period to multiple NetCDF files.
-    """
+    """Farm files grouped by calendar day, ISO week, month or year."""
 
     def __init__(
         self,
-        *args,
-        period: str["day", "week", "month", "year"],
-        **kwargs,
-    ):
-        super().__init__(*args, n_states_per_file=-1, **kwargs)
-        self.period = period
-
-        assert self.period in ["day", "week", "month", "year"], (
-            f"{self.name}: Invalid period {self.period}, must be one of ['day', 'week', 'month', 'year']"
-        )
-
-    def calculate(
-        self,
-        algo: Algorithm,
-        mdata: MData,
-        fdata: FData,
-        tdata: TData,
-        model_results: Any,
-        chunk_results: Dict[str, Any] | None = None,
-    ) -> Dict[str, Any]:
-        """
-        The chunk based output calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        base_name: str | Path,
+        *,
+        period: Literal["day", "week", "month", "year"],
+        write_nc_pars: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Configure calendar-period farm files.
 
         Parameters
         ----------
-        algo
-            The calculation algorithm
-        mdata
-            The model data
-        fdata
-            The farm data
-        tdata
-            The target point data
-        model_results
-            The results from the model calculation for this chunk
-        chunk_results
-            Existing chunk results, keys are result object names
+        base_name
+            Filename prefix followed by the calendar date or period.
+        period
+            Calendar grouping. Weeks begin on Monday and use the ISO week year.
+            State coordinates must be nondecreasing, non-NaT ``numpy.datetime64``
+            values. Empty periods do not produce files.
+        write_nc_pars
+            Keyword arguments forwarded to ``foxes.utils.write_nc``.
+        kwargs
+            Farm selection, metadata and path options for ``FarmResultsOutput``.
 
-        Returns
-        -------
-        chunk_results
-            The updated chunk results, keys are result object names
-
+        Raises
+        ------
+        ValueError
+            If ``period`` is not day, week, month or year.
         """
-        chunk_results = super().calculate(
-            algo=algo,
-            mdata=mdata,
-            fdata=fdata,
-            tdata=tdata,
-            model_results=model_results,
-            chunk_results=chunk_results,
+        # Validate the calendar selector before initializing the shared writer.
+        if period not in {"day", "week", "month", "year"}:
+            raise ValueError(
+                f"Invalid period '{period}'; expected day, week, month or year"
+            )
+        super().__init__(
+            base_name, n_states_per_file=1, write_nc_pars=write_nc_pars, **kwargs
         )
+        self.period = period
 
-        attrs = chunk_results[FC.FARM_RESULTS]["attrs"]
-        attrs["period"] = self.period
+    def _collect_chunk(self, mdata: MData, fdata: FData) -> _FarmResults:
+        # Attach the period to this writer's independently collected payload.
+        payload = super()._collect_chunk(mdata, fdata)
+        payload["attrs"]["period"] = self.period
+        return payload
 
-        return chunk_results
+    def _validate_chunk(self, chunk: _FarmResults, previous: np.generic | None) -> None:
+        # Require chronological datetime coordinates within and across chunks.
+        states = chunk["coords"][FC.STATE]
+        if not np.issubdtype(states.dtype, np.datetime64):
+            raise ValueError(
+                f"{self.name}: State coordinates must be datetime64 values"
+            )
+        if np.any(np.isnat(states)):
+            raise ValueError(f"{self.name}: State coordinates must not contain NaT")
+        if np.any(states[1:] < states[:-1]) or (
+            previous is not None and states[0] < previous
+        ):
+            raise ValueError(f"{self.name}: State coordinates must be chronological")
 
-    def _init_output_results(self, first_chunk_results):
-        """Helper function to initialize output results for farm results"""
-        output_results = super()._init_output_results(first_chunk_results)
-
-        time0 = first_chunk_results["coords"][FC.STATE][0]
-        assert isinstance(time0, np.datetime64), (
-            f"{self.name}: State coordinates must be of type np.datetime64, got {type(time0)}"
-        )
-
-        return output_results
-
-    def _write_criteria(self, results) -> bool:
-        """Helper function for determining the write criteria"""
-        if results["attrs"]["n_states"] <= 0:
-            return False
-        first_time = results["coords"][FC.STATE][0][0].astype("datetime64[D]")
-        latest_time = results["coords"][FC.STATE][-1][-1].astype("datetime64[D]")
-        if self.period == "day":
-            next_time = first_time.astype("datetime64[D]") + np.timedelta64(1, "D")
+    def _next_period(self, first_time: np.datetime64) -> np.datetime64:
+        """Return the exclusive calendar boundary after the first sample."""
+        # Align week boundaries with Monday rather than the first sample's weekday.
+        day = first_time.astype("datetime64[D]")
         if self.period == "week":
-            next_time = first_time.astype("datetime64[D]") + np.timedelta64(1, "W")
-        if self.period == "month":
-            next_time = first_time.astype("datetime64[M]") + np.timedelta64(1, "M")
-        if self.period == "year":
-            next_time = first_time.astype("datetime64[Y]") + np.timedelta64(1, "Y")
-        results["time"] = next_time
-        return latest_time >= next_time
+            weekday = (int(day.astype(np.int64)) + 3) % 7
+            return day + np.timedelta64(7 - weekday, "D")
 
-    def _reduce_and_select(
-        self,
-        key,
-        n_chunks_states,
-        results,
-        coords,
-        dvars,
-        attrs,
-        hstates=None,
-    ):
-        """Helper function for reducing and selecting farm results"""
-        hstates = np.searchsorted(coords[FC.STATE], results["time"], side="left")
+        # Calendar units naturally align day, month and year boundaries.
+        unit = {"day": "D", "month": "M", "year": "Y"}[self.period]
+        return first_time.astype(f"datetime64[{unit}]") + np.timedelta64(1, unit)
 
-        coords, dvars, attrs = super()._reduce_and_select(
-            key, n_chunks_states, results, coords, dvars, attrs, hstates=hstates
+    def _ready(self, chunks: list[_FarmResults]) -> bool:
+        # Write once the buffered samples enter a later calendar period.
+        first = chunks[0]["coords"][FC.STATE][0]
+        latest = chunks[-1]["coords"][FC.STATE][-1]
+        return bool(latest >= self._next_period(first))
+
+    def _file_size(self, states: np.ndarray) -> int:
+        # Split each buffered interval at its own next calendar boundary.
+        return int(np.searchsorted(states, self._next_period(states[0]), side="left"))
+
+    def _file_attrs(self, payload: _FarmResults) -> None:
+        # Record calendar and ISO fields without confusing their year conventions.
+        date = payload["coords"][FC.STATE][0].astype("datetime64[D]").astype(object)
+        iso = date.isocalendar()
+        payload["attrs"].update(
+            year=date.year,
+            month=date.month,
+            day=date.day,
+            week=iso.week,
+            iso_year=iso.year,
         )
 
-        time0 = coords[FC.STATE][0].astype("datetime64[D]").astype(object)
-        attrs["year"] = time0.year
-        attrs["month"] = time0.month
-        attrs["week"] = time0.isocalendar().week
-        attrs["day"] = time0.day
-
-        return coords, dvars, attrs
-
-    def _get_fpath(self, attrs):
-        """Helper function to get the file path for farm results"""
+    def _get_fpath(self, attrs: dict[str, Any]) -> Path:
+        # Name weekly files with the ISO year, including December/January crossings.
         if self.period == "day":
-            fname = f"{self.base_name}_{attrs['year']}-{attrs['month']:02d}-{attrs['day']:02d}.nc"
+            suffix = f"{attrs['year']}-{attrs['month']:02d}-{attrs['day']:02d}"
         elif self.period == "week":
-            fname = f"{self.base_name}_{attrs['year']}-W{attrs['week']:02d}.nc"
+            suffix = f"{attrs['iso_year']}-W{attrs['week']:02d}"
         elif self.period == "month":
-            fname = f"{self.base_name}_{attrs['year']}-{attrs['month']:02d}.nc"
-        elif self.period == "year":
-            fname = f"{self.base_name}_{attrs['year']}.nc"
-        return self.get_fpath(fname)
+            suffix = f"{attrs['year']}-{attrs['month']:02d}"
+        else:
+            suffix = str(attrs["year"])
+        return self.get_fpath(f"{self.base_name}_{suffix}.nc")

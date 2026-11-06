@@ -5,40 +5,33 @@ applicable project-local instruction explicitly and justifiably overrides them.
 
 ## Instruction Hierarchy
 
-1. This file is the canonical source of general repository rules.
-2. Read applicable scoped instruction files before changing files in their scope.
-3. For UI, visual-design, or brand work, read `docs/fraunhofer-design/` when that
-	 directory is present. See [UI Design Policy](#ui-design-policy).
-4. Use `docs/architecture.md` for durable FOXES structure and
-	 `docs/naming-conventions.md` for detailed vocabulary. They supplement this
-	 file; they do not override it.
-5. Use `docs/docstrings.md` for public Python documentation contracts.
-6. Use `docs/development.md` for FOXES setup, navigation, test selection, and
-	 quality-gate commands.
+This file is canonical. Read applicable scoped instructions before editing.
+The linked guides below are required for relevant work; they elaborate these
+rules without overriding them.
+
+| Work | Required guide |
+|---|---|
+| Structure, ownership, model lifecycle and parallelization | [Architecture](docs/architecture.md) |
+| Vocabulary, symbols, dimensions and types | [Naming conventions](docs/naming-conventions.md) |
+| Public Python documentation | [Docstrings](docs/docstrings.md) |
+| Setup, code quality, tests, decisions and closure | [Development](docs/development.md) |
+| UI, visual design or brand assets | [UI policy](#ui-design-policy) and `docs/fraunhofer-design/` when present |
 
 ## Working Protocol
 
 - Ask before implementing when requirements are materially unclear.
 - Make one focused, logical change at a time.
 - Do not refactor unrelated code or add dependencies without justification.
-- Deliver tests, documentation, and decision records in the same change as the
-	code they describe; the sections below state when each is required.
+- Deliver required tests, documentation, and decision records with the code.
 - Self-review against these rules before presenting work as complete.
 
 ## Development Direction
 
-- Development is strictly forward-looking by default. Implement the current
-	target contract directly and remove the superseded implementation, tests, and
-	documentation in the same change.
-- Do not add or retain legacy branches, compatibility shims, deprecated aliases,
-	dual formats, fallback behavior, or migration-only code unless the user
-	explicitly requires a bounded exception and an ADR records its removal
-	condition.
-- Update all in-repository callers and examples to the current contract instead
-	of preserving an obsolete path for them.
-- Keep `docs/architecture.md`, `docs/naming-conventions.md`,
-	`docs/development.md`, API documentation, examples, and other FOXES facts
-	accurate in every change. Known documentation drift blocks completion.
+Implement the target contract directly; remove superseded code, tests and docs,
+and update all in-repository callers and examples in the same change. Do not
+retain legacy branches, shims, aliases, dual formats, fallbacks or migration-only
+code without an explicit user-required bounded exception and an ADR removal
+condition. See [forward-only development](docs/development.md#forward-only-development).
 
 ## UI Design Policy
 
@@ -98,15 +91,9 @@ covers only the scope it names.
 
 ## Existing FOXES Project
 
-This repository contains the established FOXES Python package, not an
-application template or empty scaffold. `pyproject.toml` is authoritative for
-the supported Python versions, dependencies, extras, and tool configuration.
-Use `uv` for local Python workflows. The default environment command is
-`uv sync --extra dev --extra test --extra mpi --extra shp --upgrade`.
-
-Read `docs/architecture.md` for package boundaries, runtime contracts, and
-extension points. Read `docs/naming-conventions.md` for FOXES vocabulary, common
-type annotations, dimensions, variables, and naming rules.
+FOXES is an established Python package, not a scaffold. `pyproject.toml` owns
+supported runtimes, dependencies, extras and tool configuration. Use `uv`;
+follow [environment setup](docs/development.md#environment-and-dependencies).
 
 ## Priority
 
@@ -116,51 +103,32 @@ Security > Correctness > Tests > Documentation > Modularity > Style
 
 ### Code Quality
 
-- Prefer idiomatic, readable code over cleverness.
-- Handle errors explicitly. Do not use empty catch blocks or swallow exceptions.
-- Keep functions under 40 lines and files under 700 lines where practical;
-	justify exceptions.
-- Keep one module focused on one concern.
+Write idiomatic, human-readable code; start logical blocks with brief one-line
+comments and separate them with blank lines. Follow the
+[code-quality rules](docs/development.md#code-quality) for size, modularity,
+error handling and technical-debt markers, and the [docstring standard](docs/docstrings.md).
+
+### Model Parallelization
+
+For every model, treat `self` and its referenced objects as read-only between
+`set_running()` and `unset_running()`. Keep runtime state in data containers,
+chunk stores or result mappings; follow the
+[lifecycle and ownership contract](docs/architecture.md#model-lifecycle).
 
 ### Tests
 
-Tests are required for changes to logic, including conditionals, transformations,
-validation, state, side effects, and public behavior.
-
-- Use pytest and the established test structure described in
-	`docs/development.md`.
-- Cover a happy path, an error path, and a relevant edge case.
-- Keep tests deterministic, isolated, fast, and delivered with the change.
-
-Pure styling, static text, and documentation-only restructuring do not require
-new runtime test cases or the full runtime test suite. Documentation validation
-and the remaining completion gate still apply.
+Logic changes require deterministic, isolated, fast pytest coverage of happy,
+error and edge paths. Follow the [test structure](docs/development.md#test-structure)
+and [closure requirements](#completion-gate); documentation-only changes use
+documentation checks instead of runtime tests.
 
 ### Documentation
 
-Update documentation when a public API, CLI option, configuration value,
-dependency, setup process, or build/deployment process changes. Document public
-Python APIs according to `docs/docstrings.md`. Examples must be runnable. Review
-and update every affected public docstring in the same change. Keep all
-architectural, naming, workflow, and other FOXES information synchronized with
-the implementation at all times.
-
-### Decision Records
-
-Keep `docs/architecture.md` and `docs/naming-conventions.md` current.
-
-When a human or AI establishes, selects, changes, or supersedes a durable
-decision, update the relevant record in the same change:
-
-- Update `docs/architecture.md` for system context, selected technologies,
-	module ownership, public contracts, data ownership, integrations, security,
-	operational practices, and cross-cutting decisions.
-- Update `docs/naming-conventions.md` for agreed domain vocabulary and stable
-	naming rules for code, files, contracts, configuration, and identifiers.
-- Create or update an ADR for consequential architectural or naming decisions.
-
-Record confirmed decisions, not alternatives, guesses, or placeholders. Ask a
-focused question when the decision is materially unclear.
+Keep affected public docstrings, API/CLI/configuration docs, dependencies,
+workflows, architecture, naming and runnable examples current in the same change.
+Known drift blocks completion. Record confirmed durable decisions in their
+owning guide and consequential decisions in an ADR; follow
+[documentation and decision records](docs/development.md#documentation-and-decision-records).
 
 ### Security
 
@@ -178,41 +146,19 @@ FOXES is a library. Raise contextual exceptions and use its established
 verbosity/progress mechanisms; do not configure application-global logging from
 library code. Failures must be diagnosable without code changes.
 
-### Technical Debt
-
-Record intentional compromises as `TODO(minor): <specific, actionable
-description>`. Never use vague deferred-work markers.
-
 ## Completion Gate
 
-A development change is complete only when all of the following hold:
-
-1. If code files changed, required tests were added or updated, focused tests
-	pass, and `uv run pytest tests` passes. Documentation-only changes run the
-	applicable documentation checks instead of the full runtime suite.
-2. `uv run pre-commit run --all-files` passes after the final edit.
-3. Every affected public function and class has an accurate NumPy-style
-	docstring following `docs/docstrings.md`; unchanged docstrings were reviewed
-	for continued correctness.
-4. Architecture, naming conventions, development guidance, API documentation,
-	examples, and any other FOXES information affected by the change are current.
-5. The last version section of `CHANGELOG.md` is updated for the change and its
-	heading is exactly `## v<version>`, where `<version>` is the current
-	`project.version` from `pyproject.toml`.
-
-Notebook execution also passes when notebooks change. A Sphinx build is not part
-of default closure. Do not report completion with a knowingly stale record or
-defer one of the required closure steps to a follow-up change.
+Follow [development closure](docs/development.md#development-closure):
+focused tests and `uv run pytest tests` pass for code changes, applicable checks
+pass for docs-only changes, and `uv run pre-commit run --all-files` passes after
+the final edit. Review all affected public docstrings and records; update the
+last changelog section headed exactly `## v<project.version>`. Execute changed
+notebooks; Sphinx is not a default gate. Do not defer required closure steps or
+report completion with stale records.
 
 ## Completion Report
 
-When reporting an implementation, state:
-
-1. **Summary**: what changed and why.
-2. **Code**: implementation details, including any size guideline exceeded and
-	the justification for it.
-3. **Tests**: coverage and results, or why tests were not needed.
-4. **Docs**: documentation changes, or `N/A`.
-5. **Self-review**: confirmation that the rules above hold, any declared
-	deviation, and any data-classification exception recorded in
-	`docs/data-classification-exceptions.md`.
+Report **Summary**, **Code** (including justified size exceptions), **Tests**,
+**Docs**, and **Self-review** (rule compliance, deviations and named
+data-classification exceptions). See the
+[report checklist](docs/development.md#completion-report).

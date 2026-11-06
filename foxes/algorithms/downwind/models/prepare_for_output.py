@@ -41,7 +41,7 @@ class PrepareForOutput(DataCalcModel):
 
         """
         raise NotImplementedError
-    
+
     def output_farm_vars(self, algo: Algorithm) -> list[str]:
         """
         The variables which are being modified by the model.
@@ -101,12 +101,12 @@ class PrepareForOutput(DataCalcModel):
         vrs_mdata = self.output.mdata_variables
         vrs_fdata = self.output.fdata_variables
         vrs_tdata = self.output.tdata_variables
-        
+
         # loop over targets:
         order = fdata[FV.ORDER]
         ssel = None
         order_inv = None
-        for (vrs, data) in zip((vrs_mdata, vrs_fdata, vrs_tdata), (mdata, fdata, tdata)):
+        for vrs, data in zip((vrs_mdata, vrs_fdata, vrs_tdata), (mdata, fdata, tdata)):
             if data is None:
                 continue
             all_vrs = list(set(data.keys()) - set(data.sizes.keys()))
@@ -128,9 +128,13 @@ class PrepareForOutput(DataCalcModel):
                             and np.any(dta != dta[0, 0, None, None])
                         ):
                             if ssel is None:
-                                ssel = np.broadcast_to(np.arange(order.shape[0])[:, None], order.shape)
+                                ssel = np.broadcast_to(
+                                    np.arange(order.shape[0])[:, None], order.shape
+                                )
                                 order_inv = np.empty_like(order)
-                                order_inv[ssel, order] = np.arange(order.shape[1])[None, :]
+                                order_inv[ssel, order] = np.arange(order.shape[1])[
+                                    None, :
+                                ]
                             dta = dta[ssel, order_inv, ...]
 
                     data[v] = dta

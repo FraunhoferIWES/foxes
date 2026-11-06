@@ -203,7 +203,7 @@ class ProcessEngineRunner(EngineRunner):
 
         chunk_store = algo.reset_chunk_store()
         cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
-        
+
         if output is None:
             results = None
         else:

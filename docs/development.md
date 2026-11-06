@@ -62,6 +62,15 @@ Multiple extras can be combined by repeating the option.
 | `ray` | Ray engine support |
 | `multiprocess` | multiprocess backend support |
 | `dask` | Dask and distributed/jobqueue support |
+| `engines` | All optional engine packages, combining `dask`, `mpi`, `multiprocess` and `ray` |
+
+Install all engine packages with `uv sync --extra engines` (or
+`pip install 'foxes[engines]'` for a published release). This aggregate extra
+reuses the individual engine extras so their version requirements stay aligned.
+NumPy, single-chunk, thread and standard-library process engines need no
+additional packages. MPI still requires a system MPI runtime, and Slurm-backed
+Dask clusters require an available Slurm installation; the extra installs Python
+packages, not external execution infrastructure.
 
 Put a new dependency in the narrowest justified extra. A dependency required by
 an import of base `foxes` belongs in the main dependencies; an optional adapter
@@ -101,7 +110,8 @@ and the nearest tests.
 | Farm/point orchestration | `foxes/algorithms/` | Core algorithm contract and consistency tests |
 | Chunking or parallel execution | `foxes/engines/` | Engine contract and engine consistency tests |
 | State or file ingestion | `foxes/input/` | Input docs, examples, and boundary/error tests |
-| Evaluation, plotting, or writing | `foxes/output/` | Result schema and output tests/examples |
+| Chunk-based output collection or writing | `foxes/models/outputs/` | `foxes/core/output.py`, Downwind, pool engine and farm-output tests |
+| Existing consumers awaiting output adoption | `foxes/output/` | Result schema and current migration boundaries |
 | Factory, geometry, or shared infrastructure | `foxes/utils/` | All owning call sites and `tests/4_utils/` |
 | Public import | Owning package `__init__.py` | Root exports, API docs, and import tests |
 
@@ -111,6 +121,58 @@ files before changing a constructor or registered name; they are often the most
 direct view of the public contract.
 
 Do not treat `build/lib/foxes/` as source. The maintained package is `foxes/`.
+
+## Code Quality
+
+These rules elaborate [AGENTS.md](../AGENTS.md#code-quality):
+
+- Prefer idiomatic, readable code over cleverness. Write code that reads
+	naturally, as if written by a human: clear names, direct control flow and
+	purposeful explanations.
+- Start every logical code block with a brief, one-line comment explaining its
+	purpose, and always separate logical blocks with a blank line.
+- Keep each module focused on one concern. Keep functions under 40 lines and
+	files under 700 lines where practical; justify exceptions in the completion
+	report.
+- Handle errors explicitly. Do not use empty catch blocks or swallow
+	exceptions. Follow FOXES library diagnostics rather than configuring global
+	application logging.
+- Write clear, polished NumPy-style public documentation following
+	[docstring conventions](docstrings.md).
+- Record intentional compromises as
+	`TODO(minor): <specific, actionable description>`, never vague deferred-work
+	markers.
+
+For all models, follow the
+[model lifecycle and parallelization contract](architecture.md#model-lifecycle).
+Prepare persistent configuration before running; runtime state belongs in
+chunk containers, local variables, engine-owned chunk stores or explicit result
+mappings, not on `self`.
+
+## Documentation And Decision Records
+
+Update documentation whenever a public API, CLI option, configuration value,
+dependency, setup process, or build/deployment process changes. Review every
+affected public docstring, including unchanged docstrings for continued
+correctness, and deliver any updates with the code. Examples must be runnable.
+Keep all affected FOXES facts synchronized; known drift blocks completion.
+
+When a human or AI establishes, selects, changes or supersedes a durable
+decision, update the relevant record in the same change:
+
+- [Architecture](architecture.md): system context, selected technologies, module
+	ownership, public contracts, data ownership, integrations, security,
+	operational practices and cross-cutting decisions.
+- [Naming conventions](naming-conventions.md): domain vocabulary and stable
+	names for code, files, contracts, configuration and identifiers.
+- [ADRs](adr/README.md): consequential architectural or naming decisions, using
+	the index's rules for new and superseding records.
+
+Record confirmed decisions, not alternatives presented as decisions, guesses
+or placeholders. Ask a focused question when the decision is materially unclear.
+Keep general policy in `AGENTS.md` concise: retain critical guardrails there,
+link to these owning guides for detail, and avoid circular links that leave a
+requirement unspecified.
 
 ## Focused Validation
 
@@ -129,6 +191,25 @@ uv run mypy foxes
 # Repository hooks on touched files
 uv run pre-commit run --files foxes/path.py tests/path/test_module.py
 ```
+
+For the implemented chunk-based farm outputs, run:
+
+```console
+uv run pytest tests/2_models/test_farm_results_outputs.py -q
+```
+
+These tests cover dataset selection, state coordinates, broadcast/uniform
+weights, metadata, real NetCDF file counts and encodings, calendar boundaries,
+ISO week years, invalid inputs, asynchronous write failures and output
+composition. Real Downwind runs compare NumPy and thread results across
+different state-chunk sizes, changing wind directions and normalized weights.
+The tests use synthetic inputs and temporary output directories.
+
+Use explicit `numpy` or `threads` engines for this validated farm path.
+Single-chunk/default, distributed, Iterative, Sequential and point-output
+migrations are not completed by these tests. The required full test and
+pre-commit commands still expose their branch-wide blockers; do not mistake
+focused farm-output coverage for certification of those paths.
 
 Before closure, broaden to the repository gates:
 
@@ -180,6 +261,18 @@ Sphinx/AutoAPI output itself is under investigation. A documentation-only change
 does not run the full runtime test suite, but it still runs its applicable
 documentation checks and all other closure gates.
 
+## Completion Report
+
+When reporting an implementation, state:
+
+1. **Summary**: what changed and why.
+2. **Code**: implementation details, including any exceeded size guideline and
+	its justification.
+3. **Tests**: coverage and results, or why tests were not needed.
+4. **Docs**: documentation changes, or `N/A`.
+5. **Self-review**: rule compliance, declared deviations and any named exception
+	recorded in `docs/data-classification-exceptions.md`.
+
 ## Test Structure
 
 Repository-file inputs to pytest tests must come only from `foxes/`,
@@ -210,6 +303,10 @@ Logic tests cover a successful path, a meaningful error path, and a relevant
 edge case. For numerical code, assert values, dimensions, ordering, and finite
 or NaN behavior as applicable. Use deterministic synthetic arrays or public
 packaged fixtures. Do not use private research or customer data as a fixture.
+
+Pure styling, static text and documentation-only restructuring do not require
+new runtime test cases or the full runtime suite. Applicable documentation
+checks and the remaining closure gates still apply.
 
 The layout-population interpolation regressions in
 `tests/2_models/test_point_cloud_data.py` require the optional `foxes-opt`
@@ -379,6 +476,8 @@ task explicitly changes that expected contract.
 
 - Identify the core base class and required input/output variables.
 - Preserve dimensions, state/turbine order, lifecycle, and chunk-local behavior.
+- Keep model instance state read-only while running; verify the ownership of
+	chunk data and run-level aggregation under threads and worker copies.
 - Update exports and `ModelBook` only when the feature is public/name-selectable.
 - Add focused mathematics/validation tests and realistic integration coverage.
 - Update affected API docs and examples, and always add the current changelog

@@ -2,41 +2,42 @@ Downwind algorithm
 ==================
 Orders turbines in downwind direction in a single sweep.
 
-Ambient-only calculations
--------------------------
-Use ``ambient=True`` to skip wake effects. By default, results omit ordinary
-variables that have ambient counterparts. Set ``ambient_keep=True`` to retain
-both names, such as ``P`` and ``AMB_P`` or ``REWS`` and ``AMB_REWS``; each retained
-pair contains the same unwaked values. This option applies to both
-``calc_farm()`` and ``calc_points()`` and defaults to ``False``.
-
-For example, using synthetic uniform inflow:
+Chunk-based farm outputs
+------------------------
+``calc_farm()`` selects output models through ``outputs``. The default
+``"farm_results"`` model-book entry returns an xarray farm dataset. Pass an
+``Output`` instance or a model-book output name for one output, or a list for
+an ordered output chain. Physical field selections belong to the output model:
 
 .. code-block:: python
 
-    import foxes
+    from foxes.models.outputs import FarmResultsOutput
     import foxes.variables as FV
 
-    farm = foxes.WindFarm()
-    farm.add_turbine(
-        foxes.Turbine(xy=[0.0, 0.0], turbine_models=["NREL5MW"]), verbosity=0
-    )
-    states = foxes.input.states.SingleStateStates(
-        ws=8.0, wd=270.0, ti=0.08, rho=1.225
-    )
-    algo = foxes.algorithms.Downwind(farm, states, wake_models=[], verbosity=0)
-    with foxes.Engine.new("single", verbosity=0):
-        farm_results = algo.calc_farm(ambient=True, ambient_keep=True)
-        point_results = algo.calc_points(
-            farm_results, [[1000.0, 0.0, 90.0]], ambient=True, ambient_keep=True
-        )
-    assert FV.P in farm_results and FV.AMB_P in farm_results
-    assert FV.WS in point_results and FV.AMB_WS in point_results
+    selected_output = FarmResultsOutput(variables=[FV.P, FV.AMB_P])
+    # Pass selected_output as algo.calc_farm(outputs=selected_output).
 
-Explicit ``outputs`` selections still select exactly the requested variables;
-request both names to return both. ``ambient_keep`` has no effect on ordinary
-waked calculations. Iterative inherits the same option and retains ordinary
-fields during intermediate farm passes regardless of the final output setting.
+Multiple outputs return a result-name keyed mapping, even when only one output
+returns a dataset. Writer-only outputs and disabled collection (``None`` or an
+empty list) return an empty mapping. Use explicit NumPy or thread engines for
+the currently validated farm-output path; the other engine/algorithm and
+point-output paths still require migration.
+
+See :doc:`api_output` for dataset and NetCDF output models, composition and a
+runnable synthetic example.
+
+Ambient-only calculations
+-------------------------
+Use ``ambient=True`` to skip wake effects. Farm result filtering is independent
+of this calculation choice: ``FarmResultsOutput(ambient_vars=True,
+waked_vars=False)`` collects ambient fields while omitting ordinary fields
+that have ambient counterparts. Choose both flags to retain both selected
+field names. Farm ``outputs`` are output models, not lists of variable names.
+
+``calc_points()`` retains its ``ambient_keep=False`` parameter and
+variable-name output selection, but its engine integration is not yet adopted
+into the chunk-output structure. Do not infer point or Iterative support from
+the farm-output tests.
 
 .. toctree::
     :maxdepth: 2

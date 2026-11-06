@@ -1188,7 +1188,31 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Dependencies:
+  - Added the `engines` extra combining all optional engine packages through
+    the existing Dask, MPI, multiprocess and Ray extras.
 - Bug fixes:
   - Bug fixed that prevented turbine models from using their loaded data during run time
+  - Chunk-based farm outputs preserve state labels and broadcast farm fields;
+    uniform weights are compacted only after dataset assembly.
+  - Count and period writers split the final chunk correctly, forward NetCDF
+    options, and keep private buffers independent of collected farm results.
+  - Weekly files use Monday-based ISO weeks and the ISO week year.
+  - Output lists no longer share mutable defaults; Downwind resolves multiple
+    output models correctly, supports disabled collection, and normalizes the
+    collected dataset rather than the output mapping.
+- Tests:
+  - Added regression coverage for the four implemented farm output models,
+    NetCDF files, output composition, validation and NumPy/thread chunk parity.
+  - Keep Python test modules visible despite generated-result ignore patterns.
+- Development:
+  - Added logical-block comments, blank-line separation, natural code style and
+    polished docstring requirements to the canonical contributor rules.
+  - Documented parallel-safe instance-state rules for every FOXES model:
+    avoid runtime mutation of `self` after `set_running()` and keep calculation
+    state in data containers, chunk stores or explicit result mappings.
+  - Condensed `AGENTS.md` into guardrails and required documentation links;
+    detailed style, lifecycle, decision and report guidance lives in its
+    owning development and architecture guides without weakening the rules.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.10](https://github.com/FraunhoferIWES/foxes/commits/v1.9.10)

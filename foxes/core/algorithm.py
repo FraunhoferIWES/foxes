@@ -769,7 +769,9 @@ class Algorithm(Model):
         else:
             self.reset_chunk_store()
 
-    def _launch_parallel_farm_calc(self, *args: Any, **kwargs: Any) -> xr.Dataset:
+    def _launch_parallel_farm_calc(
+        self, *args: Any, **kwargs: Any
+    ) -> xr.Dataset | dict[str, Any]:
         """
         Run the farm calculation in parallel.
 
@@ -782,9 +784,9 @@ class Algorithm(Model):
 
         Returns
         -------
-        farm_results
-            The farm results. The calculated variables have dimensions
-            ``(state, turbine)``.
+        results
+            Engine results, either a dataset or a result-name keyed output
+            mapping, according to the concrete algorithm's output contract.
 
         """
         return launch_parallel_calc(self, *args, **kwargs)
@@ -794,7 +796,7 @@ class Algorithm(Model):
         *args: Any,
         clear_mem: bool = False,
         **kwargs: Any,
-    ) -> xr.Dataset:
+    ) -> xr.Dataset | dict[str, Any]:
         """
         Calculate farm data.
 
@@ -809,9 +811,9 @@ class Algorithm(Model):
 
         Returns
         -------
-        farm_results
-            The farm results. The calculated variables have dimensions
-            ``(state, turbine)``.
+        results
+            The concrete algorithm's farm results: a dataset or an output
+            mapping containing the requested unified results.
 
         """
         if self.running:

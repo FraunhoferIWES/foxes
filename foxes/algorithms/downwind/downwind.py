@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 
 from foxes.core import Algorithm, FarmDataModelList, Output, OutputList
 from foxes.core import PointDataModel, PointDataModelList, FarmController
-from foxes.config import config
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
@@ -518,10 +517,10 @@ class Downwind(Algorithm):
             if outputs is not None:
                 print("  outputs:")
                 if isinstance(outputs, OutputList):
-                    outputs = outputs.outputs
+                    output_models = outputs.outputs
                 else:
-                    outputs = [outputs]
-                for i, output in enumerate(outputs):
+                    output_models = [outputs]
+                for i, output in enumerate(output_models):
                     print(f"    {i}) {output}")
                 print(deco)
             print()
@@ -683,9 +682,9 @@ class Downwind(Algorithm):
         output: Output | None = None,
         normalize: bool = False,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> dict[str, Any]:
         """
-        Runs the main calculation, launching parallelization
+        Run farm chunks and return unified output results.
 
         Parameters
         ----------
@@ -696,25 +695,35 @@ class Downwind(Algorithm):
         output
             The output object
         normalize
-            Normalize the weights to 1 wrt sum over states
+            Normalize collected farm weights to unit sum over states.
+            Requires an in-memory farm dataset containing ``FV.WEIGHT``.
+            Files written by output models are not renormalized.
         kwargs
             Additional parameters for running
 
         Returns
         -------
-        farm_results
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+        output_results
+            Result-name keyed values finalized by the selected output models.
 
         """
-        farm_results = super()._launch_parallel_farm_calc(
+        # Delegate chunk execution and require the new output mapping contract.
+        output_results = super()._launch_parallel_farm_calc(
             mlist, model_data, output=output, **kwargs
         )
+        if not isinstance(output_results, dict):
+            raise TypeError(f"{self.name}: Expected an engine output result mapping")
 
+        # Normalize only the collected farm dataset, not writer-private state.
         if normalize:
+            farm_results = output_results.get(FC.FARM_RESULTS)
+            if not isinstance(farm_results, Dataset) or FV.WEIGHT not in farm_results:
+                raise ValueError(
+                    f"{self.name}: Normalization requires collected farm weights"
+                )
             farm_results[FV.WEIGHT] /= farm_results[FV.WEIGHT].sum(dim=FC.STATE)
 
-        return farm_results
+        return output_results
 
     def calc_farm(
         self,
@@ -724,15 +733,19 @@ class Downwind(Algorithm):
         finalize: bool = True,
         clear_mem: bool = False,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Dataset | dict[str, Any]:
         """
         Calculate farm data.
 
         Parameters
         ----------
         outputs
-            The output variables, an instance of ``Output``,
-            or a list of outputs or output names from the model book
+            An ``Output`` instance, a name from ``ModelBook.outputs``, or a
+            list of instances and names. A single output returning one result
+            yields that result directly. Multiple outputs return a result-name
+            mapping. ``None`` disables output collection; an empty list also
+            returns an empty mapping. Choose farm variables through
+            ``FarmResultsOutput(variables=...)``, not a list of variable names.
         calc_parameters
             Parameters for model calculation.
             Key: model name str, value: parameter dict
@@ -747,33 +760,45 @@ class Downwind(Algorithm):
 
         Returns
         -------
-        farm_results
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+        results
+            The selected unified output. The default is a farm dataset with
+            state/turbine physical fields and explicit coordinates. Uniform
+            state weights are one-dimensional. Writer-only selections return
+            an empty mapping because their result is the files they write.
 
         """
         # initialize algorithm:
         if not self.initialized:
             self.initialize()
 
-        # collect outputs:
+        # Resolve output names and preserve the single-versus-multiple return contract.
+        oneout = False
+        output: Output | None
         if isinstance(outputs, Output):
+            output = outputs
             oneout = True
         elif isinstance(outputs, str):
-            outputs = self.mbook.outputs[outputs]
+            output = self.mbook.outputs[outputs]
             oneout = True
         elif isinstance(outputs, list):
-            outputs = [
-                self.mbook.outputs[o] if isinstance(o, str) else o
-                for o in outputs
+            output_models: list[Output] = [
+                self.mbook.outputs[o] if isinstance(o, str) else o for o in outputs
             ]
-            oneout = len(outputs) == 1
-            outputs = outputs[0] if oneout else OutputList(outputs)
-        if outputs is not None:
-            self.init_model(outputs)
+            oneout = len(output_models) == 1
+            output = output_models[0] if oneout else OutputList(outputs=output_models)
+        elif outputs is None:
+            output = None
+        else:
+            raise TypeError(f"{self.name}: Expected output models or model-book names")
+
+        # Initialize the resolved output chain before preparing model inputs.
+        if output is not None:
+            self.init_model(output)
 
         # collect models:
-        mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient, output=outputs)
+        mlist, calc_pars = self._collect_farm_models(
+            calc_parameters, ambient, output=output
+        )
 
         # initialize models:
         if not mlist.initialized:
@@ -781,8 +806,8 @@ class Downwind(Algorithm):
             self._calc_farm_vars(mlist)
 
         # welcome:
-        self.print_deco("calc_farm", outputs=outputs)
-        self._print_model_oder(mlist, calc_pars, outputs)
+        self.print_deco("calc_farm", outputs=output)
+        self._print_model_oder(mlist, calc_pars, output)
 
         # get input model data:
         model_data, extra_data = self.get_model_data(pop=clear_mem)
@@ -799,7 +824,7 @@ class Downwind(Algorithm):
             model_data,
             extra_data=extra_data,
             parameters=calc_pars,
-            output=outputs,
+            output=output,
             clear_mem=clear_mem,
             **kwargs,
         )

@@ -77,6 +77,26 @@ configuration keys, and xarray fields are compatibility-sensitive.
 	module `helpers.py` when an existing focused module owns the behavior.
 - Use `from __future__ import annotations` consistently with the surrounding
 	module. Production annotations must remain valid for Python 3.10.
+- Apply the [code-quality rules](development.md#code-quality) for logical-block
+	comments, blank lines and natural readability, and the
+	[docstring standard](docstrings.md) for polished public documentation.
+
+### Output Names And Result Keys
+
+`Output` is the core chunk-local output contract; `OutputList` is an ordered
+chain, not a list of physical variables. Adopted concrete classes belong in
+`foxes.models.outputs`. `ModelBook.outputs` maps output model-book names and
+factories to these instances.
+
+`FC.FARM_RESULTS` names the unified in-memory farm dataset. Buffered writers
+use `model.var(FC.FARM_RESULTS)` as their private result key. A writer's file
+`index` is distinct from the engine's `chunki_states`: count/period intervals
+can span chunks or split a single chunk.
+
+Count/chunk filenames use six-digit zero-padded indices. Calendar files use
+`YYYY-MM-DD`, `YYYY-Www`, `YYYY-MM` or `YYYY` suffixes. Weekly `YYYY` is the ISO
+week year (`iso_year`), not necessarily the sample's calendar `year`. See
+[ADR-0010](adr/0010-chunk-based-farm-outputs.md).
 
 ## Common Type Annotations
 
