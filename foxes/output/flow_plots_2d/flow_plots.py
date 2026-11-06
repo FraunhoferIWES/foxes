@@ -1,20 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Any, Iterator, TYPE_CHECKING
+from typing import Any, Iterator
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from foxes.core import TData
 from foxes.output import SliceData
 import foxes.variables as FV
-import foxes.constants as FC
 
 from .get_fig import get_fig
-from ..grids import get_grid_xy, np2np_sp
-
-if TYPE_CHECKING:
-    from foxes.core import FData, MData
 
 
 class FlowPlots2D(SliceData):
@@ -1245,88 +1239,3 @@ class FlowPlots2D(SliceData):
             )
 
             yield out
-
-    def precalc_chunk_xy(
-        self,
-        var: str,
-        mdata: MData,
-        fdata: FData,
-        resolution: float = 100.0,
-        figsize: tuple[int, int] = (8, 8),
-        n_img_points: tuple[int, int] | None = None,
-        xmin: float | None = None,
-        ymin: float | None = None,
-        xmax: float | None = None,
-        ymax: float | None = None,
-        z: float | None = None,
-        xspace: float = 500.0,
-        yspace: float = 500.0,
-    ) -> tuple[Any, Any, Any]:
-        """
-        Pre-calculation of data for xy flow plots.
-
-        Parameters
-        ----------
-        var
-            The variable name
-        mdata
-            The model data
-        fdata
-            The farm data
-        resolution
-            The resolution in m
-        figsize
-            The figsize for plt.Figure
-        n_img_points
-            The number of image points along each axis
-        xmin
-            The minimal x position
-        ymin
-            The minimal y position
-        xmax
-            The maximal x position
-        ymax
-            The maximal y position
-        z
-            The z position
-        xspace
-            Additional space around turbines
-        yspace
-            Additional space around turbines
-
-        Returns
-        -------
-        data
-            The calculated data
-        sinds
-            The state indices
-        gdata
-            The grid data ``(x_pos, y_pos, z_pos, g_pts)``, with static
-            ``g_pts`` coordinates of shape ``(n_points, 3)``.
-
-        """
-        gdata = get_grid_xy(
-            self.fres,
-            resolution=resolution,
-            n_img_points=n_img_points,
-            xmin=xmin,
-            ymin=ymin,
-            xmax=xmax,
-            ymax=ymax,
-            z=z,
-            xspace=xspace,
-            yspace=yspace,
-        )
-
-        mlist, mpars = self.algo._collect_point_models()
-        mlist.initialize(self.algo, verbosity=0, force=True)
-        assert mdata.n_states is not None
-        points = np.broadcast_to(gdata[-1], (mdata.n_states, *gdata[-1].shape))
-        htdata = TData.from_points(points, mdata=mdata)
-
-        sinds = mdata[FC.STATE]
-        data = mlist.calculate(self.algo, mdata, fdata, htdata, **mpars[0])
-        data.pop(FV.WEIGHT, None)
-        data = np2np_sp(data, sinds, gdata[0], gdata[1])
-
-        return data, sinds, gdata

@@ -81,6 +81,11 @@ if __name__ == "__main__":
         help="Read reduced binned data from this NetCDF file instead of reducing the source states",
         default=None,
     )
+
+    # Select chunk outputs by their model-book names.
+    parser.add_argument(
+        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+    )
     args = parser.parse_args()
 
     source_states = foxes.input.states.Timeseries(
@@ -176,10 +181,18 @@ if __name__ == "__main__":
             support_rose_data = source_binned_data.get_support_wind_rose_data(
                 algo._Algorithm__loaded_data
             )
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs=args.outputs)
         if full_algo is not None:
             print("\nRunning full timeseries calculation for comparison")
-            full_farm_results = full_algo.calc_farm()
+            full_farm_results = full_algo.calc_farm(outputs=args.outputs)
+
+    # Evaluate collected farm data only; complete both runs for writer-only outputs.
+    if isinstance(farm_results, dict):
+        farm_results = farm_results.get("farm_results")
+    if farm_results is None:
+        raise SystemExit(0)
+    if full_algo is not None and isinstance(full_farm_results, dict):
+        full_farm_results = full_farm_results["farm_results"]
 
     if not args.nofig and support_rose_data is not None:
         fig = source_binned_data.get_support_wind_roses_figure(

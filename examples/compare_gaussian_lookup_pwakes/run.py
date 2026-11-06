@@ -17,8 +17,31 @@ def build_case(
     distance: float,
     rotor_model: str,
     partial_wakes: str,
+    outputs: list[str],
 ):
-    """Build and run the two-turbine lateral-offset comparison case."""
+    """Run a two-turbine lateral-offset case with the selected chunk outputs.
+
+    Parameters
+    ----------
+    y_values
+        Lateral positions of the downstream turbine in metres, one per state.
+    distance
+        Downstream spacing in rotor diameters.
+    rotor_model
+        Rotor model-book name.
+    partial_wakes
+        Partial-wake model-book name.
+    outputs
+        Output model-book names passed to the farm calculation.
+
+    Returns
+    -------
+    rews
+        Downstream rotor-effective wind speeds, one per state, or ``None`` if
+        the selected outputs do not collect farm results.
+    diameter
+        Turbine rotor diameter in metres.
+    """
     mbook = foxes.models.ModelBook()
     turbine_type = mbook.turbine_types["NREL5MW"]
     mbook.turbine_models["set_y"] = foxes.models.turbine_models.SetFarmVars()
@@ -65,7 +88,15 @@ def build_case(
         mbook=mbook,
         verbosity=0,
     )
-    return algo.calc_farm()[FV.REWS].to_numpy()[:, 1], turbine_type.D
+    farm_results = algo.calc_farm(outputs=outputs)
+
+    # Writer-only cases still run, but have no numerical comparison payload.
+    if isinstance(farm_results, dict):
+        farm_results = farm_results.get("farm_results")
+    if farm_results is None:
+        return None, turbine_type.D
+
+    return farm_results[FV.REWS].to_numpy()[:, 1], turbine_type.D
 
 
 def build_benchmark_farm(n_turbines: int, diameter: float) -> foxes.WindFarm:
@@ -91,8 +122,19 @@ def build_benchmark_farm(n_turbines: int, diameter: float) -> foxes.WindFarm:
 def benchmark_large_case(
     engine: foxes.Engine,
     n_turbines: int,
+    outputs: list[str],
 ) -> None:
-    """Compare runtime on the packaged 8000-state case and generated farm."""
+    """Compare output-inclusive runtimes for the generated benchmark farm.
+
+    Parameters
+    ----------
+    engine
+        Active calculation engine.
+    n_turbines
+        Number of turbines in the generated square-grid farm.
+    outputs
+        Output model-book names passed to every benchmark calculation.
+    """
     runtimes: dict[str, float] = {}
     cases = {
         "gaussian": ("centre", "gaussian"),
@@ -119,7 +161,7 @@ def benchmark_large_case(
             verbosity=0,
         )
         start = time.perf_counter()
-        _ = algo.calc_farm()
+        _ = algo.calc_farm(outputs=outputs)
         runtimes[name] = time.perf_counter() - start
 
     grid_time = runtimes["grid400"]
@@ -176,7 +218,7 @@ def parse_args() -> argparse.Namespace:
         help="Point chunk size",
     )
     parser.add_argument(
-        "-o", "--output", type=Path, default=None, help="Optional PNG output path"
+        "--figure-file", type=Path, default=None, help="Optional PNG output path"
     )
     parser.add_argument(
         "-rt",
@@ -194,6 +236,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-nf", "--nofig", action="store_true", help="Do not show the figure"
     )
+
+    # Select chunk outputs separately from the comparison figure filename.
+    parser.add_argument(
+        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+    )
     return parser.parse_args()
 
 
@@ -210,12 +257,22 @@ def main() -> None:
     )
     with engine:
         gaussian_rews, diameter = build_case(
-            y_values, args.distance, "centre", "gaussian"
+            y_values, args.distance, "centre", "gaussian", args.outputs
         )
         lookup_rews, diameter = build_case(
-            y_values, args.distance, "centre", "gaussian_lookup"
+            y_values, args.distance, "centre", "gaussian_lookup", args.outputs
         )
-        grid_rews, _ = build_case(y_values, args.distance, "grid400", "rotor_points")
+        grid_rews, _ = build_case(
+            y_values, args.distance, "grid400", "rotor_points", args.outputs
+        )
+
+        # Include requested writers in every optional benchmark case too.
+        if args.runtime_benchmark:
+            benchmark_large_case(engine, args.benchmark_turbines, args.outputs)
+
+    # Writer-only selections finish all cases without requiring a comparison figure.
+    if gaussian_rews is None or lookup_rews is None or grid_rews is None:
+        return
 
     gaussian_norm = gaussian_rews / 9.0
     lookup_norm = lookup_rews / 9.0
@@ -284,18 +341,14 @@ def main() -> None:
     axes[1].grid(alpha=0.3)
     axes[1].legend()
 
-    if args.output is not None:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(args.output, dpi=150)
-        print(f"Wrote comparison figure to {args.output}")
+    if args.figure_file is not None:
+        args.figure_file.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(args.figure_file, dpi=150)
+        print(f"Wrote comparison figure to {args.figure_file}")
     if not args.nofig:
         plt.show()
     else:
         plt.close(fig)
-
-    if args.runtime_benchmark:
-        with engine:
-            benchmark_large_case(engine, args.benchmark_turbines)
 
 
 if __name__ == "__main__":

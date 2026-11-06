@@ -85,12 +85,31 @@ Use only a configured runtime and bounded worker counts; Slurm lifecycle checks
 use synthetic infrastructure rather than submitting jobs. Local Dask defaults to
 process scheduling and resolves bounded batches concurrently.
 
+For adopted animations, run
+`uv run pytest tests/2_models/test_chunk_animation_output.py -q`.
+Synthetic tests verify actual GIF frames, finalization-only rendering, numerical
+point parity, bounded grid blocks, shared coordinates, target reuse, private
+payloads, selection errors and writer cleanup. NumPy, single-chunk, threads,
+process, multiprocess, local Dask and local distributed-cluster farm runs are
+covered; point runs also exercise NumPy/threads/process collection. MP4 encoding
+is tested when external ffmpeg is available.
+Iterative cases verify requested-output initialization, calculation, buffering
+and finalization occur only in the final evaluation pass. Streamline tests
+use Iterative and compare animation fields against separate point results.
+Memory checks verify that loaded grids and state-sized boolean selection masks
+stay out of running model instances, raw configuration is restored from the
+lifecycle stash, and worker calculations leave model serialization unchanged.
+
 Engine `progress_bar=True` automatically uses tqdm for terminals/notebooks and
 newline-only snapshots for logs. Unicode terminal bars are selected when the
 stream supports them. Use `False` for explicit snapshots, `None` for no progress,
 or `verbosity=0` for a quiet engine. Progress goes to stderr; a full chunk counter
 is followed by output finalization before success is reported. No notebook widget
 dependency is required: tqdm selects the available notebook/text renderer.
+
+Select NetCDF writers through output models rather than engine calculation
+options. Engine output tests cover worker-local chunk files and count-limited
+buffered files, including file completion before the engine returns.
 
 The engine migration's focused checks do not certify unrelated unfinished branch
 migrations. The full-suite gate currently exposes removed state-provider exports;
@@ -229,11 +248,11 @@ composition. Real Downwind runs compare NumPy and thread results across
 different state-chunk sizes, changing wind directions and normalized weights.
 The tests use synthetic inputs and temporary output directories.
 
-Use explicit `numpy` or `threads` engines for this validated farm path.
-Single-chunk/default, distributed, Iterative, Sequential and point-output
-migrations are not completed by these tests. The required full test and
-pre-commit commands still expose their branch-wide blockers; do not mistake
-focused farm-output coverage for certification of those paths.
+Those farm-output tests validate their NumPy/thread paths. Broader engine,
+algorithm and animation coverage is described above; do not treat one focused
+suite as certification of every runtime. Full-suite collection remains blocked
+by removed state-provider exports, while older consistency tests also expose
+default-field expectations that differ from the committed model-book selection.
 
 Before closure, broaden to the repository gates:
 
@@ -318,6 +337,13 @@ The numbered test directories encode intent:
 The aggregate example test excludes `examples/windio`. Changes to that example
 or its CLI flow need a separate focused check with the required integration
 available; do not infer coverage from `tests/3_examples/` alone.
+
+Run `uv run pytest tests/3_examples/test_output_selection.py -q` for the common
+Downwind/Iterative example `-o/--outputs` option. Parser checks cover every
+supported script; small real runs verify direct datasets, composed mappings,
+writer-only files, invalid names and completion of multi-case comparisons.
+Sequential iterator examples, YAML-only workflows and the wake-field exporter
+are outside this option's scope.
 
 `tests/conftest.py` fixes default engine chunk sizes to 64 states and 500 points
 for deterministic behavior across machines. Do not make a test depend on a

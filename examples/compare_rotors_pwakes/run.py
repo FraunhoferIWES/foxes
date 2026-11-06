@@ -51,7 +51,11 @@ def calc(args, rotor, sdata, pwake):
     )
 
     print(f"\nCalculating rotor = {rotor}, pwake = {pwake}")
-    farm_results = algo.calc_farm()
+    farm_results = algo.calc_farm(outputs=args.outputs)
+
+    # Leave numerical comparison to callers only when farm data was collected.
+    if isinstance(farm_results, dict):
+        farm_results = farm_results.get("farm_results")
 
     return farm_results, D
 
@@ -128,6 +132,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
+
+    # Select chunk outputs by their model-book names.
+    parser.add_argument(
+        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+    )
     args = parser.parse_args()
 
     ws = args.ws
@@ -158,6 +167,8 @@ if __name__ == "__main__":
         chunk_size_points=args.chunksize_points,
     )
 
+    # Collect every case before plotting the available farm datasets.
+    title = None
     if len(args.rotors) == 1:
         pwake_results = []
         with engine:
@@ -166,6 +177,9 @@ if __name__ == "__main__":
                 pwake_results.append((pwake, farm_results))
 
         for pwake, farm_results in pwake_results:
+            if farm_results is None:
+                continue
+
             ax.plot(
                 farm_results[FV.Y][:, 1] / D,
                 farm_results[var][:, 1] / varn,
@@ -184,6 +198,9 @@ if __name__ == "__main__":
                 rotor_results.append((rotor, farm_results))
 
         for rotor, farm_results in rotor_results:
+            if farm_results is None:
+                continue
+
             ax.plot(
                 farm_results[FV.Y][:, 1] / D,
                 farm_results[var][:, 1] / varn,
@@ -202,6 +219,9 @@ if __name__ == "__main__":
                 all_results.append((rotor, pwake, farm_results))
 
         for rotor, pwake, farm_results in all_results:
+            if farm_results is None:
+                continue
+
             ax.plot(
                 farm_results[FV.Y][:, 1] / D,
                 farm_results[var][:, 1] / varn,
@@ -218,6 +238,11 @@ if __name__ == "__main__":
         raise ValueError(
             "Please either give one rotor, or one pwake, or same number of both"
         )
+
+    # Writer-only selections complete every case without leaving a figure open.
+    if title is None:
+        plt.close(fig)
+        raise SystemExit(0)
 
     if args.title is not None:
         title = args.title

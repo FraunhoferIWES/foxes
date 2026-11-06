@@ -81,6 +81,12 @@ YAML parameter files mirror this object graph. The YAML reader constructs the
 states, model book, farm, engine, and algorithm, then invokes the same runtime
 contracts as Python callers.
 
+Downwind/Iterative Python example scripts expose output model-book selection as
+`-o/--outputs`, defaulting to `farm_results`. They accept direct dataset and
+composed mapping returns, and skip dataset consumers for writer-only selections
+after completing every requested farm run. This example CLI does not change
+Sequential's iterator API, YAML configuration or the wake-field exporter.
+
 ## Module Boundaries
 
 | Module | Owns | Main interfaces and dependencies |
@@ -201,7 +207,10 @@ scientific calculation, independently of output selection.
 `calc_points()` retains `ambient_keep=False` for its point-facing contract.
 Iterative and Sequential use explicit intermediate collectors. Iterative keeps
 all convergence fields in downwind order and restores farm order only for final
-outputs. The `"default"` field set is unchanged; point callers needing all wake
+outputs. Requested output models are initialized and executed only in its final
+evaluation pass; a separate internal collector serves the convergence loop.
+Streamline cases use the Iterative algorithm.
+The `"default"` field set is unchanged; point callers needing all wake
 inputs select `"farm_results_all"` explicitly.
 
 Use `Engine` as a context manager for an explicit backend. `Engine.new()` maps
@@ -214,6 +223,10 @@ Across engine backends, the engine passes ordered worker
 payloads to output `update_results()` hooks and calls `finalize_results()` after
 all chunks have arrived. Writers await submitted file jobs so worker exceptions
 propagate to the caller.
+
+NetCDF writing belongs exclusively to output models. Engines have no file-writing
+options or chunk-file helpers; compose a collector with a writer when both files
+and an in-memory dataset are required.
 
 `Engine.await_results()` resolves ordered batches. Local Dask schedules complete
 batches using a process scheduler by default, rather than computing each chunk
@@ -255,6 +268,44 @@ values without `NaT`. See [ADR-0010](adr/0010-chunk-based-farm-outputs.md).
 
 `normalize=True` normalizes the collected weighted farm dataset after output
 finalization. It does not rewrite files or renormalize each file independently.
+
+### Chunk-Based Flow Animations
+
+`ChunkAnimationOutput` replaces engine-owned animation hooks. It uses supplied
+`tdata` coordinates and fields when available. Otherwise, initialization loads
+one static XY point array into `loaded_data["extra_data"]`, eligible for engine
+shared storage. Grid bounds include all turbine positions. Farm workers evaluate
+the shared points in blocks bounded by the active engine's `chunk_size_points`,
+using initialized point models and private copies of farm-ordered chunk inputs.
+Its constructor retains configuration only. Validation and preparation run
+during initialization, keeping the `ModelBook.outputs` registrations
+`"create_gif"` and `"create_mp4"` inexpensive and avoiding unused grids or
+scientific submodels. The `"chunk_gif_<chunk>"` and `"chunk_mp4_<chunk>"`
+factories select a single state chunk.
+
+`calculate()` returns numerical payloads; `update_results()` buffers only its
+private key in the explicit results mapping. `finalize_results()` assembles target
+tiles and state chunks in index order and saves one
+animation per variable. Rendering is parent-only, never concurrent in worker
+threads. Figures are closed on success or failure; write exceptions propagate.
+Scientific block limits do not bound final animation memory.
+Full state selection is `None`. Partial frame selections are boolean
+`(FC.STATE,)` variables in `loaded_data["data_vars"]`, sliced into `mdata` by
+engines and applied to chunk payloads. Raw constructor configuration is stashed
+while running; neither full selections nor grids/frames remain on the model.
+
+`Downwind.calc_points(output=...)` composes an additional output with its standard
+point collector before extracting loaded data. Existing dataset returns and
+the physical-field selection `outputs=...` are unchanged. Calculation and output
+models participate in the complete point-run running/unsetting lifecycle.
+Workers retain scientific caches until output calculation has completed.
+State-subset cache lookups traverse a shallow snapshot of chunk entries so
+concurrent thread workers can insert new chunks without invalidating traversal;
+the snapshot does not duplicate scientific arrays.
+Static rectangular XY targets reuse flow plotting; irregular/moving targets
+retain their actual coordinates in XY scatter frames. GIF/Pillow or MP4/ffmpeg
+encoding follows the final filename suffix. See
+[ADR-0012](adr/0012-chunk-animation-output.md).
 
 ## Extension Points
 
@@ -466,6 +517,9 @@ subprocess.
 	point collection and iterative callers use the same output lifecycle. Corporate
 	design remains confirmed for progress displays. See
 	[ADR-0011](adr/0011-engine-output-execution-and-progress.md).
+- Flow animation is an optional output with shared grid loading, bounded point
+	evaluation, target-data reuse and finalization-only file creation. See
+	[ADR-0012](adr/0012-chunk-animation-output.md).
 - [AGENTS.md](../AGENTS.md) keeps critical contributor guardrails and routes
 	detailed requirements to their owning guides. Code style is detailed in
 	[development](development.md#code-quality), lifecycle and parallelization in

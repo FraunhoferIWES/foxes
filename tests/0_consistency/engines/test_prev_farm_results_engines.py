@@ -59,10 +59,6 @@ class _ReturnOutput:
         return {**fdata, **model_results}
 
 
-def _patch_writer_hooks(runner):
-    runner._write_ani = lambda *args, **kwargs: None
-
-
 def _patch_fdata_from_dataset(monkeypatch):
     calls = []
 
@@ -84,7 +80,6 @@ def test_process_family_runners_rebuild_and_merge_prev_farm_results(
     calls = _patch_fdata_from_dataset(monkeypatch)
 
     runner = runner_cls()
-    _patch_writer_hooks(runner)
 
     algo = _DummyAlgo()
     model = _EchoModel()
@@ -102,8 +97,6 @@ def test_process_family_runners_rebuild_and_merge_prev_farm_results(
         chunk_store={},
         chunk_key=(0, 0),
         out_dims=("x",),
-        write_nc=None,
-        write_chunk_ani=None,
         utm_zone=None,
     )
 
@@ -129,7 +122,6 @@ def test_single_runner_rebuilds_and_merges_prev_farm_results(monkeypatch):
     calls = _patch_fdata_from_dataset(monkeypatch)
 
     runner = SingleChunkEngineRunner()
-    _patch_writer_hooks(runner)
 
     algo = _DummyAlgo()
     model = _EchoModel()
@@ -146,8 +138,6 @@ def test_single_runner_rebuilds_and_merges_prev_farm_results(monkeypatch):
         shared=None,
         chunk_key=(0, 0),
         out_dims=("x",),
-        write_nc=None,
-        write_chunk_ani=None,
     )
 
     assert cstore == {}
@@ -169,7 +159,6 @@ def test_single_runner_uses_previous_farm_data_without_output(monkeypatch):
     _patch_fdata_from_dataset(monkeypatch)
 
     runner = SingleChunkEngineRunner()
-    _patch_writer_hooks(runner)
 
     algo = _DummyAlgo()
     model = _EchoModel()
@@ -185,8 +174,6 @@ def test_single_runner_uses_previous_farm_data_without_output(monkeypatch):
         chunk_store={},
         chunk_key=(0, 0),
         out_dims=("x",),
-        write_nc=None,
-        write_chunk_ani=None,
     )
     assert results is None
     assert cstore == {}

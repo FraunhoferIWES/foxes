@@ -263,31 +263,23 @@ class Iterative(Downwind):
             calc_pars = []
             mlist = FarmDataModelList(models=[])
 
-            # do not rotate back from downwind order:
-            if not self._final_run:
-                # add under-relaxation during wake calculation:
-                urelax = None
-                if self._urelax is not None and len(self._urelax["pre_wake"]):
-                    urelax = mdls.URelax(**self._urelax["pre_wake"])
+            # Keep convergence calculations in downwind order.
+            urelax = None
+            if self._urelax is not None and len(self._urelax["pre_wake"]):
+                urelax = mdls.URelax(**self._urelax["pre_wake"])
 
-                # add model that calculates wake effects:
-                mlist.models.append(
-                    self.get_model("FarmWakesCalculation")(
-                        urelax=urelax,
-                        reorder_mdata=True,
-                    )
+            mlist.models.append(
+                self.get_model("FarmWakesCalculation")(
+                    urelax=urelax,
+                    reorder_mdata=True,
                 )
-                calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+            )
+            calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
-                # add under-relaxation:
-                if self._urelax is not None and len(self._urelax["last"]):
-                    mlist.append(mdls.URelax(**self._urelax["last"]))
-                    calc_pars.append({})
-
-            # rotate back from downwind order:
-            else:
-                mlist.models.append(self.get_model("PrepareForOutput")(output=output))
-                calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+            # Apply final relaxation without executing requested output models.
+            if self._urelax is not None and len(self._urelax["last"]):
+                mlist.append(mdls.URelax(**self._urelax["last"]))
+                calc_pars.append({})
 
             return mlist, calc_pars
 
@@ -358,6 +350,9 @@ class Iterative(Downwind):
         outputs
             Output models or model-book names, as in ``Downwind.calc_farm``.
             ``None`` disables final output, not intermediate convergence data.
+            Requested models are initialized and executed only in the final
+            evaluation pass, after the convergence loop. Intermediate iterations
+            use a separate internal collector and never write requested outputs.
         finalize
             Flag for finalization after calculation
         ret_dwnd_order
@@ -373,7 +368,8 @@ class Iterative(Downwind):
             dimensions (state, turbine)
 
         """
-        # Convergence always needs full datasets, even for writer-only final output.
+        # Isolate convergence data from requested outputs until the final pass.
+        convergence_output = FarmResultsOutput()
         fres = None
         self._it = -1
         self._final_run = False
@@ -391,7 +387,7 @@ class Iterative(Downwind):
 
             self.__prev_farm_results = fres
             iteration_results = super().calc_farm(
-                outputs=FarmResultsOutput(),
+                outputs=convergence_output,
                 finalize=False,
                 clear_mem=False,
                 **iteration_kwargs,

@@ -16,6 +16,9 @@ The user reconfirmed corporate design and permitted adaptive Unicode terminal ba
 
 - Every engine uses prepared-data runners and the core `Output` lifecycle.
   An absent output produces an empty result mapping, not implicit raw arrays.
+- Output models exclusively own NetCDF writing. Remove engine `write_nc`
+  options and chunk-file helpers; compose a collector and writer when callers
+  need both an in-memory dataset and files.
 - Parent-side output updates remain in state/target submission order, even when
   workers finish out of order. Writer boundaries therefore remain deterministic.
 - `Engine.await_results()` resolves ordered batches; local Dask schedules the
@@ -43,7 +46,7 @@ The user reconfirmed corporate design and permitted adaptive Unicode terminal ba
 ## Consequences And Verification
 
 Real farm/point parity tests cover single, NumPy, threads, process,
-multiprocess, local Dask and local distributed clusters. Buffered-file tests
+multiprocess, local Dask and local distributed clusters. Chunk/count-writer tests
 verify that files are complete before calculation returns. Progress tests cover
 terminal/notebook selection, redirected logs, quiet modes and failures.
 

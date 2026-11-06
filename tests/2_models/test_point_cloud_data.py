@@ -15,6 +15,7 @@ from foxes.input.states.point_cloud_data import (
     TurbinePointCloud,
     _interpolate_point_cloud_fields,
 )
+from foxes.models.outputs import FarmResultsCountWriter
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -922,23 +923,23 @@ def test_turbine_point_cloud_load_modes_preserve_timestamp_labels(tmp_path, load
         rotor_model="centre",
         verbosity=0,
     )
-    write_nc = (
-        {
-            "out_dir": tmp_path,
-            "base_name": "results",
-            "split": 2,
-            "ret_data": True,
-        }
-        if load_mode == "preload"
-        else None
-    )
+    # Compose file writing with collection without changing the state labels.
+    outputs: list[str | FarmResultsCountWriter] = ["farm_results_all"]
+    if load_mode == "preload":
+        outputs.append(
+            FarmResultsCountWriter(
+                base_name="results", n_states_per_file=2, out_dir=tmp_path
+            )
+        )
 
     with foxes.Engine.new("single", chunk_size_states=2, verbosity=0):
-        results = algo.calc_farm(write_nc=write_nc)
+        results = algo.calc_farm(outputs=outputs)
+    if isinstance(results, dict):
+        results = results[FC.FARM_RESULTS]
 
     np.testing.assert_array_equal(results[FC.STATE].to_numpy(), state_index.to_numpy())
     np.testing.assert_allclose(results[FV.AMB_REWS].to_numpy(), ws)
-    if write_nc is not None:
+    if load_mode == "preload":
         for file_i, expected_labels in enumerate((state_index[:2], state_index[2:])):
             with xr.open_dataset(tmp_path / f"results_{file_i:06d}.nc") as split_data:
                 np.testing.assert_array_equal(

@@ -30,6 +30,11 @@ backend with ``{"nc_engine": "h5netcdf"}``, or enable lossless packing with
 ``{"pack": True}``. Buffered writers await submitted writes during finalization,
 so worker failures propagate.
 
+File writing is owned by these output models, not by engines. Select a writer
+through ``outputs`` and compose it with ``FarmResultsOutput`` when an in-memory
+dataset is also required. Engine backends only dispatch chunk calculations and
+coordinate the output lifecycle.
+
 ``Downwind.calc_farm(outputs=...)`` accepts a model-book output name, an
 ``Output`` instance, or a list of either. It does not accept physical variable
 names as output models. A single output with one returned result is unwrapped.
@@ -75,6 +80,10 @@ Engine parity tests cover single, NumPy, threads, process, multiprocess, local
 Dask and distributed local clusters. MPI runtime checks are opt-in and have
 also been exercised locally; Ray runtime parity remains unverified here.
 Iterative and Sequential use explicit intermediate collectors.
+Iterative initializes and executes requested outputs only in its final evaluation
+pass; convergence iterations use a separate internal collector. Use Iterative
+for streamline wake frames. Animations therefore contain final states once,
+not repeated intermediate iterations.
 ``normalize=True`` normalizes collected farm weights after finalization and
 requires a collected weighted dataset; it does not rewrite output files.
 
@@ -91,6 +100,97 @@ or notebook tqdm bars, including Unicode terminal bars where supported, and
 newline-only snapshots for redirected logs. ``False`` forces snapshots;
 ``None`` or verbosity zero disables progress. Output finalization and failures
 are distinguished from completed chunk counts.
+
+Flow animations
+---------------
+``ChunkAnimationOutput`` is an optional adopted output, not an engine hook.
+It is registered as ``ModelBook.outputs["create_gif"]`` and
+``ModelBook.outputs["create_mp4"]``, with base filenames ``ani.gif`` and
+``ani.mp4``. Select either with ``algo.calc_farm(outputs="create_mp4")``, for
+example. The factories ``"chunk_gif_<chunk>"`` and ``"chunk_mp4_<chunk>"``
+select a single state chunk, such as ``outputs="chunk_mp4_1"``.
+Its constructor only retains configuration; validation, private selections and
+point-model preparation happen in ``initialize()``. Configure a registered
+instance before selecting it when non-default grid, filename or directory
+settings are needed.
+It collects numerical payloads during ``calculate()``, buffers them in
+``update_results()``, then joins target tiles and state chunks in engine index
+order during ``finalize_results()``. Only finalization renders and saves files.
+Each variable produces one ``<base_name stem>_<variable>.gif`` or ``.mp4``,
+without chunk suffixes. Set ``base_name="flow.mp4"`` to write MP4 rather than
+GIF, producing ``flow_WS.mp4`` for wind speed. The final filename suffix,
+including any ``out_fname_fun`` transformation, selects the writer: ``.gif``
+uses Pillow and ``.mp4`` uses external ffmpeg, which must be installed.
+No separate format option is needed. Write failures propagate, and figures
+are closed even after failures.
+
+For farm-only chunks, a static XY grid is loaded once into
+``loaded_data["extra_data"]`` as a top-level NumPy array, making it eligible for
+engine shared storage. Bounds include all turbine positions, including moving
+layouts; the default plane is the midpoint of the minimum/maximum hub heights.
+``grid_pars`` accepts ``get_grid_xy`` options such as ``resolution`` or
+``n_img_points`` (mutually exclusive), explicit bounds and ``z`` in metres.
+Workers broadcast grid coordinates only over their active states and evaluate
+blocks of at most the active engine's ``chunk_size_points``; ``None`` evaluates
+the whole grid in one block. Point models are initialized before running.
+Set ``ambient=True`` on the animation output to evaluate generated grids without
+wakes; supplied target data is always reused unchanged.
+
+When ``tdata`` is provided, its coordinates and calculated fields are used
+directly, without grid evaluation. All target quadrature locations are retained.
+Static rectangular XY targets use the existing flow-plot renderer; irregular
+or moving targets use coloured XY scatter frames without interpolation.
+``plot_pars`` passes to ``FlowPlots2D.gen_states_fig_xy`` for rectangular grids,
+or to Matplotlib ``scatter`` for other targets; ``vmin`` and ``vmax`` select a
+shared colour scale in either case, and ``vlabel`` overrides the colour-bar
+label. Known variables use existing FOXES unit labels. Requested fields, wind
+speed and wind direction must be present in supplied target data.
+
+``chunk`` selects all chunks, a state-chunk index, an exact state/target pair,
+or a list of either. State labels/positions select from the calculation's input
+states, preserving input order. Selecting every input state is represented by
+``None``, without a loaded mask. Partial selections are boolean variables with
+dimensions ``(FC.STATE,)`` in ``loaded_data["data_vars"]``; engines slice the
+mask with each state chunk. Unknown selections fail explicitly; an empty
+selection writes no files. Standard ``out_dir`` and ``out_fname_fun`` apply to
+every final file.
+Selected state chunks must contain the same total number of target points.
+No runtime buffers are stored on model instances. Final animation frames are
+retained in memory; point-block limits bound scientific evaluation, not the
+complete rendered animation.
+Raw constructor dictionaries and selection lists move to the normal lifecycle
+stash during running and are restored afterwards when a stash is retained.
+The running model holds only small configuration, keys and initialized submodels,
+not grids, state-sized selections or frame buffers.
+
+For example, continuing the synthetic setup above:
+
+.. code-block:: python
+
+    import numpy as np
+    from foxes.models.outputs import ChunkAnimationOutput
+
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=128, verbosity=0
+    ):
+        farm_results = algo.calc_farm(outputs=[
+            FarmResultsOutput(),
+            ChunkAnimationOutput(
+                base_name="flow.gif",
+                out_dir="results",
+                grid_pars={"n_img_points": (12, 8)},
+            ),
+        ])[FC.FARM_RESULTS]
+        point_results = algo.calc_points(
+            farm_results,
+            np.array([[0.0, 0.0, 90.0], [400.0, 0.0, 90.0]]),
+            output=ChunkAnimationOutput(base_name="targets.gif", out_dir="results"),
+        )
+    assert point_results.sizes[FC.POINT] == 2
+
+``calc_points(outputs=...)`` still selects physical fields for the returned
+dataset. Its separate ``output=...`` parameter adds an output model alongside
+the standard collector without changing the dataset return contract.
 
 Existing consumers awaiting adoption
 ------------------------------------

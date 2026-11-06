@@ -182,58 +182,36 @@ class PoolEngine(Engine):
         chunk_store: dict[Any, Any] | None = None,
         sel: dict[str, Any] | None = None,
         iterative: bool = False,
-        write_nc: dict[str, Any] | None = None,
-        write_chunk_ani: dict[str, Any] | None = None,
         **calc_pars: Any,
     ) -> Dict[str, Any]:
         """
-        Runs the model calculation
+        Run chunk calculations and finalize the selected output models.
 
         Parameters
         ----------
         algo
-            The algorithm object
+            The calculation algorithm.
         model
-            The model that whose calculate function
-            should be run
+            The initialized model whose ``calculate`` method runs in each chunk.
         model_data
-            The initial model data
+            The initial model data.
         farm_data
-            The initial farm data
+            The initial farm data.
         point_data
-            The initial point data
+            The initial point data.
         extra_data
-            Additional non-array input data from the models
+            Additional non-array input data from the models.
         output
-            The output object
+            The output model that consumes prepared chunk data, collects results
+            or writes files. ``None`` runs calculations without output collection.
         chunk_store
-            The chunk store
+            Cached scientific data from previous chunk calculations.
         sel
-            Selection of coordinate subsets
+            Selection of coordinate subsets.
         iterative
-            Flag for use within the iterative algorithm
-        write_nc
-            Parameters for writing results to netCDF files, e.g.
-            {'out_dir': 'results', 'base_name': 'calc_results',
-            'ret_data': False, 'split': 1000}.
-
-            The split parameter controls how the output is split:
-            - 'chunks': one file per chunk (fastest method),
-            - 'input': split according to sizes of multiple states input files,
-            - int: split with this many states per file,
-            - None: create a single output file.
-
-            Use ret_data = False together with non-single file writing
-            to avoid constructing the full Dataset in memory.
-        write_chunk_ani
-            Parameters for writing chunk animations, e.g.
-            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
-            'resolution': 100, 'chunk': 5}.'}
-            The chunk is either an integer that refers to a states chunk,
-            a tuple (states_chunk_index, points_chunk_index), or a list
-            of chunk indices.
+            Whether the calculation is an iterative algorithm pass.
         calc_pars
-            Additional parameters for the model.calculate()
+            Additional parameters forwarded to the model's ``calculate`` method.
 
         Returns
         -------
@@ -423,8 +401,6 @@ class PoolEngine(Engine):
                         chunk_store=chunk_store,
                         chunk_key=key,
                         out_dims=out_dims,
-                        write_nc=write_nc,
-                        write_chunk_ani=write_chunk_ani,
                         utm_zone=utm_zone,
                         **calc_pars,
                     )

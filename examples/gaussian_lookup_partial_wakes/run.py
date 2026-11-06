@@ -106,6 +106,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
     )
     parser.add_argument("-nf", "--nofig", help="Skip figures", action="store_true")
+
+    # Select chunk outputs by their model-book names.
+    parser.add_argument(
+        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+    )
     return parser.parse_args()
 
 
@@ -151,7 +156,13 @@ def main() -> None:
     )
 
     with engine:
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs=args.outputs)
+
+        # Evaluate collected farm data only; writer-only outputs are already complete.
+        if isinstance(farm_results, dict):
+            farm_results = farm_results.get("farm_results")
+        if farm_results is None:
+            return
 
         plot_data = None
         if not args.nofig:

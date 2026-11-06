@@ -135,7 +135,6 @@ def test_dask_runner_resolves_nested_future_payloads():
         chunk_store={},
         chunk_key=(0, 0),
         out_dims=("u",),
-        write_nc=None,
         vector=_FakeFuture(np.arange(3, dtype=np.float64)),
     )
 

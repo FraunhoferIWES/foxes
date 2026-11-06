@@ -3,3 +3,4 @@ from .farm_results import FarmResultsChunkWriter as FarmResultsChunkWriter
 from .farm_results import FarmResultsCountWriter as FarmResultsCountWriter
 from .farm_results import FarmResultsPeriodWriter as FarmResultsPeriodWriter
 from .point_results import PointResultsOutput as PointResultsOutput
+from .chunk_animation import ChunkAnimationOutput as ChunkAnimationOutput

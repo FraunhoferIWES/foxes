@@ -52,6 +52,11 @@ if __name__ == "__main__":
         default=None,
         type=int,
     )
+
+    # Select chunk outputs by their model-book names.
+    parser.add_argument(
+        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+    )
     args = parser.parse_args()
 
     mbook = foxes.ModelBook()
@@ -91,8 +96,14 @@ if __name__ == "__main__":
 
     with engine:
         time0 = time.time()
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs=args.outputs)
         time1 = time.time()
+
+    # Evaluate collected farm data only; writer-only outputs are already complete.
+    if isinstance(farm_results, dict):
+        farm_results = farm_results.get("farm_results")
+    if farm_results is None:
+        raise SystemExit(0)
 
     print("\nCalc time =", time1 - time0, "\n")
     print(farm_results)

@@ -2,6 +2,8 @@
 
 import io
 import os
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 from types import SimpleNamespace
 
 import numpy as np
@@ -12,8 +14,13 @@ import xarray as xr
 import foxes
 import foxes.constants as FC
 import foxes.variables as FV
+from foxes.core import MData
 from foxes.engines.progress import CalculationProgress
-from foxes.models.outputs import FarmResultsOutput, FarmResultsCountWriter
+from foxes.models.outputs import (
+    FarmResultsOutput,
+    FarmResultsChunkWriter,
+    FarmResultsCountWriter,
+)
 
 
 def _algorithm(algorithm="Downwind"):
@@ -98,6 +105,49 @@ def test_farm_and_point_output_backend_parity(backend):
         assert algo.calc_farm(outputs=None) == {}
     xr.testing.assert_allclose(results, reference)
     xr.testing.assert_allclose(point_results, point_reference)
+
+
+def test_chunk_store_selection_allows_concurrent_chunk_insertion(monkeypatch):
+    # Reuse a larger cached state chunk for a smaller calculation.
+    algo = _algorithm()
+    full = MData(
+        {FC.STATE: np.array([1, 3, 5, 9])},
+        dims={FC.STATE: (FC.STATE,)},
+        states_i0=0,
+        chunki_states=0,
+        chunki_points=0,
+    )
+    algo.add_to_chunk_store("cached", np.array([10, 30, 50, 90]), (FC.STATE,), full)
+    subset = MData(
+        {FC.STATE: np.array([1, 9])},
+        dims={FC.STATE: (FC.STATE,)},
+        chunki_states=0,
+        chunki_points=0,
+    )
+
+    # Insert another chunk exactly while the reader matches cached state labels.
+    reading, inserted = Event(), Event()
+    intersect = np.intersect1d
+
+    def match_states(*args, **kwargs):
+        # Release the writer only after cache traversal has started.
+        reading.set()
+        assert inserted.wait(timeout=5)
+        return intersect(*args, **kwargs)
+
+    def add_chunk():
+        # New chunks may appear while another worker reads an existing chunk.
+        assert reading.wait(timeout=5)
+        algo.chunk_store[(1, 0)] = {}
+        inserted.set()
+
+    # A stable traversal must retain the selected values without copying arrays.
+    monkeypatch.setattr(np, "intersect1d", match_states)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        writer = pool.submit(add_chunk)
+        values = algo.get_from_chunk_store("cached", subset)
+        writer.result(timeout=5)
+    np.testing.assert_array_equal(values, [10, 90])
 
 
 @pytest.mark.parametrize("algorithm", ["Iterative", "Sequential"])
@@ -186,7 +236,7 @@ def test_default_farm_field_selection_is_not_expanded():
         FV.Y,
         FV.H,
         FV.D,
-        FV.AMB_WD,
+        FV.WD,
         FV.YAW,
         FV.AMB_RHO,
         FV.AMB_REWS,
@@ -195,13 +245,16 @@ def test_default_farm_field_selection_is_not_expanded():
         FV.TI,
         FV.AMB_P,
         FV.P,
+        FV.WEIGHT,
     ]
 
 
 @pytest.mark.parametrize(
-    "backend", ["process", "multiprocess", "dask", "local_cluster"]
+    "backend",
+    ["single", "numpy", "threads", "process", "multiprocess", "dask", "local_cluster"],
 )
-def test_buffered_files_are_complete_before_engine_returns(tmp_path, backend):
+@pytest.mark.parametrize("split", ["chunks", "count"])
+def test_output_files_are_complete_before_engine_returns(tmp_path, backend, split):
     # Avoid requiring the aggregate engines extra for the ordinary test suite.
     module = {
         "multiprocess": "multiprocess",
@@ -211,19 +264,21 @@ def test_buffered_files_are_complete_before_engine_returns(tmp_path, backend):
     if module is not None:
         pytest.importorskip(module)
 
-    # Exercise parent-submitted file jobs, including lazy Dask writer graphs.
+    # Output models own worker writes and parent-submitted buffered file jobs.
     algo = _algorithm()
     options = (
         {"cluster_pars": {"dashboard_address": None}}
         if backend == "local_cluster"
         else {}
     )
-    output = FarmResultsCountWriter(
-        "power",
-        3,
+    writer = FarmResultsChunkWriter if split == "chunks" else FarmResultsCountWriter
+    split_pars = {} if split == "chunks" else {"n_states_per_file": 3}
+    output = writer(
+        base_name="power",
         variables=[FV.P],
         out_dir=tmp_path,
         write_nc_pars={"nc_engine": "h5netcdf", "verbosity": 0},
+        **split_pars,
     )
     with foxes.Engine.new(
         backend,
@@ -237,11 +292,15 @@ def test_buffered_files_are_complete_before_engine_returns(tmp_path, backend):
         for path in sorted(tmp_path.glob("power_*.nc")):
             with xr.open_dataset(path) as dataset:
                 datasets.append(dataset.load())
-        assert [dataset.sizes[FC.STATE] for dataset in datasets] == [3, 1]
+        expected_sizes = (
+            [3, 1] if split == "count" else [4] if backend == "single" else [2, 2]
+        )
+        assert [dataset.sizes[FC.STATE] for dataset in datasets] == expected_sizes
         np.testing.assert_array_equal(
             np.concatenate([dataset[FC.STATE] for dataset in datasets]),
             [1, 3, 5, 9],
         )
+        assert all(FV.P in dataset for dataset in datasets)
 
 
 class _FailingOutput(FarmResultsOutput):

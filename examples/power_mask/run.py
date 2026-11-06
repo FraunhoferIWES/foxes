@@ -75,6 +75,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
+
+    # Select chunk outputs by their model-book names.
+    parser.add_argument(
+        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+    )
     args = parser.parse_args()
 
     print("\nReading file", args.pmax_file)
@@ -157,29 +162,47 @@ if __name__ == "__main__":
         FV.MAX_P,
     ]
 
+    # Preserve the fields required by this example's farm collector.
+    mbook.outputs["farm_results"] = FarmResultsOutput(variables=outputs)
+
     # run calculation with power mask:
     with engine:
-        farm_results = algo.calc_farm(outputs=FarmResultsOutput(variables=outputs))
+        farm_results = algo.calc_farm(outputs=args.outputs)
 
-        fr = farm_results.to_dataframe()
-        print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.MAX_P]])
+        # Skip evaluation, but not the comparison run, for writer-only outputs.
+        if isinstance(farm_results, dict):
+            farm_results = farm_results.get("farm_results")
+        if farm_results is not None:
+            fr = farm_results.to_dataframe()
+            print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.MAX_P]])
 
-        o = foxes.output.FarmResultsEval(farm_results)
-        P0 = o.calc_mean_farm_power(ambient=True)
-        P = o.calc_mean_farm_power()
-        print(f"\nFarm power: {P / 1000:.1f} MW, Efficiency = {P / P0 * 100:.2f} %")
+            o = foxes.output.FarmResultsEval(farm_results)
+            P0 = o.calc_mean_farm_power(ambient=True)
+            P = o.calc_mean_farm_power()
+            print(f"\nFarm power: {P / 1000:.1f} MW, Efficiency = {P / P0 * 100:.2f} %")
 
-        o1 = foxes.output.StateTurbineMap(farm_results)
+            o1 = foxes.output.StateTurbineMap(farm_results)
 
         # run calculation without power mask:
         for t in farm.turbines:
             t.models.remove("set_Pmax")
             t.models.remove("PMask")
 
-        farm_results = algo.calc_farm(outputs=FarmResultsOutput(variables=outputs))
+        # The unmasked run no longer produces a maximum-power field.
+        mbook.outputs["farm_results"] = FarmResultsOutput(
+            variables=[variable for variable in outputs if variable != FV.MAX_P]
+        )
+
+        farm_results = algo.calc_farm(outputs=args.outputs)
+
+    # Evaluate collected farm data only; both output runs have finished.
+    if isinstance(farm_results, dict):
+        farm_results = farm_results.get("farm_results")
+    if farm_results is None:
+        raise SystemExit(0)
 
     fr = farm_results.to_dataframe()
-    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.MAX_P]])
+    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT]])
 
     o = foxes.output.FarmResultsEval(farm_results)
     P0 = o.calc_mean_farm_power(ambient=True)

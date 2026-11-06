@@ -27,12 +27,46 @@ class ThreadsEngineRunner(ProcessEngineRunner):
         chunk_store: dict[Any, Any],
         chunk_key: Any,
         out_dims: tuple[str, ...],
-        write_nc: dict[str, Any] | None,
-        write_chunk_ani: dict[str, Any] | None = None,
         utm_zone: tuple[int, str] | None = None,
         **cpars: Any,
     ) -> tuple[dict[str, Any] | None, dict[Any, Any]]:
-        """Helper function for running in a single thread"""
+        """Calculate one thread chunk and evaluate its output model.
+
+        Parameters
+        ----------
+        algo
+            Running algorithm with an engine-managed shared chunk store.
+        model
+            Initialized scientific model to execute.
+        mdata
+            Chunk model data, recombined with shared arrays before calculation.
+        fdata
+            Chunk farm data, replaced by previous farm results when available.
+        tdata
+            Chunk targets, or ``None`` for a farm calculation.
+        output
+            Output model consuming prepared data and scientific results.
+            ``None`` skips output evaluation.
+        shared
+            Shared-storage manifest, or ``None`` for entirely local model data.
+        chunk_store
+            Engine-managed scientific caches, already attached to ``algo``.
+        chunk_key
+            State/target chunk index identifying returned cache entries.
+        out_dims
+            Scientific model's output dimensions.
+        utm_zone
+            Engine-supplied zone, unused because threads share process configuration.
+        cpars
+            Parameters forwarded to the scientific model's ``calculate`` method.
+
+        Returns
+        -------
+        results
+            Output payload mapping, or ``None`` when no output is selected.
+        chunk_store
+            This chunk's caches, including entries created by the output.
+        """
         mdata = self._recombine_mdata_with_shared(mdata, shared)
 
         fdata, _ = self._apply_prev_farm_results(algo, mdata, fdata)
@@ -45,15 +79,6 @@ class ThreadsEngineRunner(ProcessEngineRunner):
         else:
             model_results = model.calculate(algo, mdata, fdata, tdata, **cpars)
 
-        # Render requested chunk diagnostics before prepared data leaves the worker.
-        self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)
-
-        cstore = (
-            {chunk_key: algo.chunk_store[chunk_key]}
-            if chunk_key in algo.chunk_store
-            else {}
-        )
-
         if output is None:
             results = None
         else:
@@ -65,6 +90,12 @@ class ThreadsEngineRunner(ProcessEngineRunner):
                 model_results=model_results,
             )
 
+        # Return caches created by both scientific models and chunk outputs.
+        cstore = (
+            {chunk_key: algo.chunk_store[chunk_key]}
+            if chunk_key in algo.chunk_store
+            else {}
+        )
         return results, cstore
 
 

@@ -55,6 +55,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
+
+    # Select chunk outputs by their model-book names.
+    parser.add_argument(
+        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+    )
     args = parser.parse_args()
 
     # create model book
@@ -95,7 +100,14 @@ if __name__ == "__main__":
     )
 
     # calculate farm results
-    farm_results = algo.calc_farm()
+    farm_results = algo.calc_farm(outputs=args.outputs)
+
+    # Evaluate collected farm data only; writer-only outputs are already complete.
+    if isinstance(farm_results, dict):
+        farm_results = farm_results.get("farm_results")
+    if farm_results is None:
+        raise SystemExit(0)
+
     print("\nResults data:\n", farm_results)
 
     # add capacity and efficiency to farm results

@@ -22,7 +22,6 @@ from .rose_plot import StatesRosePlotOutput as StatesRosePlotOutput
 from .rose_plot import WindRoseBinPlot as WindRoseBinPlot
 
 from .flow_plots_2d import FlowPlots2D as FlowPlots2D
-from .flow_plots_2d import write_chunk_ani_xy as write_chunk_ani_xy
 
 from .seq_plugins import SeqFlowAnimationPlugin as SeqFlowAnimationPlugin
 from .seq_plugins import SeqWakeDebugPlugin as SeqWakeDebugPlugin

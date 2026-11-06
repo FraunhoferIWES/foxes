@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from unittest.mock import Mock
 
 import numpy as np
 import pandas as pd
@@ -9,7 +8,6 @@ import xarray as xr
 import foxes
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.core import FData, MData
 from foxes.output import grids
 
 
@@ -148,7 +146,8 @@ def test_flow_slices_use_static_points_across_chunks(
     with foxes.Engine.new(
         "numpy", chunk_size_states=2, chunk_size_points=2, verbosity=0
     ):
-        farm_data = flow_algorithm.calc_farm(finalize=False)
+        # Null turbines have no power fields; retain the available point inputs.
+        farm_data = flow_algorithm.calc_farm(outputs="farm_results_all", finalize=False)
         output = foxes.output.FlowPlots2D(flow_algorithm, farm_data)
         mean_output = getattr(output, f"get_mean_data_{orientation}")(
             FV.WS, n_img_points=(2, 3), **selection
@@ -168,32 +167,3 @@ def test_flow_slices_use_static_points_across_chunks(
             np.array(expected_speeds)[:, None, None], (len(selected_states), 2, 3)
         ),
     )
-
-
-def test_precalc_grid_broadcasts_only_the_active_chunk(farm_results):
-    point_model = Mock()
-
-    def calculate(algo, mdata, fdata, tdata, **kwargs):
-        targets = tdata[FC.TARGETS]
-        assert targets.shape == (2, 6, 1, 3)
-        assert targets.strides[0] == 0
-        return {FV.WS: np.full((2, 6), 8.0)}
-
-    point_model.calculate.side_effect = calculate
-    algo = SimpleNamespace(_collect_point_models=lambda: (point_model, [{}]))
-    output = foxes.output.FlowPlots2D(algo, farm_results)
-    mdata = MData(data={FC.STATE: np.array([10, 20])}, dims={FC.STATE: (FC.STATE,)})
-    data, states, grid_data = output.precalc_chunk_xy(
-        FV.WS,
-        mdata,
-        FData.from_sizes(n_states=2, n_turbines=1),
-        resolution=100.0,
-        xmin=0.0,
-        xmax=100.0,
-        ymin=0.0,
-        ymax=200.0,
-        z=100.0,
-    )
-    assert grid_data[-1].shape == (6, 3)
-    np.testing.assert_array_equal(states, [10, 20])
-    np.testing.assert_allclose(data, 8.0)

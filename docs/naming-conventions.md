@@ -103,6 +103,19 @@ Count/chunk filenames use six-digit zero-padded indices. Calendar files use
 week year (`iso_year`), not necessarily the sample's calendar `year`. See
 [ADR-0010](adr/0010-chunk-based-farm-outputs.md).
 
+`ChunkAnimationOutput` uses model-private `var("chunk_animation")` buffers and
+`var("animation_points")` shared extra data. Its final filenames are
+`<base_name stem>_<variable>.gif` or `.mp4`, without per-chunk indices. `chunk`
+selects engine indices; `states_isel` selects input-state positions, retaining
+input order rather than repeating positions in every chunk. All-state selection
+is `None`; partial selection is a boolean `(FC.STATE,)` loaded variable named by
+`var("animation_selection")`, not an instance-held array. For point calculations,
+`outputs` selects returned physical fields and `output` adds a chunk output model.
+The model-book output names are `"create_gif"` and `"create_mp4"`, using
+`ani.gif` and `ani.mp4` as base filenames. The `"chunk_gif_<chunk>"` and
+`"chunk_mp4_<chunk>"` factories select one state chunk. Construction is
+configuration only; validation and preparation are deferred to initialization.
+
 ## Common Type Annotations
 
 Infer types from the owning base class and call site rather than from a name

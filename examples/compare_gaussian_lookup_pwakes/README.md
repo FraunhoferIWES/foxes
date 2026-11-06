@@ -27,3 +27,11 @@ resolution with `--distance`, `--y-span`, and `--step`.
 The `gaussian_lookup` case uses the bundled model-book lookup artifact. Create
 custom lookup NetCDF files with the standalone `foxes_create_gaussian_lookup`
 tool and pass them to `PartialGaussianLookup` in custom scripts.
+
+Select chunk output models for all three cases and any optional runtime benchmark
+with `-o/--outputs` (default: `farm_results`). Writer-only selections run every
+case but skip numerical comparisons and their figure. Registered writers reuse
+their configured filenames, so successive cases can overwrite earlier files.
+
+Save the comparison figure with `--figure-file comparison.png`, independently
+of `-o/--outputs`. Use `farm_results_all` when a report requires extra fields.

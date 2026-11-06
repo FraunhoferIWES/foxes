@@ -178,12 +178,46 @@ class ProcessEngineRunner(EngineRunner):
         chunk_store: dict[Any, Any],
         chunk_key: Any,
         out_dims: tuple[str, ...],
-        write_nc: dict[str, Any] | None,
-        write_chunk_ani: dict[str, Any] | None = None,
         utm_zone: tuple[int, str] | None = None,
         **cpars: Any,
     ) -> tuple[dict[str, Any] | None, dict[Any, Any]]:
-        """Helper function for running in a single process"""
+        """Calculate one process chunk and evaluate its output model.
+
+        Parameters
+        ----------
+        algo
+            Worker algorithm whose chunk store is replaced with a local copy.
+        model
+            Initialized scientific model to execute.
+        mdata
+            Chunk model data, recombined with shared arrays before calculation.
+        fdata
+            Chunk farm data, replaced by previous farm results when available.
+        tdata
+            Chunk targets, or ``None`` for a farm calculation.
+        output
+            Output model consuming prepared data and scientific results.
+            ``None`` skips output evaluation.
+        shared
+            Shared-storage manifest, or ``None`` for entirely local model data.
+        chunk_store
+            Scientific caches available to this worker.
+        chunk_key
+            State/target chunk index identifying returned cache entries.
+        out_dims
+            Scientific model's output dimensions.
+        utm_zone
+            UTM zone number and latitude band to set in the worker.
+        cpars
+            Parameters forwarded to the scientific model's ``calculate`` method.
+
+        Returns
+        -------
+        results
+            Output payload mapping, or ``None`` when no output is selected.
+        chunk_store
+            This chunk's caches, including entries created by the output.
+        """
 
         if utm_zone is not None:  # needed in some cases for mpi engine TODO investigate
             config.set_utm_zone(*utm_zone)
@@ -201,12 +235,6 @@ class ProcessEngineRunner(EngineRunner):
         else:
             model_results = model.calculate(algo, mdata, fdata, tdata, **cpars)
 
-        # Keep chunk-local animation diagnostics available on process backends.
-        self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)
-
-        chunk_store = algo.reset_chunk_store()
-        cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
-
         if output is None:
             results = None
         else:
@@ -218,6 +246,9 @@ class ProcessEngineRunner(EngineRunner):
                 model_results=model_results,
             )
 
+        # Scientific outputs may still need or extend this chunk's wake caches.
+        chunk_store = algo.reset_chunk_store()
+        cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
         return results, cstore
 
 

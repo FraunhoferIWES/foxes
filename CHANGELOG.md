@@ -1188,9 +1188,32 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Examples:
+  - Added `-o/--outputs` to all Downwind/Iterative Python example scripts.
+    Handle direct datasets, composed results and writer-only selections without
+    skipping later comparison runs. Retain example-specific collector fields.
+    Reserve `--figure-file` for the Gaussian comparison's optional PNG.
+    Stop requesting the removed maximum-power field in the unmasked comparison.
 - Engines:
   - Unified synchronous and parallel execution around the core output lifecycle;
-    restored chunk animation hooks and corrected chunk-store merging.
+    corrected chunk-store merging.
+  - Removed engine `write_nc` options and chunk-file helpers. NetCDF files are
+    written exclusively by selected output models; compose a writer with a
+    collector when an in-memory dataset is also needed.
+  - Replaced engine animation hooks with optional `ChunkAnimationOutput`:
+    reuse supplied target data or evaluate shared grids in bounded point blocks,
+    then combine all selected chunks and save one animation per variable during
+    output finalization. Removed the superseded chunk plotting helper.
+    Register `"create_gif"` and `"create_mp4"` in `ModelBook.outputs`, plus
+    `"chunk_gif_<chunk>"` and `"chunk_mp4_<chunk>"` factories. Defer configuration
+    validation and preparation from construction to initialization.
+    All-state selections use `None`; partial selections are boolean `FC.STATE`
+    variables in loaded data, and constructor inputs are stashed while running.
+    Select GIF/Pillow or MP4/ffmpeg encoding through the final filename suffix.
+  - Keep wake-frame caches available through scientific output calculations,
+    and return caches created by outputs alongside the model caches.
+  - Snapshot chunk entries during state-subset cache lookups to permit
+    concurrent insertion by thread workers without copying scientific arrays.
   - Restored shared terminal/notebook progress with adaptive Unicode bars,
     readable labels, quiet modes, newline-only logs and failure cleanup.
   - Schedule local Dask chunks and buffered writes in ordered batches; prevent
@@ -1201,6 +1224,11 @@ This major version introduces the concept of `Engines` which handle the chunking
     callers while preserving intermediate downwind order.
   - Kept the default farm field selection unchanged; callers requiring all
     wake inputs explicitly request the existing all-fields output.
+  - `Downwind.calc_points(output=...)` adds chunk outputs alongside its standard
+    collector without changing point dataset returns.
+  - Include calculation/output models in the complete point-run lifecycle.
+    Iterative keeps requested output initialization and execution in the final
+    evaluation pass, with a separate internal convergence collector.
 - Dependencies:
   - Added the `engines` extra combining all optional engine packages through
     the existing Dask, MPI, multiprocess and Ray extras.
@@ -1218,6 +1246,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Added regression coverage for the four implemented farm output models,
     NetCDF files, output composition, validation and NumPy/thread chunk parity.
   - Keep Python test modules visible despite generated-result ignore patterns.
+  - Added animation lifecycle, field parity, target-tile assembly, point-block
+    limits, actual GIF frames, filename transformation and failure-cleanup tests.
+  - Verify final-only Iterative animations, including streamline cases, and
+    exercise MP4 encoding when ffmpeg is available.
 - Development:
   - Added logical-block comments, blank-line separation, natural code style and
     polished docstring requirements to the canonical contributor rules.

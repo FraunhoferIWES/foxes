@@ -536,33 +536,42 @@ class Algorithm(Model):
         ret_inds: bool = False,
         error: bool = True,
     ) -> Any:
-        """
-        Get data from the chunk store
+        """Get cached data for a chunk or its selected input states.
 
         Parameters
         ----------
         name
-            The data name
+            Name of the cached field.
         mdata
-            The mdata object
-        tdata
-            The tdata object
+            Model data identifying the chunk and requested state labels.
         prev_s
-            How many states chunks backward
+            Number of state chunks to look backward.
         prev_t
-            How many points chunks backward
+            Number of target chunks to look backward.
         ret_inds
-            Also return chunk index data (i0, n_states, t0, n_targets)
+            Also return the cached chunk's index metadata.
         error
-            Flag for raising KeyError if data not found
+            Raise ``KeyError`` for missing data rather than returning ``None``.
 
         Returns
         -------
         data
-            The data
+            Cached value, restricted to requested state labels when necessary.
+            With ``ret_inds=True``, return ``(data, inds)`` instead.
         inds
-            The chunk index data (i0, n_states, t0, n_targets)
+            With ``ret_inds=True``, chunk metadata
+            ``(i0, n_states, t0, n_targets)``; missing chunks return four
+            ``None`` values when ``error=False``.
 
+        Raises
+        ------
+        KeyError
+            If the chunk or field is missing and ``error=True``.
+
+        Notes
+        -----
+        State selection traverses a shallow snapshot of cache entries, allowing
+        worker threads to add chunks during lookup without copying field arrays.
         """
         assert mdata.chunki_states is not None, (
             f"{self.name}: mdata.chunki_states is None, cannot add to chunk store"
@@ -596,10 +605,10 @@ class Algorithm(Model):
                 else:
                     data = None
 
-        # combine data from multiple chunks, in case of states subset selection:
+        # Snapshot entries so other threads can add chunks during state matching.
         else:
             data = None
-            for (_, ipoints), d in self.chunk_store.items():
+            for (_, ipoints), d in self.chunk_store.copy().items():
                 if ipoints == key[1] and name in d:
                     _, j0, j1 = np.intersect1d(
                         d["states_index"], mdata[FC.STATE], return_indices=True
@@ -829,10 +838,11 @@ class Algorithm(Model):
             for m in [self] + list(args) + list(kwargs.values())
             if isinstance(m, Model)
         ]
-        for m in mdls:
-            m.set_running(self, data_stash, sel=None, verbosity=self.verbosity - 2)
-
         try:
+            # Unwind models already started if a later running hook fails.
+            for m in mdls:
+                m.set_running(self, data_stash, sel=None, verbosity=self.verbosity - 2)
+
             # run parallel calculation:
             return self._launch_parallel_farm_calc(
                 *args,
@@ -900,13 +910,19 @@ class Algorithm(Model):
                 f"Algorithm '{self.name}': Cannot call calc_points while running"
             )
 
-        # set to running:
+        # Include supplied calculation/output models in the point-run lifecycle.
         data_stash: dict[str, Any] = {}
-        self.set_running(self, data_stash, sel=sel, verbosity=self.verbosity - 2)
+        mdls = [
+            m
+            for m in [self] + list(args) + list(kwargs.values())
+            if isinstance(m, Model)
+        ]
 
-        # run parallel calculation:
+        # Restore the caller's farm caches after point evaluation, even on failure.
         chunk_store = self.reset_chunk_store()
         try:
+            for m in mdls:
+                m.set_running(self, data_stash, sel=sel, verbosity=self.verbosity - 2)
             return self._launch_parallel_points_calc(
                 *args,
                 chunk_store=chunk_store,
@@ -917,14 +933,15 @@ class Algorithm(Model):
             try:
                 self.reset_chunk_store(chunk_store)
             finally:
-                # reset to not running:
-                if self.running:
-                    self.unset_running(
-                        self,
-                        data_stash,
-                        sel=sel,
-                        verbosity=self.verbosity - 2,
-                    )
+                # Restore every model after output finalization or a worker error.
+                for m in mdls:
+                    if m.running:
+                        m.unset_running(
+                            self,
+                            data_stash,
+                            sel=sel,
+                            verbosity=self.verbosity - 2,
+                        )
 
     def finalize(self, clear_mem: bool = False) -> None:
         """

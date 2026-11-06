@@ -192,12 +192,46 @@ class DaskProcessRunner(ProcessEngineRunner):
         chunk_store: dict[Any, Any],
         chunk_key: Any,
         out_dims: tuple[str, ...],
-        write_nc: dict[str, Any] | None,
-        write_chunk_ani: dict[str, Any] | None = None,
         utm_zone: tuple[int, str] | None = None,
         **cpars: Any,
     ) -> tuple[dict[str, Any] | None, dict[Any, Any]]:
-        """Run one chunk while resolving future-like payloads before calculate."""
+        """Resolve Dask payloads, calculate one chunk and evaluate its output.
+
+        Parameters
+        ----------
+        algo
+            Algorithm copied locally to isolate tasks sharing a worker process.
+        model
+            Initialized scientific model to execute.
+        mdata
+            Chunk model data whose shared arrays and futures are resolved in place.
+        fdata
+            Chunk farm data, replaced by previous farm results when available.
+        tdata
+            Chunk targets, or ``None`` for a farm calculation.
+        output
+            Output model consuming prepared data and scientific results.
+            ``None`` skips output evaluation.
+        shared
+            Dask or process shared-storage manifest, or ``None`` for local data.
+        chunk_store
+            Scientific caches copied into the task-local algorithm.
+        chunk_key
+            State/target chunk index identifying returned cache entries.
+        out_dims
+            Scientific model's output dimensions.
+        utm_zone
+            UTM zone number and latitude band to set in the worker.
+        cpars
+            Scientific calculation parameters; nested futures are resolved first.
+
+        Returns
+        -------
+        results
+            Output payload mapping, or ``None`` when no output is selected.
+        chunk_store
+            This chunk's caches, including entries created by the output.
+        """
         # Distributed workers may run several tasks in one process or thread pool.
         algo = deepcopy(algo)
         if utm_zone is not None:
@@ -218,15 +252,15 @@ class DaskProcessRunner(ProcessEngineRunner):
             model_results = model.calculate(algo, mdata, fdata, **cpars)
         else:
             model_results = model.calculate(algo, mdata, fdata, tdata, **cpars)
-        chunk_store = algo.reset_chunk_store()
-        cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
-        self._write_ani(algo, chunk_key, write_chunk_ani, mdata, fdata, tdata)
         results = (
             output.calculate(algo, mdata, fdata, tdata, model_results)
             if output is not None
             else None
         )
 
+        # Keep model caches available through scientific output evaluation.
+        chunk_store = algo.reset_chunk_store()
+        cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
         return results, cstore
 
 

@@ -99,7 +99,7 @@ class kTI(TurbineModel):
             The model data
         fdata
             The farm data
-        st_sel: slice or array of bool
+        st_sel
             The state-turbine selection,
             for shape: (n_states, n_turbines)
 

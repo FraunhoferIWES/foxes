@@ -736,6 +736,30 @@ class ModelBook:
         }
 
         self.outputs = FDict(_name="outputs")
+
+        # Register animations and factories selecting one state chunk.
+        self.outputs["create_gif"] = fm.outputs.ChunkAnimationOutput(
+            base_name="ani.gif"
+        )
+        self.outputs["create_mp4"] = fm.outputs.ChunkAnimationOutput(
+            base_name="ani.mp4"
+        )
+        self.outputs.add_factory(
+            fm.outputs.ChunkAnimationOutput,
+            "chunk_gif_<chunk>",
+            chunk=lambda c: int(c),
+            hints={"chunk": "(Chunk index)"},
+            kwargs=dict(base_name="ani.gif"),
+        )
+        self.outputs.add_factory(
+            fm.outputs.ChunkAnimationOutput,
+            "chunk_mp4_<chunk>",
+            chunk=lambda c: int(c),
+            hints={"chunk": "(Chunk index)"},
+            kwargs=dict(base_name="ani.mp4"),
+        )
+
+        # Register farm result collectors and NetCDF writers.
         self.outputs["farm_results"] = fm.outputs.FarmResultsOutput(
             ambient_vars=True,
             waked_vars=True,

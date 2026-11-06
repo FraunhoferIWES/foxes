@@ -6,9 +6,8 @@ from abc import ABC, abstractmethod
 from xarray import Dataset
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-from foxes.config import config, get_output_path
+from foxes.config import config
 from foxes.utils import new_instance
-from foxes.utils import write_nc as write_nc_file
 import foxes.constants as FC
 
 from .data import MData, FData, TData
@@ -24,86 +23,6 @@ class EngineRunner(ABC):
     """
     Helper class for running calculations in engines
     """
-
-    def _write_chunk_results(
-        self,
-        algo: Algorithm,
-        results: dict[str, np.ndarray],
-        write_nc: dict[str, Any] | None,
-        out_dims: tuple[str, ...],
-        mdata: MData,
-    ) -> dict[str, np.ndarray] | None:
-        """Helper function for optionally writing chunk results to netCDF file"""
-        ret_data = True
-        if write_nc is not None and write_nc["split"] == "chunks":
-            ret_data = write_nc.get("ret_data", False)
-            out_dir = get_output_path(write_nc.get("out_dir", "."))
-            base_name = write_nc["base_name"]
-            ret_data = write_nc.get("ret_data", False)
-            out_dir.mkdir(parents=True, exist_ok=True)
-
-            coords: dict[str, np.ndarray] = {}
-            if FC.STATE in out_dims and FC.STATE in mdata:
-                coords[FC.STATE] = mdata[FC.STATE]
-
-            dvars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {}
-            for v, d in results.items():
-                if (
-                    out_dims == (FC.STATE, FC.TURBINE)
-                    and d.shape[1] == 1
-                    and algo.n_turbines > 1
-                ):
-                    dvars[v] = ((FC.STATE,), d[:, 0])
-                else:
-                    dvars[v] = (out_dims, d)
-
-            ds = Dataset(coords=coords, data_vars=dvars)
-
-            i0 = mdata.chunki_states
-            t0 = mdata.chunki_points
-            vrb = max(algo.verbosity - 1, 0)
-            if out_dims == (FC.STATE, FC.TURBINE):
-                fpath = out_dir / f"{base_name}_{i0:06d}.nc"
-            else:
-                fpath = out_dir / f"{base_name}_{i0:06d}_{t0:06d}.nc"
-            write_nc_file(
-                ds,
-                fpath,
-                nc_engine=config.nc_engine or "netcdf4",
-                verbosity=vrb,
-            )
-
-        return results if ret_data else None
-
-    def _write_ani(
-        self,
-        algo: Algorithm,
-        chunk_key: tuple[int, int],
-        write_chunk_ani: dict[str, Any] | None,
-        *data: Any,
-    ) -> None:
-        """Helper function for optionally writing chunk flow animations to file"""
-        if write_chunk_ani is not None:
-            from foxes.output import write_chunk_ani_xy
-
-            pars = write_chunk_ani.copy()
-            chk = pars.pop("chunk")
-
-            def _do_run(chk: Any) -> bool:
-                if isinstance(chk, list):
-                    for c in chk:
-                        if _do_run(c):
-                            return True
-                    return False
-                else:
-                    return (
-                        chk == chunk_key
-                        if isinstance(chk, tuple)
-                        else chk == chunk_key[0]
-                    )
-
-            if _do_run(chk):
-                write_chunk_ani_xy(algo, *data, **pars)
 
     def _apply_prev_farm_results(
         self,

@@ -23,6 +23,7 @@ all of them.
 | [0009](0009-test-file-dependency-boundary.md) | Accepted; supersedes the test-input boundary in 0008 | Limit pytest repository-file inputs to package code, examples, notebooks, and tests. |
 | [0010](0010-chunk-based-farm-outputs.md) | Accepted | Adopt outputs through the core chunk lifecycle; isolate farm writer payloads and split files by exact counts or calendar periods, including ISO weeks. |
 | [0011](0011-engine-output-execution-and-progress.md) | Accepted; supersedes the engine/algorithm scope restriction in 0010 | Unify engine output execution, ordered batches, point collection and parent-owned adaptive progress without changing default farm fields. |
+| [0012](0012-chunk-animation-output.md) | Accepted | Adopt optional flow animations with shared point grids, target-data reuse, bounded scientific blocks and finalization-only assembly/writing. |
 
 ## When To Add An ADR
 

@@ -943,6 +943,7 @@ class Downwind(Algorithm):
         states_sel: list[Any] | None = None,
         clear_mem: bool = False,
         ambient_keep: bool = False,
+        output: Output | None = None,
         **kwargs: Any,
     ) -> Dataset:
         """
@@ -983,6 +984,10 @@ class Downwind(Algorithm):
             Otherwise ordinary variables with ambient counterparts are dropped.
             This option has no effect when ``ambient=False`` and does not expand
             explicit ``outputs`` selections.
+        output
+            Additional chunk-based output, such as ``ChunkAnimationOutput``.
+            It receives the calculated target fields and coordinates alongside
+            the standard point collector. The returned dataset is unchanged.
         kwargs
             Additional parameters for run_calculation
 
@@ -1012,6 +1017,14 @@ class Downwind(Algorithm):
         # initialize models:
         if not mlist.initialized:
             self.init_model(mlist)
+
+        # Initialize additional outputs before extracting their loaded data.
+        ovars = mlist.output_point_vars(self) if outputs is None else outputs
+        collector = fm.outputs.PointResultsOutput(variables=ovars)
+        output = (
+            collector if output is None else OutputList(outputs=[collector, output])
+        )
+        self.init_model(output)
 
         if "states_isel" in kwargs:
             raise TypeError(
@@ -1065,10 +1078,7 @@ class Downwind(Algorithm):
         self.print("\nInput point data:\n\n", point_data, "\n")
 
         # check vars:
-        ovars = mlist.output_point_vars(self) if outputs is None else outputs
         self.print("\nOutput point variables:", ", ".join(ovars))
-        output = fm.outputs.PointResultsOutput(variables=ovars)
-        self.init_model(output)
 
         # calculate:
         point_results = super().calc_points(
