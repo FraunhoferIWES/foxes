@@ -738,21 +738,23 @@ class ModelBook:
         self.outputs = FDict(_name="outputs")
 
         # Register animations and factories selecting one state chunk.
-        self.outputs["create_gif"] = fm.outputs.ChunkAnimationOutput(
+        self.outputs["create_gif"] = fm.outputs.FlowAnimation(base_name="ani.gif")
+        self.outputs["create_mp4"] = fm.outputs.FlowAnimation(base_name="ani.mp4")
+        self.outputs["create_turbine_gif"] = fm.outputs.FlowTurbineAnimation(
             base_name="ani.gif"
         )
-        self.outputs["create_mp4"] = fm.outputs.ChunkAnimationOutput(
+        self.outputs["create_turbine_mp4"] = fm.outputs.FlowTurbineAnimation(
             base_name="ani.mp4"
         )
         self.outputs.add_factory(
-            fm.outputs.ChunkAnimationOutput,
+            fm.outputs.FlowAnimation,
             "chunk_gif_<chunk>",
             chunk=lambda c: int(c),
             hints={"chunk": "(Chunk index)"},
             kwargs=dict(base_name="ani.gif"),
         )
         self.outputs.add_factory(
-            fm.outputs.ChunkAnimationOutput,
+            fm.outputs.FlowAnimation,
             "chunk_mp4_<chunk>",
             chunk=lambda c: int(c),
             hints={"chunk": "(Chunk index)"},

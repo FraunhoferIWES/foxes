@@ -167,54 +167,43 @@ class LookupTable(TurbineModel):
         st_sel: slice | np.ndarray = slice(None),
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        Interpolate table outputs for selected farm entries.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The calculation algorithm.
         mdata
-            The model data
+            The model data.
         fdata
-            The farm data
-        st_sel: slice or array of bool
-            The state-turbine selection,
-            for shape: (n_states, n_turbines)
+            The farm data; output fields are updated in place.
+        st_sel
+            A state slice or boolean state-turbine mask with shape
+            ``(n_states, n_turbines)``.
 
         Returns
         -------
         results
-            The resulting data, keys: output variable str.
-            Values
+            Output-variable names mapped to arrays with dimensions
+            ``(FC.STATE, FC.TURBINE)``. Unselected entries are unchanged.
+
+        Raises
+        ------
+        ValueError
+            If an input lies outside the table and interpolation options
+            prohibit extrapolation.
 
         """
         self.ensure_output_vars(algo, fdata)
         table = self._data
         assert table is not None, "Lookup table data not initialized"
-        n_states = fdata.n_states
-        n_turbines = fdata.n_turbines
-        assert n_states is not None and n_turbines is not None
-        sel_data: np.ndarray | None
-        if isinstance(st_sel, slice) and st_sel == slice(None):
-            sel_data = None
-        elif isinstance(st_sel, slice):
-            sel_arr = np.zeros((n_states, n_turbines), dtype=np.bool_)
-            sel_arr[st_sel] = True
-            sel_data = sel_arr
-        else:
-            sel_data = st_sel
-
         data = {
             v: self.get_data(
                 v,
                 FC.STATE_TURBINE,
                 lookup="fs",
                 fdata=fdata,
-                upcast=False,
-                selection=sel_data,
+                selection=st_sel,
             )
             for v in self.input_vars
         }

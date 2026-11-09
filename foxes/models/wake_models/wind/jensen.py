@@ -97,7 +97,6 @@ class JensenWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         k = self.wake_k(
@@ -106,7 +105,6 @@ class JensenWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=False,
         )
 
         return D / 2 + k * x
@@ -167,7 +165,6 @@ class JensenWake(TopHatWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
             / 2
@@ -312,7 +309,6 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -324,7 +320,6 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
             )
             k = self.wake_k(
                 FC.STATE_TARGET,
@@ -333,7 +328,6 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 tdata=tdata,
                 downwind_index=downwind_index,
                 amb_ti=ati,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -420,7 +414,6 @@ class JensenTurbOParkWake(TopHatWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
             / 2

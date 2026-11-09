@@ -1,4 +1,4 @@
-"""Animation collection, bounded point evaluation and final file assembly."""
+"""Flow animation collection, bounded point evaluation and file assembly."""
 
 from copy import deepcopy
 import pickle
@@ -15,7 +15,7 @@ import foxes
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.core import FData, MData, TData
-from foxes.models.outputs import ChunkAnimationOutput, FarmResultsOutput
+from foxes.models.outputs import FlowAnimation, FarmResultsOutput
 from foxes.utils import Dict
 
 
@@ -71,7 +71,7 @@ def _initialize_output(output):
     return output
 
 
-class _StoreCheckingAnimation(ChunkAnimationOutput):
+class _StoreCheckingAnimation(FlowAnimation):
     def calculate(self, algo, *args, **kwargs):
         # Farm and point outputs both participate in running-state propagation.
         assert self.running and self._point_models.running
@@ -87,7 +87,7 @@ class _StoreCheckingAnimation(ChunkAnimationOutput):
         return super()._calculate_grid(algo, mdata, fdata)
 
 
-class _FinalIterationAnimation(ChunkAnimationOutput):
+class _FinalIterationAnimation(FlowAnimation):
     def initialize(self, algo, *args, **kwargs):
         # Requested outputs must not even initialize before convergence finishes.
         assert algo.final_iteration
@@ -135,7 +135,7 @@ def test_real_gif_composes_without_changing_collected_results(
         reference = algo.calc_farm(outputs="farm_results_all")
 
     # All state chunks contribute to a single final animation per variable.
-    animation = ChunkAnimationOutput(
+    animation = FlowAnimation(
         out_dir=tmp_path,
         figsize=(2.0, 2.0),
         grid_pars={"n_img_points": (3, 3)},
@@ -191,11 +191,11 @@ def test_chunk_selection_renders_once_on_parent(
     # Rendering happens only in finalization, on the caller thread.
     parent, calls = get_ident(), []
     monkeypatch.setattr(
-        ChunkAnimationOutput,
+        FlowAnimation,
         "_render",
         lambda self, algo, payload: calls.append((payload["states"], get_ident())),
     )
-    output = ChunkAnimationOutput(
+    output = FlowAnimation(
         chunk=chunk,
         out_dir=tmp_path,
         grid_pars={"n_img_points": (2, 2)},
@@ -224,7 +224,7 @@ def test_chunk_selection_renders_once_on_parent(
 )
 def test_invalid_configuration_is_rejected(tmp_path, options, match):
     # Construction is cheap; initialization rejects settings before loading data.
-    output = ChunkAnimationOutput(out_dir=tmp_path, **options)
+    output = FlowAnimation(out_dir=tmp_path, **options)
     assert not output.initialized
     with pytest.raises(ValueError, match=match):
         output.initialize(None)
@@ -244,11 +244,11 @@ def test_state_selection_is_global(tmp_path, monkeypatch, selection, expected, b
     # State positions refer to the input states, not each worker chunk.
     calls = []
     monkeypatch.setattr(
-        ChunkAnimationOutput,
+        FlowAnimation,
         "_render",
         lambda self, algo, payload: calls.append(payload["states"]),
     )
-    output = ChunkAnimationOutput(
+    output = FlowAnimation(
         out_dir=tmp_path,
         grid_pars={"n_img_points": (2, 2)},
         **selection,
@@ -279,8 +279,8 @@ def _target_chunk(state_chunk, target_chunk):
 
 def test_target_tiles_are_copied_buffered_and_combined(tmp_path, monkeypatch):
     # Existing targets never trigger a second scientific calculation.
-    output = _initialize_output(ChunkAnimationOutput(out_dir=tmp_path))
-    monkeypatch.setattr(ChunkAnimationOutput, "_calculate_grid", _unexpected_grid)
+    output = _initialize_output(FlowAnimation(out_dir=tmp_path))
+    monkeypatch.setattr(FlowAnimation, "_calculate_grid", _unexpected_grid)
     calls, results = [], Dict()
     monkeypatch.setattr(output, "_render", lambda algo, payload: calls.append(payload))
     for key in [(1, 1), (0, 1), (1, 0), (0, 0)]:
@@ -309,7 +309,7 @@ def test_target_tiles_are_copied_buffered_and_combined(tmp_path, monkeypatch):
 
 def test_grid_is_loaded_once_and_point_blocks_are_bounded(tmp_path, monkeypatch):
     # Inspect the real scientific chain without storing runtime state on models.
-    output = ChunkAnimationOutput(
+    output = FlowAnimation(
         out_dir=tmp_path,
         grid_pars={"n_img_points": (3, 3)},
     )
@@ -350,7 +350,7 @@ def test_generated_grid_matches_independent_point_calculation(
 ):
     # Check wake values and alternating turbine order, not just file existence.
     algo, payloads = _algorithm(), []
-    output = ChunkAnimationOutput(
+    output = FlowAnimation(
         out_dir=tmp_path,
         grid_pars={"n_img_points": (3, 3)},
         ambient=ambient,
@@ -389,7 +389,7 @@ def test_calc_points_uses_existing_fields(tmp_path, monkeypatch, backend):
     with foxes.Engine.new("numpy", verbosity=0):
         expected = algo.calc_points(farm, points)
     output = _StoreCheckingAnimation(out_dir=tmp_path, figsize=(2.0, 2.0))
-    monkeypatch.setattr(ChunkAnimationOutput, "_calculate_grid", _unexpected_grid)
+    monkeypatch.setattr(FlowAnimation, "_calculate_grid", _unexpected_grid)
     with foxes.Engine.new(
         backend,
         n_procs=2,
@@ -416,7 +416,7 @@ def test_unavailable_selections_fail(tmp_path, selection, match):
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
         with pytest.raises(ValueError, match=match):
             _algorithm().calc_farm(
-                outputs=ChunkAnimationOutput(
+                outputs=FlowAnimation(
                     out_dir=tmp_path,
                     grid_pars={"n_img_points": (2, 2)},
                     **selection,
@@ -427,7 +427,7 @@ def test_unavailable_selections_fail(tmp_path, selection, match):
 def test_multiple_outputs_have_private_buffers(tmp_path):
     # Independently configured animations must not consume each other's buffers.
     first, second = [
-        _initialize_output(ChunkAnimationOutput(out_dir=tmp_path)) for _ in range(2)
+        _initialize_output(FlowAnimation(out_dir=tmp_path)) for _ in range(2)
     ]
     assert first._result_key != second._result_key
     pending = Dict({first._result_key: {(0, 0): {}}, second._result_key: {(0, 0): {}}})
@@ -450,7 +450,7 @@ def test_save_failure_propagates_and_closes_figure(tmp_path, monkeypatch, point_
 
     monkeypatch.setattr(Animation, "save", fail)
     algo = _algorithm()
-    output = ChunkAnimationOutput(
+    output = FlowAnimation(
         out_dir=tmp_path,
         grid_pars={"n_img_points": (2, 2)},
     )
@@ -468,9 +468,7 @@ def test_save_failure_propagates_and_closes_figure(tmp_path, monkeypatch, point_
 
 def test_missing_target_fields_are_contextual(tmp_path):
     # Missing external fields must identify the offending animation variable.
-    output = _initialize_output(
-        ChunkAnimationOutput(out_dir=tmp_path, variables=[FV.TI])
-    )
+    output = _initialize_output(FlowAnimation(out_dir=tmp_path, variables=[FV.TI]))
     md, fd, td = _target_chunk(0, 0)
     with pytest.raises(KeyError, match="Missing target field 'TI'"):
         output.calculate(None, md, fd, td, {})
@@ -549,7 +547,7 @@ def test_iterative_writes_only_after_convergence(tmp_path, backend):
 
 def test_missing_tiles_are_rejected(tmp_path):
     # Finalization cannot silently create an incomplete animation.
-    output = _initialize_output(ChunkAnimationOutput(out_dir=tmp_path))
+    output = _initialize_output(FlowAnimation(out_dir=tmp_path))
     md, fd, td = _target_chunk(0, 0)
     chunk = output.calculate(None, md, fd, td, {})[output._result_key]
     with pytest.raises(ValueError, match="Missing animation chunks"):
@@ -560,7 +558,7 @@ def test_moving_target_artists_preserve_coordinates_and_units(tmp_path):
     # Moving targets retain their true coordinates and a comparable colour scale.
     import matplotlib.pyplot as plt
 
-    output = ChunkAnimationOutput(out_dir=tmp_path)
+    output = FlowAnimation(out_dir=tmp_path)
     payload = dict(
         states=np.array([5, 2]),
         points=np.array([[[0.0, 0.0, 90.0]], [[10.0, 20.0, 90.0]]]),
@@ -596,7 +594,7 @@ def test_moving_target_artists_preserve_coordinates_and_units(tmp_path):
 def test_default_engine_supports_animation(tmp_path, point_run):
     # Algorithm-owned default engines are opened after running-state propagation.
     algo = _algorithm()
-    output = ChunkAnimationOutput(
+    output = FlowAnimation(
         out_dir=tmp_path,
         figsize=(2.0, 2.0),
         grid_pars={"n_img_points": (2, 2)},
@@ -615,7 +613,7 @@ def test_default_engine_supports_animation(tmp_path, point_run):
 def test_invalid_point_limit_unwinds_started_models(tmp_path):
     # A rejected running hook must not strand the algorithm in running state.
     algo = _algorithm()
-    output = ChunkAnimationOutput(out_dir=tmp_path)
+    output = FlowAnimation(out_dir=tmp_path)
     with foxes.Engine.new("numpy", chunk_size_points=0, verbosity=0):
         with pytest.raises(ValueError, match="chunk_size_points must be positive"):
             algo.calc_farm(outputs=output)
@@ -627,6 +625,8 @@ def test_invalid_point_limit_unwinds_started_models(tmp_path):
     [
         ("create_gif", None, "ani.gif"),
         ("create_mp4", None, "ani.mp4"),
+        ("create_turbine_gif", None, "ani.gif"),
+        ("create_turbine_mp4", None, "ani.mp4"),
         ("chunk_gif_1", 1, "ani.gif"),
         ("chunk_mp4_1", 1, "ani.mp4"),
     ],
@@ -638,18 +638,28 @@ def test_model_book_defers_animation_preparation(monkeypatch, name, chunk, base_
         lambda *args, **kwargs: pytest.fail("grid generated during construction"),
     )
     output = foxes.ModelBook().outputs[name]
-    assert isinstance(output, ChunkAnimationOutput)
+    assert isinstance(output, FlowAnimation)
     assert output.chunk == chunk
     assert output.base_name == base_name
     assert not output.initialized
     assert output.sub_models() == []
     assert not hasattr(output, "_result_key")
     assert not hasattr(output, "_variables")
+    if "turbine" in name:
+        assert isinstance(output, foxes.models.outputs.FlowTurbineAnimation)
+        assert output.turbines is None
 
 
 @pytest.mark.parametrize(
     "name,frames",
-    [("create_gif", 4), ("create_mp4", 4), ("chunk_gif_1", 2), ("chunk_mp4_1", 2)],
+    [
+        ("create_gif", 4),
+        ("create_mp4", 4),
+        ("create_turbine_gif", 4),
+        ("create_turbine_mp4", 4),
+        ("chunk_gif_1", 2),
+        ("chunk_mp4_1", 2),
+    ],
 )
 def test_registered_animation_can_be_selected_by_name(tmp_path, name, frames):
     # Optional movie encoders do not prevent testing the GIF registry paths.
@@ -677,7 +687,7 @@ def test_initialize_snapshots_mutable_configuration(tmp_path):
     grid_pars = {"n_img_points": (2, 2)}
     algo = _algorithm()
     algo.initialize()
-    output = ChunkAnimationOutput(
+    output = FlowAnimation(
         out_dir=tmp_path,
         variables=variables,
         grid_pars=grid_pars,
@@ -705,7 +715,7 @@ def test_running_model_does_not_retain_grid_or_large_selection(tmp_path, keep_st
         verbosity=0,
     )
     selection = list(range(0, count, 2))
-    output = ChunkAnimationOutput(
+    output = FlowAnimation(
         out_dir=tmp_path,
         states_isel=selection,
         grid_pars={"n_img_points": (200, 200)},
@@ -746,7 +756,7 @@ def test_state_selection_is_loaded_only_when_partial(tmp_path, options, mask):
     # Full selection uses None; partial masks have exactly the state dimension.
     algo = _algorithm()
     algo.initialize()
-    output = ChunkAnimationOutput(out_dir=tmp_path, **options)
+    output = FlowAnimation(out_dir=tmp_path, **options)
     algo.init_model(output)
     loaded = algo.loaded_data
     if mask is None:
@@ -766,7 +776,7 @@ def test_datetime_state_selection_uses_input_labels(tmp_path):
     labels = pd.date_range("2020-01-01", periods=4)
     algo.states.data_source.index = labels
     algo.initialize()
-    output = ChunkAnimationOutput(out_dir=tmp_path, states_sel=[labels[1]])
+    output = FlowAnimation(out_dir=tmp_path, states_sel=[labels[1]])
     algo.init_model(output)
     _, selection = algo.loaded_data["data_vars"][output._selection]
     np.testing.assert_array_equal(selection, [False, True, False, False])
@@ -776,7 +786,7 @@ def test_force_initialization_removes_obsolete_selection_mask(tmp_path):
     # Replacing a partial selection with all states must leave no stale variable.
     algo = _algorithm()
     algo.initialize()
-    output = ChunkAnimationOutput(out_dir=tmp_path, states_isel=[1])
+    output = FlowAnimation(out_dir=tmp_path, states_isel=[1])
     algo.init_model(output)
     assert output._selection_key in algo.loaded_data["data_vars"]
     output.states_isel = [0, 1, 2, 3]
@@ -785,28 +795,32 @@ def test_force_initialization_removes_obsolete_selection_mask(tmp_path):
     assert output._selection_key not in algo.loaded_data["data_vars"]
 
 
-def test_filename_transform_and_multiple_variables(tmp_path):
+@pytest.mark.parametrize("variables", [[FV.WS], [FV.WS, FV.WD]])
+@pytest.mark.parametrize(
+    "animation_class", [FlowAnimation, foxes.models.outputs.FlowTurbineAnimation]
+)
+def test_filename_transform_and_multiple_variables(
+    tmp_path, variables, animation_class
+):
     # Each final variable file passes through the standard Output path helper.
-    output = ChunkAnimationOutput(
+    output = animation_class(
         out_dir=tmp_path,
-        variables=[FV.WS, FV.WD],
+        variables=variables,
         figsize=(2.0, 2.0),
         grid_pars={"n_img_points": (2, 2)},
         out_fname_fun=lambda path: path.with_name("renamed_" + path.name),
     )
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
         _algorithm().calc_farm(outputs=output)
-    assert sorted(p.name for p in tmp_path.glob("*.gif")) == [
-        "renamed_chunk_animation_WD.gif",
-        "renamed_chunk_animation_WS.gif",
-    ]
+    expected = sorted(f"renamed_chunk_animation_{v}.gif" for v in variables)
+    assert sorted(p.name for p in tmp_path.glob("*.gif")) == expected
 
 
 @pytest.mark.skipif(which("ffmpeg") is None, reason="MP4 encoding requires ffmpeg")
 @pytest.mark.parametrize("transform_suffix", [False, True])
 def test_real_mp4_encoding(tmp_path, transform_suffix):
     # Exercise the optional encoder, not just its selected writer name.
-    output = ChunkAnimationOutput(
+    output = FlowAnimation(
         out_dir=tmp_path,
         base_name="flow.gif" if transform_suffix else "flow.mp4",
         figsize=(2.0, 2.0),

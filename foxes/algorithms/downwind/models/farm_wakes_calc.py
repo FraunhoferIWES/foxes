@@ -181,7 +181,8 @@ class FarmWakesCalculation(FarmDataModel):
                 data=hres,
                 dims=hdims,
             )
-            htdata[FV.WEIGHT] = weights
+            weight_index = 0 if weights.shape[1] == 1 else oi
+            htdata[FV.WEIGHT] = weights[:, weight_index : weight_index + 1, :]
             del hres, hdims
 
             rotor.eval_rpoint_results(

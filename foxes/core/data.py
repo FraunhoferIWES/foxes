@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from xarray import Dataset
-from typing import Any, Callable
+from typing import Any, Callable, SupportsIndex
 
 from foxes.utils import Dict
 from foxes.utils.memory_utils import (
@@ -15,10 +15,35 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
+def _broadcast_storage(data: np.ndarray) -> np.ndarray:
+    """Select one value along repeated, zero-stride axes for copying/transport."""
+    return data[
+        tuple(slice(0, 1) if stride == 0 else slice(None) for stride in data.strides)
+    ]
+
+
+def _restore_data(
+    cls: type[Data], attributes: dict[str, Any], entries: dict[str, Any]
+) -> Data:
+    """Rebuild a container with full-shaped views after compact wire transport."""
+    out = cls.__new__(cls)
+    out.__dict__.update(attributes)
+    for name, (value, shape) in entries.items():
+        out[name] = (
+            np.broadcast_to(value, shape)
+            if shape is not None and value.shape != shape
+            else value
+        )
+    return out
+
+
 class Data(Dict[str, np.ndarray]):
     """
-    Container for numpy array data and
-    the associated meta data.
+    NumPy arrays with dimension metadata and full declared shapes.
+
+    Repeated values are stored as broadcast views when a dimension is larger
+    than its input axis. Such views are read-only; callers requiring writable
+    working storage must explicitly copy them.
     """
 
     def __init__(
@@ -84,6 +109,44 @@ class Data(Dict[str, np.ndarray]):
             for v, d in data.items():
                 self._run_entry_checks(v, d, dims[v])
             self._auto_update()
+
+    def __setitem__(self, key: str, value: np.ndarray) -> None:
+        # Normalize replacements as well as additions through update().
+        if hasattr(self, "sizes") and key in self.dims:
+            value = self._broadcast_entry(key, value, self.dims[key])
+        super().__setitem__(key, value)
+
+    def __reduce_ex__(self, protocol: SupportsIndex) -> Any:
+        # Preserve zero-stride storage across process and distributed workers.
+        entries = {
+            name: (_broadcast_storage(value), value.shape)
+            if isinstance(value, np.ndarray)
+            else (value, None)
+            for name, value in self.items()
+        }
+        return _restore_data, (type(self), self.__dict__, entries)
+
+    def _broadcast_entry(
+        self, name: str, data: Any, dims: tuple[str, ...] | None
+    ) -> Any:
+        """Expand known dimension sizes without materializing repeated values."""
+        if dims is None or not isinstance(data, np.ndarray):
+            return data
+        if data.ndim != len(dims):
+            raise ValueError(
+                f"Data '{self.name}': Entry '{name}' has shape {data.shape} "
+                f"but dimensions {dims}"
+            )
+        shape = tuple(self.sizes.get(d, s) for d, s in zip(dims, data.shape))
+        if data.shape == shape:
+            return data
+        try:
+            return np.broadcast_to(data, shape)
+        except ValueError as e:
+            raise ValueError(
+                f"Data '{self.name}': Cannot broadcast '{name}' with dimensions "
+                f"{dims} from shape {data.shape} to {shape}"
+            ) from e
 
     def to_dataset(self) -> Dataset:
         """
@@ -329,6 +392,11 @@ class Data(Dict[str, np.ndarray]):
         data = self
         dims = self.dims
 
+        # Expand all entries after discovering sizes, independent of input order.
+        for name, value in list(self.items()):
+            if name in dims:
+                self[name] = self._broadcast_entry(name, value, dims[name])
+
         if (
             FV.TXYH not in data
             and FV.X in data
@@ -370,8 +438,6 @@ class Data(Dict[str, np.ndarray]):
             for ci, c in enumerate(dims):
                 if c not in self.sizes or self.sizes[c] == 1:
                     self.sizes[c] = self[name].shape[ci]
-                elif c != FC.TARGET and self[name].shape[ci] == 1:
-                    pass
                 elif (
                     self.sizes[c] != self[name].shape[ci] and self[name].shape[ci] != 1
                 ):
@@ -381,19 +447,20 @@ class Data(Dict[str, np.ndarray]):
 
     def add(self, name: str, data: np.ndarray, dims: tuple[str, ...]) -> None:
         """
-        Add data entry
+        Add an entry and expand it to its declared dimension sizes.
 
         Parameters
         ----------
         name
             The data name
         data
-            The data
+            The input array. Singleton axes are expanded with read-only
+            broadcast views when their declared dimensions are larger.
         dims
             The dimensions
 
         """
-        self[name] = data
+        super().__setitem__(name, data)
         self.dims[name] = dims
         self._run_entry_checks(name, data, dims)
         self._auto_update()
@@ -594,7 +661,8 @@ class Data(Dict[str, np.ndarray]):
         s_states
             Optional slice object for states
         copy
-            Flag for copying data
+            Copy array storage independently of the dataset. Zero-stride axes
+            remain broadcast views rather than materialized repetitions.
         n_states
             The number of states, if not found in the dataset
         n_turbines
@@ -613,13 +681,23 @@ class Data(Dict[str, np.ndarray]):
         if n_states == 0:
             raise ValueError("Cannot create Data object with n_states=0")
 
+        def _copy(data: np.ndarray) -> np.ndarray:
+            if not copy:
+                return data
+            storage = _broadcast_storage(data).copy()
+            return (
+                np.broadcast_to(storage, data.shape)
+                if storage.shape != data.shape
+                else storage
+            )
+
         for c, d in ds.coords.items():
             c_name = str(c)
             if c_name == FC.STATE:
                 s = np.s_[:] if s_states is None else s_states
-                data[c_name] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
+                data[c_name] = _copy(d.to_numpy()[s])
             else:
-                data[c_name] = d.to_numpy().copy() if copy else d.to_numpy()
+                data[c_name] = _copy(d.to_numpy())
             dims[c_name] = tuple(str(dd) for dd in d.dims)
 
         for v, d in ds.data_vars.items():
@@ -630,12 +708,10 @@ class Data(Dict[str, np.ndarray]):
                         f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v_name}', got {d.dims}"
                     )
                 s = np.s_[:] if s_states is None else s_states
-                data[v_name] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
+                data[v_name] = _copy(d.to_numpy()[s])
                 dims[v_name] = tuple(str(dd) for dd in d.dims)
                 if n_states is None or n_states == 1:
                     n_states = data[v_name].shape[0]
-                elif data[v_name].shape[0] == 1:
-                    pass
                 else:
                     assert n_states == data[v_name].shape[0], (
                         f"Expecting {n_states} states, got {data[v_name].shape[0]} in data variable '{v_name}'"
@@ -644,7 +720,7 @@ class Data(Dict[str, np.ndarray]):
                     data[v_name] = data[v_name][:, None]
                     dims[v_name] = (FC.STATE, FC.TURBINE)
             else:
-                data[v_name] = d.to_numpy().copy() if copy else d.to_numpy()
+                data[v_name] = _copy(d.to_numpy())
                 dims[v_name] = tuple(str(dd) for dd in d.dims)
 
         if FC.TURBINE not in data and n_turbines is not None:
@@ -989,10 +1065,9 @@ class TData(Data):
             n_states = self.n_states
             assert n_states is not None
             expected_shape = (n_states, self.n_targets, self.n_tpoints, 3)
-            broadcast_shape = (1, self.n_targets, self.n_tpoints, 3)
-            if data.shape not in {expected_shape, broadcast_shape}:
+            if any(s not in (1, n) for s, n in zip(data.shape, expected_shape)):
                 raise ValueError(
-                    f"TData '{self.name}': Invalid shape of {FC.TARGETS}, expecting {expected_shape} or {broadcast_shape}, got {data.shape}"
+                    f"TData '{self.name}': Invalid shape of {FC.TARGETS}, expecting {expected_shape}, got {data.shape}"
                 )
 
         elif name == FC.TWEIGHTS:
@@ -1094,21 +1169,6 @@ class TData(Data):
         """
         return np.einsum("stp...,p->st...", self[variable], self[FC.TWEIGHTS])
 
-    def expand_targets(self) -> None:
-        """Broadcast singleton-state target coordinates over this state chunk.
-
-        Replaces ``FC.TARGETS`` with a broadcast view whose leading size equals
-        ``n_states``. Other target data remains unchanged.
-        """
-        n_states = self.n_states
-        assert n_states is not None
-        targets = self[FC.TARGETS]
-        if targets.shape[0] == 1 and n_states != 1:
-            self[FC.TARGETS] = np.broadcast_to(
-                targets,
-                (n_states,) + targets.shape[1:],
-            )
-
     def targets_i0(self) -> int | None:
         """
         Get the target counter for first target in chunk
@@ -1144,15 +1204,9 @@ class TData(Data):
         for v in self.keys():
             if v in self.dims and FC.TARGET in self.dims[v]:
                 if len(self.dims[v]) >= 2 and self.dims[v][1] == FC.TARGET:
-                    if self.n_targets > 1 and self[v].shape[1] > 1:
-                        data[v] = self[v][:, sel_targets, ...]
-                    else:
-                        data[v] = self[v]
+                    data[v] = self[v][:, sel_targets, ...]
                 elif len(self.dims[v]) >= 1 and self.dims[v][0] == FC.TARGET:
-                    if self.n_targets > 1 and self[v].shape[0] > 1:
-                        data[v] = self[v][sel_targets, ...]
-                    else:
-                        data[v] = self[v]
+                    data[v] = self[v][sel_targets, ...]
                 else:
                     raise ValueError(
                         f"TData '{self.name}': Cannot subset variable '{v}' with dims {self.dims[v]} for target selection, expecting '{FC.TARGET}' in dims at positions 0 or 1"
@@ -1342,20 +1396,12 @@ class TData(Data):
             The data object
 
         """
-        broadcast_states = (
-            FC.TARGETS in ds
-            and ds[FC.TARGETS].dims == (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
-            and ds[FC.TARGETS].shape[0] == 1
-        )
-        if broadcast_states:
-            kwargs["s_states"] = None
-
         if mdata is None:
             cb0 = callback
         else:
 
             def cb_mdata(data: dict[str, Any], dims: dict[str, Any]) -> None:
-                if broadcast_states or FC.STATE not in data:
+                if FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
                     dims[FC.STATE] = mdata.dims[FC.STATE]
                 if callback is not None:

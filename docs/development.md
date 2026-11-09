@@ -86,7 +86,7 @@ use synthetic infrastructure rather than submitting jobs. Local Dask defaults to
 process scheduling and resolves bounded batches concurrently.
 
 For adopted animations, run
-`uv run pytest tests/2_models/test_chunk_animation_output.py -q`.
+`uv run pytest tests/2_models/test_flow_animations.py -q`.
 Synthetic tests verify actual GIF frames, finalization-only rendering, numerical
 point parity, bounded grid blocks, shared coordinates, target reuse, private
 payloads, selection errors and writer cleanup. NumPy, single-chunk, threads,
@@ -99,6 +99,12 @@ use Iterative and compare animation fields against separate point results.
 Memory checks verify that loaded grids and state-sized boolean selection masks
 stay out of running model instances, raw configuration is restored from the
 lifecycle stash, and worker calculations leave model serialization unchanged.
+
+For synchronized flow/turbine animations, also run
+`uv run pytest tests/2_models/test_flow_turbine_animation.py tests/3_examples/test_output_selection.py -q`.
+These checks cover reusable trace configuration, original turbine ordering,
+selected-state numerical parity, real two-panel GIF/MP4 encoding, failure
+cleanup and the `dyn_wakes` example's local output registrations.
 
 Engine `progress_bar=True` automatically uses tqdm for terminals/notebooks and
 newline-only snapshots for logs. Unicode terminal bars are selected when the

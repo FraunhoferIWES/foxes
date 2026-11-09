@@ -14,9 +14,9 @@ all of them.
 |---|---|---|
 | [0001](0001-forward-only-development.md) | Accepted | Development is forward-only by default; code changes require tests, and every change requires pre-commit, current docstrings, a current-version changelog entry, and synchronized FOXES documentation. |
 | [0002](0002-corporate-design.md) | Accepted | Apply Fraunhofer corporate design to FOXES plots, animations, documentation, notebooks, and brand assets. |
-| [0003](0003-compact-static-target-coordinates.md) | Accepted | Keep static target coordinates compact with a singleton state axis and broadcast them inside engine runners. |
+| [0003](0003-compact-static-target-coordinates.md) | Accepted; superseded by [0013](0013-full-shaped-broadcast-data.md) | Keep static target coordinates compact with a singleton state axis and broadcast them inside engine runners. |
 | [0004](0004-sphinx-design-token-adapter.md) | Accepted; pytest requirement superseded by [0008](0008-documentation-independent-tests.md) | Adapt authoritative IWES design tokens to Sphinx CSS. |
-| [0005](0005-static-output-grid-coordinates.md) | Accepted | Store output slice grids without a state axis and pass them through the static-point calculation contract. |
+| [0005](0005-static-output-grid-coordinates.md) | Accepted; internal target storage superseded by [0013](0013-full-shaped-broadcast-data.md) | Store output slice grids without a state axis and pass them through the static-point calculation contract. |
 | [0006](0006-micro-reference-disk-averages.md) | Accepted | Average micro reference disks during loading with native support points and vector wind means. |
 | [0007](0007-smooth-power-mask-boosts.md) | Accepted | Smooth near-rated power-mask boosts and saturate low-induction thrust at the Betz optimum while retaining requested power. |
 | [0008](0008-documentation-independent-tests.md) | Accepted | Keep pytest independent of documentation files and review documentation separately. |
@@ -24,6 +24,7 @@ all of them.
 | [0010](0010-chunk-based-farm-outputs.md) | Accepted | Adopt outputs through the core chunk lifecycle; isolate farm writer payloads and split files by exact counts or calendar periods, including ISO weeks. |
 | [0011](0011-engine-output-execution-and-progress.md) | Accepted; supersedes the engine/algorithm scope restriction in 0010 | Unify engine output execution, ordered batches, point collection and parent-owned adaptive progress without changing default farm fields. |
 | [0012](0012-chunk-animation-output.md) | Accepted | Adopt optional flow animations with shared point grids, target-data reuse, bounded scientific blocks and finalization-only assembly/writing. |
+| [0013](0013-full-shaped-broadcast-data.md) | Accepted; supersedes [0003](0003-compact-static-target-coordinates.md) | Represent repeated dimensioned data as full-shaped read-only broadcast views and broadcast mismatched `Model.get_data()` results automatically. |
 
 ## When To Add An ADR
 

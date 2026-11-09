@@ -124,7 +124,6 @@ class JimenezDeflection(WakeDeflection):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         # get gamma:
@@ -136,7 +135,6 @@ class JimenezDeflection(WakeDeflection):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         sel = (x > 1e-8) & (x < 1e10) & (ct > 1e-8) & (np.abs(gamma) > 1e-8)
@@ -157,7 +155,6 @@ class JimenezDeflection(WakeDeflection):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
                 selection=sel,
             )[:, None]
 

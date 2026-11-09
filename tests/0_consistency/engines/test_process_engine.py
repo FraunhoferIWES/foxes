@@ -161,7 +161,7 @@ def test_select_subsets_reapplies_label_selection_safely():
     assert n_states == 3
 
 
-def test_select_subsets_ignores_compact_static_target_state_axis():
+def test_select_subsets_selects_broadcast_static_target_state_axis():
     from foxes.core.engine import Engine
 
     selected_data = Dataset(coords={FC.STATE: np.array([0, 2, 5])})
@@ -179,8 +179,8 @@ def test_select_subsets_ignores_compact_static_target_state_axis():
     )
 
     assert np.array_equal(subsets[0][FC.STATE], [0, 2, 5])
-    assert subsets[1].sizes[FC.STATE] == 1
-    assert FC.STATE not in subsets[1].coords
+    assert subsets[1].sizes[FC.STATE] == 3
+    np.testing.assert_array_equal(subsets[1][FC.STATE], [0, 2, 5])
     assert n_states == 3
 
 
@@ -273,7 +273,7 @@ def test_process_engine_get_chunk_input_data_uses_min_size_threshold_for_split()
     assert FC.STATE in fdata
 
 
-def test_point_chunks_keep_static_targets_compact_until_worker():
+def test_point_chunks_preserve_broadcast_static_targets():
     n_states = 7
     points = np.arange(30, dtype=float).reshape(10, 3)
 
@@ -293,8 +293,9 @@ def test_point_chunks_keep_static_targets_compact_until_worker():
         FC.TPOINT,
         FC.XYH,
     )
-    assert point_data[FC.TARGETS].shape == (1, 10, 1, 3)
-    assert point_data[FC.TARGETS].nbytes == points.nbytes
+    assert point_data[FC.TARGETS].shape == (7, 10, 1, 3)
+    assert np.shares_memory(point_data[FC.TARGETS].to_numpy(), points)
+    assert point_data[FC.TARGETS].to_numpy().strides[0] == 0
 
     engine = ProcessEngine(n_procs=2, verbosity=0)
     model_data = Dataset(coords={FC.STATE: np.arange(n_states)})
@@ -311,10 +312,8 @@ def test_point_chunks_keep_static_targets_compact_until_worker():
         n_chunks_points=1,
     )
 
-    assert tdata[FC.TARGETS].shape == (1, 4, 1, 3)
-    assert tdata.n_states == 3
-    tdata.expand_targets()
     assert tdata[FC.TARGETS].shape == (3, 4, 1, 3)
+    assert tdata.n_states == 3
     np.testing.assert_array_equal(tdata[FC.TARGETS][0, :, 0], points[2:6])
 
 

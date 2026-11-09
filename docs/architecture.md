@@ -129,6 +129,17 @@ as `FV`. Avoid local string copies of established constants.
 - Dimension metadata is part of the contract. A numerically correct array with
 	the wrong dimension tuple is invalid.
 
+`Model.get_data()` resolves sources in `lookup` order (`"smft"` by default)
+and aligns named data-container dimensions to the requested target. Model
+attributes follow leading target dimensions. When the source shape differs
+from the target shape, `get_data()` returns a read-only NumPy broadcast view;
+matching-shape sources retain their existing storage and writeability. Both
+`upcast` and `broadcast` options have been removed. NumPy selections operate
+on the full target shape, with lists treated as tuples of indices. NaN
+validation applies to returned values. Iteration-state reconstruction applies
+only to farm/wake-source lookups and uses private writable storage before
+enforcing the requested result ownership.
+
 ### Data Containers
 
 - `MData` stores model and chunk metadata.
@@ -136,11 +147,12 @@ as `FV`. Avoid local string copies of established constants.
 - `TData` stores targets, target-point weights, and point variables.
 - These containers are NumPy-backed mappings with dimension and size metadata;
 	they are not xarray datasets.
-- Static `FC.TARGETS` coordinates retain dimensions
-	`(FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)` with a singleton `FC.STATE` axis.
-	Engine runners broadcast that axis to the active state chunk immediately
-	before model calculation; state-dependent targets retain their full state
-	axis.
+- Dimensioned data containers expose arrays with their full declared shape.
+	When input axes of size one correspond to larger known dimension sizes,
+	containers use read-only NumPy broadcast views rather than materializing
+	repeated values. Static `FC.TARGETS` therefore have their full logical state
+	shape while sharing singleton backing storage; state-dependent targets
+	retain their distinct values for each state.
 - Output slice grids use static `(n_points, 3)` coordinates. `SliceData` and
 	`FlowPlots2D` pass these directly to point calculation without repeating them
 	over states. Returned grid-data tuples use the same static representation;
@@ -271,7 +283,7 @@ finalization. It does not rewrite files or renormalize each file independently.
 
 ### Chunk-Based Flow Animations
 
-`ChunkAnimationOutput` replaces engine-owned animation hooks. It uses supplied
+`FlowAnimation` replaces engine-owned animation hooks. It uses supplied
 `tdata` coordinates and fields when available. Otherwise, initialization loads
 one static XY point array into `loaded_data["extra_data"]`, eligible for engine
 shared storage. Grid bounds include all turbine positions. Farm workers evaluate
@@ -288,11 +300,25 @@ private key in the explicit results mapping. `finalize_results()` assembles targ
 tiles and state chunks in index order and saves one
 animation per variable. Rendering is parent-only, never concurrent in worker
 threads. Figures are closed on success or failure; write exceptions propagate.
+Every animation adds its variable name before the filename extension, including
+single-variable selections: `ani.mp4` produces `ani_WS.mp4` for wind speed.
 Scientific block limits do not bound final animation memory.
 Full state selection is `None`. Partial frame selections are boolean
 `(FC.STATE,)` variables in `loaded_data["data_vars"]`, sliced into `mdata` by
 engines and applied to chunk payloads. Raw constructor configuration is stashed
 while running; neither full selections nor grids/frames remain on the model.
+
+`FlowTurbineAnimation` derives from `FlowAnimation` and adds
+selected farm-order state-turbine traces to those same numerical payloads.
+Parent-side figure/animator hooks add a synchronized lower panel, optional layout
+annotations and a reference marker without duplicating scientific collection,
+chunk assembly, encoding or cleanup. The `dyn_wakes` example configures this
+class for its local `"create_turbine_gif"` and `"create_turbine_mp4"` registrations; global
+flow-only defaults remain unchanged. Global `"create_turbine_gif"` and
+`"create_turbine_mp4"` registrations select this two-panel class directly,
+using the same `ani.gif` and `ani.mp4` base filenames as the flow-only outputs.
+Selecting both variants of the same format requires custom filenames to
+retain both files.
 
 `Downwind.calc_points(output=...)` composes an additional output with its standard
 point collector before extracting loaded data. Existing dataset returns and
@@ -440,8 +466,8 @@ over Python loops on those axes. At the same time, do not materialize a full
 state/target product merely to slice it per engine chunk.
 
 - Let engines choose and propagate chunk metadata.
-- Keep static target coordinates compact until engine runners broadcast them to
-	the active state chunk.
+- Preserve compact backing storage for repeated values with full-shaped
+	broadcast views; copy explicitly before writing to such arrays.
 - Slice means currently collect point results before reducing over states.
 	Static output grids avoid state-expanded coordinate storage, but do not bound
 	the memory used by complete state-by-point result arrays.
@@ -528,9 +554,9 @@ subprocess.
 - Power-mask boosts use a smooth near-rated transition and bounded
 	low-induction thrust while preserving requested power. See
 	[ADR-0007](adr/0007-smooth-power-mask-boosts.md).
-- Static target coordinates use a singleton state axis during chunk transport
-	and are broadcast by engine runners. See
-	[ADR-0003](adr/0003-compact-static-target-coordinates.md).
+- Dimensioned container arrays and mismatched `Model.get_data()` results use
+	full-shaped broadcast views. See
+	[ADR-0013](adr/0013-full-shaped-broadcast-data.md).
 - Output slice grids have no state axis and use the existing static-point
 	calculation contract. See
 	[ADR-0005](adr/0005-static-output-grid-coordinates.md).

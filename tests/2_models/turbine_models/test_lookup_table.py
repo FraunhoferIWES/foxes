@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 from types import SimpleNamespace
 
 import foxes.constants as FC
@@ -37,6 +38,26 @@ def test_lookup_table_interpolation():
     expected = np.zeros((2, 2), dtype=float)
     expected[st_sel] = np.array([1.5, 2.0, 2.5])
     assert np.allclose(out[out_var], expected)
+
+
+@pytest.mark.parametrize("selection", [slice(None), slice(1, None)])
+def test_lookup_table_broadcasts_default_inputs_for_state_slices(selection):
+    model = LookupTable(
+        data_source=pd.DataFrame({"in_x": [0.0, 10.0], "out_y": [1.0, 3.0]}),
+        input_vars=["in_x"],
+        output_vars=["out_y"],
+        in_x=5.0,
+    )
+    algo = SimpleNamespace(store_model_data=lambda *args, **kwargs: None)
+    model.initialize(algo=algo, verbosity=0)
+    fdata = FData.from_sizes(3, 2)
+    fdata.add("out_y", np.zeros((3, 2)), (FC.STATE, FC.TURBINE))
+
+    out = model.calculate(algo=algo, mdata={}, fdata=fdata, st_sel=selection)
+
+    expected = np.zeros((3, 2))
+    expected[selection] = 2.0
+    np.testing.assert_allclose(out["out_y"], expected)
 
 
 def main():

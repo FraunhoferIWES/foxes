@@ -101,35 +101,67 @@ class WakeFrame(Model):
         states0: np.ndarray | None = None,
     ) -> np.ndarray:
         """
-        Return data that is required for computing the
-        wake from source turbines to evaluation points.
+        Retrieve source-turbine data at the requested wake target shape.
 
         Parameters
         ----------
         algo
-            The algorithm, needed for data from previous iteration
+            The algorithm, required for data from previous iterations.
         variable
-            The variable, serves as data key
+            The variable used as a farm-data key.
         downwind_index
-            The index in the downwind order
+            The source-turbine index in downwind order.
         fdata
-            The farm data
+            Chunk-local farm data; never mutated by this method.
         tdata
-            The target point data
+            Target data, including source-state indices for dynamic wakes.
         target
-            The dimensions identifier for the output,
-            FC.STATE_TURBINE, FC.STATE_TARGET,
-            FC.STATE_TARGET_TPOINT
+            ``FC.STATE_TURBINE``, ``FC.STATE_TARGET`` or
+            ``FC.STATE_TARGET_TPOINT``.
         states0
-            The states of wake creation
+            Explicit source-state indices in the current farm chunk. ``None``
+            uses dynamic source indices from ``tdata`` when present, otherwise
+            the current states.
 
         Returns
         -------
         data
-            Data for wake modelling, shape:
-            (n_states, n_turbines) or (n_states, n_target)
+            Source values with the full shape defined by ``target``. Repeated
+            values use read-only broadcast views. Dynamic reconstruction uses
+            private writable storage, without changing current or previous
+            farm results. State-target requests round the target-point-weighted
+            mean source index to its nearest integer before looking up values.
+
+        Raises
+        ------
+        ValueError
+            If the target or source-turbine metadata is invalid, source states
+            are out of range, or required previous-iteration results are absent.
 
         """
+        # Reconstruct dynamic source values before any broadcast expansion.
+        if (
+            states0 is None
+            and target in (FC.STATE_TARGET, FC.STATE_TARGET_TPOINT)
+            and FC.STATES_SEL in tdata
+        ):
+            if tdata[FC.STATE_SOURCE_ORDERI] != downwind_index:
+                raise ValueError(
+                    f"Wake frame '{self.name}': Expected downwind_index "
+                    f"{tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
+                )
+            i0 = fdata.states_i0(counter=True)
+            assert i0 is not None
+            indices = tdata[FC.STATES_SEL]
+            if target == FC.STATE_TARGET:
+                indices = (tdata.tpoint_mean(FC.STATES_SEL) + 0.5).astype(
+                    config.dtype_int
+                )
+            return self._get_source_states(
+                algo, variable, downwind_index, fdata, indices, i0
+            )
+
+        # Expand source values to exactly the dimensions requested by the caller.
         s = np.s_[:] if states0 is None else states0
 
         if target == FC.STATE_TARGET_TPOINT:
@@ -146,6 +178,45 @@ class WakeFrame(Model):
                 f"Unkown target '{target}', choices are {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
             )
 
+        return out
+
+    def _get_source_states(
+        self,
+        algo: Algorithm,
+        variable: str,
+        downwind_index: int,
+        fdata: FData,
+        indices: np.ndarray,
+        states_i0: int,
+    ) -> np.ndarray:
+        """Gather historical and current source states without mutating either."""
+        current = fdata[variable][:, downwind_index]
+        previous = indices < states_i0
+        out = np.empty(indices.shape, dtype=current.dtype)
+        if np.any(previous):
+            results = algo.farm_results_downwind
+            if results is None:
+                raise ValueError(
+                    f"Wake frame '{self.name}': Missing previous iteration "
+                    f"results for '{variable}'"
+                )
+            values = results[variable].to_numpy()
+            old_indices = indices[previous]
+            if np.any(old_indices < 0) or np.any(old_indices >= len(values)):
+                raise ValueError(
+                    f"Wake frame '{self.name}': Previous source states for "
+                    f"'{variable}' are outside [0, {len(values)})"
+                )
+            out[previous] = values[old_indices, downwind_index]
+        if np.any(~previous):
+            new_indices = indices[~previous] - states_i0
+            if np.any(new_indices >= len(current)):
+                raise ValueError(
+                    f"Wake frame '{self.name}': Current source states for "
+                    f"'{variable}' are outside chunk [{states_i0}, "
+                    f"{states_i0 + len(current)})"
+                )
+            out[~previous] = current[new_indices]
         return out
 
     def get_centreline_points(

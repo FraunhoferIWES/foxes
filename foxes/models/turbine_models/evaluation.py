@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from foxes.core import Algorithm
     from foxes.core.data import FData, MData
 
+
 class TurbineEvaluation(TurbineModel):
     """
     Final performance evaluation on the turbine level,
@@ -18,9 +19,9 @@ class TurbineEvaluation(TurbineModel):
     """
 
     def __init__(
-        self, 
-        variables: list[str] = [], 
-        name="TurbineEvaluation", 
+        self,
+        variables: list[str] = [],
+        name="TurbineEvaluation",
         **kwargs,
     ):
         """
@@ -110,21 +111,23 @@ class TurbineEvaluation(TurbineModel):
 
         # commpute variables:
         for v in variables:
-
             # calculate efficiency:
             if v == FV.EFF:
                 P = self.get_data(
                     FV.P,
                     FC.STATE_TURBINE,
-                    lookup="sf",
+                    lookup="f",
                     fdata=fdata,
-                    upcast=False,
                     selection=sel_data,
                 )
-                results[FV.EFF]
-
-            results[var] = fdata.get(var, np.zeros((fdata.n_states, fdata.n_turbines), dtype=np.float64))
-
-        
+                AMB_P = self.get_data(
+                    FV.AMB_P,
+                    FC.STATE_TURBINE,
+                    lookup="f",
+                    fdata=fdata,
+                    selection=sel_data,
+                )
+                results[FV.EFF] = P / AMB_P
+                del P, AMB_P
 
         return results

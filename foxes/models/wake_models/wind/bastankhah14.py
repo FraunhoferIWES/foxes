@@ -180,7 +180,6 @@ class Bastankhah2014(GaussianWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         # select targets:
@@ -199,7 +198,6 @@ class Bastankhah2014(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -210,7 +208,6 @@ class Bastankhah2014(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 

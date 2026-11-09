@@ -198,7 +198,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=False,
         )
 
         # get k:
@@ -208,7 +207,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=False,
         )
 
         # calculate:
@@ -279,7 +277,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
         )
@@ -294,7 +291,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
         )

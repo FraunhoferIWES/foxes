@@ -183,7 +183,6 @@ class Bastankhah2016Model(Model):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         # get ct:
@@ -195,7 +194,6 @@ class Bastankhah2016Model(Model):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         # select targets:
@@ -210,7 +208,6 @@ class Bastankhah2016Model(Model):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -223,7 +220,6 @@ class Bastankhah2016Model(Model):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -236,7 +232,6 @@ class Bastankhah2016Model(Model):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -249,7 +244,6 @@ class Bastankhah2016Model(Model):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -581,7 +575,6 @@ class Bastankhah2016(DistSlicedWakeModel):
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,
-                upcast=True,
                 downwind_index=downwind_index,
             )
             gamma = gamma * np.pi / 180
@@ -592,7 +585,6 @@ class Bastankhah2016(DistSlicedWakeModel):
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,
-                upcast=True,
                 downwind_index=downwind_index,
             )
 

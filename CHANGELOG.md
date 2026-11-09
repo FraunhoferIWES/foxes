@@ -1188,6 +1188,17 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Core:
+  - Removed stored data singletons in favor of full-shaped read-only NumPy
+    broadcast views. `Model.get_data()` automatically broadcasts mismatched
+    inputs to the target shape; its `upcast` and `broadcast` options are removed.
+  - Corrected default target-data lookup, full-rank shape validation, named
+    dimension alignment, slice/list selections and selected-result shapes.
+    Validate NaNs in returned selections, including partially NaN arrays.
+  - Keep iteration reconstruction confined to farm/wake sources, preserve
+    source arrays and report unavailable previous results explicitly.
+  - Updated read-only wake callers and removed boolean-mask construction for
+    turbine-model state slices; honor uniform TI in the `kTI` turbine model.
 - Examples:
   - Added `-o/--outputs` to all Downwind/Iterative Python example scripts.
     Handle direct datasets, composed results and writer-only selections without
@@ -1200,7 +1211,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Removed engine `write_nc` options and chunk-file helpers. NetCDF files are
     written exclusively by selected output models; compose a writer with a
     collector when an in-memory dataset is also needed.
-  - Replaced engine animation hooks with optional `ChunkAnimationOutput`:
+  - Replaced engine animation hooks with optional `FlowAnimation`:
     reuse supplied target data or evaluate shared grids in bounded point blocks,
     then combine all selected chunks and save one animation per variable during
     output finalization. Removed the superseded chunk plotting helper.
@@ -1233,6 +1244,16 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Added the `engines` extra combining all optional engine packages through
     the existing Dask, MPI, multiprocess and Ray extras.
 - Bug fixes:
+  - Preserve the dynamic-wake example's flow-and-REWS animations through
+    `-o create_turbine_gif` and `-o create_turbine_mp4`, including headless
+    and writer-only runs. Always append the animated variable to the configured
+    base filename, including single-variable output (`ani_WS.gif`/`ani_WS.mp4`).
+    Remove its superseded `-a/--animation` and `-A/--ani_file` options.
+    Add reusable `FlowTurbineAnimation`, deriving from `FlowAnimation` in
+    `flow_animations.py`, with configurable turbine traces, layout annotations
+    and reference marker. Register `create_turbine_gif` and `create_turbine_mp4`
+    globally with `ani.gif` and `ani.mp4` base filenames, and customize the
+    dynamic-wake example's local turbine-animation registrations.
   - Bug fixed that prevented turbine models from using their loaded data during run time
   - Chunk-based farm outputs preserve state labels and broadcast farm fields;
     uniform weights are compacted only after dataset assembly.

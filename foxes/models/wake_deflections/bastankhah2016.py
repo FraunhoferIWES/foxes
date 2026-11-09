@@ -178,7 +178,6 @@ class Bastankhah2016Deflection(WakeDeflection):
             algo=algo,
             fdata=fdata,
             tdata=tdata,
-            upcast=True,
             downwind_index=downwind_index,
             accept_nan=False,
         )
@@ -192,7 +191,6 @@ class Bastankhah2016Deflection(WakeDeflection):
             algo=algo,
             fdata=fdata,
             tdata=tdata,
-            upcast=True,
             downwind_index=downwind_index,
             accept_nan=False,
         )

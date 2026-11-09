@@ -207,7 +207,6 @@ class Rathmann(TurbineInductionModel):
             algo=algo,
             fdata=fdata,
             tdata=tdata,
-            upcast=True,
             downwind_index=downwind_index,
         )
 
@@ -219,7 +218,6 @@ class Rathmann(TurbineInductionModel):
             algo=algo,
             fdata=fdata,
             tdata=tdata,
-            upcast=False,
             downwind_index=downwind_index,
         )
 

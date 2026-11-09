@@ -185,7 +185,6 @@ class TurbOParkWake(GaussianWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         # select targets:
@@ -204,7 +203,6 @@ class TurbOParkWake(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -217,7 +215,6 @@ class TurbOParkWake(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
             )
 
             # get k:
@@ -228,7 +225,6 @@ class TurbOParkWake(GaussianWakeModel):
                 tdata=tdata,
                 downwind_index=downwind_index,
                 amb_ti=ati,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -489,7 +485,6 @@ class TurbOParkWakeIX(GaussianWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         # select targets:
@@ -508,7 +503,6 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 
@@ -519,7 +513,6 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
                 selection=st_sel,
             )
 

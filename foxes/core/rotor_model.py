@@ -203,11 +203,12 @@ class RotorModel(FarmDataModel):
         Helper function for results setting
         """
         if downwind_index is None:
-            fdata[v] = res.copy()
-        elif res.shape[1] == 1:
-            fdata[v][:, downwind_index] = res[:, 0]
+            fdata[v] = np.broadcast_to(res, (fdata.n_states, fdata.n_turbines)).copy()
         else:
-            fdata[v, downwind_index] = res[:, downwind_index]
+            if not fdata[v].flags.writeable:
+                fdata[v] = fdata[v].copy()
+            source_index = 0 if res.shape[1] == 1 else downwind_index
+            fdata[v][:, downwind_index] = res[:, source_index]
 
     def eval_rpoint_results(
         self,

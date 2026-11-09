@@ -103,7 +103,7 @@ Count/chunk filenames use six-digit zero-padded indices. Calendar files use
 week year (`iso_year`), not necessarily the sample's calendar `year`. See
 [ADR-0010](adr/0010-chunk-based-farm-outputs.md).
 
-`ChunkAnimationOutput` uses model-private `var("chunk_animation")` buffers and
+`FlowAnimation` uses model-private `var("chunk_animation")` buffers and
 `var("animation_points")` shared extra data. Its final filenames are
 `<base_name stem>_<variable>.gif` or `.mp4`, without per-chunk indices. `chunk`
 selects engine indices; `states_isel` selects input-state positions, retaining
@@ -115,6 +115,14 @@ The model-book output names are `"create_gif"` and `"create_mp4"`, using
 `ani.gif` and `ani.mp4` as base filenames. The `"chunk_gif_<chunk>"` and
 `"chunk_mp4_<chunk>"` factories select one state chunk. Construction is
 configuration only; validation and preparation are deferred to initialization.
+
+`FlowTurbineAnimation` adds a synchronized farm-data panel to
+`FlowAnimation`. Its `turbines` are original farm indices;
+`turbine_variable` names a `(FC.STATE, FC.TURBINE)` farm field, independently
+of the animated point `variables`. It retains the inherited per-variable
+filenames. `ref_xy` and `layout_pars` configure optional flow-axis annotations.
+Its model-book names are `"create_turbine_gif"` and `"create_turbine_mp4"`,
+using `ani.gif` and `ani.mp4` as base filenames, like the flow-only outputs.
 
 ## Common Type Annotations
 
@@ -184,10 +192,12 @@ mere spelling conveniences.
 
 Farm variables ordinarily lead with `(FC.STATE, FC.TURBINE)`. Target variables
 ordinarily lead with `(FC.STATE, FC.TARGET, FC.TPOINT)`, and `FC.TARGETS` adds
-`FC.XYH`. Static `FC.TARGETS` keep that dimension tuple with a singleton
-`FC.STATE` axis until an engine runner broadcasts them to the active state
-chunk. State-dependent target coordinates carry the full state axis. Point
-calculations use these target dimensions internally;
+`FC.XYH`. Dimensioned data containers expose arrays at their full declared
+shape. Singleton input axes are represented by read-only broadcast views when
+their dimensions are larger than one; static `FC.TARGETS` therefore have a
+full logical state axis without materializing repeated coordinates.
+State-dependent target coordinates retain distinct values along that axis.
+Point calculations use these target dimensions internally;
 `calc_points()` selects the single target point and exposes `FC.TARGET` as
 `FC.POINT` in the returned xarray dataset. Keep dimensions as tuples of
 constants. Do not substitute array shape comments for dimension metadata.

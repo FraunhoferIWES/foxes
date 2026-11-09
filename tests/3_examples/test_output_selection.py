@@ -3,10 +3,12 @@
 import argparse
 from pathlib import Path
 import runpy
+from shutil import which
 import sys
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from PIL import Image
 import pytest
 import xarray as xr
 
@@ -75,6 +77,119 @@ def test_example_output_option_requires_a_name(monkeypatch, script):
     with pytest.raises(SystemExit) as error:
         _parse_example(monkeypatch, script, ["-o"])
     assert error.value.code == 2
+
+
+@pytest.mark.parametrize(
+    "options", [["-a"], ["--animation"], ["-A", "ani.mp4"], ["--ani_file", "ani.gif"]]
+)
+def test_dyn_wakes_rejects_removed_animation_flags(monkeypatch, options):
+    # Animations are selected exclusively through named output models.
+    with pytest.raises(SystemExit) as error:
+        _parse_example(monkeypatch, EXAMPLES / "dyn_wakes/run.py", options)
+    assert error.value.code == 2
+
+
+@pytest.mark.parametrize("output", ["create_turbine_gif", "create_turbine_mp4"])
+def test_dyn_wakes_animation_configuration(monkeypatch, output):
+    # Stop at algorithm construction to inspect local model-book customization.
+    class Captured(Exception):
+        pass
+
+    books = []
+
+    def capture(*args, **kwargs):
+        books.append(kwargs["mbook"])
+        raise Captured
+
+    script = EXAMPLES / "dyn_wakes/run.py"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [str(script), "-nf", "-F", "6", "-R", "1200", "1800", "-o", output],
+    )
+    monkeypatch.setattr(foxes.algorithms, "Iterative", capture)
+    with pytest.raises(Captured):
+        runpy.run_path(str(script), run_name="__main__")
+    model = books[0].outputs[output]
+    assert isinstance(model, foxes.models.outputs.FlowTurbineAnimation)
+    assert model.turbines == [1, 4, 7]
+    assert model.turbine_variable == FV.REWS
+    assert model.ref_xy == [1200, 1800]
+    assert model.fps == 6
+    assert model.figsize == (5.2, 7)
+    assert model.grid_pars == {"resolution": 30, "xmax": 5000, "ymax": 5000}
+    assert model.plot_pars == {
+        "vmin": 0,
+        "quiver_pars": {"angles": "xy", "scale_units": "xy", "scale": 0.013},
+        "quiver_n": 35,
+        "title": None,
+        "rotor_color": "red",
+    }
+    assert model.layout_pars == {
+        "title": "",
+        "annotate": 1,
+        "anno_delx": -120,
+        "anno_dely": -60,
+        "alpha": 0,
+    }
+    assert model.base_name == ("ani.gif" if output.endswith("gif") else "ani.mp4")
+    default = foxes.ModelBook().outputs[output]
+    assert isinstance(default, foxes.models.outputs.FlowTurbineAnimation)
+    assert default.turbines is None
+    for name in ("create_gif", "create_mp4"):
+        assert type(books[0].outputs[name]) is foxes.models.outputs.FlowAnimation
+
+
+@pytest.mark.parametrize("suffix", ["gif", "mp4"])
+@pytest.mark.parametrize("collect", [False, True])
+def test_real_dyn_wakes_animation(monkeypatch, tmp_path, suffix, collect):
+    # Run the actual dynamic-background example with bounded synthetic inputs.
+    if suffix == "mp4" and which("ffmpeg") is None:
+        pytest.skip("MP4 encoding requires ffmpeg")
+    source = tmp_path / "states.csv"
+    pd.DataFrame(
+        {"ws": [7.0, 8.0, 9.0], "wd": [270.0, 275.0, 280.0], "ti": [0.07] * 3},
+        index=pd.date_range("2020-01-01", periods=3, freq="10s"),
+    ).to_csv(source)
+    monkeypatch.setitem(config, FC.OUTPUT_DIR, tmp_path)
+    engine_new = foxes.Engine.new
+    monkeypatch.setattr(
+        foxes.Engine,
+        "new",
+        lambda **kwargs: engine_new(
+            "numpy", chunk_size_states=2, chunk_size_points=2000, verbosity=0
+        ),
+    )
+    script = EXAMPLES / "dyn_wakes/run.py"
+    outputs = (["farm_results"] if collect else []) + [f"create_turbine_{suffix}"]
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [str(script), "-nf", "-s", str(source), "-o", *outputs],
+    )
+
+    # Explicit file outputs must finish even when no farm collector is selected.
+    backend = plt.get_backend()
+    plt.switch_backend("Agg")
+    try:
+        if collect:
+            namespace = runpy.run_path(str(script), run_name="__main__")
+            assert namespace["farm_results"].sizes[FC.STATE] == 3
+        else:
+            with pytest.raises(SystemExit) as error:
+                runpy.run_path(str(script), run_name="__main__")
+            assert error.value.code == 0
+        path = tmp_path / f"ani_WS.{suffix}"
+        if suffix == "gif":
+            with Image.open(path) as gif:
+                assert gif.n_frames == 3
+                assert gif.size == (520, 700)
+        else:
+            assert path.read_bytes()[4:8] == b"ftyp"
+        assert not plt.get_fignums()
+    finally:
+        plt.close("all")
+        plt.switch_backend(backend)
 
 
 def test_comparison_figure_option_is_separate(monkeypatch):
@@ -166,6 +281,38 @@ def test_unknown_output_model_fails_explicitly(monkeypatch, small_examples):
     monkeypatch.setattr(sys, "argv", [str(script), "-o", "no_such_output"])
     with pytest.raises(KeyError, match="no_such_output"):
         runpy.run_path(str(script), run_name="__main__")
+
+
+@pytest.mark.parametrize("suffix", ["gif", "mp4"])
+def test_timeseries_registered_turbine_animation(monkeypatch, small_examples, suffix):
+    # Select the new global model-book output through the unchanged example CLI.
+    if suffix == "mp4" and which("ffmpeg") is None:
+        pytest.skip("MP4 encoding requires ffmpeg")
+    model_book = foxes.models.ModelBook
+
+    def small_model_book():
+        book = model_book()
+        animation = book.outputs[f"create_turbine_{suffix}"]
+        animation.grid_pars = {"n_img_points": (2, 2)}
+        animation.figsize = (3, 4)
+        animation.turbines = [0, 1]
+        return book
+
+    monkeypatch.setattr(foxes.models, "ModelBook", small_model_book)
+    script = EXAMPLES / "timeseries/run.py"
+    monkeypatch.setattr(
+        sys, "argv", [str(script), "-nf", "-o", f"create_turbine_{suffix}"]
+    )
+    with pytest.raises(SystemExit) as error:
+        runpy.run_path(str(script), run_name="__main__")
+    assert error.value.code == 0
+    path = small_examples / f"ani_WS.{suffix}"
+    if suffix == "gif":
+        with Image.open(path) as gif:
+            assert gif.n_frames == 3
+            assert gif.size == (300, 400)
+    else:
+        assert path.read_bytes()[4:8] == b"ftyp"
 
 
 @pytest.mark.parametrize("example", ["power_mask", "sector_management"])

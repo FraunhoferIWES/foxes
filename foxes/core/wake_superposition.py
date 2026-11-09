@@ -39,7 +39,6 @@ def get_ws_scale(
         fdata=fdata,
         tdata=tdata,
         downwind_index=downwind_index,
-        upcast=False,
         selection=st_sel,
     )
 

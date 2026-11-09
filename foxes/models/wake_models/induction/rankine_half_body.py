@@ -194,7 +194,6 @@ class RankineHalfBody(TurbineInductionModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=False,
         )
 
         # get ws:
@@ -206,7 +205,6 @@ class RankineHalfBody(TurbineInductionModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=False,
         )
 
         # get D
@@ -218,7 +216,6 @@ class RankineHalfBody(TurbineInductionModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         # calc m (page 7, skipping pi everywhere)

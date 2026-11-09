@@ -1,4 +1,4 @@
-"""Collect flow chunks and save unified XY animations during finalization."""
+"""Collect flow chunks and save unified flow and turbine animations."""
 
 from __future__ import annotations
 
@@ -19,11 +19,12 @@ import foxes.variables as FV
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
+    from foxes.output import Animator
     from foxes.core import Algorithm, Model, PointDataModelList
     from foxes.core.model import LoadedData
 
 
-class ChunkAnimationOutput(Output):
+class FlowAnimation(Output):
     """Write one state-ordered XY flow animation per variable.
 
     Supplied target data is reused without further scientific calculations.
@@ -56,8 +57,9 @@ class ChunkAnimationOutput(Output):
         variables
             Point fields to animate; ``None`` selects wind speed.
         base_name
-            Filename including ``.gif`` or ``.mp4``. Files append the variable
-            before the suffix, without a chunk suffix. The final suffix, after
+            Filename including ``.gif`` or ``.mp4``. Each file appends the
+            animated variable before the suffix, even for one variable,
+            without a chunk suffix. The final suffix, after
             ``out_fname_fun``, selects Pillow for GIF or ffmpeg for MP4.
         fps
             Positive frame rate. GIF uses Pillow; MP4 requires external ffmpeg.
@@ -617,7 +619,7 @@ class ChunkAnimationOutput(Output):
         """Render combined fields once and always close figures on failures."""
         # Import plotting only for selected payloads, never in chunk workers.
         import matplotlib.pyplot as plt
-        from foxes.output import Animator, FlowPlots2D
+        from foxes.output import FlowPlots2D
         from foxes.output.grids import np2np_sp
         from foxes.output.rose_plot import RosePlotOutput
 
@@ -667,9 +669,9 @@ class ChunkAnimationOutput(Output):
                 print(f"{self.name}: Writing {path}")
 
             # Ensure renderer failures cannot leak Matplotlib figures.
-            fig, ax = plt.subplots(figsize=self.figsize)
+            fig, ax = self._create_figure()
             try:
-                animator = Animator(fig=fig)
+                animator = self._create_animator(algo, farm, fig, ax)
                 if rectangular:
                     generator = plotter.gen_states_fig_xy(
                         (parameters, gridded, payload["states"], grid),
@@ -697,6 +699,20 @@ class ChunkAnimationOutput(Output):
                 )
             finally:
                 plt.close(fig)
+
+    def _create_figure(self) -> tuple[Figure, Axes]:
+        """Create the figure and axes used for the flow field."""
+        import matplotlib.pyplot as plt
+
+        return plt.subplots(figsize=self.figsize)
+
+    def _create_animator(
+        self, algo: Algorithm, farm: Dataset, fig: Figure, ax: Axes
+    ) -> Animator:
+        """Create the animator before adding its flow-field generator."""
+        from foxes.output import Animator
+
+        return Animator(fig=fig)
 
     def _scatter_frames(
         self,
@@ -738,3 +754,212 @@ class ChunkAnimationOutput(Output):
                 ha="center",
             )
             yield fig, [artist, title]
+
+
+class FlowTurbineAnimation(FlowAnimation):
+    """Write flow animations with a synchronized state-turbine trace panel.
+
+    Each animated flow variable shares the same lower panel, using original
+    farm turbine indices. Chunk/state selection, point evaluation, filenames
+    and encoding follow ``FlowAnimation``.
+    """
+
+    def __init__(
+        self,
+        turbines: list[int] | None = None,
+        turbine_variable: str = FV.REWS,
+        layout_pars: dict[str, Any] | None = None,
+        ref_xy: list[float] | tuple[float, float] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Configure the turbine panel and optional flow-field annotations.
+
+        Parameters
+        ----------
+        turbines
+            Original farm turbine indices to plot; ``None`` selects all.
+            An explicit selection must be nonempty and contain valid indices.
+        turbine_variable
+            Farm variable with dimensions ``(FC.STATE, FC.TURBINE)`` to trace.
+        layout_pars
+            Options for ``FarmLayoutOutput.get_figure`` on the flow axes.
+            ``None`` disables layout annotations; ``fig`` and ``ax`` are supplied
+            by this output.
+        ref_xy
+            Finite reference point coordinates in metres, shown as a red cross.
+            ``None`` disables the marker.
+        kwargs
+            Options for ``FlowAnimation``, including ``figsize``,
+            ``grid_pars``, ``plot_pars``, frame selection and file paths.
+            The upper and lower panels have a height ratio of three to one.
+        """
+        # Retain configuration until initialization prepares private snapshots.
+        super().__init__(**kwargs)
+        self.turbines = turbines
+        self.turbine_variable = turbine_variable
+        self.layout_pars = layout_pars
+        self.ref_xy = ref_xy
+
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
+        """Validate panel configuration before initializing flow dependencies.
+
+        Parameters
+        ----------
+        algo
+            Farm algorithm supplying the available turbine indices.
+        loaded_data
+            Shared initialization data to extend.
+        force
+            Reinitialize the output and its scientific dependencies.
+        verbosity
+            Initialization verbosity.
+
+        Returns
+        -------
+        loaded_data
+            Combined loaded model data, including inherited flow-grid data.
+
+        Raises
+        ------
+        ValueError
+            If the panel configuration is invalid or the output is running.
+        """
+        # Validate before retaining selections or building scientific submodels.
+        if self.running:
+            raise ValueError(f"{self.name}: Cannot initialize while running")
+        if not self.initialized or force:
+            turbines = (
+                list(range(algo.n_turbines)) if self.turbines is None else self.turbines
+            )
+            if not turbines or any(
+                isinstance(i, bool)
+                or not isinstance(i, int)
+                or not 0 <= i < algo.n_turbines
+                for i in turbines
+            ):
+                raise ValueError(f"{self.name}: Invalid turbine selection {turbines}")
+            if not isinstance(self.turbine_variable, str) or not self.turbine_variable:
+                raise ValueError(f"{self.name}: turbine_variable must be nonempty")
+            if self.ref_xy is not None and (
+                np.shape(self.ref_xy) != (2,) or not np.all(np.isfinite(self.ref_xy))
+            ):
+                raise ValueError(
+                    f"{self.name}: ref_xy must contain two finite coordinates"
+                )
+            if self.layout_pars is not None and {"fig", "ax"} & self.layout_pars.keys():
+                raise ValueError(f"{self.name}: layout_pars must not supply fig or ax")
+
+            # Snapshot caller-owned settings without retaining runtime buffers.
+            self._turbines = tuple(turbines)
+            self._turbine_variable = self.turbine_variable
+            self._layout_pars = deepcopy(self.layout_pars)
+            self._ref_xy = None if self.ref_xy is None else tuple(self.ref_xy)
+        return super().initialize(algo, loaded_data, force, verbosity)
+
+    def calculate(  # type: ignore[override]
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        tdata: TData | None,
+        model_results: Any,
+        chunk_results: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Collect flow fields and farm-order traces for selected states.
+
+        Parameters
+        ----------
+        algo
+            Running farm algorithm.
+        mdata
+            Chunk model data, including the inherited state selection.
+        fdata
+            Chunk farm data in original turbine order.
+        tdata
+            Supplied target data, or ``None`` for generated flow grids.
+        model_results
+            Scientific calculation results passed to the inherited collector.
+        chunk_results
+            Shared output payload mapping to extend.
+
+        Returns
+        -------
+        chunk_results
+            Private numerical animation payloads including the trace variable.
+
+        Raises
+        ------
+        KeyError
+            If the requested farm trace variable is unavailable.
+        ValueError
+            If the trace variable does not have state-turbine dimensions.
+        """
+        # Extend only selected payloads, keeping all model configuration read-only.
+        results = super().calculate(
+            algo, mdata, fdata, tdata, model_results, chunk_results
+        )
+        payload = results.get(self._result_key)
+        if payload is not None:
+            variable = self._turbine_variable
+            if variable not in fdata:
+                raise KeyError(f"{self.name}: Missing turbine variable '{variable}'")
+            if fdata.dims[variable] != (FC.STATE, FC.TURBINE):
+                raise ValueError(
+                    f"{self.name}: '{variable}' must have state-turbine dimensions"
+                )
+            selection = (
+                slice(None) if self._selection is None else mdata[self._selection]
+            )
+            payload["farm"][variable] = np.broadcast_to(
+                fdata[variable], (fdata.n_states, fdata.n_turbines)
+            )[selection].copy()
+        return results
+
+    def _create_figure(self) -> tuple[Figure, Axes]:
+        """Create the flow axes above a smaller turbine-trace panel."""
+        import matplotlib.pyplot as plt
+
+        fig, axes = plt.subplots(
+            2, 1, figsize=self.figsize, gridspec_kw={"height_ratios": [3, 1]}
+        )
+        return fig, axes[0]
+
+    def _create_animator(
+        self, algo: Algorithm, farm: Dataset, fig: Figure, ax: Axes
+    ) -> Animator:
+        """Add synchronized turbine traces and optional flow annotations."""
+        from foxes.output import FarmLayoutOutput, FarmResultsEval
+
+        # Attach traces to the figure, never to the running output instance.
+        animator = super()._create_animator(algo, farm, fig, ax)
+        animator.add_generator(
+            FarmResultsEval(farm, algo=algo).gen_stdata(
+                turbines=list(self._turbines),
+                variable=self._turbine_variable,
+                fig=fig,
+                ax=fig.axes[1],
+                ret_im=True,
+                legloc="upper right",
+                animated=True,
+            )
+        )
+
+        # Annotate only the flow axes, leaving inherited scales and grids intact.
+        if self._layout_pars is not None:
+            FarmLayoutOutput(algo.farm).get_figure(fig=fig, ax=ax, **self._layout_pars)
+        if self._ref_xy is not None:
+            ax.scatter(
+                [self._ref_xy[0]],
+                [self._ref_xy[1]],
+                marker="x",
+                color="red",
+                s=80,
+                animated=True,
+            )
+        return animator

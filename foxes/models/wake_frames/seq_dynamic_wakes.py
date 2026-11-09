@@ -342,18 +342,12 @@ class SeqDynamicWakes(FarmOrder):
                     f"Model '{self.name}': Mismatch of '{FC.STATE_SOURCE_ORDERI}'. Expected {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
                 )
 
-            n_states = 1
-            n_targets = tdata.n_targets
             n_tpoints = tdata.n_tpoints
-            n_points = n_targets * n_tpoints
             counter = cast(Any, algo.states).counter
 
-            s = tdata[FC.STATES_SEL][0].reshape(n_points)
-            fresults = algo.farm_results_downwind
-            assert fresults is not None, "Missing farm_results_downwind"
-            data = fresults[variable].to_numpy()
-            data[counter] = fdata[variable][0]
-            data = data[s, downwind_index].reshape(n_states, n_targets, n_tpoints)
+            data = self._get_source_states(
+                algo, variable, downwind_index, fdata, tdata[FC.STATES_SEL], counter
+            )
 
             if target == FC.STATE_TARGET:
                 if n_tpoints == 1:

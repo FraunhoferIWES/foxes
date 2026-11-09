@@ -118,7 +118,6 @@ class PartialAxiwake(PartialCentre):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         # calc coordinates to rotor centres:

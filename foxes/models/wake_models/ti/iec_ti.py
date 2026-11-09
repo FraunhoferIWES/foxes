@@ -188,7 +188,6 @@ class IECTIWake(TopHatWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
             )
 
             k = self.wake_k(
@@ -196,7 +195,6 @@ class IECTIWake(TopHatWakeModel):
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,
-                upcast=False,
                 downwind_index=downwind_index,
             )
             return D / 2 + k * x
@@ -255,7 +253,6 @@ class IECTIWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=False,
             selection=st_sel,
         )
 
@@ -268,7 +265,6 @@ class IECTIWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=False,
             selection=st_sel,
         )
 

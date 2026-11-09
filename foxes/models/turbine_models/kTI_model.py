@@ -86,28 +86,25 @@ class kTI(TurbineModel):
         st_sel: slice | np.ndarray = slice(None),
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        Calculate wake growth coefficients for selected farm entries.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The calculation algorithm.
         mdata
-            The model data
+            The model data.
         fdata
-            The farm data
+            The farm data; the coefficient field is updated in place.
         st_sel
-            The state-turbine selection,
-            for shape: (n_states, n_turbines)
+            A state slice or boolean state-turbine mask with shape
+            ``(n_states, n_turbines)``.
 
         Returns
         -------
         results
-            The resulting data, keys: output variable str.
-            Values
+            The coefficient array under ``self.k_var`` with dimensions
+            ``(FC.STATE, FC.TURBINE)``. Unselected entries are unchanged.
 
         """
         self.ensure_output_vars(algo, fdata)
@@ -115,39 +112,26 @@ class kTI(TurbineModel):
         n_states = fdata.n_states
         n_turbines = fdata.n_turbines
         assert n_states is not None and n_turbines is not None
-        sel_data: np.ndarray | None
-        if isinstance(st_sel, slice) and st_sel == slice(None):
-            sel_data = None
-        elif isinstance(st_sel, slice):
-            sel_arr = np.zeros((n_states, n_turbines), dtype=np.bool_)
-            sel_arr[st_sel] = True
-            sel_data = sel_arr
-        else:
-            sel_data = st_sel
-
         kti = self.get_data(
             FV.KTI,
             FC.STATE_TURBINE,
             lookup="sf",
             fdata=fdata,
-            upcast=False,
-            selection=sel_data,
+            selection=st_sel,
         )
         kb = self.get_data(
             FV.KB,
             FC.STATE_TURBINE,
             lookup="sf",
             fdata=fdata,
-            upcast=False,
-            selection=sel_data,
+            selection=st_sel,
         )
         ti = self.get_data(
             self.ti_var,
             FC.STATE_TURBINE,
-            lookup="f",
+            lookup="sf",
             fdata=fdata,
-            upcast=False,
-            selection=sel_data,
+            selection=st_sel,
         )
 
         k = fdata.get(

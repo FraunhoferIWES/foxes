@@ -985,7 +985,7 @@ class Downwind(Algorithm):
             This option has no effect when ``ambient=False`` and does not expand
             explicit ``outputs`` selections.
         output
-            Additional chunk-based output, such as ``ChunkAnimationOutput``.
+            Additional chunk-based output, such as ``FlowAnimation``.
             It receives the calculated target fields and coordinates alongside
             the standard point collector. The returned dataset is unchanged.
         kwargs

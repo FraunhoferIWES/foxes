@@ -417,9 +417,8 @@ class Algorithm(Model):
         -------
         point_data
             Point data with ``FC.TARGETS`` dimensions
-            ``(FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)``. Static target
-            coordinates have a singleton ``FC.STATE`` axis for worker-side
-            broadcasting.
+            ``(FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)``. Static coordinates
+            are read-only views broadcast over the full state dimension.
 
         """
         if n_states is None:
@@ -428,9 +427,10 @@ class Algorithm(Model):
         idata: dict[str, Any] = {"coords": {}, "data_vars": {}}
 
         if len(points.shape) == 2 and points.shape[1] == 3:
-            target_data = np.asarray(points, dtype=config.dtype_double)[
-                None, :, None, :
-            ]
+            target_data = np.broadcast_to(
+                np.asarray(points, dtype=config.dtype_double)[None, :, None, :],
+                (n_states, len(points), 1, 3),
+            )
         elif (
             len(points.shape) == 3
             and points.shape[0] == n_states

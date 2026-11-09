@@ -5,7 +5,6 @@ from abc import ABC
 from itertools import count
 from typing import TYPE_CHECKING, Any, Iterator, Literal, TypedDict, overload
 
-from foxes.config import config
 import foxes.constants as FC
 
 
@@ -358,7 +357,7 @@ class Model(ABC):
         self,
         variable: str,
         target: str,
-        lookup: str = "smfp",
+        lookup: str = "smft",
         mdata: MData | None = None,
         fdata: FData | None = None,
         tdata: TData | None = None,
@@ -366,8 +365,11 @@ class Model(ABC):
         accept_none: Literal[False] = False,
         accept_nan: bool = True,
         algo: Algorithm | None = None,
-        upcast: bool = False,
-        selection: np.ndarray[Any, Any] | tuple[Any, ...] | list[Any] | None = None,
+        selection: np.ndarray[Any, Any]
+        | tuple[Any, ...]
+        | list[Any]
+        | slice
+        | None = None,
     ) -> np.ndarray[Any, Any]: ...
 
     @overload
@@ -375,7 +377,7 @@ class Model(ABC):
         self,
         variable: str,
         target: str,
-        lookup: str = "smfp",
+        lookup: str = "smft",
         mdata: MData | None = None,
         fdata: FData | None = None,
         tdata: TData | None = None,
@@ -383,15 +385,18 @@ class Model(ABC):
         accept_none: Literal[True] = True,
         accept_nan: bool = True,
         algo: Algorithm | None = None,
-        upcast: bool = False,
-        selection: np.ndarray[Any, Any] | tuple[Any, ...] | list[Any] | None = None,
+        selection: np.ndarray[Any, Any]
+        | tuple[Any, ...]
+        | list[Any]
+        | slice
+        | None = None,
     ) -> np.ndarray[Any, Any] | None: ...
 
     def get_data(
         self,
         variable: str,
         target: str,
-        lookup: str = "smfp",
+        lookup: str = "smft",
         mdata: MData | None = None,
         fdata: FData | None = None,
         tdata: TData | None = None,
@@ -399,12 +404,14 @@ class Model(ABC):
         accept_none: bool = False,
         accept_nan: bool = True,
         algo: Algorithm | None = None,
-        upcast: bool = False,
-        selection: np.ndarray[Any, Any] | tuple[Any, ...] | list[Any] | None = None,
+        selection: np.ndarray[Any, Any]
+        | tuple[Any, ...]
+        | list[Any]
+        | slice
+        | None = None,
     ) -> np.ndarray[Any, Any] | None:
         """
-        Getter for a data entry in the model object
-        or provided data sources
+        Retrieve data from the first matching source in lookup order.
 
         Parameters
         ----------
@@ -426,62 +433,74 @@ class Model(ABC):
         downwind_index
             The index in the downwind order.
         accept_none
-            Do not raise an error if the data entry is ``None``.
+            Return ``None`` if no source provides the variable.
         accept_nan
-            Do not raise an error if the data entry is ``np.nan``.
+            Allow NaN values in the returned selection.
         algo
             The algorithm, needed for data from previous iterations.
-        upcast
-            Ensure the target dimensions are present. If expansion is needed,
-            the result is a read-only broadcasted view.
         selection
-            Apply this selection to the result, for state-turbine, state-target,
-            or state-target-tpoint outputs.
+            Index the full target shape with a boolean array, a slice, or a
+            tuple/list of NumPy indices. Integer indices remove dimensions;
+            slices retain their selected lengths. Lists are treated as tuples.
+
+        Returns
+        -------
+        data
+            The requested array, or ``None`` when missing and ``accept_none``
+            is enabled. Named source dimensions are aligned to ``target``;
+            model attributes use leading target dimensions. Shape mismatches
+            are expanded to the full target shape with ``numpy.broadcast_to``
+            before selection. Expanded views are read-only; unchanged source
+            arrays and advanced-indexing copies retain their writeability.
+            Call ``copy()`` when independent writable storage is required.
+
+        Raises
+        ------
+        ValueError
+            If lookup contains an unknown source, data has an incompatible
+            shape, a required variable is
+            missing, NaNs are disallowed, or iteration data is unavailable.
+        KeyError
+            If the target is unknown or required dimension sizes or iteration
+            metadata cannot be determined.
+        TypeError
+            If the selection has an unsupported type.
 
         """
+        # Validate options before accessing data sources.
+        if any(s not in "smftw" for s in lookup):
+            raise ValueError(f"Model '{self.name}': Invalid lookup '{lookup}'")
 
         def _geta(a: str) -> Any:
             sources: list[Any] = [
                 s for s in [mdata, fdata, tdata, algo, self] if s is not None
             ]
             for s in sources:
-                try:
-                    if a == "states_i0":
-                        get_states_i0 = getattr(s, "states_i0", None)
-                        if callable(get_states_i0):
-                            out = get_states_i0(counter=True)
-                            if out is not None:
-                                return out
-                    else:
-                        out = getattr(s, a)
+                if a == "states_i0":
+                    get_states_i0 = getattr(s, "states_i0", None)
+                    if callable(get_states_i0):
+                        out = get_states_i0(counter=True)
                         if out is not None:
                             return out
-                except AttributeError:
-                    pass
+                else:
+                    out = getattr(s, a, None)
+                    if out is not None:
+                        return out
             raise KeyError(
                 f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, tdata, algo?"
             )
 
         dims: tuple[str, ...]
-        shp: tuple[int, ...]
-        n_states = _geta("n_states")
         if target == FC.STATE_TURBINE:
             if downwind_index is not None:
                 raise ValueError(
                     f"Target '{target}' is incompatible with downwind_index (here {downwind_index})"
                 )
-            n_turbines = _geta("n_turbines")
             dims = (FC.STATE, FC.TURBINE)
-            shp = (n_states, n_turbines)
         elif target == FC.STATE_TARGET:
-            n_targets = _geta("n_targets")
             dims = (FC.STATE, FC.TARGET)
-            shp = (n_states, n_targets)
         elif target == FC.STATE_TARGET_TPOINT:
-            n_targets = _geta("n_targets")
-            n_tpoints = _geta("n_tpoints")
             dims = (FC.STATE, FC.TARGET, FC.TPOINT)
-            shp = (n_states, n_targets, n_tpoints)
         else:
             raise KeyError(
                 f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
@@ -489,73 +508,58 @@ class Model(ABC):
 
         def _match_shape(a: Any) -> np.ndarray[Any, Any]:
             out = np.asarray(a)
-            if len(out.shape) < len(shp):
-                for i, s in enumerate(shp):
-                    if i >= len(out.shape):
-                        out = out[..., None]
-                    elif out.shape[i] not in (1, s):
-                        raise ValueError(
-                            f"Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}"
-                        )
-            elif len(out.shape) > len(shp):
+            if out.ndim > len(shp) or any(
+                size not in (1, shp[i]) for i, size in enumerate(out.shape)
+            ):
                 raise ValueError(
-                    f"Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}"
+                    f"Model '{self.name}': Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}"
                 )
-            return out
+            return out.reshape(out.shape + (1,) * (len(shp) - out.ndim))
 
         def _filter_dims(
             source: MData | FData | TData,
-        ) -> tuple[np.ndarray[Any, Any], tuple[str, ...]]:
+        ) -> np.ndarray[Any, Any] | None:
             a = source[variable]
             a_dims = tuple(source.dims[variable])
-            if downwind_index is None or FC.TURBINE not in a_dims:
-                d: tuple[str, ...] = a_dims
-            else:
+            if downwind_index is not None and FC.TURBINE in a_dims:
                 slc = tuple(
                     [downwind_index if dd == FC.TURBINE else np.s_[:] for dd in a_dims]
                 )
                 a = a[slc]
-                d = tuple(dd for dd in a_dims if dd != FC.TURBINE)
-            return a, d
+                a_dims = tuple(dd for dd in a_dims if dd != FC.TURBINE)
+            if len(set(a_dims)) != len(a_dims) or any(d not in dims for d in a_dims):
+                return None
+            order = tuple(a_dims.index(d) for d in dims if d in a_dims)
+            a = np.transpose(a, order)
+            sizes = dict(zip((d for d in dims if d in a_dims), a.shape))
+            shape = tuple(sizes.get(d, 1) for d in dims)
+            return a.reshape(shape)
 
         out = None
+        source_key = None
         for s in lookup:
             # lookup self:
             if s == "s" and hasattr(self, variable):
                 a = getattr(self, variable)
                 if a is not None:
-                    out = _match_shape(a)
+                    out = np.asarray(a)
 
             # lookup mdata:
             elif s == "m" and mdata is not None and variable in mdata:
-                a, d = _filter_dims(mdata)
-                ld = len(d)
-                if ld <= len(dims) and d == dims[:ld]:
-                    out = _match_shape(a)
+                out = _filter_dims(mdata)
 
             # lookup fdata:
-            elif (
-                s == "f"
-                and fdata is not None
-                and variable in fdata
-                and tuple(fdata.dims[variable]) == (FC.STATE, FC.TURBINE)
-            ):
-                if target == FC.STATE_TURBINE:
-                    out = fdata[variable]
-                elif downwind_index is not None:
-                    out = _match_shape(fdata[variable][:, downwind_index])
+            elif s == "f" and fdata is not None and variable in fdata:
+                out = _filter_dims(fdata)
 
-            # lookup pdata:
+            # lookup target data:
             elif (
                 s == "t"
                 and target != FC.STATE_TURBINE
                 and tdata is not None
                 and variable in tdata
             ):
-                a, d = _filter_dims(tdata)
-                ld = len(d)
-                if ld <= len(dims) and d == dims[:ld]:
-                    out = _match_shape(a)
+                out = _filter_dims(tdata)
 
             # lookup wake modelling data:
             elif (
@@ -568,7 +572,7 @@ class Model(ABC):
                 and algo is not None
             ):
                 wake_frame = algo.wake_frame
-                out = _match_shape(
+                out = np.asarray(
                     wake_frame.get_wake_modelling_data(
                         algo,
                         variable,
@@ -580,6 +584,7 @@ class Model(ABC):
                 )
 
             if out is not None:
+                source_key = s
                 break
 
         # check for None:
@@ -589,127 +594,60 @@ class Model(ABC):
                     f"Model '{self.name}': Variable '{variable}' is requested but not found."
                 )
             return out
-        assert out is not None
+        # Resolve sizes only after finding a value, including optional lookups.
+        sizes = {
+            FC.STATE: "n_states",
+            FC.TURBINE: "n_turbines",
+            FC.TARGET: "n_targets",
+            FC.TPOINT: "n_tpoints",
+        }
+        shp = tuple(_geta(sizes[d]) for d in dims)
+        out = _match_shape(out)
 
         # data from other chunks, only with iterations:
         if (
             target in [FC.STATE_TARGET, FC.STATE_TARGET_TPOINT]
+            and source_key == "f"
             and fdata is not None
             and variable in fdata
             and tdata is not None
             and FC.STATES_SEL in tdata
         ):
-            if out.shape != shp:
-                # upcast to dims:
-                tmp = np.zeros(shp, dtype=out.dtype)
-                tmp[:] = out
-                out = tmp
-                del tmp
-            else:
-                out = out.copy()
             if downwind_index is None:
                 raise KeyError(
                     f"Model '{self.name}': Require downwind_index for obtaining results from previous iteration"
-                )
-            if tdata[FC.STATE_SOURCE_ORDERI] != downwind_index:
-                raise ValueError(
-                    f"Model '{self.name}': Expecting downwind_index {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
                 )
             if algo is None:
                 raise ValueError(
                     f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo"
                 )
 
-            from foxes.algorithms.sequential import Sequential
-
-            if isinstance(algo, Sequential):
-                i0 = getattr(algo.states, "counter", _geta("states_i0"))
-            else:
-                i0 = _geta("states_i0")
-            sts = tdata[FC.STATES_SEL]
-            if target == FC.STATE_TARGET and tdata.n_tpoints != 1:
-                # find the mean index and round it to nearest integer:
-                sts = tdata.tpoint_mean(FC.STATES_SEL)[:, :, None]
-                sts = (sts + 0.5).astype(config.dtype_int)
-            sel = sts < i0
-            if np.any(sel):
-                prev_fres = algo.farm_results_downwind
-                if prev_fres is not None:
-                    prev_data = prev_fres[variable].to_numpy()[sts[sel], downwind_index]
-                    if target == FC.STATE_TARGET:
-                        out[sel[:, :, 0]] = prev_data
-                    else:
-                        out[sel] = prev_data
-                    del prev_data
-            if np.any(~sel):
-                sts = sts[~sel] - i0
-                sel_data = fdata[variable][sts, downwind_index]
-                if target == FC.STATE_TARGET:
-                    out[~sel[:, :, 0]] = sel_data
-                else:
-                    out[~sel] = sel_data
-                del sel_data
-            del sel, sts
-
-        # check for nan:
-        if not accept_nan:
-            try:
-                if np.all(np.isnan(np.atleast_1d(out))):
-                    raise ValueError(
-                        f"Model '{self.name}': Requested variable '{variable}' contains NaN values."
-                    )
-            except TypeError:
-                pass
-
-        # apply selection:
-        if selection is not None:
-            selected_out = out
-
-            def _upcast_sel(
-                sel_shape: tuple[int, ...],
-                broadcast: bool = False,
-            ) -> tuple[np.ndarray[Any, Any], list[int]]:
-                chp: list[int] = []
-                for i, s in enumerate(selected_out.shape):
-                    if i < len(sel_shape) and sel_shape[i] > 1:
-                        if sel_shape[i] != shp[i]:
-                            raise ValueError(
-                                f"Incompatible selection shape {sel_shape} for output shape {shp[i]}"
-                            )
-                        chp.append(shp[i])
-                    else:
-                        chp.append(s)
-                chp_t = tuple(chp)
-                eshp: list[int] = list(shp[len(sel_shape) :])
-                if chp_t != selected_out.shape:
-                    if broadcast:
-                        return np.broadcast_to(selected_out, chp_t), eshp
-                    nout = np.zeros(chp_t, dtype=selected_out.dtype)
-                    nout[:] = selected_out
-                    return nout, eshp
-                return selected_out, eshp
-
-            if isinstance(selection, np.ndarray) and selection.dtype == bool:
-                if len(selection.shape) > len(out.shape):
-                    raise ValueError(
-                        f"Expecting selection of shape {out.shape}, got {selection.shape}"
-                    )
-                out, eshp = _upcast_sel(selection.shape, broadcast=True)
-            elif isinstance(selection, (tuple, list)):
-                if len(selection) > len(out.shape):
-                    raise ValueError(
-                        f"Selection is tuple/list of length {len(selection)}, expecting <= {len(out.shape)} "
-                    )
-                out, eshp = _upcast_sel(shp[: len(selection)])
-            else:
-                raise TypeError(
-                    f"Expecting selection of type np.ndarray (bool), or tuple, or list. Got {type(selection).__name__}"
+            out = _match_shape(
+                algo.wake_frame.get_wake_modelling_data(
+                    algo, variable, downwind_index, fdata, tdata, target
                 )
-            out = out[selection]
-            shp = (len(out), *eshp)
+            )
 
-        # apply upcast:
-        if upcast and out.shape != shp:
+        # Expand before indexing so NumPy determines the selected shape.
+        if out.shape != shp:
             out = np.broadcast_to(out, shp)
+        if selection is not None:
+            if not isinstance(selection, (np.ndarray, tuple, list, slice)) or (
+                isinstance(selection, np.ndarray) and selection.dtype != bool
+            ):
+                raise TypeError(
+                    f"Model '{self.name}': Expecting a boolean array, slice, tuple or list selection, got {type(selection).__name__}"
+                )
+            index = tuple(selection) if isinstance(selection, list) else selection
+            out = np.asarray(out[index])
 
+        # Validate only values that are actually returned.
+        if (
+            not accept_nan
+            and np.issubdtype(out.dtype, np.inexact)
+            and np.any(np.isnan(out))
+        ):
+            raise ValueError(
+                f"Model '{self.name}': Requested variable '{variable}' contains NaN values."
+            )
         return out

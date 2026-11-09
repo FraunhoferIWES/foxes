@@ -170,7 +170,6 @@ class PartialTopHat(PartialCentre):
             tdata=tdata,
             downwind_index=downwind_index,
             algo=algo,
-            upcast=True,
         )
 
         sel0 = (ct > 1e-8) & (x > 1e-8)
@@ -186,7 +185,6 @@ class PartialTopHat(PartialCentre):
                 tdata=tdata,
                 downwind_index=downwind_index,
                 algo=algo,
-                upcast=True,
             )
 
             wr = wmodel.calc_wake_radius(

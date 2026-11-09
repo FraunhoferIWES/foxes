@@ -12,7 +12,7 @@ and point evaluation bounded by `chunk_size_points`.
 
 ## Decision
 
-- Implement `ChunkAnimationOutput` under `foxes.models.outputs`, deriving from
+- Implement `FlowAnimation` under `foxes.models.outputs`, deriving from
   `foxes.core.Output`; remove engine hooks and the superseded chunk helper.
   Register `"create_gif"` and `"create_mp4"` in `ModelBook.outputs`, plus
   `"chunk_gif_<chunk>"` and `"chunk_mp4_<chunk>"` factories for a single state

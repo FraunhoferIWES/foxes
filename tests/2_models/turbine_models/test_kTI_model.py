@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from types import SimpleNamespace
 
 import foxes.constants as FC
@@ -36,6 +37,19 @@ def test_kti_calculate_selected_entries():
     expected = np.zeros((2, 2), dtype=float)
     expected[st_sel] = 0.3 * ti_sel + 0.01
     assert np.allclose(out[FV.K], expected)
+
+
+@pytest.mark.parametrize("selection", [slice(None), slice(1, None), slice(0, 0)])
+def test_kti_uniform_inputs_support_state_slices(selection):
+    model = kTI(kTI=0.3, kb=0.01, ti_val=0.2)
+    fdata = FData.from_sizes(3, 2)
+    fdata.add(FV.K, np.zeros((3, 2)), (FC.STATE, FC.TURBINE))
+
+    out = model.calculate(algo=None, mdata={}, fdata=fdata, st_sel=selection)
+
+    expected = np.zeros((3, 2))
+    expected[selection] = 0.07
+    np.testing.assert_allclose(out[FV.K], expected)
 
 
 def main():

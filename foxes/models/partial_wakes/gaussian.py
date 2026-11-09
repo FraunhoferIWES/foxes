@@ -188,7 +188,6 @@ class PartialGaussianLookup(PartialCentre):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
         )
 
         amsi, st_sel = wmodel.calc_amplitude_sigma(

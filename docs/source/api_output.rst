@@ -103,7 +103,7 @@ are distinguished from completed chunk counts.
 
 Flow animations
 ---------------
-``ChunkAnimationOutput`` is an optional adopted output, not an engine hook.
+``FlowAnimation`` is an optional adopted output, not an engine hook.
 It is registered as ``ModelBook.outputs["create_gif"]`` and
 ``ModelBook.outputs["create_mp4"]``, with base filenames ``ani.gif`` and
 ``ani.mp4``. Select either with ``algo.calc_farm(outputs="create_mp4")``, for
@@ -116,9 +116,10 @@ settings are needed.
 It collects numerical payloads during ``calculate()``, buffers them in
 ``update_results()``, then joins target tiles and state chunks in engine index
 order during ``finalize_results()``. Only finalization renders and saves files.
-Each variable produces one ``<base_name stem>_<variable>.gif`` or ``.mp4``,
-without chunk suffixes. Set ``base_name="flow.mp4"`` to write MP4 rather than
-GIF, producing ``flow_WS.mp4`` for wind speed. The final filename suffix,
+Each animated variable produces one ``<base_name stem>_<variable>.gif`` or
+``.mp4``, without chunk suffixes, even when only one variable is selected.
+Set ``base_name="flow.mp4"`` to write MP4 rather than GIF, producing
+``flow_WS.mp4`` for wind speed. The final filename suffix,
 including any ``out_fname_fun`` transformation, selects the writer: ``.gif``
 uses Pillow and ``.mp4`` uses external ffmpeg, which must be installed.
 No separate format option is needed. Write failures propagate, and figures
@@ -168,14 +169,14 @@ For example, continuing the synthetic setup above:
 .. code-block:: python
 
     import numpy as np
-    from foxes.models.outputs import ChunkAnimationOutput
+    from foxes.models.outputs import FlowAnimation
 
     with foxes.Engine.new(
         "numpy", chunk_size_states=2, chunk_size_points=128, verbosity=0
     ):
         farm_results = algo.calc_farm(outputs=[
             FarmResultsOutput(),
-            ChunkAnimationOutput(
+            FlowAnimation(
                 base_name="flow.gif",
                 out_dir="results",
                 grid_pars={"n_img_points": (12, 8)},
@@ -184,13 +185,57 @@ For example, continuing the synthetic setup above:
         point_results = algo.calc_points(
             farm_results,
             np.array([[0.0, 0.0, 90.0], [400.0, 0.0, 90.0]]),
-            output=ChunkAnimationOutput(base_name="targets.gif", out_dir="results"),
+            output=FlowAnimation(base_name="targets.gif", out_dir="results"),
         )
     assert point_results.sizes[FC.POINT] == 2
 
 ``calc_points(outputs=...)`` still selects physical fields for the returned
 dataset. Its separate ``output=...`` parameter adds an output model alongside
 the standard collector without changing the dataset return contract.
+
+Flow animations with turbine traces
+-----------------------------------
+``FlowTurbineAnimation`` derives from ``FlowAnimation`` and adds
+a synchronized lower panel using ``FarmResultsEval.gen_stdata``. Set
+``turbines`` to original farm indices (all turbines by default) and
+``turbine_variable`` to a state-turbine farm field (``FV.REWS`` by default).
+Trace data follows the same state/chunk selection as the flow field and remains
+in private numerical payloads rather than on the running model.
+Both rectangular and arbitrary-target flow rendering use this panel.
+
+``layout_pars`` optionally forwards annotation settings to
+``FarmLayoutOutput.get_figure`` on the flow axes; do not supply ``fig`` or
+``ax``. ``ref_xy`` optionally draws a red cross at two finite coordinates
+in metres. The panels have a three-to-one height ratio and use inherited
+``figsize``, grid/plot settings, filename suffixes, writers and cleanup.
+For example:
+
+.. code-block:: python
+
+    from foxes.models.outputs import FlowTurbineAnimation
+
+    animation = FlowTurbineAnimation(
+        turbines=[0],
+        turbine_variable=FV.REWS,
+        base_name="flow.gif",
+        grid_pars={"n_img_points": (12, 8)},
+        plot_pars={"vmin": 0, "rotor_color": "red"},
+        layout_pars={"annotate": 1, "alpha": 0, "title": ""},
+        ref_xy=[300.0, 200.0],
+    )
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        algo.calc_farm(outputs=animation)
+
+The model book registers this class as ``create_turbine_gif`` and
+``create_turbine_mp4``, with base filenames ``ani.gif`` and ``ani.mp4``.
+They trace all turbines' REWS by default and write ``ani_WS.gif`` or
+``ani_WS.mp4``. These filenames match the flow-only outputs; configure
+different base names before selecting both variants of the same format,
+or the later output overwrites the earlier file.
+Select these names directly with ``calc_farm(outputs=...)`` or example ``-o``.
+The ``create_gif`` and ``create_mp4`` registrations remain ``FlowAnimation``.
+The ``dyn_wakes`` example configures its own ``create_turbine_gif`` and
+``create_turbine_mp4`` registrations to reproduce its flow-and-REWS animation.
 
 Existing consumers awaiting adoption
 ------------------------------------

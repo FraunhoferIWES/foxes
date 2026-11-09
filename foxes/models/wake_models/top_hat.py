@@ -274,7 +274,6 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             tdata=tdata,
             downwind_index=downwind_index,
             algo=algo,
-            upcast=True,
         )
 
         wake_r = self.calc_wake_radius(algo, mdata, fdata, tdata, downwind_index, x, ct)

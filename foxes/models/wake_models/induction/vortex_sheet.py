@@ -210,7 +210,6 @@ class VortexSheet(TurbineInductionModel):
             algo=algo,
             fdata=fdata,
             tdata=tdata,
-            upcast=True,
             downwind_index=downwind_index,
         )
 
@@ -222,7 +221,6 @@ class VortexSheet(TurbineInductionModel):
             algo=algo,
             fdata=fdata,
             tdata=tdata,
-            upcast=True,
             downwind_index=downwind_index,
         )
 
