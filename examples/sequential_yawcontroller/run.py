@@ -231,7 +231,7 @@ if __name__ == "__main__":
         partial_wakes=args.pwakes,
         mbook=mbook,
         plugins=[
-            foxes.output.SeqAnimationOutputPlugin(
+            foxes.models.seq_plugins.SeqAnimationOutputPlugin(
                 [name for name in args.outputs if name != "farm_results"],
                 debug=args.debug,
             )

@@ -328,6 +328,13 @@ output evaluation use actual previous-iteration history. Ambient wake geometry
 is unchanged; this permits split state chunks without requiring unavailable
 history in the initial pass.
 
+`foxes.models.outputs` owns `Animator`, alongside `FlowAnimation` and
+`FlowTurbineAnimation`. `foxes.models.seq_plugins` owns all Sequential plugins:
+`SeqAnimationOutputPlugin`, `SeqWakeDebugPlugin` and `SeqFlowAnimationPlugin`.
+These helpers are not standalone `Output` models.
+No aliases preserve the moved helpers' former module paths. See
+[ADR-0015](adr/0015-animation-helper-ownership.md).
+
 `SeqAnimationOutputPlugin` bridges these models to Sequential without changing
 its physical-field `outputs` argument. It evaluates selected grids through
 `algo.calc_points()` during each state step, while wake history is available,
@@ -528,6 +535,10 @@ boundary and reusable logic in importable functions so tests need not spawn a
 subprocess.
 
 ## Cross-Cutting Decisions
+
+- Animation composition lives in `foxes.models.outputs`; Sequential plugins
+  live in `foxes.models.seq_plugins`. See
+  [ADR-0015](adr/0015-animation-helper-ownership.md).
 
 - Development is strictly forward-looking by default. Superseded code and
 	contracts are removed rather than kept behind compatibility shims; a bounded

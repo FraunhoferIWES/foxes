@@ -19,9 +19,114 @@ import foxes.variables as FV
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
-    from foxes.output import Animator
     from foxes.core import Algorithm, Model, PointDataModelList
     from foxes.core.model import LoadedData
+
+
+class Animator:
+    """Compose an animation from generators yielding figures and artists."""
+
+    def __init__(self, fig: Figure | None = None) -> None:
+        """Configure the shared figure.
+
+        Parameters
+        ----------
+        fig
+            Shared figure, or ``None`` to use the first yielded figure.
+        """
+        self.fig = fig
+        self._gens: list[Any] = []
+
+    def add_generator(self, gen: Any) -> None:
+        """Add a synchronized artist generator.
+
+        Parameters
+        ----------
+        gen
+            Generator yielding ``(figure, artists)`` pairs.
+        """
+        self._gens.append(gen)
+
+    @property
+    def generators(self) -> list[Any]:
+        """The synchronized artist generators.
+
+        Returns
+        -------
+        generators
+            Generators yielding figures and artist collections.
+        """
+        return self._gens
+
+    def animate(self, verbosity: int = 1, **kwargs: Any) -> Any:
+        """Create a Matplotlib artist animation.
+
+        Parameters
+        ----------
+        verbosity
+            Diagnostic verbosity; zero is silent.
+        kwargs
+            Options for ``matplotlib.animation.ArtistAnimation``.
+
+        Returns
+        -------
+        animation
+            Composed animation, or ``None`` when no generators were added.
+
+        Raises
+        ------
+        ValueError
+            If a generator yields an invalid pair or a different figure.
+        """
+        from matplotlib.animation import ArtistAnimation
+
+        if len(self.generators) == 0:
+            return None
+
+        if verbosity > 0:
+            print("Creating animation data")
+
+        # Consume generators in lockstep until no artists remain.
+        si = 0
+        arts = []
+        while True:
+            if verbosity > 1:
+                print(f"  Frame {si}")
+
+            harts = []
+            for g in self.generators:
+                try:
+                    y = next(g)
+
+                    if len(y) != 2:
+                        raise ValueError(
+                            f"Expecting yield (fig, artists) from generator {g}"
+                        )
+
+                    fig, artists = y
+                    if self.fig is None:
+                        self.fig = fig
+                    elif fig is not self.fig:
+                        raise ValueError(f"Wrong figure returned by generator {g}")
+
+                    harts += [a for a in artists]
+
+                except StopIteration:
+                    pass
+
+            if len(harts):
+                arts.append(harts)
+                si += 1
+            else:
+                break
+
+        if verbosity > 1:
+            print("Done.")
+
+        # Retain established playback defaults unless explicitly overridden.
+        kwa = dict(interval=200, blit=True, repeat_delay=2000)
+        kwa.update(kwargs)
+        return ArtistAnimation(fig, arts, **kwa)
 
 
 class FlowAnimation(Output):
@@ -734,7 +839,7 @@ class FlowAnimation(Output):
         self, algo: Algorithm, farm: Dataset, fig: Figure, ax: Axes
     ) -> Animator:
         """Create the animator before adding its flow-field generator."""
-        from foxes.output import Animator, FarmLayoutOutput
+        from foxes.output import FarmLayoutOutput
 
         if self._layout_pars is not None:
             FarmLayoutOutput(algo.farm).get_figure(fig=fig, ax=ax, **self._layout_pars)

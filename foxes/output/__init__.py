@@ -7,7 +7,6 @@ from .farm_results_eval import FarmResultsEval as FarmResultsEval
 from .results_writer import ResultsWriter as ResultsWriter
 from .state_turbine_map import StateTurbineMap as StateTurbineMap
 from .turbine_type_curves import TurbineTypeCurves as TurbineTypeCurves
-from .animation import Animator as Animator
 from .calc_points import PointCalculator as PointCalculator
 from .slice_data import SliceData as SliceData
 from .slices_data import SlicesData as SlicesData
@@ -23,9 +22,5 @@ from .rose_plot import WindRoseBinPlot as WindRoseBinPlot
 
 from .flow_plots_2d import FlowPlots2D as FlowPlots2D
 
-from .seq_plugins import SeqFlowAnimationPlugin as SeqFlowAnimationPlugin
-from .seq_plugins import SeqWakeDebugPlugin as SeqWakeDebugPlugin
-from .seq_plugins import SeqAnimationOutputPlugin as SeqAnimationOutputPlugin
 
 from . import grids as grids
-from . import seq_plugins as seq_plugins

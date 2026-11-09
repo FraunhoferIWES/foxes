@@ -1,13 +1,17 @@
+"""Collect sequential wake histories for animation debug overlays."""
+
 # mypy: disable-error-code=arg-type
 
 from __future__ import annotations
 
 from foxes.algorithms.sequential import SequentialPlugin
-from foxes.algorithms.sequential.sequential import Sequential
 from foxes.models.wake_frames.seq_dynamic_wakes import SeqDynamicWakes
 from matplotlib.axes import Axes
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 from xarray import Dataset
+
+if TYPE_CHECKING:
+    from foxes.algorithms.sequential.sequential import Sequential
 
 
 class SeqWakeDebugPlugin(SequentialPlugin):

@@ -126,6 +126,11 @@ using `ani.gif` and `ani.mp4` as base filenames, like the flow-only outputs.
 `layout_pars` is shared by both animation classes; `ref_xy` belongs to the
 turbine-panel subclass.
 
+`foxes.models.outputs` exports `Animator` for animation composition.
+`foxes.models.seq_plugins` exports `SeqWakeDebugPlugin`,
+`SeqAnimationOutputPlugin` and `SeqFlowAnimationPlugin` as iterator helpers,
+not standalone chunk outputs. Their old `foxes.output` paths are removed.
+
 `SeqAnimationOutputPlugin.outputs` selects flow-animation models or model-book
 names. It is distinct from `Sequential.outputs`, which selects physical fields.
 Within this adapter, chunk indices identify iterator steps rather than engine

@@ -17,5 +17,6 @@ from . import point_models as point_models
 from . import axial_induction as axial_induction
 from . import ground_models as ground_models
 from . import outputs as outputs
+from . import seq_plugins as seq_plugins
 
 from .model_book import ModelBook as ModelBook

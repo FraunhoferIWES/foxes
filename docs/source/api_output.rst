@@ -245,7 +245,13 @@ The ``dyn_wakes`` example configures its own ``create_turbine_gif`` and
 
 Sequential animation outputs
 ----------------------------
-``foxes.output.SeqAnimationOutputPlugin`` adapts selected ``FlowAnimation``
+Animation composition lives in ``foxes.models.outputs.Animator``.
+Sequential plugins live in ``foxes.models.seq_plugins``:
+``SeqAnimationOutputPlugin``, ``SeqWakeDebugPlugin`` and ``SeqFlowAnimationPlugin``.
+These helpers are not standalone chunk-output models.
+Their former ``foxes.output`` exports and modules are removed.
+
+``foxes.models.seq_plugins.SeqAnimationOutputPlugin`` adapts selected ``FlowAnimation``
 models (including ``FlowTurbineAnimation``) to the Sequential iterator.
 Pass model-book output names or model instances to the plugin, not to
 ``Sequential(outputs=...)``: that argument still selects physical variables.
@@ -256,7 +262,7 @@ Other output model types are rejected.
     algo = foxes.algorithms.Sequential(
         farm, states, wake_models=["Jensen_linear_k007"],
         wake_frame="seq_dyn_wakes_1min",
-        plugins=[foxes.output.SeqAnimationOutputPlugin(["create_gif"])],
+        plugins=[foxes.models.seq_plugins.SeqAnimationOutputPlugin(["create_gif"])],
     )
     algo.mbook.outputs["create_gif"].grid_pars = {"n_img_points": (12, 8)}
     with foxes.Engine.new("single", chunk_size_points=128, verbosity=0):
@@ -296,4 +302,4 @@ result collection memory-bounded.
     _autoapi/foxes/models/outputs/index
     _autoapi/foxes/output/index
     _autoapi/foxes/output/flow_plots_2d/index
-    _autoapi/foxes/output/seq_plugins/index
+    _autoapi/foxes/models/seq_plugins/index

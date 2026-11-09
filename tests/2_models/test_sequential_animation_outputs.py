@@ -15,6 +15,25 @@ from foxes.algorithms.iterative.models.convergence import ConvVarDelta
 from foxes.models.outputs import FlowAnimation
 
 
+def test_animation_namespace_ownership():
+    # Animation composition and Sequential plugins have separate owning packages.
+    assert (
+        foxes.models.outputs.Animator.__module__
+        == "foxes.models.outputs.flow_animations"
+    )
+    assert not hasattr(foxes.output, "Animator")
+    assert not hasattr(foxes.output, "seq_plugins")
+    for name in (
+        "SeqFlowAnimationPlugin",
+        "SeqWakeDebugPlugin",
+        "SeqAnimationOutputPlugin",
+    ):
+        cls = getattr(foxes.models.seq_plugins, name)
+        assert cls.__module__.startswith("foxes.models.seq_plugins.")
+        assert not hasattr(foxes.output, name)
+        assert not hasattr(foxes.models.outputs, name)
+
+
 def _algorithm(plugin):
     states = foxes.input.states.StatesTable(
         pd.DataFrame(
@@ -56,7 +75,9 @@ def _headless():
 def test_real_sequential_animation(tmp_path, suffix, debug):
     if suffix == "mp4" and which("ffmpeg") is None:
         pytest.skip("MP4 encoding requires ffmpeg")
-    plugin = foxes.output.SeqAnimationOutputPlugin([f"create_{suffix}"], debug=debug)
+    plugin = foxes.models.seq_plugins.SeqAnimationOutputPlugin(
+        [f"create_{suffix}"], debug=debug
+    )
     algo = _algorithm(plugin)
     output = algo.mbook.outputs[f"create_{suffix}"]
     output.out_dir = tmp_path
@@ -83,7 +104,7 @@ def test_sequential_selection_and_numerical_values(tmp_path, monkeypatch, select
         states_isel=selection,
         grid_pars={"n_img_points": (2, 2)},
     )
-    plugin = foxes.output.SeqAnimationOutputPlugin([output])
+    plugin = foxes.models.seq_plugins.SeqAnimationOutputPlugin([output])
     algo = _algorithm(plugin)
     payloads, expected = [], []
     monkeypatch.setattr(
@@ -114,7 +135,7 @@ def test_sequential_selection_and_numerical_values(tmp_path, monkeypatch, select
     ],
 )
 def test_invalid_sequential_animation_selection(outputs, error, match):
-    algo = _algorithm(foxes.output.SeqAnimationOutputPlugin(outputs))
+    algo = _algorithm(foxes.models.seq_plugins.SeqAnimationOutputPlugin(outputs))
     with foxes.Engine.new("single", verbosity=0):
         with pytest.raises(error, match=match):
             list(algo)
@@ -125,7 +146,7 @@ def test_sequential_step_chunk_selection(tmp_path, monkeypatch, chunk):
     output = FlowAnimation(
         out_dir=tmp_path, chunk=chunk, grid_pars={"n_img_points": (2, 2)}
     )
-    plugin = foxes.output.SeqAnimationOutputPlugin([output])
+    plugin = foxes.models.seq_plugins.SeqAnimationOutputPlugin([output])
     algo = _algorithm(plugin)
     payloads = []
     monkeypatch.setattr(
@@ -148,7 +169,7 @@ def test_unavailable_sequential_chunk(tmp_path, chunk):
     output = FlowAnimation(
         out_dir=tmp_path, chunk=chunk, grid_pars={"n_img_points": (2, 2)}
     )
-    algo = _algorithm(foxes.output.SeqAnimationOutputPlugin([output]))
+    algo = _algorithm(foxes.models.seq_plugins.SeqAnimationOutputPlugin([output]))
     with foxes.Engine.new("single", verbosity=0):
         with pytest.raises(ValueError, match="unavailable"):
             list(algo)
@@ -166,7 +187,9 @@ def test_sequential_turbine_and_multiple_formats(tmp_path):
         )
         for i in range(2)
     ]
-    algo = _algorithm(foxes.output.SeqAnimationOutputPlugin(outputs, debug=True))
+    algo = _algorithm(
+        foxes.models.seq_plugins.SeqAnimationOutputPlugin(outputs, debug=True)
+    )
     with foxes.Engine.new("single", chunk_size_points=2, verbosity=0):
         list(algo)
     for i in range(2):
@@ -176,7 +199,7 @@ def test_sequential_turbine_and_multiple_formats(tmp_path):
 
 
 def test_no_animation_does_not_collect_debug():
-    plugin = foxes.output.SeqAnimationOutputPlugin([], debug=True)
+    plugin = foxes.models.seq_plugins.SeqAnimationOutputPlugin([], debug=True)
     with foxes.Engine.new("single", verbosity=0):
         list(_algorithm(plugin))
     assert plugin._debug is None

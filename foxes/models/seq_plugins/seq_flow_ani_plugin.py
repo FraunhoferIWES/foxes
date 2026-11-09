@@ -9,8 +9,6 @@ from matplotlib.axes import Axes
 from typing import Any, Callable, Iterator
 from xarray import Dataset
 
-from ..flow_plots_2d.flow_plots import FlowPlots2D
-
 
 class SeqFlowAnimationPlugin(SequentialPlugin):
     """
@@ -71,6 +69,8 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
         """
         super().update(algo, fres, pres)
+
+        from foxes.output.flow_plots_2d import FlowPlots2D
 
         o = FlowPlots2D(algo, fres)
 

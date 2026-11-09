@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, cast
 from foxes.utils import wd2uv
 from foxes.core.data import TData
 from foxes.config import config
-from foxes.algorithms.sequential import Sequential
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -112,6 +111,8 @@ class SeqDynamicWakes(FarmOrder):
         loaded_data = super().initialize(
             algo, loaded_data=loaded_data, force=force, verbosity=verbosity
         )
+
+        from foxes.algorithms.sequential import Sequential
 
         if not isinstance(algo, Sequential):
             raise TypeError(

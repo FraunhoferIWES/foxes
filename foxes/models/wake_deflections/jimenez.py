@@ -4,7 +4,6 @@ import numpy as np
 from typing import TYPE_CHECKING
 
 from foxes.core.wake_deflection import WakeDeflection
-from foxes.algorithms import Sequential
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -236,6 +235,8 @@ class JimenezDeflection(WakeDeflection):
             shape: (n_times,)
 
         """
+        from foxes.algorithms import Sequential
+
         assert isinstance(algo, Sequential), (
             f"Wake deflection '{self.name}' requires Sequential algorithm, got '{type(algo).__name__}'"
         )

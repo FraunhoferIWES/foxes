@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from foxes.core import WakeFrame, MData, FData, TData
 from foxes.utils import wd2uv
-from foxes.algorithms.iterative import Iterative
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -213,6 +212,8 @@ class Timelines(WakeFrame):
             and "extra_data", a dict with non-array additional data.
 
         """
+        from foxes.algorithms.iterative import Iterative
+
         if not isinstance(algo, Iterative):
             raise TypeError(
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Iterative.__name__}"
@@ -377,6 +378,8 @@ class Timelines(WakeFrame):
         Wake coordinates retain the full ambient timeline in every pass.
 
         """
+        from foxes.algorithms.iterative import Iterative
+
         # prepare:
         tldata = self.timelines_data
         assert tldata is not None, "Timeline data not initialized"

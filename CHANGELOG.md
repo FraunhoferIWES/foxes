@@ -1280,6 +1280,12 @@ This major version introduces the concept of `Engines` which handle the chunking
     optional keyword-only engine `progress_label`.
     Explicitly forward the upstream label through every engine dispatch and
     delegation call, including both DefaultEngine backends.
+  - Consolidate `Animator` in `foxes.models.outputs.flow_animations` and move all Sequential plugins
+    (`SeqWakeDebugPlugin`, `SeqAnimationOutputPlugin`, `SeqFlowAnimationPlugin`)
+    to the new `foxes.models.seq_plugins` package.
+    Update animation renderers, examples and the Sequential notebook without
+    old-path aliases.
+    Defer wake-model algorithm type-check imports to avoid initialization cycles.
   - Bug fixed that prevented turbine models from using their loaded data during run time
   - Chunk-based farm outputs preserve state labels and broadcast farm fields;
     uniform weights are compacted only after dataset assembly.

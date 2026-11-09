@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from foxes.algorithms.sequential import SequentialPlugin
-from foxes.models.outputs import FlowAnimation
 import foxes.constants as FC
 import foxes.variables as FV
 
 from .seq_wake_debug_plugin import SeqWakeDebugPlugin
+from foxes.models.outputs import FlowAnimation
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes

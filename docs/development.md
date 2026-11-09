@@ -108,6 +108,9 @@ cleanup and the `dyn_wakes` example's local output registrations.
 
 For iterator animation workflows, also run
 `uv run pytest tests/2_models/test_sequential_animation_outputs.py -q`.
+Animation composition is exported from `foxes.models.outputs`; all Sequential
+plugins are exported from `foxes.models.seq_plugins`. Namespace checks ensure
+the moved classes are not retained as legacy aliases.
 These checks cover step-local numerical parity, state/chunk selections, real
 GIF/MP4 output, synchronized traces and debug overlays, fractional frame rates,
 and explicit model-selection errors. Execute changed animation notebooks with

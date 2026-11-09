@@ -6,7 +6,6 @@ from typing import cast
 
 from foxes.core import WakeFrame, TData
 from foxes.utils import wd2uv
-from foxes.algorithms.iterative import Iterative
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -91,6 +90,8 @@ class DynamicWakes(WakeFrame):
             and "extra_data", a dict with non-array additional data.
 
         """
+        from foxes.algorithms.iterative import Iterative
+
         if not isinstance(algo, Iterative):
             raise TypeError(
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Iterative.__name__}"
