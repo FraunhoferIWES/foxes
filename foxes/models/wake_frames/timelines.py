@@ -369,6 +369,13 @@ class Timelines(WakeFrame):
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
+        Notes
+        -----
+        In the initial iterative farm pass, source states preceding the active
+        chunk use its first state's turbine values as an initial guess.
+        Subsequent passes use the actual previous-iteration source history.
+        Wake coordinates retain the full ambient timeline in every pass.
+
         """
         # prepare:
         tldata = self.timelines_data
@@ -459,6 +466,13 @@ class Timelines(WakeFrame):
 
         # store turbines that cause wake:
         trace_si = np.minimum(trace_si, i0 + np.arange(n_states)[:, None])
+        if (
+            isinstance(algo, Iterative)
+            and algo.iterations == 0
+            and not algo.final_iteration
+        ):
+            # Bootstrap unavailable source history only in the initial farm pass.
+            trace_si = np.maximum(trace_si, i0)
         tdata[FC.STATE_SOURCE_ORDERI] = downwind_index
 
         # store states that cause wake for each target point,

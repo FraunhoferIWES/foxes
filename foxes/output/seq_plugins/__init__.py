@@ -1,2 +1,3 @@
 from .seq_flow_ani_plugin import SeqFlowAnimationPlugin as SeqFlowAnimationPlugin
 from .seq_wake_debug_plugin import SeqWakeDebugPlugin as SeqWakeDebugPlugin
+from .seq_animation_output import SeqAnimationOutputPlugin as SeqAnimationOutputPlugin

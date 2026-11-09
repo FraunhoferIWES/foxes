@@ -106,12 +106,31 @@ These checks cover reusable trace configuration, original turbine ordering,
 selected-state numerical parity, real two-panel GIF/MP4 encoding, failure
 cleanup and the `dyn_wakes` example's local output registrations.
 
+For iterator animation workflows, also run
+`uv run pytest tests/2_models/test_sequential_animation_outputs.py -q`.
+These checks cover step-local numerical parity, state/chunk selections, real
+GIF/MP4 output, synchronized traces and debug overlays, fractional frame rates,
+and explicit model-selection errors. Execute changed animation notebooks with
+`uv run pytest --nbmake notebooks/dyn_wakes.ipynb notebooks/timelines.ipynb notebooks/sequential.ipynb --nbmake-timeout=1800`.
+Timeline state-chunk parity is covered by
+`uv run pytest tests/2_models/test_timelines_chunking.py -q`: initial source
+guesses converge to full-state results on NumPy and process engines. The
+timelines notebook exercises state chunks and bounded point evaluation together.
+
 Engine `progress_bar=True` automatically uses tqdm for terminals/notebooks and
 newline-only snapshots for logs. Unicode terminal bars are selected when the
 stream supports them. Use `False` for explicit snapshots, `None` for no progress,
 or `verbosity=0` for a quiet engine. Progress goes to stderr; a full chunk counter
 is followed by output finalization before success is reported. No notebook widget
 dependency is required: tqdm selects the available notebook/text renderer.
+Algorithm progress labels identify the upstream FOXES operation, for example
+`ProcessEngine [Downwind.calc_farm]` or `ProcessEngine [Iterative.calc_points]`.
+The prefix is the concrete algorithm class, including subclasses such as
+`Sequential`, rather than the base `Algorithm` class or a unique instance name.
+Direct engine calls may supply keyword-only `progress_label`; when unset they
+use the model class, not its unique instance name.
+The launch helper and both default-engine delegation paths forward this label
+unchanged; intermediate dispatch functions do not replace the upstream operation.
 
 Select NetCDF writers through output models rather than engine calculation
 options. Engine output tests cover worker-local chunk files and count-limited
@@ -348,8 +367,9 @@ Run `uv run pytest tests/3_examples/test_output_selection.py -q` for the common
 Downwind/Iterative example `-o/--outputs` option. Parser checks cover every
 supported script; small real runs verify direct datasets, composed mappings,
 writer-only files, invalid names and completion of multi-case comparisons.
-Sequential iterator examples, YAML-only workflows and the wake-field exporter
-are outside this option's scope.
+Sequential iterator scripts are covered separately in the same test module,
+with selections limited to the farm collector and animation models. YAML-only
+workflows and the wake-field exporter are outside this option's scope.
 
 `tests/conftest.py` fixes default engine chunk sizes to 64 states and 500 points
 for deterministic behavior across machines. Do not make a test depend on a

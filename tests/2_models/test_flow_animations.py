@@ -213,6 +213,9 @@ def test_chunk_selection_renders_once_on_parent(
     [
         ({"fps": 0}, "fps"),
         ({"fps": True}, "fps"),
+        ({"fps": float("inf")}, "fps"),
+        ({"fps": float("nan")}, "fps"),
+        ({"layout_pars": {"ax": None}}, "layout_pars"),
         ({"base_name": "file.png"}, "base_name"),
         ({"chunk": -1}, "chunk"),
         ({"chunk": (0, 1, 2)}, "chunk"),
@@ -228,6 +231,31 @@ def test_invalid_configuration_is_rejected(tmp_path, options, match):
     assert not output.initialized
     with pytest.raises(ValueError, match=match):
         output.initialize(None)
+
+
+@pytest.mark.parametrize(
+    "output_verbosity,algo_verbosity,announces",
+    [(None, 0, False), (None, 1, True), (0, 1, False), (1, 0, True)],
+)
+@pytest.mark.parametrize(
+    "animation_class", [FlowAnimation, foxes.models.outputs.FlowTurbineAnimation]
+)
+def test_writing_message_verbosity(
+    tmp_path, capsys, output_verbosity, algo_verbosity, announces, animation_class
+):
+    # Output verbosity overrides algorithm verbosity for either renderer.
+    algo = _algorithm()
+    algo.verbosity = algo_verbosity
+    animation = animation_class(
+        out_dir=tmp_path,
+        verbosity=output_verbosity,
+        grid_pars={"n_img_points": (2, 2)},
+        figsize=(2, 2),
+    )
+    with foxes.Engine.new("single", verbosity=0):
+        algo.calc_farm(outputs=animation)
+    message = f"Writing {tmp_path / 'chunk_animation_WS.gif'}"
+    assert (message in capsys.readouterr().out) is announces
 
 
 @pytest.mark.parametrize(

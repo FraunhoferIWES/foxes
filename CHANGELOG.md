@@ -1254,6 +1254,32 @@ This major version introduces the concept of `Engines` which handle the chunking
     and reference marker. Register `create_turbine_gif` and `create_turbine_mp4`
     globally with `ani.gif` and `ani.mp4` base filenames, and customize the
     dynamic-wake example's local turbine-animation registrations.
+  - Migrate timelines, sequential and sequential-yaw-controller animation
+    scripts to named output models, removing their old animation flags.
+    Add `SeqAnimationOutputPlugin` for step-local numerical collection and
+    final-only rendering, including wake-debug overlays. Share layout
+    annotations across flow outputs and accept positive finite fractional
+    frame rates. Migrate all three animation notebooks to the same models,
+    retaining their panels, markers, flow settings and playback timing.
+    Verify local Sequential animation settings for both formats and exercise
+    real MP4 writer-only runs with and without wake-debug overlays.
+  - Fix the timelines example's default state-chunked runs, including
+    `-o create_turbine_mp4`: initialize cross-chunk source values from the
+    current chunk only in iteration zero, then use actual source history.
+    Restore state chunking in the timelines notebook and test parity with
+    full-state results on NumPy and process engines.
+  - Enable timeline example progress messages that announce the animation
+    destination when encoding begins. Animation outputs accept their own
+    `verbosity`, inheriting algorithm verbosity when unset; the example enables
+    writer messages without increasing algorithm verbosity.
+    Enable these notices on both Sequential examples' local animation outputs
+    as well, keeping their algorithm calculations quiet.
+  - Label engine progress bars and text snapshots with the model class name
+    instead of its unique instance name for direct engine calls. Algorithm
+    calls supply `<algorithm class>.calc_farm` or `<algorithm class>.calc_points` through the
+    optional keyword-only engine `progress_label`.
+    Explicitly forward the upstream label through every engine dispatch and
+    delegation call, including both DefaultEngine backends.
   - Bug fixed that prevented turbine models from using their loaded data during run time
   - Chunk-based farm outputs preserve state labels and broadcast farm fields;
     uniform weights are compacted only after dataset assembly.

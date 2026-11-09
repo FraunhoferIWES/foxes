@@ -124,6 +124,12 @@ including any ``out_fname_fun`` transformation, selects the writer: ``.gif``
 uses Pillow and ``.mp4`` uses external ffmpeg, which must be installed.
 No separate format option is needed. Write failures propagate, and figures
 are closed even after failures.
+``fps`` accepts any positive finite frame rate, including fractional rates.
+Both animation classes announce ``Writing <path>`` when their ``verbosity``
+is positive. It defaults to ``None``, inheriting ``algo.verbosity``; an explicit
+zero suppresses the message independently of algorithm progress.
+Both animation classes accept ``layout_pars`` for flow-axis annotations through
+``FarmLayoutOutput.get_figure``; do not supply ``fig`` or ``ax``.
 
 For farm-only chunks, a static XY grid is loaded once into
 ``loaded_data["extra_data"]`` as a top-level NumPy array, making it eligible for
@@ -236,6 +242,34 @@ Select these names directly with ``calc_farm(outputs=...)`` or example ``-o``.
 The ``create_gif`` and ``create_mp4`` registrations remain ``FlowAnimation``.
 The ``dyn_wakes`` example configures its own ``create_turbine_gif`` and
 ``create_turbine_mp4`` registrations to reproduce its flow-and-REWS animation.
+
+Sequential animation outputs
+----------------------------
+``foxes.output.SeqAnimationOutputPlugin`` adapts selected ``FlowAnimation``
+models (including ``FlowTurbineAnimation``) to the Sequential iterator.
+Pass model-book output names or model instances to the plugin, not to
+``Sequential(outputs=...)``: that argument still selects physical variables.
+Other output model types are rejected.
+
+.. code-block:: python
+
+    algo = foxes.algorithms.Sequential(
+        farm, states, wake_models=["Jensen_linear_k007"],
+        wake_frame="seq_dyn_wakes_1min",
+        plugins=[foxes.output.SeqAnimationOutputPlugin(["create_gif"])],
+    )
+    algo.mbook.outputs["create_gif"].grid_pars = {"n_img_points": (12, 8)}
+    with foxes.Engine.new("single", chunk_size_points=128, verbosity=0):
+        for farm_state in algo:
+            pass
+
+Point fields are calculated during each selected state step, while wake history
+is available, respecting the engine's point chunk limit. The plugin owns
+numerical buffers outside the output model; rendering happens once when
+iteration completes. Abandoned iteration does not write an animation.
+State selections refer to full input states; chunk indices refer to sequential
+step indices with target index zero. ``debug=True`` adds the existing wake
+point/vector overlays without changing their scientific calculations.
 
 Existing consumers awaiting adoption
 ------------------------------------

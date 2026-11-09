@@ -25,6 +25,7 @@ all of them.
 | [0011](0011-engine-output-execution-and-progress.md) | Accepted; supersedes the engine/algorithm scope restriction in 0010 | Unify engine output execution, ordered batches, point collection and parent-owned adaptive progress without changing default farm fields. |
 | [0012](0012-chunk-animation-output.md) | Accepted | Adopt optional flow animations with shared point grids, target-data reuse, bounded scientific blocks and finalization-only assembly/writing. |
 | [0013](0013-full-shaped-broadcast-data.md) | Accepted; supersedes [0003](0003-compact-static-target-coordinates.md) | Represent repeated dimensioned data as full-shaped read-only broadcast views and broadcast mismatched `Model.get_data()` results automatically. |
+| [0014](0014-sequential-animation-outputs.md) | Accepted | Adapt flow-animation outputs to Sequential with step-local point evaluation and completion-only shared rendering. |
 
 ## When To Add An ADR
 

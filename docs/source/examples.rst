@@ -46,9 +46,18 @@ marker. Use ``-o create_turbine_gif`` or ``-o create_turbine_mp4`` to write
 ``-F/--fps`` sets the frame rate.
 Include ``farm_results`` in the selection when result reporting is also wanted.
 
-Sequential iterator examples, YAML-only examples and the standalone wake-field
-exporter do not use this script option. YAML output configuration remains in its
-parameter file.
+``timelines`` uses the same turbine-animation selections and retains its
+original synchronized flow/REWS panels.
+The ``sequential`` and ``sequential_yawcontroller`` scripts accept
+``-o create_gif`` or ``-o create_mp4`` for their original flow-only animations,
+and optionally ``farm_results`` for reporting. They use
+``SeqAnimationOutputPlugin`` to evaluate points during each state step and render
+only at iterator completion. Other output writer types are not supported by
+these two scripts. ``--debug`` retains wake point/vector overlays; ``-F`` sets
+the frame rate. Animation selection replaces their old animation flags.
+
+YAML-only examples and the standalone wake-field exporter do not use this
+script option. YAML output configuration remains in its parameter file.
 
 Notebooks
 ---------
@@ -56,6 +65,12 @@ Notebooks
 The following examples are jupyter notebooks,
 available in the `notebooks <https://github.com/FraunhoferIWES/foxes/tree/main/notebooks>`_
 folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github repository.
+
+The dynamic-wake, timelines and sequential notebooks configure the same
+model-book animation outputs and display their saved GIF files. Temporary output
+directories are cleaned after display. The sequential notebook preserves its
+600 ms frame interval using ``fps=5 / 3``. The timelines notebook uses state
+and point chunking, like the script.
 
     .. toctree::
         :titlesonly:

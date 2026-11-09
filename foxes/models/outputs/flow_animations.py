@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Callable, Iterator
 
 import numpy as np
 from pandas import Index
@@ -37,13 +37,15 @@ class FlowAnimation(Output):
         chunk: int | tuple[int, int] | list[int | tuple[int, int]] | None = None,
         variables: list[str] | None = None,
         base_name: str = "chunk_animation.gif",
-        fps: int = 4,
+        fps: float = 4,
         figsize: tuple[float, float] = (8, 8),
         states_sel: list[Any] | None = None,
         states_isel: list[int] | None = None,
         grid_pars: dict[str, Any] | None = None,
         plot_pars: dict[str, Any] | None = None,
         ambient: bool = False,
+        layout_pars: dict[str, Any] | None = None,
+        verbosity: int | None = None,
         **kwargs: Any,
     ) -> None:
         """Configure optional chunk animations.
@@ -62,7 +64,8 @@ class FlowAnimation(Output):
             without a chunk suffix. The final suffix, after
             ``out_fname_fun``, selects Pillow for GIF or ffmpeg for MP4.
         fps
-            Positive frame rate. GIF uses Pillow; MP4 requires external ffmpeg.
+            Positive finite frame rate; fractional rates are supported.
+            GIF uses Pillow; MP4 requires external ffmpeg.
         figsize
             Figure width and height in inches.
         states_sel
@@ -81,6 +84,12 @@ class FlowAnimation(Output):
         ambient
             Skip wake calculations on generated grids. Supplied target data is
             always used as given, independently of this option.
+        layout_pars
+            Options for ``FarmLayoutOutput.get_figure`` on the flow axes.
+            ``None`` disables annotations; do not supply ``fig`` or ``ax``.
+        verbosity
+            Writing-message verbosity. ``None`` uses ``algo.verbosity``;
+            positive values announce each destination, and zero suppresses it.
         kwargs
             Common output options, including ``out_dir`` and ``out_fname_fun``.
         """
@@ -98,6 +107,8 @@ class FlowAnimation(Output):
         self.grid_pars = grid_pars
         self.plot_pars = plot_pars
         self.ambient = ambient
+        self.layout_pars = layout_pars
+        self.verbosity = verbosity
         self._point_models: PointDataModelList | None = None
 
     def initialize(
@@ -139,12 +150,15 @@ class FlowAnimation(Output):
                 raise ValueError(f"{self.name}: base_name must end in .gif or .mp4")
             if (
                 isinstance(self.fps, bool)
-                or not isinstance(self.fps, int)
+                or not isinstance(self.fps, (int, float))
+                or not np.isfinite(self.fps)
                 or self.fps <= 0
             ):
-                raise ValueError(f"{self.name}: fps must be a positive integer")
+                raise ValueError(f"{self.name}: fps must be a positive finite number")
             if self.states_sel is not None and self.states_isel is not None:
                 raise ValueError(f"{self.name}: Choose states_sel or states_isel")
+            if self.layout_pars is not None and {"fig", "ax"} & self.layout_pars.keys():
+                raise ValueError(f"{self.name}: layout_pars must not supply fig or ax")
             selections = self.chunk if isinstance(self.chunk, list) else [self.chunk]
             for selection in selections:
                 indices = selection if isinstance(selection, tuple) else (selection,)
@@ -181,6 +195,7 @@ class FlowAnimation(Output):
                 )
             self._base_name = Path(self.base_name)
             self._plot_pars = deepcopy(self.plot_pars or {})
+            self._layout_pars = deepcopy(self.layout_pars)
             self._result_key = self.var("chunk_animation")
             self._grid_key = self.var("animation_points")
             self._selection_key = self.var("animation_selection")
@@ -231,6 +246,7 @@ class FlowAnimation(Output):
                 "states_isel",
                 "grid_pars",
                 "plot_pars",
+                "layout_pars",
             )
         }
         if data_stash is not None:
@@ -615,7 +631,12 @@ class FlowAnimation(Output):
             },
         )
 
-    def _render(self, algo: Algorithm, payload: dict[str, Any]) -> None:
+    def _render(
+        self,
+        algo: Algorithm,
+        payload: dict[str, Any],
+        extra_generators: tuple[Callable[[Axes], Iterator[Any]], ...] = (),
+    ) -> None:
         """Render combined fields once and always close figures on failures."""
         # Import plotting only for selected payloads, never in chunk workers.
         import matplotlib.pyplot as plt
@@ -665,13 +686,16 @@ class FlowAnimation(Output):
             )
             path = self.get_fpath(filename)
             path.parent.mkdir(parents=True, exist_ok=True)
-            if algo.verbosity > 0:
+            verbosity = algo.verbosity if self.verbosity is None else self.verbosity
+            if verbosity > 0:
                 print(f"{self.name}: Writing {path}")
 
             # Ensure renderer failures cannot leak Matplotlib figures.
             fig, ax = self._create_figure()
             try:
                 animator = self._create_animator(algo, farm, fig, ax)
+                for create_generator in extra_generators:
+                    animator.add_generator(create_generator(ax))
                 if rectangular:
                     generator = plotter.gen_states_fig_xy(
                         (parameters, gridded, payload["states"], grid),
@@ -710,8 +734,10 @@ class FlowAnimation(Output):
         self, algo: Algorithm, farm: Dataset, fig: Figure, ax: Axes
     ) -> Animator:
         """Create the animator before adding its flow-field generator."""
-        from foxes.output import Animator
+        from foxes.output import Animator, FarmLayoutOutput
 
+        if self._layout_pars is not None:
+            FarmLayoutOutput(algo.farm).get_figure(fig=fig, ax=ax, **self._layout_pars)
         return Animator(fig=fig)
 
     def _scatter_frames(
@@ -794,10 +820,9 @@ class FlowTurbineAnimation(FlowAnimation):
             The upper and lower panels have a height ratio of three to one.
         """
         # Retain configuration until initialization prepares private snapshots.
-        super().__init__(**kwargs)
+        super().__init__(layout_pars=layout_pars, **kwargs)
         self.turbines = turbines
         self.turbine_variable = turbine_variable
-        self.layout_pars = layout_pars
         self.ref_xy = ref_xy
 
     def initialize(
@@ -852,13 +877,10 @@ class FlowTurbineAnimation(FlowAnimation):
                 raise ValueError(
                     f"{self.name}: ref_xy must contain two finite coordinates"
                 )
-            if self.layout_pars is not None and {"fig", "ax"} & self.layout_pars.keys():
-                raise ValueError(f"{self.name}: layout_pars must not supply fig or ax")
 
             # Snapshot caller-owned settings without retaining runtime buffers.
             self._turbines = tuple(turbines)
             self._turbine_variable = self.turbine_variable
-            self._layout_pars = deepcopy(self.layout_pars)
             self._ref_xy = None if self.ref_xy is None else tuple(self.ref_xy)
         return super().initialize(algo, loaded_data, force, verbosity)
 
@@ -934,7 +956,7 @@ class FlowTurbineAnimation(FlowAnimation):
         self, algo: Algorithm, farm: Dataset, fig: Figure, ax: Axes
     ) -> Animator:
         """Add synchronized turbine traces and optional flow annotations."""
-        from foxes.output import FarmLayoutOutput, FarmResultsEval
+        from foxes.output import FarmResultsEval
 
         # Attach traces to the figure, never to the running output instance.
         animator = super()._create_animator(algo, farm, fig, ax)
@@ -951,8 +973,6 @@ class FlowTurbineAnimation(FlowAnimation):
         )
 
         # Annotate only the flow axes, leaving inherited scales and grids intact.
-        if self._layout_pars is not None:
-            FarmLayoutOutput(algo.farm).get_figure(fig=fig, ax=ax, **self._layout_pars)
         if self._ref_xy is not None:
             ax.scatter(
                 [self._ref_xy[0]],

@@ -209,6 +209,8 @@ class DefaultEngine(Engine):
         model_data: Any = None,
         farm_data: Any = None,
         point_data: Any = None,
+        *,
+        progress_label: str | None = None,
         **kwargs: Any,
     ) -> Any:
         """
@@ -227,6 +229,11 @@ class DefaultEngine(Engine):
             The initial farm data
         point_data
             The initial point data
+        progress_label
+            Upstream operation label, forwarded unchanged to the selected engine.
+            ``None`` retains the model-class label.
+        kwargs
+            Additional calculation options forwarded to the selected engine.
 
         Returns
         -------
@@ -252,6 +259,7 @@ class DefaultEngine(Engine):
                     model_data,
                     farm_data,
                     point_data=point_data,
+                    progress_label=progress_label,
                     **kwargs,
                 )
             finally:
@@ -276,7 +284,13 @@ class DefaultEngine(Engine):
                 verbosity=self.verbosity,
             ) as e:
                 results = e.run_calculation(
-                    algo, model, model_data, farm_data, point_data=point_data, **kwargs
+                    algo,
+                    model,
+                    model_data,
+                    farm_data,
+                    point_data=point_data,
+                    progress_label=progress_label,
+                    **kwargs,
                 )
         finally:
             if suspended_delegate:

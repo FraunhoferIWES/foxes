@@ -4,7 +4,6 @@ import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from pathlib import Path
 
 import foxes
 import foxes.variables as FV
@@ -12,15 +11,6 @@ import foxes.variables as FV
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-a", "--animation", help="Write flow animation file", action="store_true"
-    )
-    parser.add_argument(
-        "-A",
-        "--ani_file",
-        help="Path to the animation file to be written",
-        default="ani.gif",
-    )
     parser.add_argument(
         "-F",
         "--fps",
@@ -127,9 +117,38 @@ if __name__ == "__main__":
         help="Switch off dynamic background interpretation",
         action="store_true",
     )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="Farm collector and animation output models",
+        nargs="+",
+        default=["farm_results"],
+    )
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
+
+    # Preserve the yaw-controller flow field, rotor indicators and labels.
+    for suffix in ("gif", "mp4"):
+        mbook.outputs[f"create_{suffix}"] = foxes.models.outputs.FlowAnimation(
+            base_name=f"ani.{suffix}",
+            fps=args.fps,
+            verbosity=1,
+            figsize=(6.4, 4.8),
+            grid_pars=dict(resolution=10),
+            plot_pars=dict(
+                vmin=0,
+                levels=None,
+                quiver_n=33,
+                quiver_pars=dict(scale=0.022, alpha=0.5),
+                title=None,
+                rotor_color="red",
+            ),
+            layout_pars=dict(
+                title="", annotate=1, anno_delx=-120, anno_dely=-60, alpha=0, s=10
+            ),
+        )
+
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -211,6 +230,12 @@ if __name__ == "__main__":
         wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
         mbook=mbook,
+        plugins=[
+            foxes.output.SeqAnimationOutputPlugin(
+                [name for name in args.outputs if name != "farm_results"],
+                debug=args.debug,
+            )
+        ],
         max_it=args.max_it,
         conv_crit="default" if args.max_it is None else None,
         verbosity=0,
@@ -223,29 +248,16 @@ if __name__ == "__main__":
         chunk_size_points=args.chunksize_points,
     )
 
-    # in case of animation, add a plugin that creates the images:
-    if args.animation:
-        anigen = foxes.output.SeqFlowAnimationPlugin(
-            orientation="xy",
-            var=FV.WS,
-            resolution=10,
-            vmin=0,
-        )
-        algo.plugins.append(anigen)
-
-        if args.debug:
-            anigen_debug = foxes.output.SeqWakeDebugPlugin()
-            algo.plugins.append(anigen_debug)
-
     # run all states sequentially:
     with engine:
         for r in algo:
             print(algo.index)
 
-    print("\nFarm results:\n")
-    print(algo.farm_results)
+    if "farm_results" in args.outputs:
+        print("\nFarm results:\n")
+        print(algo.farm_results)
 
-    if not args.nofig:
+    if not args.nofig and "farm_results" in args.outputs:
         fres = algo.farm_results
         plt.plot(fres["state"], fres["WD"].to_numpy()[:, 0], label="WD turbine 0")
         plt.plot(fres["state"], fres["WD"].to_numpy()[:, 1], label="WD turbine 1")
@@ -270,43 +282,3 @@ if __name__ == "__main__":
         plt.xlabel("Time step")
         plt.ylabel("Degrees")
         plt.show()
-
-    if args.animation:
-        print("\nCalculating animation")
-
-        fig, ax = plt.subplots()
-        anim = foxes.output.Animator(fig)
-        anim.add_generator(
-            anigen.gen_images(
-                ax,
-                levels=None,
-                quiver_pars=dict(scale=0.022, alpha=0.5),
-                quiver_n=33,
-                title=None,
-                rotor_color="red",
-            )
-        )
-
-        if args.debug:
-            anim.add_generator(anigen_debug.gen_images(ax))
-
-        ani = anim.animate(interval=600)
-
-        lo = foxes.output.FarmLayoutOutput(farm)
-        lo.get_figure(
-            fig=fig,
-            ax=ax,
-            title="",
-            annotate=1,
-            anno_delx=-120,
-            anno_dely=-60,
-            alpha=0,
-            s=10,
-        )
-
-        fpath = Path(args.ani_file)
-        print("Writing file", fpath)
-        if fpath.suffix == ".gif":
-            ani.save(filename=fpath, writer="pillow", fps=args.fps)
-        else:
-            ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)

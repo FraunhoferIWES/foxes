@@ -661,6 +661,8 @@ class Engine(ABC):
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
         point_data: Dataset | None = None,
+        *,
+        progress_label: str | None = None,
         **kwargs: Any,
     ) -> Any:
         """
@@ -678,6 +680,8 @@ class Engine(ABC):
             The initial farm data.
         point_data
             The initial point data.
+        progress_label
+            Operation label for progress displays. ``None`` uses the model class.
         kwargs
             Additional engine-specific calculation options.
 
@@ -844,7 +848,12 @@ def map_with_engine(*args: Any, **kwargs: Any) -> Any:
     return results
 
 
-def launch_parallel_calc(self: Any, *args: Any, **kwargs: Any) -> Any:
+def launch_parallel_calc(
+    self: Any,
+    *args: Any,
+    progress_label: str | None = None,
+    **kwargs: Any,
+) -> Any:
     """
     Launch a parallel calculation using the active engine.
 
@@ -852,6 +861,9 @@ def launch_parallel_calc(self: Any, *args: Any, **kwargs: Any) -> Any:
     ----------
     args
         Additional parameters for running the calculation.
+    progress_label
+        Upstream operation label, forwarded unchanged to the active engine.
+        ``None`` retains the engine's model-class label.
     kwargs
         Additional keyword arguments for running the calculation.
 
@@ -864,8 +876,12 @@ def launch_parallel_calc(self: Any, *args: Any, **kwargs: Any) -> Any:
     if has_engine():
         engine = get_engine()
         assert engine is not None
-        results = engine.run_calculation(self, *args, **kwargs)
+        results = engine.run_calculation(
+            self, *args, progress_label=progress_label, **kwargs
+        )
     else:
         with Engine.new("default") as e:
-            results = e.run_calculation(self, *args, **kwargs)
+            results = e.run_calculation(
+                self, *args, progress_label=progress_label, **kwargs
+            )
     return results

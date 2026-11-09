@@ -2,7 +2,6 @@ import time
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
 
 import foxes
 import foxes.variables as FV
@@ -10,15 +9,6 @@ import foxes.variables as FV
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-a", "--animation", help="Write flow animation file", action="store_true"
-    )
-    parser.add_argument(
-        "-A",
-        "--ani_file",
-        help="Path to the animation file to be written",
-        default="ani.gif",
-    )
     parser.add_argument(
         "-F",
         "--fps",
@@ -129,6 +119,32 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
+    mbook.outputs["farm_results"].fdata_variables.append(FV.CT)
+
+    # Preserve the two-panel animation through the named output models.
+    for suffix in ("gif", "mp4"):
+        mbook.outputs[f"create_turbine_{suffix}"] = (
+            foxes.models.outputs.FlowTurbineAnimation(
+                base_name=f"ani.{suffix}",
+                turbines=[1, 4, 7],
+                ref_xy=args.ref_xy,
+                fps=args.fps,
+                verbosity=1,
+                figsize=(5.2, 7),
+                grid_pars=dict(resolution=30, xmax=5000, ymax=5000),
+                plot_pars=dict(
+                    vmin=0,
+                    quiver_n=35,
+                    title=None,
+                    rotor_color="red",
+                    quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
+                ),
+                layout_pars=dict(
+                    title="", annotate=1, anno_delx=-120, anno_dely=-60, alpha=0
+                ),
+            )
+        )
+
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -254,75 +270,3 @@ if __name__ == "__main__":
         plt.xlabel("State")
         plt.ylabel("REWS [m/s]")
         plt.show()
-
-    if not args.nofig and args.animation:
-        print("\nCalculating animation")
-
-        with engine:
-            of = foxes.output.FlowPlots2D(algo, farm_results)
-            flow_data = of.get_states_data_xy(
-                FV.WS,
-                resolution=30,
-                xmax=5000,
-                ymax=5000,
-                vmin=0,
-            )
-
-        fig, axs = plt.subplots(
-            2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
-        )
-
-        anim = foxes.output.Animator(fig)
-        anim.add_generator(
-            of.gen_states_fig_xy(
-                flow_data,
-                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
-                quiver_n=35,
-                fig=fig,
-                ax=axs[0],
-                ret_im=True,
-                title=None,
-                animated=True,
-                rotor_color="red",
-            )
-        )
-        anim.add_generator(
-            o.gen_stdata(
-                turbines=[1, 4, 7],
-                variable=FV.REWS,
-                fig=fig,
-                ax=axs[1],
-                ret_im=True,
-                legloc="upper right",
-                animated=True,
-            )
-        )
-
-        lo = foxes.output.FarmLayoutOutput(farm)
-        lo.get_figure(
-            fig=fig,
-            ax=axs[0],
-            title="",
-            annotate=1,
-            anno_delx=-120,
-            anno_dely=-60,
-            alpha=0,
-        )
-
-        axs[0].scatter(
-            [args.ref_xy[0]],
-            [args.ref_xy[1]],
-            marker="x",
-            color="red",
-            s=80,
-            animated=True,
-        )
-
-        ani = anim.animate()
-
-        fpath = Path(args.ani_file)
-        print("Writing file", fpath)
-        if fpath.suffix == ".gif":
-            ani.save(filename=fpath, writer="pillow", fps=args.fps)
-        else:
-            ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)

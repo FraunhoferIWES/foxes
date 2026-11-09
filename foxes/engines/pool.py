@@ -182,6 +182,8 @@ class PoolEngine(Engine):
         chunk_store: dict[Any, Any] | None = None,
         sel: dict[str, Any] | None = None,
         iterative: bool = False,
+        *,
+        progress_label: str | None = None,
         **calc_pars: Any,
     ) -> Dict[str, Any]:
         """
@@ -210,6 +212,8 @@ class PoolEngine(Engine):
             Selection of coordinate subsets.
         iterative
             Whether the calculation is an iterative algorithm pass.
+        progress_label
+            Operation label for progress displays. ``None`` uses the model class.
         calc_pars
             Additional parameters forwarded to the model's ``calculate`` method.
 
@@ -248,7 +252,14 @@ class PoolEngine(Engine):
             farm_data = None
 
         # basic checks:
-        super().run_calculation(algo, model, model_data, farm_data, point_data)
+        super().run_calculation(
+            algo,
+            model,
+            model_data,
+            farm_data,
+            point_data,
+            progress_label=progress_label,
+        )
 
         # prepare:
         out_dims = model.output_coords()
@@ -320,7 +331,7 @@ class PoolEngine(Engine):
         )
         output_results: Dict = Dict(_name="output_results")
         progress = CalculationProgress(
-            f"{self.name} [{model.name}]",
+            f"{self.name} [{type(model).__name__ if progress_label is None else progress_label}]",
             n_chunks_states * n_chunks_targets,
             self.progress_bar,
             self.verbosity,

@@ -798,6 +798,7 @@ class Algorithm(Model):
             mapping, according to the concrete algorithm's output contract.
 
         """
+        kwargs.setdefault("progress_label", f"{type(self).__name__}.calc_farm")
         return launch_parallel_calc(self, *args, **kwargs)
 
     def calc_farm(
@@ -878,6 +879,7 @@ class Algorithm(Model):
             dimensions (state, point)
 
         """
+        kwargs.setdefault("progress_label", f"{type(self).__name__}.calc_points")
         return launch_parallel_calc(self, *args, **kwargs)
 
     def calc_points(

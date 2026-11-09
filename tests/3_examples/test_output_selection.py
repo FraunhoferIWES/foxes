@@ -82,10 +82,13 @@ def test_example_output_option_requires_a_name(monkeypatch, script):
 @pytest.mark.parametrize(
     "options", [["-a"], ["--animation"], ["-A", "ani.mp4"], ["--ani_file", "ani.gif"]]
 )
-def test_dyn_wakes_rejects_removed_animation_flags(monkeypatch, options):
+@pytest.mark.parametrize(
+    "example", ["dyn_wakes", "timelines", "sequential", "sequential_yawcontroller"]
+)
+def test_examples_reject_removed_animation_flags(monkeypatch, options, example):
     # Animations are selected exclusively through named output models.
     with pytest.raises(SystemExit) as error:
-        _parse_example(monkeypatch, EXAMPLES / "dyn_wakes/run.py", options)
+        _parse_example(monkeypatch, EXAMPLES / example / "run.py", options)
     assert error.value.code == 2
 
 
@@ -142,14 +145,17 @@ def test_dyn_wakes_animation_configuration(monkeypatch, output):
 
 @pytest.mark.parametrize("suffix", ["gif", "mp4"])
 @pytest.mark.parametrize("collect", [False, True])
-def test_real_dyn_wakes_animation(monkeypatch, tmp_path, suffix, collect):
+@pytest.mark.parametrize("example", ["dyn_wakes", "timelines"])
+def test_real_dynamic_animation(
+    monkeypatch, tmp_path, capsys, suffix, collect, example
+):
     # Run the actual dynamic-background example with bounded synthetic inputs.
     if suffix == "mp4" and which("ffmpeg") is None:
         pytest.skip("MP4 encoding requires ffmpeg")
     source = tmp_path / "states.csv"
     pd.DataFrame(
         {"ws": [7.0, 8.0, 9.0], "wd": [270.0, 275.0, 280.0], "ti": [0.07] * 3},
-        index=pd.date_range("2020-01-01", periods=3, freq="10s"),
+        index=pd.date_range("2020-01-01", periods=3, freq="min"),
     ).to_csv(source)
     monkeypatch.setitem(config, FC.OUTPUT_DIR, tmp_path)
     engine_new = foxes.Engine.new
@@ -160,7 +166,7 @@ def test_real_dyn_wakes_animation(monkeypatch, tmp_path, suffix, collect):
             "numpy", chunk_size_states=2, chunk_size_points=2000, verbosity=0
         ),
     )
-    script = EXAMPLES / "dyn_wakes/run.py"
+    script = EXAMPLES / example / "run.py"
     outputs = (["farm_results"] if collect else []) + [f"create_turbine_{suffix}"]
     monkeypatch.setattr(
         sys,
@@ -186,6 +192,136 @@ def test_real_dyn_wakes_animation(monkeypatch, tmp_path, suffix, collect):
                 assert gif.size == (520, 700)
         else:
             assert path.read_bytes()[4:8] == b"ftyp"
+        if example == "timelines":
+            assert f"Writing {path}" in capsys.readouterr().out
+        assert not plt.get_fignums()
+    finally:
+        plt.close("all")
+        plt.switch_backend(backend)
+
+
+@pytest.mark.parametrize("example", ["sequential", "sequential_yawcontroller"])
+def test_sequential_output_options(monkeypatch, example):
+    args = _parse_example(
+        monkeypatch, EXAMPLES / example / "run.py", ["-o", "farm_results", "create_mp4"]
+    )
+    assert args.outputs == ["farm_results", "create_mp4"]
+
+
+@pytest.mark.parametrize("example", ["sequential", "sequential_yawcontroller"])
+@pytest.mark.parametrize("suffix", ["gif", "mp4"])
+def test_sequential_local_animation_configuration(monkeypatch, example, suffix):
+    # Inspect the actual local model book before any scientific input is read.
+    class Captured(Exception):
+        pass
+
+    model_book = foxes.models.ModelBook
+    book = model_book()
+    default_plot_pars = book.outputs[f"create_{suffix}"].plot_pars
+
+    def capture_curve(*args, **kwargs):
+        raise Captured
+
+    script = EXAMPLES / example / "run.py"
+    monkeypatch.setattr(foxes.models, "ModelBook", lambda: book)
+    monkeypatch.setattr(foxes.models.turbine_types, "PCtFile", capture_curve)
+    options = ["-V", FV.TI, "-VMAX", "0.2"] if example == "sequential" else []
+    monkeypatch.setattr(
+        sys, "argv", [str(script), "-F", "6", *options, "-o", f"create_{suffix}"]
+    )
+    with pytest.raises(Captured):
+        runpy.run_path(str(script), run_name="__main__")
+
+    # Preserve all legacy flow/rotor/layout settings without altering defaults.
+    model = book.outputs[f"create_{suffix}"]
+    assert type(model) is foxes.models.outputs.FlowAnimation
+    assert model.base_name == f"ani.{suffix}"
+    assert model.fps == 6
+    assert model.figsize == (6.4, 4.8)
+    assert model.layout_pars == dict(
+        title="", annotate=1, anno_delx=-120, anno_dely=-60, alpha=0, s=10
+    )
+    expected = dict(vmin=0, levels=None, title=None, rotor_color="red")
+    if example == "sequential":
+        assert model.variables == [FV.TI]
+        assert model.grid_pars == dict(
+            resolution=10, xmin=-1000, ymin=-1000, xmax=4000, ymax=3000
+        )
+        expected.update(
+            vmax=0.2, quiver_n=157, quiver_pars=dict(scale=0.016, alpha=0.5)
+        )
+    else:
+        assert model.grid_pars == dict(resolution=10)
+        expected.update(quiver_n=33, quiver_pars=dict(scale=0.022, alpha=0.5))
+    assert model.plot_pars == expected
+    assert default_plot_pars is None
+
+
+@pytest.mark.parametrize("example", ["sequential", "sequential_yawcontroller"])
+@pytest.mark.parametrize("debug", [False, True])
+@pytest.mark.parametrize("suffix", ["gif", "mp4"])
+def test_real_sequential_example_animation(
+    monkeypatch, tmp_path, capsys, example, debug, suffix
+):
+    if suffix == "mp4" and which("ffmpeg") is None:
+        pytest.skip("MP4 encoding requires ffmpeg")
+    source = tmp_path / "states.csv"
+    data = pd.DataFrame(
+        {
+            FV.WS: [7.0, 8.0, 9.0],
+            FV.WD: [270.0, 275.0, 280.0],
+            FV.TI: [0.07] * 3,
+            FV.RHO: [1.225] * 3,
+        },
+        index=pd.date_range("2020-01-01", periods=3, freq="10s"),
+    )
+    data.to_csv(source)
+    monkeypatch.setitem(config, FC.OUTPUT_DIR, tmp_path)
+    if example == "sequential":
+        timeseries = foxes.input.states.Timeseries
+        monkeypatch.setattr(
+            foxes.input.states,
+            "Timeseries",
+            lambda **kwargs: timeseries(
+                data_source=data, output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO]
+            ),
+        )
+        extra = ["-S", "3"]
+    else:
+        extra = ["-s", str(source), "-S", "3"]
+    engine_new = foxes.Engine.new
+    monkeypatch.setattr(
+        foxes.Engine,
+        "new",
+        lambda **kwargs: engine_new("single", chunk_size_points=5000, verbosity=0),
+    )
+    script = EXAMPLES / example / "run.py"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(script),
+            "-nf",
+            *extra,
+            *(["--debug"] if debug else []),
+            "-o",
+            *(["farm_results"] if suffix == "gif" else []),
+            f"create_{suffix}",
+        ],
+    )
+    backend = plt.get_backend()
+    plt.switch_backend("Agg")
+    try:
+        namespace = runpy.run_path(str(script), run_name="__main__")
+        assert namespace["algo"].farm_results.sizes[FC.STATE] == 3
+        path = tmp_path / f"ani_WS.{suffix}"
+        if suffix == "gif":
+            with Image.open(path) as gif:
+                assert gif.n_frames == 3
+                assert gif.size == (640, 480)
+        else:
+            assert path.read_bytes()[4:8] == b"ftyp"
+        assert f"Writing {path}" in capsys.readouterr().out
         assert not plt.get_fignums()
     finally:
         plt.close("all")

@@ -46,6 +46,42 @@ def _algorithm(algorithm="Downwind"):
     )
 
 
+@pytest.mark.parametrize("backend", ["numpy", "threads", "process"])
+@pytest.mark.parametrize("algorithm", ["Downwind", "Iterative"])
+def test_engine_progress_uses_algorithm_operation(backend, capsys, algorithm):
+    # Farm and point launch boundaries supply stable upstream operation labels.
+    algo = _algorithm(algorithm)
+    with foxes.Engine.new(
+        backend, n_procs=2, chunk_size_states=2, verbosity=1, progress_bar=False
+    ) as engine:
+        farm_results = algo.calc_farm(outputs="farm_results_all")
+        algo.calc_points(farm_results, np.array([[800.0, 0.0, 90.0]]))
+        name = engine.name
+    stderr = capsys.readouterr().err
+    for operation in ("calc_farm", "calc_points"):
+        label = f"{name} [{algorithm}.{operation}]"
+        assert f"{label}: Starting" in stderr
+        assert f"{label}: Finished" in stderr
+    assert "_instance" not in stderr
+
+
+@pytest.mark.parametrize("progress_label", [None, "custom.operation"])
+def test_direct_engine_progress_label(monkeypatch, capsys, progress_label):
+    # Bypass only the algorithm label injection to exercise direct engine calls.
+    from foxes.core.engine import launch_parallel_calc
+
+    def launch(self, *args, **kwargs):
+        return launch_parallel_calc(
+            self, *args, progress_label=progress_label, **kwargs
+        )
+
+    monkeypatch.setattr(foxes.core.Algorithm, "_launch_parallel_farm_calc", launch)
+    with foxes.Engine.new("numpy", verbosity=1, progress_bar=False):
+        _algorithm().calc_farm()
+    expected = "FarmDataModelList" if progress_label is None else progress_label
+    assert f"NumpyEngine [{expected}]: Finished" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize(
     "backend",
     [
@@ -318,7 +354,7 @@ def test_finalization_failure_closes_progress_and_releases_engine(capsys):
     text = capsys.readouterr().err
     assert "Failed" in text
     assert "Finished" not in text
-    assert "ThreadsEngine [Downwind_calc]" in text
+    assert "ThreadsEngine [Downwind.calc_farm]" in text
     assert foxes.get_engine(error=False) is None
 
 

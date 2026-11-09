@@ -86,6 +86,8 @@ Downwind/Iterative Python example scripts expose output model-book selection as
 composed mapping returns, and skip dataset consumers for writer-only selections
 after completing every requested farm run. This example CLI does not change
 Sequential's iterator API, YAML configuration or the wake-field exporter.
+The Sequential example scripts also expose `-o`, limited to `farm_results` and
+flow-animation models through their iterator adapter.
 
 ## Module Boundaries
 
@@ -320,6 +322,21 @@ using the same `ani.gif` and `ani.mp4` base filenames as the flow-only outputs.
 Selecting both variants of the same format requires custom filenames to
 retain both files.
 
+Timeline farm runs bootstrap source states before the active chunk with its
+first-state turbine values only in iteration zero. Later iterations and final
+output evaluation use actual previous-iteration history. Ambient wake geometry
+is unchanged; this permits split state chunks without requiring unavailable
+history in the initial pass.
+
+`SeqAnimationOutputPlugin` bridges these models to Sequential without changing
+its physical-field `outputs` argument. It evaluates selected grids through
+`algo.calc_points()` during each state step, while wake history is available,
+then passes ordered numerical payloads to the shared render hooks at completion.
+The plugin, not a running model, owns buffers and optional debug history.
+Sequential chunk selections are step indices with target index zero; numerical
+point chunks still use the selected engine. See
+[ADR-0014](adr/0014-sequential-animation-outputs.md).
+
 `Downwind.calc_points(output=...)` composes an additional output with its standard
 point collector before extracting loaded data. Existing dataset returns and
 the physical-field selection `outputs=...` are unchanged. Calculation and output
@@ -546,6 +563,9 @@ subprocess.
 - Flow animation is an optional output with shared grid loading, bounded point
 	evaluation, target-data reuse and finalization-only file creation. See
 	[ADR-0012](adr/0012-chunk-animation-output.md).
+- Sequential animation selection uses an iterator plugin with step-local point
+	evaluation and shared output-model rendering, not replayed final farm results.
+	See [ADR-0014](adr/0014-sequential-animation-outputs.md).
 - [AGENTS.md](../AGENTS.md) keeps critical contributor guardrails and routes
 	detailed requirements to their owning guides. Code style is detailed in
 	[development](development.md#code-quality), lifecycle and parallelization in

@@ -25,6 +25,7 @@ from .flow_plots_2d import FlowPlots2D as FlowPlots2D
 
 from .seq_plugins import SeqFlowAnimationPlugin as SeqFlowAnimationPlugin
 from .seq_plugins import SeqWakeDebugPlugin as SeqWakeDebugPlugin
+from .seq_plugins import SeqAnimationOutputPlugin as SeqAnimationOutputPlugin
 
 from . import grids as grids
 from . import seq_plugins as seq_plugins

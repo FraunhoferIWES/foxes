@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import pytest
 
 import foxes.constants as FC
 from foxes.engines.default import DefaultEngine
@@ -82,23 +83,38 @@ def test_default_engine_selects_single_vs_process_by_condition():
     assert eng._select_engine_name(algo=small_algo, point_data=point_data) == "process"
 
 
-def test_default_engine_run_calculation_uses_selected_engine(monkeypatch):
+@pytest.mark.parametrize("delegate", ["single", "process"])
+@pytest.mark.parametrize(
+    "progress_label", [None, "Downwind.calc_farm", "Downwind.calc_points"]
+)
+def test_default_engine_run_calculation_uses_selected_engine(
+    monkeypatch, delegate, progress_label
+):
     selected = []
+    labels = []
+
+    class LabelEngine(_FakeDelegatedEngine):
+        def run_calculation(self, *args, **kwargs):
+            labels.append(kwargs["progress_label"])
+            return super().run_calculation(*args, **kwargs)
 
     def _fake_new(engine_type, *args, **kwargs):
         selected.append(engine_type)
-        return _FakeDelegatedEngine(engine_type)
+        return LabelEngine(engine_type)
 
     monkeypatch.setattr("foxes.engines.default.Engine.new", _fake_new)
 
     eng = DefaultEngine(n_procs=2, verbosity=0)
-    monkeypatch.setattr(eng, "_select_engine_name", lambda **kwargs: "single")
+    monkeypatch.setattr(eng, "_select_engine_name", lambda **kwargs: delegate)
 
     algo = _Algo(n_states=10, n_turbines=10)
-    result = eng.run_calculation(algo, object(), object(), point_data=None)
+    result = eng.run_calculation(
+        algo, object(), object(), point_data=None, progress_label=progress_label
+    )
 
-    assert result == "single"
-    assert selected == ["single"]
+    assert result == delegate
+    assert selected == [delegate]
+    assert labels == [progress_label]
 
 
 def test_default_engine_non_calc_methods_fallback_to_process(monkeypatch):

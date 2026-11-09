@@ -123,6 +123,13 @@ of the animated point `variables`. It retains the inherited per-variable
 filenames. `ref_xy` and `layout_pars` configure optional flow-axis annotations.
 Its model-book names are `"create_turbine_gif"` and `"create_turbine_mp4"`,
 using `ani.gif` and `ani.mp4` as base filenames, like the flow-only outputs.
+`layout_pars` is shared by both animation classes; `ref_xy` belongs to the
+turbine-panel subclass.
+
+`SeqAnimationOutputPlugin.outputs` selects flow-animation models or model-book
+names. It is distinct from `Sequential.outputs`, which selects physical fields.
+Within this adapter, chunk indices identify iterator steps rather than engine
+state batches; target chunk indices are zero.
 
 ## Common Type Annotations
 

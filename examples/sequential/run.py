@@ -1,22 +1,12 @@
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
-from pathlib import Path
 
 import foxes
 import foxes.variables as FV
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-a", "--animation", help="Write flow animation file", action="store_true"
-    )
-    parser.add_argument(
-        "-A",
-        "--ani_file",
-        help="Path to the animation file to be written",
-        default="ani.gif",
-    )
     parser.add_argument(
         "-F",
         "--fps",
@@ -118,9 +108,40 @@ if __name__ == "__main__":
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="Farm collector and animation output models",
+        nargs="+",
+        default=["farm_results"],
+    )
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
+
+    # Keep flow-only output content and settings local to this example.
+    for suffix in ("gif", "mp4"):
+        mbook.outputs[f"create_{suffix}"] = foxes.models.outputs.FlowAnimation(
+            base_name=f"ani.{suffix}",
+            variables=[args.variable],
+            fps=args.fps,
+            verbosity=1,
+            figsize=(6.4, 4.8),
+            grid_pars=dict(resolution=10, xmin=-1000, ymin=-1000, xmax=4000, ymax=3000),
+            plot_pars=dict(
+                vmin=0,
+                vmax=args.max_variable,
+                levels=None,
+                quiver_n=157,
+                quiver_pars=dict(scale=0.016, alpha=0.5),
+                title=None,
+                rotor_color="red",
+            ),
+            layout_pars=dict(
+                title="", annotate=1, anno_delx=-120, anno_dely=-60, alpha=0, s=10
+            ),
+        )
+
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -176,72 +197,20 @@ if __name__ == "__main__":
         wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
         mbook=mbook,
+        plugins=[
+            foxes.output.SeqAnimationOutputPlugin(
+                [name for name in args.outputs if name != "farm_results"],
+                debug=args.debug,
+            )
+        ],
         verbosity=0,
     )
-
-    # in case of animation, add a plugin that creates the images:
-    if args.animation:
-        anigen = foxes.output.SeqFlowAnimationPlugin(
-            orientation="xy",
-            var=args.variable,
-            resolution=10,
-            xmin=-1000,
-            ymin=-1000,
-            xmax=4000,
-            ymax=3000,
-            vmin=0,
-            vmax=args.max_variable,
-        )
-        algo.plugins.append(anigen)
-
-        if args.debug:
-            anigen_debug = foxes.output.SeqWakeDebugPlugin()
-            algo.plugins.append(anigen_debug)
 
     # run all states sequentially:
     with engine:
         for r in algo:
             print(algo.index)
 
-    print("\nFarm results:\n")
-    print(algo.farm_results)
-
-    if args.animation:
-        print("\nCalculating animation")
-
-        fig, ax = plt.subplots()
-        anim = foxes.output.Animator(fig)
-        anim.add_generator(
-            anigen.gen_images(
-                ax,
-                levels=None,
-                quiver_pars=dict(scale=0.016, alpha=0.5),
-                quiver_n=157,
-                title=None,
-                rotor_color="red",
-            )
-        )
-
-        if args.debug:
-            anim.add_generator(anigen_debug.gen_images(ax))
-
-        ani = anim.animate(interval=600)
-
-        lo = foxes.output.FarmLayoutOutput(farm)
-        lo.get_figure(
-            fig=fig,
-            ax=ax,
-            title="",
-            annotate=1,
-            anno_delx=-120,
-            anno_dely=-60,
-            alpha=0,
-            s=10,
-        )
-
-        fpath = Path(args.ani_file)
-        print("Writing file", fpath)
-        if fpath.suffix == ".gif":
-            ani.save(filename=fpath, writer="pillow", fps=args.fps)
-        else:
-            ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)
+    if "farm_results" in args.outputs:
+        print("\nFarm results:\n")
+        print(algo.farm_results)
