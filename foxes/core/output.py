@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 import pandas as pd
+import numpy as np
 
 from foxes.config import config, get_output_path
 from foxes.utils import PandasFileHelper, new_instance, all_subclasses, Dict
@@ -127,6 +128,19 @@ class Output(DataCalcModel):
 
         """
         raise NotImplementedError
+
+    def get_calc_points(self) -> np.ndarray | None:
+        """
+        Get the points to be used in algo.calc_points during 
+        algo.calc_outputs calculation.
+
+        Returns
+        -------
+        points
+            The points
+
+        """
+        return None
 
     def calculate(  # type: ignore[override]
         self,
