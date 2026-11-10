@@ -186,6 +186,22 @@ when requested power exceeds the calibrated Betz maximum. Requested power is
 retained: this is an engineering thrust approximation, not an attainable-power
 or controller model. See [ADR-0007](adr/0007-smooth-power-mask-boosts.md).
 
+`TurbineEvaluation` computes requested performance fields in `fdata` without
+reducing its `(FC.STATE, FC.TURBINE)` axes. Nominal capacity and power-unit
+conversion follow the original turbine identity through `FV.ORDER`. Annualized
+yield is unweighted power times 8760 hours, converted to GWh/a; apply state
+weights only during later aggregation. P75/P90 require explicit relative
+uncertainty. See [ADR-0016](adr/0016-state-turbine-performance-evaluation.md).
+
+Downwind adds an evaluation-only controller pass after ambient copying and wake
+calculation, before output preparation. This covers unwaked turbines, no-wake
+farms and ambient-only metric selections without rerunning power-changing
+models. Iterative also evaluates final under-relaxed powers before output,
+aligning fresh original-order turbine selections with downwind-ordered results
+without mutating the model data. `FarmController.calculate()`
+and `FarmDataModelList.calculate()` support `model_names` to retain model order,
+parameters and state-turbine selections while executing only named models.
+
 `Model.initialize()` recursively initializes submodels and calls `load_data()`.
 Execution is bracketed by `set_running()` and `unset_running()`, which may move
 large data through a stash. `finalize()` recursively releases initialized state
@@ -588,6 +604,10 @@ subprocess.
 - Dimensioned container arrays and mismatched `Model.get_data()` results use
 	full-shaped broadcast views. See
 	[ADR-0013](adr/0013-full-shaped-broadcast-data.md).
+- Turbine performance metrics retain state-turbine dimensions; annualized
+	yield is unweighted and P75/P90 use explicit relative uncertainty. A final
+	evaluation-only pass resolves metrics after ambient and wake powers exist.
+	See [ADR-0016](adr/0016-state-turbine-performance-evaluation.md).
 - Output slice grids have no state axis and use the existing static-point
 	calculation contract. See
 	[ADR-0005](adr/0005-static-output-grid-coordinates.md).

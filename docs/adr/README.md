@@ -27,6 +27,7 @@ all of them.
 | [0013](0013-full-shaped-broadcast-data.md) | Accepted; supersedes [0003](0003-compact-static-target-coordinates.md) | Represent repeated dimensioned data as full-shaped read-only broadcast views and broadcast mismatched `Model.get_data()` results automatically. |
 | [0014](0014-sequential-animation-outputs.md) | Accepted | Adapt flow-animation outputs to Sequential with step-local point evaluation and completion-only shared rendering. |
 | [0015](0015-animation-helper-ownership.md) | Accepted | Keep animation composition in adopted outputs and all Sequential plugins in `foxes.models.seq_plugins`. |
+| [0016](0016-state-turbine-performance-evaluation.md) | Accepted | Keep turbine performance metrics in state-turbine data, annualize unweighted power and require explicit uncertainty for P75/P90. |
 
 ## When To Add An ADR
 

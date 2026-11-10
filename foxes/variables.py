@@ -99,6 +99,14 @@ YLD = "YLD"
 """ Yield in GWh/a
 """
 
+P75 = "P75"
+""" Annual yield exceeded with 75 percent probability, in GWh/a
+"""
+
+P90 = "P90"
+""" Annual yield exceeded with 90 percent probability, in GWh/a
+"""
+
 EFF = "EFF"
 """ Efficiency, equals P/AMB_P
 """
@@ -198,8 +206,16 @@ AMB_YLD = "AMB_YLD"
 """ Ambient yield in GWh/a
 """
 
+AMB_P75 = "AMB_P75"
+""" Ambient annual P75 yield in GWh/a
+"""
+
+AMB_P90 = "AMB_P90"
+""" Ambient annual P90 yield in GWh/a
+"""
+
 AMB_CAPF = "AMB_CAPF"
-""" Ambient capacity, equals AMB_P/CAP
+""" Ambient capacity factor, equals AMB_P/CAP
 """
 
 AMB_FLF = "AMB_FLF"
@@ -250,6 +266,8 @@ var2amb = {
         WEIBULL_A,
         WEIBULL_k,
         YLD,
+        P75,
+        P90,
         CAPF,
         FLF,
         UV,
@@ -273,6 +291,10 @@ extensive_farm = set(
         P,
         AMB_YLD,
         YLD,
+        AMB_P75,
+        P75,
+        AMB_P90,
+        P90,
         AMB_CAPF,
         CAPF,
     ]
@@ -293,6 +315,10 @@ extensive_state = set(
         P,
         AMB_YLD,
         YLD,
+        AMB_P75,
+        P75,
+        AMB_P90,
+        P90,
         AMB_CAPF,
         CAPF,
         WEIGHT,
@@ -374,6 +400,8 @@ ROUND_DIGITS = {
     CT: 6,
     T: 3,
     YLD: 3,
+    P75: 3,
+    P90: 3,
     CAPF: 5,
     EFF: 5,
     WEIBULL_A: 3,

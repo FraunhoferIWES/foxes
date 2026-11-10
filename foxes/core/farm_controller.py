@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from foxes.config import config
 import foxes.constants as FC
+import foxes.variables as FV
 from foxes.utils import new_instance
 
 from .farm_data_model import FarmDataModelList, FarmDataModel
@@ -357,6 +358,7 @@ class FarmController(FarmDataModel):
         ptype: str,
         mdata: MData | None = None,
         downwind_index: int | None = None,
+        selection_order: np.ndarray | None = None,
     ) -> list[dict[str, Any]]:
         """
         Private helper function for gathering model parameters.
@@ -371,10 +373,13 @@ class FarmController(FarmDataModel):
             else:
                 assert mdata is not None
                 vsel = self._tmodel_sels_var(mi)
+                selected = mdata[vsel]
+                if selection_order is not None:
+                    selected = np.take_along_axis(selected, selection_order, axis=1)
                 if downwind_index is None:
-                    s = mdata[vsel]
+                    s = selected
                 else:
-                    s = np.s_[mdata[vsel][:, downwind_index], downwind_index]
+                    s = np.s_[selected[:, downwind_index], downwind_index]
             pars.append({"st_sel": s})
             if m.name in self.pars:
                 pars[-1].update(self.pars[m.name][ptype])
@@ -489,6 +494,8 @@ class FarmController(FarmDataModel):
         fdata: FData,
         pre_rotor: bool,
         downwind_index: int | None = None,
+        model_names: list[str] | None = None,
+        selection_in_farm_order: bool = False,
     ) -> dict[str, np.ndarray]:
         """
         Run the main model calculation for a single chunk of data.
@@ -508,6 +515,14 @@ class FarmController(FarmDataModel):
             Flag indicating whether to run pre-rotor or post-rotor models.
         downwind_index
             The index in the downwind order.
+        model_names
+            Execute only turbine models with these names, retaining controller
+            order, parameters and state-turbine selections. ``None`` runs all
+            models in the selected pre/post-rotor chain; an empty list runs none.
+        selection_in_farm_order
+            Align fresh model-data turbine selections through ``fdata[FV.ORDER]``
+            before applying them to downwind-ordered farm arrays. Enable only
+            when selection masks are still in original farm order.
 
         Returns
         -------
@@ -515,11 +530,19 @@ class FarmController(FarmDataModel):
             The resulting data. Keys are output variable names and values are
             arrays with shape ``(n_states, n_turbines)``.
 
+        Raises
+        ------
+        ValueError
+            If a selected model name is not in the chosen pre/post-rotor chain.
         """
+        # Resolve turbine selections against the full chain before name filtering.
         s = self.pre_rotor_models if pre_rotor else self.post_rotor_models
         assert s is not None
-        pars = self.__get_pars(algo, s.models, "calc", mdata, downwind_index)
-        res = s.calculate(algo, mdata, fdata, parameters=pars)
+        order = fdata[FV.ORDER] if selection_in_farm_order else None
+        pars = self.__get_pars(
+            algo, s.models, "calc", mdata, downwind_index, selection_order=order
+        )
+        res = s.calculate(algo, mdata, fdata, parameters=pars, model_names=model_names)
         return res
 
     def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:

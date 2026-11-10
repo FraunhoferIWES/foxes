@@ -1,7 +1,10 @@
 import numpy as np
+import pytest
 
 import foxes.constants as FC
-from foxes.core import FarmController
+import foxes.variables as FV
+from foxes.core import FarmController, FarmDataModelList, FData, MData
+from foxes.models.turbine_models import Calculator
 
 
 class _Model:
@@ -88,3 +91,59 @@ def test_tmodel_sels_constant_is_no_longer_written_to_data_vars():
 
     assert FC.TMODEL_SELS not in loaded_data["data_vars"]
     assert c._tmodel_sels_var(0) in loaded_data["data_vars"]
+
+
+@pytest.mark.parametrize(
+    "names,expected",
+    [
+        (None, 8.0),
+        (["second"], 6.0),
+        (["first"], 4.0),
+        (["second", "first"], 8.0),
+        ([], 3.0),
+    ],
+)
+def test_model_name_selection_preserves_order_and_skips_other_models(names, expected):
+    first = Calculator([FV.P], [FV.P], lambda power, **_: (power + 1.0,))
+    second = Calculator([FV.P], [FV.P], lambda power, **_: (power * 2.0,))
+    first.name, second.name = "first", "second"
+    models = FarmDataModelList([first, second])
+    models.initialize(None, verbosity=0)
+    fdata = FData(
+        data={FV.P: np.array([[3.0]])},
+        dims={FV.P: (FC.STATE, FC.TURBINE)},
+    )
+
+    results = models.calculate(None, MData(), fdata, model_names=names)
+
+    np.testing.assert_array_equal(fdata[FV.P], [[expected]])
+    assert set(results) == ({FV.P} if names is None or names else set())
+
+
+def test_model_name_selection_rejects_unknown_names():
+    models = FarmDataModelList([])
+    models.initialize(None, verbosity=0)
+
+    with pytest.raises(ValueError, match="Unknown model names.*unknown"):
+        models.calculate(None, MData(), FData(), model_names=["unknown"])
+
+
+def test_get_pars_aligns_original_farm_selection_without_mutating_model_data():
+    controller = FarmController()
+    controller.turbine_model_names = ["evaluation"]
+    controller._tmall = [False]
+    selection = np.array([[True, False, False], [True, False, False]])
+    mdata = {controller._tmodel_sels_var(0): selection}
+    order = np.array([[2, 0, 1], [1, 2, 0]])
+
+    parameters = controller._FarmController__get_pars(
+        None, [_Model("evaluation")], "calc", mdata=mdata, selection_order=order
+    )
+
+    np.testing.assert_array_equal(
+        parameters[0]["st_sel"], [[False, True, False], [False, False, True]]
+    )
+    np.testing.assert_array_equal(
+        mdata[controller._tmodel_sels_var(0)],
+        [[True, False, False], [True, False, False]],
+    )

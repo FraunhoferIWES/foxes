@@ -251,8 +251,16 @@ those original indices.
 - Turbulence and atmosphere: `FV.TI`, `FV.TKE`, `FV.RHO`, `FV.T`, and `FV.p`.
 - Turbine operation: `FV.OPERATING`, `FV.YAW`, `FV.YAWM`, `FV.P`, `FV.CT`,
 	`FV.CAP`, and `FV.MAX_P`.
-- Derived evaluation: `FV.YLD`, `FV.EFF`, `FV.CAPF`, `FV.FLF`, and the rotor
-	effective wind-speed variables.
+- Derived evaluation: `FV.YLD`, `FV.P75`, `FV.P90`, `FV.EFF`, `FV.CAPF`,
+	`FV.FLF`, and the rotor effective wind-speed variables.
+
+`FV.P75` and `FV.P90` name annual exceedance yields in GWh/a, not power
+percentiles. Their ambient counterparts are `FV.AMB_P75` and `FV.AMB_P90`;
+all four participate in ambient mappings, extensive-variable sets and yield
+rounding. In `TurbineEvaluation`, `FV.YLD` and these probability yields are
+annualized per-state values, not weighted contributions. `power_uncert` is
+relative uncertainty (`0.1` means 10 percent), not a percent-valued input.
+`FV.CAP` remains nominal power in the turbine type's power unit.
 
 Create temporary model-specific keys with `model.var(variable)` and recover the
 base name with `model.unvar(name)`. Do not reproduce its prefixing logic by

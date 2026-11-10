@@ -208,8 +208,15 @@ class Iterative(Downwind):
         """
         # Final output preparation is independent of the intermediate wake chain.
         if self._final_run:
+            mlist = FarmDataModelList(models=[])
+            calc_pars: list[dict[str, Any]] = []
+            self._add_turbine_evaluation_models(
+                mlist, calc_pars, calc_parameters, selection_in_farm_order=True
+            )
             model = self.get_model("PrepareForOutput")(output=output)
-            return FarmDataModelList(models=[model]), [{}]
+            mlist.append(model)
+            calc_pars.append({})
+            return mlist, calc_pars
 
         # Keep every physical field in downwind order between iterations.
         if self._it == 0:

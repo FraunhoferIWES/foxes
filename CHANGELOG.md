@@ -1188,6 +1188,17 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Turbine models:
+  - Extend `TurbineEvaluation` with state-turbine capacity, capacity factor,
+    full-load fraction, annualized yield and P75/P90 yield, including ambient
+    variants. Require explicit relative uncertainty for probability yields.
+    Honor original turbine identity and power units, preserve full-shaped
+    selections and keep running model state read-only.
+  - Export the evaluator and finalize its metrics after ambient/wake powers
+    exist, including unwaked turbines and ambient-only selections, without
+    rerunning power-changing models. Reevaluate Iterative's final under-relaxed
+    powers with correctly aligned turbine selections.
+    Fix its constructor's model-name handling.
 - Core:
   - Removed stored data singletons in favor of full-shaped read-only NumPy
     broadcast views. `Model.get_data()` automatically broadcasts mismatched

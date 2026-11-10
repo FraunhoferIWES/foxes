@@ -219,33 +219,47 @@ class FarmDataModelList(FarmDataModel):
         mdata: MData,
         fdata: FData,
         parameters: list[dict[str, Any]] | None = None,
+        model_names: list[str] | None = None,
     ) -> dict[str, np.ndarray]:
-        """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        """Calculate selected models in list order for one farm-data chunk.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The calculation algorithm.
         mdata
-            The model data
+            The model data.
         fdata
-            The farm data
+            Farm data, updated in place with each executed model's results.
         parameters
-            Parameters for each model
+            Keyword arguments for every model, aligned with the full model
+            list even when ``model_names`` selects only some models.
+        model_names
+            Execute only models with these names, retaining model-list order
+            and the corresponding entries in ``parameters``. ``None`` runs
+            all models; an empty list runs none.
 
         Returns
         -------
         results
-            The resulting data, keys: output variable str.
-            Values are arrays with shape (n_states, n_turbines)
+            Executed output names mapped to arrays with dimensions
+            ``(FC.STATE, FC.TURBINE)`` shared with ``fdata``. Declared outputs
+            are initialized even for models that are not executed.
 
+        Raises
+        ------
+        ValueError
+            If parameters are not a list aligned with the model list, or a
+            selected model name is unknown.
         """
+        # Reject unknown names before adding any output arrays.
+        if model_names is not None:
+            unknown = set(model_names) - {m.name for m in self.models}
+            if unknown:
+                raise ValueError(f"{self.name}: Unknown model names {sorted(unknown)}")
         self.ensure_output_vars(algo, fdata)
 
+        # Parameter positions always refer to the unfiltered model list.
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):
@@ -257,9 +271,12 @@ class FarmDataModelList(FarmDataModel):
                 f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
             )
 
+        # Retain model order without mutating the configured chain.
         out = {}
         ovars = self.output_farm_vars(algo)
         for mi, m in enumerate(self.models):
+            if model_names is not None and m.name not in model_names:
+                continue
             # print("MLIST VARS BEFORE",m.name,list(fdata.keys()),parameters[mi])
             res = m.calculate(algo, mdata, fdata, **parameters[mi])
             out.update({v: res[v] for v in ovars if v in res})

@@ -80,6 +80,17 @@ Run engine, algorithm and farm-output checks together:
 uv run pytest tests/0_consistency/engines tests/0_consistency/algorithms tests/2_models/test_farm_results_outputs.py
 ```
 
+For turbine performance evaluation, run
+`uv run pytest tests/2_models/turbine_models/test_evaluation.py tests/0_consistency/core/test_farm_controller_tmodel_sels.py -q`.
+Synthetic cases verify exact annualized yields, P75/P90 factors, mixed turbine
+power units, changing turbine order, full-shaped selections, explicit failures
+and read-only running model state. Real Downwind/Iterative calculations cover
+NumPy, single-chunk, thread and process engines, model-specific turbine
+selections, no-wake farms and ambient-only metrics. Model-name filtering checks
+ensure the final evaluation pass does not rerun other turbine models.
+Iterative cases include final power under-relaxation and original-order model
+selection masks.
+
 Real Ray/MPI parity tests are opt-in with `FOXES_TEST_CLUSTER_ENGINES=1`.
 Use only a configured runtime and bounded worker counts; Slurm lifecycle checks
 use synthetic infrastructure rather than submitting jobs. Local Dask defaults to

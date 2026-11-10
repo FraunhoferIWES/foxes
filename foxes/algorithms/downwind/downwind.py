@@ -622,6 +622,33 @@ class Downwind(Algorithm):
         self.print(f"\nInitializing algorithm '{self.name}'")
         super().initialize(force=force)
 
+    def _add_turbine_evaluation_models(
+        self,
+        mlist: FarmDataModelList,
+        calc_pars: list[dict[str, Any]],
+        calc_parameters: dict[str, dict[str, Any]],
+        selection_in_farm_order: bool = False,
+    ) -> None:
+        """Append evaluation-only execution to ``mlist`` and ``calc_pars``."""
+        # Reuse controller ordering and selections without rerunning power models.
+        post_rotor = self.farm_controller.post_rotor_models
+        assert post_rotor is not None
+        evaluations = [
+            m.name
+            for m in post_rotor.models
+            if isinstance(m, fm.turbine_models.TurbineEvaluation)
+        ]
+        if evaluations:
+            mlist.models.append(self.farm_controller)
+            calc_pars.append(
+                dict(
+                    calc_parameters.get(self.farm_controller.name, {}),
+                    pre_rotor=False,
+                    model_names=evaluations,
+                    selection_in_farm_order=selection_in_farm_order,
+                )
+            )
+
     def _collect_farm_models(
         self,
         calc_parameters: dict[str, dict[str, Any]],
@@ -664,6 +691,9 @@ class Downwind(Algorithm):
         if not ambient:
             mlist.models.append(self.get_model("FarmWakesCalculation")())
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+
+        # Evaluate final powers, including unwaked turbines and ambient-only runs.
+        self._add_turbine_evaluation_models(mlist, calc_pars, calc_parameters)
 
         # 6) prepare for output:
         mlist.models.append(self.get_model("PrepareForOutput")(output=output))
