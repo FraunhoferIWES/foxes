@@ -76,7 +76,41 @@ def _read_flow_field(
     states_isel: Any,
     verbosity: int,
 ) -> None:
-    """Reads the flow field request"""
+    """Append a constructor-defined slice output for a WindIO flow-field request.
+
+    Parameters
+    ----------
+    wio_outs
+        WindIO output configuration. The enabled ``flow_field`` entry is
+        consumed in place while reading file, field and sampling options.
+    olist
+        FOXES output-definition list, extended in place with one ``SlicesData``
+        entry when flow-field reporting is enabled.
+    algo
+        Algorithm supplying turbine hub heights when ``z_sampling`` requests
+        ``hub_heights``.
+    states_isel
+        Positional state selection forwarded unchanged to the slice output.
+    verbosity
+        Print parsed sampling details above level two and forward this level to
+        the output definition.
+
+    Raises
+    ------
+    KeyError
+        If requested fields lack a WindIO mapping, required options are absent,
+        or grid sampling supplies neither spacing nor point counts.
+    NotImplementedError
+        If horizontal sampling is not ``grid`` or the height-sampling mode is
+        unsupported.
+
+    Notes
+    -----
+    Horizontal bounds and heights are in metres. Heights may be explicit planes,
+    unique hub heights, an evenly spaced grid or a single numerical height.
+    Horizontal counts retain endpoint coverage; ``wind_speed`` and
+    ``wind_direction`` map to ``FV.WS`` and ``FV.WD``.
+    """
     if "flow_field" in wio_outs and wio_outs["flow_field"].get_item("report", True):
         flow_field = wio_outs["flow_field"]
         flow_nc_filename = flow_field.pop_item("flow_nc_filename", "flow_field.nc")
@@ -157,23 +191,20 @@ def _read_flow_field(
             olist.append(
                 Dict(
                     output_type="SlicesData",
-                    verbosity_delta=3,
-                    functions=[
-                        dict(
-                            function="get_states_data_xy",
-                            z_list=z_list,
-                            states_isel=states_isel,
-                            xmin=xb[0],
-                            xmax=xb[1],
-                            ymin=yb[0],
-                            ymax=yb[1],
-                            n_img_points=(nx, ny),
-                            variables=[vmap[v] for v in output_variables],
-                            to_file=flow_nc_filename,
-                            label_map=foxes2wio,
-                            verbosity=verbosity,
-                        )
-                    ],
+                    positions=z_list.tolist(),
+                    plane="xy",
+                    states_isel=states_isel,
+                    grid_pars=dict(
+                        xmin=xb[0],
+                        xmax=xb[1],
+                        ymin=yb[0],
+                        ymax=yb[1],
+                        n_img_points=(nx, ny),
+                    ),
+                    variables=[vmap[v] for v in output_variables],
+                    to_file=flow_nc_filename,
+                    label_map=foxes2wio,
+                    verbosity=verbosity,
                     _name=f"outputs.output{len(olist)}.SliceData",
                 )
             )

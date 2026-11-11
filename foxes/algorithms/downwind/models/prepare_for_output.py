@@ -5,10 +5,12 @@ import numpy as np
 from typing import TYPE_CHECKING
 
 from foxes.core import DataCalcModel
+from foxes.models.turbine_models.evaluation import TurbineEvaluation
 import foxes.variables as FV
 import foxes.constants as FC
 
 if TYPE_CHECKING:
+    from foxes.core.model import LoadedData, Model
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData, TData
     from foxes.core.output import Output
@@ -63,6 +65,69 @@ class PrepareForOutput(DataCalcModel):
         """
         return []
 
+    def initialize(
+        self,
+        algo: Algorithm,
+        loaded_data: LoadedData | None = None,
+        force: bool = False,
+        verbosity: int = 0,
+    ) -> LoadedData:
+        """
+        Initialize the model.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        loaded_data
+            Data that has already been loaded, to be extended by this function.
+            Keys are "coords", a dict with entries ``dim_name_str -> dim_array``;
+            "data_vars", a dict with entries ``name_str -> (dim_tuple, data_ndarray)``;
+            and "extra_data", a dict with non-array additional data.
+        force
+            Overwrite existing data.
+        verbosity
+            The verbosity level, where 0 is silent.
+
+        Returns
+        -------
+        loaded_data
+            The loaded data, containing the keys "coords", "data_vars", and
+            "extra_data".
+
+        """
+        eval_vars = None
+        self._eval = None
+        if self.output is not None:
+            if self.output.fdata_variables is None:
+                eval_vars = TurbineEvaluation.SUPPORTED_VARIABLES
+            else:
+                eval_vars = set(self.output.fdata_variables).intersection(
+                    TurbineEvaluation.SUPPORTED_VARIABLES
+                )
+                eval_vars -= set(algo.farm_vars)
+            if len(eval_vars):
+                self._eval = TurbineEvaluation(variables=list(eval_vars))
+
+        return super().initialize(
+            algo=algo,
+            loaded_data=loaded_data,
+            force=force,
+            verbosity=verbosity,
+        )
+
+    def sub_models(self) -> list[Model]:
+        """
+        Return the list of all sub-models.
+
+        Returns
+        -------
+        smdls
+            All sub-models.
+
+        """
+        return [self._eval] if self._eval else []
+
     def calculate(
         self,
         algo: Algorithm,
@@ -71,26 +136,40 @@ class PrepareForOutput(DataCalcModel):
         tdata: TData | None = None,
     ) -> dict[str, np.ndarray]:
         """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        Filter chunk fields and restore selected arrays to original farm order.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The running calculation algorithm.
         mdata
-            The model data
+            Model chunk, filtered in place according to the output requirements.
         fdata
-            The farm data
+            Farm chunk in downwind order, filtered in place. ``FV.ORDER`` maps
+            calculation columns to original turbine indices when reordering is
+            required.
         tdata
-            The target point data
+            Target chunk, filtered in place when supplied. Physical point fields
+            use ``(FC.STATE, FC.TARGET, FC.TPOINT)``.
 
         Returns
         -------
         results
-            Empty dummy results, data is changed on the fly
+            Empty mapping; retained arrays and dimension metadata are installed
+            directly in the supplied containers. Without an output, all entries
+            and their dimension metadata are removed.
+
+        Raises
+        ------
+        KeyError
+            If a retained nonuniform state-turbine field needs reordering but
+            ``FV.ORDER`` is absent. No order is required when ``reorder`` is false
+            or retained fields do not need permutation.
+
+        Notes
+        -----
+        State-turbine arrays must lead with ``(FC.STATE, FC.TURBINE)``;
+        trailing dimensions are preserved. Model configuration is not mutated.
 
         """
         # case not output:
@@ -106,8 +185,18 @@ class PrepareForOutput(DataCalcModel):
         vrs_fdata = self.output.fdata_variables
         vrs_tdata = self.output.tdata_variables
 
+        # apply evaluation:
+        if self._eval is not None:
+            res = self._eval.calculate(
+                algo=algo,
+                mdata=mdata,
+                fdata=fdata,
+            )
+            fdata.update(res)
+            del res
+
         # loop over targets:
-        order = fdata[FV.ORDER]
+        order = fdata.get(FV.ORDER)
         ssel = None
         order_inv = None
         for vrs, data in zip((vrs_mdata, vrs_fdata, vrs_tdata), (mdata, fdata, tdata)):
@@ -133,6 +222,10 @@ class PrepareForOutput(DataCalcModel):
                             and np.any(dta != dta[0, 0, None, None])
                         ):
                             if ssel is None:
+                                if order is None:
+                                    raise KeyError(
+                                        f"{self.name}: Farm reordering requires '{FV.ORDER}'"
+                                    )
                                 ssel = np.broadcast_to(
                                     np.arange(order.shape[0])[:, None], order.shape
                                 )
@@ -146,3 +239,18 @@ class PrepareForOutput(DataCalcModel):
                     data.dims[v] = dms
 
         return {}
+
+    def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
+        """
+        Finalize the model.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        verbosity
+            The verbosity level; ``0`` is silent.
+
+        """
+        super().finalize(algo=algo, verbosity=verbosity)
+        del self._eval

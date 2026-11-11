@@ -301,7 +301,39 @@ class Iterative(Downwind):
         *data: Any,
         **kwargs: Any,
     ) -> Dataset:
-        """Helper function for running the main farm calculation"""
+        """Run farm chunks with convergence history or explicit supplied data.
+
+        Parameters
+        ----------
+        mlist
+            Initialized farm-model chain for the current pass.
+        data
+            Input datasets forwarded to the base algorithm.
+        kwargs
+            Engine calculation options. Supplying ``farm_data`` bypasses
+            convergence-history injection and preserves the caller's selection.
+
+        Returns
+        -------
+        results
+            Base-algorithm output results in deterministic chunk order.
+
+        Raises
+        ------
+        ValueError
+            If unconverged-state selection requires unavailable previous results
+            or previous results have duplicate state labels.
+
+        Notes
+        -----
+        Ordinary intermediate passes select unconverged states; the final pass
+        evaluates all states. Previous results travel through chunk metadata,
+        without mutating running models.
+        """
+        # Output-only runs provide their own data and bypass convergence state.
+        if "farm_data" in kwargs:
+            return super()._launch_parallel_farm_calc(mlist, *data, **kwargs)
+
         prev_fres = self.__prev_farm_results
         if self._final_run:
             sel = None

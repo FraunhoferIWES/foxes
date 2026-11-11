@@ -76,7 +76,11 @@ def _calculate(kind, speeds, directions, meso_directions, blending, chunk_size):
     with foxes.Engine.new(
         "numpy", n_procs=1, chunk_size_states=chunk_size, verbosity=0
     ):
-        return algo.calc_farm(outputs=[FV.AMB_REWS, FV.WD, FV.WEIGHT])
+        return algo.calc_farm(
+            outputs=foxes.models.outputs.FarmResultsOutput(
+                variables=[FV.AMB_REWS, FV.WD, FV.WEIGHT]
+            )
+        )
 
 
 @pytest.mark.parametrize("kind", ["memi", "cfd"])

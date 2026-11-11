@@ -63,9 +63,8 @@ class _Algorithm:
 
 class _Downwind:
     source_results = None
-    outputs = None
+    output = None
     ambient = None
-    ambient_keep = None
     farm_ambient = None
 
     def __init__(self, *args, **kwargs):
@@ -74,16 +73,16 @@ class _Downwind:
     def initialize(self, force=False):
         pass
 
-    def calc_farm(self, ambient=False):
+    def calc_farm(self, outputs, ambient=False):
+        """Return synthetic farm context with all available fields selected."""
+        assert outputs == "farm_results_all"
         self.__class__.farm_ambient = ambient
         return xr.Dataset()
 
-    def calc_points(
-        self, farm_results, points, outputs, ambient=False, ambient_keep=False
-    ):
-        self.__class__.outputs = outputs
+    def calc_points(self, farm_results, points, outputs, ambient=False):
+        """Return synthetic fields while recording the algorithm output selector."""
+        self.__class__.output = outputs
         self.__class__.ambient = ambient
-        self.__class__.ambient_keep = ambient_keep
         return self.__class__.source_results
 
 
@@ -109,9 +108,8 @@ def _source_results(n_points, *, variables=(FV.WS, FV.WD, FV.RHO)):
 
 def _patch_source_evaluation(monkeypatch, source_results):
     _Downwind.source_results = source_results
-    _Downwind.outputs = None
+    _Downwind.output = None
     _Downwind.ambient = None
-    _Downwind.ambient_keep = None
     _Downwind.farm_ambient = None
     monkeypatch.setattr(
         "foxes.input.states.binned._reduction.run_with_engine",
@@ -244,9 +242,8 @@ def test_binned_data_reduces_and_round_trips_artifact(
 
     states.load_data(_Algorithm(), loaded_data)
 
-    assert _Downwind.outputs == [FV.WS, FV.WD, FV.RHO]
+    assert _Downwind.output.variables == [FV.WS, FV.WD, FV.RHO]
     assert _Downwind.ambient is True
-    assert _Downwind.ambient_keep is True
     assert _Downwind.farm_ambient is True
     assert states.mean_vars == [FV.RHO]
     assert states.output_point_vars(None) == [FV.WS, FV.WD, FV.RHO]
@@ -313,10 +310,11 @@ def test_binned_data_reduces_and_round_trips_artifact(
         verbosity=0,
     )
     with foxes.Engine.new("single", progress_bar=False, verbosity=0):
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs="farm_results_all")
 
     np.testing.assert_array_equal(farm_results[FC.STATE], [0, 1, 2, 3])
-    np.testing.assert_allclose(farm_results[FV.WEIGHT][:, 0], [1.0, 2.0, 1.0, 2.0])
+    assert farm_results[FV.WEIGHT].dims == (FC.STATE,)
+    np.testing.assert_allclose(farm_results[FV.WEIGHT], [1.0, 2.0, 1.0, 2.0])
     np.testing.assert_allclose(farm_results[FV.AMB_REWS][:, 0], [2.5, 2.5, 7.5, 7.5])
     np.testing.assert_allclose(
         farm_results[FV.AMB_WD][:, 0], [90.0, 270.0, 90.0, 270.0]
@@ -761,7 +759,7 @@ def test_binned_data_averages_non_histogram_wd_across_points(states_class):
     )
 
     with foxes.Engine.new("single", progress_bar=False, verbosity=0):
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs="farm_results_all")
 
     direction = float(farm_results[FV.AMB_WD].item())
     angular_error = abs((direction + 180.0) % 360.0 - 180.0)

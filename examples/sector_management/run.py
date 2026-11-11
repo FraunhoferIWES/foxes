@@ -161,25 +161,27 @@ if __name__ == "__main__":
         ax1 = fig.add_subplot(121, polar=True)
         ax2 = fig.add_subplot(122, polar=True)
 
-        o = foxes.output.RosePlotOutput(farm_results)
-        o.get_figure(
-            16,
-            FV.P,
-            [0, 100, 1000, 2000, 4000, 5001, 7000],
-            turbine=0,
-            title="Power turbine 0",
-            fig=fig,
-            ax=ax1,
-        )
+        algo.calc_outputs(
+            outputs=foxes.models.outputs.RosePlotOutput(
+                wd_sectors=16,
+                ws_var=FV.P,
+                ws_bins=[0, 100, 1000, 2000, 4000, 5001, 7000],
+                turbine=0,
+                plot=True,
+                plot_pars=dict(title="Power turbine 0", fig=fig, ax=ax1),
+            ),
+            farm_results=farm_results,
+        )[0]
 
-        o = foxes.output.RosePlotOutput(farm_results)
-        o.get_figure(
-            16,
-            FV.P,
-            [0, 100, 1000, 2000, 4000, 5001, 7000],
-            turbine=1,
-            title="Power turbine 1",
-            fig=fig,
-            ax=ax2,
-        )
+        algo.calc_outputs(
+            outputs=foxes.models.outputs.RosePlotOutput(
+                wd_sectors=16,
+                ws_var=FV.P,
+                ws_bins=[0, 100, 1000, 2000, 4000, 5001, 7000],
+                turbine=1,
+                plot=True,
+                plot_pars=dict(title="Power turbine 1", fig=fig, ax=ax2),
+            ),
+            farm_results=farm_results,
+        )[0]
         plt.show()

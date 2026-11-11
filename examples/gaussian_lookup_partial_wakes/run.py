@@ -166,19 +166,37 @@ def main() -> None:
 
         plot_data = None
         if not args.nofig:
-            out = foxes.output.FlowPlots2D(algo, farm_results)
-            plot_data = out.get_states_data_xy(
-                args.var,
-                resolution=args.fig_resolution,
-                states_isel=[args.fig_state_index],
+            plot_data = algo.calc_outputs(
+                outputs=foxes.models.outputs.FlowPlots2D(
+                    plane="xy",
+                    reduction="states",
+                    plot=False,
+                    data_format="numpy",
+                    var=args.var,
+                    states_isel=[args.fig_state_index],
+                    grid_pars=dict(resolution=args.fig_resolution),
+                ),
+                farm_results=farm_results,
             )
 
     print("\nUsing partial_wakes:", args.partial_wakes)
     print("\nFarm results:\n", farm_results)
 
     if not args.nofig and plot_data is not None:
-        fig_gen = out.gen_states_fig_xy(plot_data, rotor_color="red", figsize=(7, 6))
-        next(fig_gen)
+        fig_gen = algo.calc_outputs(
+            outputs=foxes.models.outputs.FlowPlots2D(
+                plane="xy",
+                reduction="states",
+                plot=True,
+                data_format="numpy",
+                var=args.var,
+                states_isel=[args.fig_state_index],
+                grid_pars=dict(resolution=args.fig_resolution),
+                plot_pars=dict(rotor_color="red", figsize=(7, 6)),
+            ),
+            farm_results=farm_results,
+        )
+        fig_gen[0]
         plt.show()
 
 

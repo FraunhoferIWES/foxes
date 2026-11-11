@@ -1188,9 +1188,53 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Outputs:
+  - Polish adopted output and helper docstrings, split model-book registration
+    by concern, and separate animation composition/rendering and farm writer
+    policies from collection and payload assembly without changing result schemas.
+  - Keep animation model-book presets noninteractive. Configure all test-owned
+    output presets/factories with `show=False` and prohibit enabled display in
+    tests, including mocked display checks.
+  - Add `show=False` to plotting constructors and enable display on model-book
+    static plotting presets/factories. Explicitly enabled animation playback uses
+    configured frame rates after saving, on the parent only. Respect numerical
+    and no-figure modes, preserve results and close transient figures on errors.
+  - Reduce worker payloads before transport: mean slices return weighted point
+    sums, farm evaluations return sufficient statistics or scalar summaries,
+    roses return bin accumulators, and layouts retain selected geometry and
+    reduced colours. Merge counts, centred moments and bin denominators globally.
+    Preserve mixed power units, selections and public numerical results.
+  - Transport static point coordinates once per tile. Collect flow-plot vector
+    fields and farm geometry only for configured quivers and rotor overlays;
+    keep required state frames for datasets, writers and animations. Assemble
+    state-dependent point coordinates correctly in Sequential result buffers.
+  - Derive flow animations from `SliceData`, not the reverse. Share neutral
+    slice point/grid collection with `FlowPlots2D` and `SlicesData`, removing
+    animation settings and animation-labelled shared data from static outputs.
+    Verify reordered precomputed flow-plot values and weighted means in all
+    planes; document the `flow_plot_<plane>_<reduction>` model-book selectors.
+  - Register all newly adopted output models in `ModelBook.outputs`, including
+    lightweight evaluation/layout/rose presets and plane/reduction factories
+    for slice data, parallel slices and two-dimensional flow plots.
+  - Collect farm output once per state chunk in point runs, while preserving
+    collection and input validation for calls without a point-chunk index.
+  - Allow Iterative output-only runs to consume explicitly supplied farm results
+    and state selections without injecting convergence data or recalculating.
+  - Promote animation grids, flow/slice plotting, layout, rose and farm
+    evaluation dependencies to constructor-defined `foxes.models.outputs`
+    models, removing their former dataset-bound classes and exports.
+  - Execute outputs through `calc_farm`, `calc_points` or `calc_outputs` while
+    retaining the public `outputs` string/list selector. Bound farm-run point
+    evaluation per state chunk, reuse supplied/precomputed points and reject
+    conflicting composed grids. Keep scientific grids and buffers off models.
+  - Support horizontal/vertical planes, configured reductions and one-write
+    multi-plane datasets; migrate Python, YAML/WindIO and notebook callers.
 - Turbine models:
+  - Restrict evaluation to nominal capacity, capacity factor, efficiency and
+    annualized/probability yields, with matching ambient metadata and farm
+    evaluation operations.
   - Extend `TurbineEvaluation` with state-turbine capacity, capacity factor,
-    full-load fraction, annualized yield and P75/P90 yield, including ambient
+    annualized yield and P75/P90 yield, including ambient
     variants. Require explicit relative uncertainty for probability yields.
     Honor original turbine identity and power units, preserve full-shaped
     selections and keep running model state read-only.
@@ -1291,7 +1335,7 @@ This major version introduces the concept of `Engines` which handle the chunking
     optional keyword-only engine `progress_label`.
     Explicitly forward the upstream label through every engine dispatch and
     delegation call, including both DefaultEngine backends.
-  - Consolidate `Animator` in `foxes.models.outputs.flow_animations` and move all Sequential plugins
+  - Consolidate `Animator` in `foxes.models.outputs.animator` and move all Sequential plugins
     (`SeqWakeDebugPlugin`, `SeqAnimationOutputPlugin`, `SeqFlowAnimationPlugin`)
     to the new `foxes.models.seq_plugins` package.
     Update animation renderers, examples and the Sequential notebook without

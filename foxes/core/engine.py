@@ -1,22 +1,55 @@
 from __future__ import annotations
 
 import os
-import numpy as np
 from abc import ABC, abstractmethod
-from xarray import Dataset
-from typing import TYPE_CHECKING, Any, Callable, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, cast
 
+import numpy as np
+from xarray import Dataset
+
+import foxes.constants as FC
+import foxes.variables as FV
 from foxes.config import config
 from foxes.utils import new_instance
-import foxes.constants as FC
 
-from .data import MData, FData, TData
+from .data import FData, MData, TData
 
 if TYPE_CHECKING:
     from .algorithm import Algorithm
     from .data_calc_model import DataCalcModel
 
 __global_engine_data__: dict[str, Engine | None] = dict(engine=None)
+
+
+def _expand_farm_fields(data: dict[str, Any], dims: dict[str, Any]) -> None:
+    """Broadcast reduced farm fields to the chunk's full farm axes.
+
+    Parameters
+    ----------
+    data
+        Chunk-local dataset values, including ``FC.STATE`` and ``FC.TURBINE``
+        coordinates. Reduced fields are replaced in place by read-only views;
+        coordinate fields, ``FC.TNAME`` and ``FV.WEIGHT`` are left unchanged.
+    dims
+        Variable-to-dimension mapping, updated in place to
+        ``(FC.STATE, FC.TURBINE)`` for scalar, state-only and turbine-only
+        physical fields. Other dimensions are preserved.
+    """
+    # Farm containers require full state/turbine axes, unlike datasets.
+    shape = (len(data[FC.STATE]), len(data[FC.TURBINE]))
+    for variable, axes in list(dims.items()):
+        if variable in (FC.STATE, FC.TURBINE, FC.TNAME, FV.WEIGHT):
+            continue
+        if axes == (FC.TURBINE,):
+            data[variable] = np.broadcast_to(data[variable][None, :], shape)
+        elif axes == (FC.STATE,):
+            data[variable] = np.broadcast_to(data[variable][:, None], shape)
+        elif axes == ():
+            data[variable] = np.broadcast_to(data[variable], shape)
+        else:
+            continue
+        dims[variable] = (FC.STATE, FC.TURBINE)
 
 
 class EngineRunner(ABC):
@@ -30,7 +63,30 @@ class EngineRunner(ABC):
         mdata: MData,
         fdata: FData,
     ) -> tuple[FData, bool]:
-        """Rebuild chunk-local farm data from previous farm results when available."""
+        """Rebuild chunk-local farm data from available previous results.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm, queried for previous farm results when it
+            provides ``prev_farm_results``.
+        mdata
+            Model chunk supplying state offsets and fallback previous results
+            through ``FC.PREV_FARM_RESULTS`` in ``extra_data``.
+        fdata
+            Existing farm chunk, returned unchanged if previous results are
+            absent, empty or do not cover the current state interval.
+
+        Returns
+        -------
+        farm_data
+            The original container or a newly constructed chunk in the previous
+            results' turbine order. Reduced physical fields are broadcast to
+            ``(FC.STATE, FC.TURBINE)``; previous results are not mutated.
+        applied
+            Whether previous results replaced ``fdata``.
+        """
+        # Prefer algorithm-specific history over model-data fallback storage.
         prev_farm_results = (
             algo.prev_farm_results(mdata=mdata)
             if hasattr(algo, "prev_farm_results")
@@ -45,6 +101,7 @@ class EngineRunner(ABC):
             if prev_n_states == 0:
                 return fdata, False
 
+        # Reuse an already chunk-sized dataset or slice full-state history.
         i0 = mdata.states_i0(counter=True)
         if i0 is None or mdata.n_states is None:
             return fdata, False
@@ -56,13 +113,15 @@ class EngineRunner(ABC):
                 s_states = np.s_[:]
             elif prev_n_states < i1:
                 return fdata, False
+
+        # Copy prior values before adapting their reduced dataset dimensions.
         fdata = cast(
             FData,
             FData.from_dataset(
                 prev_farm_results,
                 mdata=mdata,
                 s_states=s_states,
-                callback=None,
+                callback=_expand_farm_fields,
                 states_i0=i0,
                 n_states=mdata.n_states,
                 n_turbines=algo.n_turbines,
@@ -73,8 +132,20 @@ class EngineRunner(ABC):
 
     @abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> Any:
-        """Runs the chunk calculation"""
-        pass
+        """Run one engine-specific chunk calculation.
+
+        Parameters
+        ----------
+        args
+            Positional inputs required by the concrete engine runner.
+        kwargs
+            Keyword inputs required by the concrete engine runner.
+
+        Returns
+        -------
+        chunk_results
+            Calculated chunk payload in the concrete engine's submission format.
+        """
 
 
 class Engine(ABC):
@@ -144,7 +215,20 @@ class Engine(ABC):
         __global_engine_data__["engine"] = self
         return self
 
-    def __exit__(self, *exit_args: Any) -> None:
+    def __exit__(self, *exit_args: object) -> None:
+        """Finalize the engine and release its active context.
+
+        Parameters
+        ----------
+        exit_args
+            Exception type, exception value and traceback supplied by the
+            context-manager protocol. Exceptions are not suppressed.
+
+        Raises
+        ------
+        ValueError
+            If the engine has not entered its context.
+        """
         if not self.__entered:
             raise ValueError(
                 f"Engine '{self.name}': Exit called for not entered engine"
@@ -272,7 +356,6 @@ class Engine(ABC):
             The future object.
 
         """
-        pass
 
     @abstractmethod
     def future_is_done(self, future: Any) -> bool:
@@ -290,7 +373,6 @@ class Engine(ABC):
             ``True`` if the future is done.
 
         """
-        pass
 
     @abstractmethod
     def await_result(self, future: Any) -> Any:
@@ -308,7 +390,6 @@ class Engine(ABC):
             The calculation result.
 
         """
-        pass
 
     def await_results(self, futures: list[Any]) -> list[Any]:
         """Resolve a batch of tasks in submission order.
@@ -354,7 +435,6 @@ class Engine(ABC):
             The result list.
 
         """
-        pass
 
     @property
     def loop_dims(self) -> list[str]:
@@ -720,7 +800,6 @@ class Engine(ABC):
             The engine runner.
 
         """
-        pass
 
     @classmethod
     def new(cls, engine_type: str | None, *args: Any, **kwargs: Any) -> Engine:

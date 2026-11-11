@@ -115,11 +115,6 @@ CAPF = "CAPF"
 """ Capacity factor, equals P/CAP
 """
 
-FLF = "FLF"
-""" The full load fraction
-"""
-
-
 REWS = "REWS"
 """ Rotor effective wind speed in m/s
 """
@@ -218,11 +213,6 @@ AMB_CAPF = "AMB_CAPF"
 """ Ambient capacity factor, equals AMB_P/CAP
 """
 
-AMB_FLF = "AMB_FLF"
-""" The ambient full load fraction
-"""
-
-
 AMB_REWS = "AMB_REWS"
 """ Ambient rotor effective wind speed in m/s
 """
@@ -269,7 +259,6 @@ var2amb = {
         P75,
         P90,
         CAPF,
-        FLF,
         UV,
         U,
         V,

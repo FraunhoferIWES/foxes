@@ -20,8 +20,8 @@ so turbine-model execution alone cannot finalize every ambient-dependent metric.
 
 - Keep all outputs in `(FC.STATE, FC.TURBINE)` arrays shared with `fdata`.
   Update only selected entries and leave running model instances read-only.
-- Support nominal capacity, capacity factor, exact full-load indicator,
-  efficiency, yield, P75/P90 and ambient capacity-factor/full-load/yield variants.
+- Support nominal capacity, capacity factor, efficiency, yield, P75/P90 and
+  ambient capacity-factor/yield variants.
 - Calculate yield as `P * P_unit_W * 8760 / 1e9` in GWh/a. Apply statistical
   state weights only during later aggregation.
 - Name exceedance yields `FV.P75`, `FV.P90`, `FV.AMB_P75`, and `FV.AMB_P90`.

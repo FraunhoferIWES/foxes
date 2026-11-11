@@ -248,6 +248,167 @@ def _get_object(results_storage: dict[Any, Any], d: str) -> Any:
         return results_storage[d]
 
 
+def _resolve_labels(value: Any, storage: dict[Any, Any]) -> Any:
+    """Resolve stored-result references in nested constructor configuration.
+
+    Parameters
+    ----------
+    value
+        Configuration value, including nested mappings, lists and tuples.
+        Strings beginning with ``$`` name stored results and may include the
+        integer indexing syntax supported by ``_get_object``.
+    storage
+        Reference-name-to-result mapping, read without modification.
+
+    Returns
+    -------
+    resolved_value
+        Rebuilt containers with references replaced by the stored objects.
+        Referenced objects and non-container values are not copied.
+
+    Raises
+    ------
+    KeyError
+        If a referenced result is unavailable.
+    ValueError
+        If a reference's positional indices cannot be parsed as integers.
+    """
+    # Rebuild configuration containers while preserving referenced object identity.
+    if isinstance(value, str) and value.startswith("$"):
+        return _get_object(storage, value)
+    if isinstance(value, dict):
+        return {key: _resolve_labels(item, storage) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return type(value)(_resolve_labels(item, storage) for item in value)
+    return value
+
+
+def _store_labels(
+    storage: dict[Any, Any], labels: str | list[str] | tuple[str, ...], result: Any
+) -> None:
+    """Store named result references for later output entries.
+
+    Parameters
+    ----------
+    storage
+        Result-reference mapping, updated in place without copying result values.
+    labels
+        A single ``$name`` for the entire result, or a sequence paired with
+        successive result elements. Empty labels and ``none``, ``None``, ``_``
+        and ``__`` are skipped. Sequence pairing stops at the shorter input.
+    result
+        Returned output value or iterable of values to register.
+
+    Raises
+    ------
+    ValueError
+        If a non-skipped label lacks ``$`` or contains brackets or a comma.
+        Earlier valid entries remain stored if a later label is invalid.
+    """
+    # Share result objects rather than duplicating scientific arrays.
+    entries = [(labels, result)] if isinstance(labels, str) else zip(labels, result)
+    for label, item in entries:
+        if label in ("", "none", "None", "_", "__"):
+            continue
+        if not label.startswith("$") or any(char in label for char in "[],"):
+            raise ValueError(
+                f"Result labels must be simple '$name' references: {label!r}"
+            )
+        storage[label] = item
+
+
+def _run_output_model(
+    index: int,
+    definition: Dict[Any, Any],
+    algo: Algorithm | None,
+    farm_results: Dataset | None,
+    point_results: Any,
+    extra_sig: dict[str, Any],
+    results_storage: dict[Any, Any],
+    nofig: bool,
+) -> Any:
+    """Construct and execute one constructor-defined output in its engine phase.
+
+    Parameters
+    ----------
+    index
+        Output-entry position used in contextual diagnostics.
+    definition
+        Mutable constructor configuration. ``output_type`` and ``result_labels``
+        are consumed, and nested result references are resolved in place.
+    algo
+        Initialized algorithm exposing ``calc_outputs``.
+    farm_results
+        Supplied farm fields on ``(FC.STATE, FC.TURBINE)``. An ``add_*`` output
+        updates this dataset in place for subsequent pipeline entries.
+    point_results
+        Supplied point fields, forwarded to ``calc_outputs`` without copying.
+    extra_sig
+        Additional constructor arguments injected by matching parameter names.
+    results_storage
+        Shared result-reference mapping, read during construction and updated
+        with explicitly requested result labels.
+    nofig
+        Suppress figure creation even if the output configuration enables it.
+
+    Returns
+    -------
+    result
+        The value returned by ``algo.calc_outputs``.
+
+    Raises
+    ------
+    ValueError
+        If the algorithm is missing, construction produces no model, the model
+        is outside ``foxes.models.outputs``, or a result label is invalid.
+    TypeError
+        If the algorithm does not provide ``calc_outputs``.
+    KeyError
+        If a referenced result or required constructor option is unavailable.
+    """
+    # Validate execution support before consuming constructor options.
+    if algo is None:
+        raise ValueError(f"Output {index}: Algorithm is required")
+    if not hasattr(algo, "calc_outputs"):
+        raise TypeError(f"Output {index}: Algorithm must implement calc_outputs")
+
+    # Resolve nested references before constructing the output model.
+    output_type = definition.pop_item("output_type")
+    labels = definition.pop("result_labels", None)
+    for key, value in definition.items():
+        definition[key] = _resolve_labels(value, results_storage)
+    output = get_output_obj(
+        output_type,
+        definition,
+        algo,
+        farm_results,
+        point_results,
+        extra_sig=extra_sig,
+    )
+    if output is None:
+        raise ValueError(f"Output {index}: Could not construct {output_type}")
+    if not type(output).__module__.startswith("foxes.models.outputs."):
+        raise ValueError(
+            f"Output {index}: Constructor-defined outputs must belong "
+            "to foxes.models.outputs"
+        )
+
+    # Execute through the ordinary output lifecycle and publish pipeline results.
+    output.nofig = nofig or output.nofig
+    result = algo.calc_outputs(
+        outputs=output, farm_results=farm_results, point_results=point_results
+    )
+    if labels is not None:
+        _store_labels(results_storage, labels, result)
+    if (
+        isinstance(result, Dataset)
+        and getattr(output, "operation", "").startswith("add_")
+        and farm_results is not None
+    ):
+        farm_results.update(result)
+    return result
+
+
 def run_obj_function(
     obj: Any,
     fdict: Dict[Any, Any],
@@ -258,30 +419,38 @@ def run_obj_function(
     verbosity: int | None = None,
 ) -> Any:
     """
-    Runs a function of an object
+    Run one configured object method and register its returned values.
 
     Parameters
     ----------
     obj
-        The object
+        Object exposing the configured method.
     fdict
-        The function call dict
+        Mutable method-call configuration. Control keys are consumed and
+        top-level ``$name`` arguments are replaced with stored result objects.
     algo
-        The algorithm
+        Algorithm injected when the method declares ``algo`` or ``farm``.
     with_engine
-        Flag for running from within engine context
+        Whether execution is inside the engine context, used in progress output.
     results_storage
-        Storage for result variables
+        Shared reference mapping, updated in place for requested result labels.
     nofig
-        Do not show figures, overrules settings from fdict
+        Suppress the ``plt_show`` and ``plt_close`` shortcuts in ``fdict``.
     verbosity
-        The verbosity level, 0 = silent
+        Progress verbosity; ``0`` is silent and ``None`` prints all messages.
 
     Returns
     -------
     results
-        The returns of the function
+        Method return value, or ``None`` when the enabled ``plt_close`` shortcut
+        closes its figure. Stored references point to this same value.
 
+    Raises
+    ------
+    KeyError
+        If the method name or a referenced result is missing.
+    ValueError
+        If an explicit result label is invalid.
 
     """
 
@@ -326,23 +495,7 @@ def run_obj_function(
 
     # store results under result labels:
     if rlbs is not None:
-
-        def _set_label(results_storage: dict[Any, Any], k: str, r: Any) -> None:
-            if k not in ["", "none", "None", "_", "__"]:
-                assert k[0] == "$", (
-                    f"Output of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
-                )
-                assert "[" not in k and "]" not in k and "," not in k, (
-                    f"Output of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
-                )
-                _print(f"    result label {k}: {type(r).__name__}")
-                results_storage[k] = r
-
-        if isinstance(rlbs, (list, tuple)):
-            for i, k in enumerate(rlbs):
-                _set_label(results_storage, k, results[i])
-        else:
-            _set_label(results_storage, rlbs, results)
+        _store_labels(results_storage, rlbs, results)
 
     return results
 
@@ -360,43 +513,62 @@ def run_outputs(
     verbosity: int | None = None,
 ) -> tuple[list[tuple[dict[str, Any], list[Any] | None]], Dict[Any, Any]]:
     """
-    Run outputs from dict.
+    Run configured output models and object methods for one engine phase.
+
+    Entries with ``output_type`` and no ``functions`` list construct output
+    models and call ``algo.calc_outputs``. Other entries execute their configured
+    method lists. Stored results can be referenced by later entries.
 
     Parameters
     ----------
-    engine
-        The engine object
     idict
-        The input parameter dictionary
+        Input dictionary containing an ``outputs`` list. Entries are copied
+        before consuming execution options or resolving references.
     algo
-        The algorithm
+        Algorithm used for constructor injection and output execution.
     farm_results
-        The farm results
+        Supplied ``(FC.STATE, FC.TURBINE)`` farm fields. Constructor-defined
+        ``add_*`` evaluations update this dataset for subsequent entries.
     point_results
-        The point results
+        Supplied point results, forwarded without scientific recalculation when
+        the selected output supports precomputed fields.
     with_engine
-        Flag for running from within engine context
+        Select entries or methods for this engine phase. Constructor-defined
+        outputs default to execution inside the engine context; method entries
+        default to execution outside it.
     extra_sig
-        Extra function signature check, sets
-        arguments (key) with data (value)
+        Parameter-name-to-value mapping injected into matching constructors.
     results_storage
-        Storage for result variables
+        Shared result-reference mapping, updated in place. ``None`` creates a
+        new mapping. Constructor options resolve nested ``$name`` references;
+        configured methods resolve top-level references.
     ret_results_storage
-        Flag for returning results variables
+        Request result-reference storage explicitly. The returned pair includes
+        this storage for either setting.
     nofig
-        Do not show figures, overrules settings from idict
+        Suppress output-model figures and configured pyplot show/close shortcuts.
     verbosity
-        The verbosity level, 0 = silent
+        Progress verbosity; ``0`` is silent and ``None`` prints all messages.
 
     Returns
     -------
     outputs
-        For each output enty, a tuple (dict, results),
-        where results is a list that represents one
-        entry per function call
+        Ordered ``(definition, results)`` pairs. A constructor-defined output has
+        one result; method entries have one value per configured call, including
+        ``None`` for skipped calls. Skipped entries have ``results=None``.
     results_storage
-        The results variables
+        The supplied or newly created reference mapping; values are not copied.
 
+    Raises
+    ------
+    KeyError
+        If an entry specifies neither ``output_type`` nor ``object``, a required
+        option is missing, or a result reference is unavailable.
+    ValueError
+        If a constructor-defined output lacks an algorithm, cannot be constructed,
+        belongs outside ``foxes.models.outputs``, or uses invalid result labels.
+    TypeError
+        If the algorithm lacks ``calc_outputs`` for a constructor-defined entry.
 
     """
 
@@ -414,6 +586,25 @@ def run_outputs(
         for i, d in enumerate(odicts):
             d = deepcopy(d)
             if "output_type" in d:
+                if "functions" not in d:
+                    # Preserve the input description before consuming model options.
+                    definition = dict(d)
+                    selected_engine = d.pop("with_engine", True)
+                    if selected_engine != with_engine:
+                        out.append((definition, None))
+                        continue
+                    result = _run_output_model(
+                        i,
+                        d,
+                        algo,
+                        farm_results,
+                        point_results,
+                        extra_sig,
+                        results_storage,
+                        nofig,
+                    )
+                    out.append((definition, [result]))
+                    continue
                 d["nofig"] = nofig
                 ocls = d.pop_item("output_type")
                 d0 = dict(output_type=ocls)

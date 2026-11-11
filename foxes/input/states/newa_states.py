@@ -10,7 +10,8 @@ from scipy.spatial import Delaunay
 
 from foxes.utils.utm_utils import from_lonlat
 from foxes.config import config, get_output_path
-from foxes.output import FarmLayoutOutput
+from foxes.models.outputs import FarmLayoutOutput
+from foxes.models.outputs._layout import _get_figure
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -101,10 +102,10 @@ class NEWAStates(DatasetStates):
             Path to a plot file, e.g. wrf_points.png, to visualize the
             selected WRF grid points and the layout of the farm.
         wrf_point_plot_pars
-            Additional parameters for `matplotlib.pyplot.plot` when drawing
+            Additional parameters for ``matplotlib.pyplot.plot`` when drawing
             the WRF grid points. Defaults to blue points with alpha 0.2.
         wrf_point_plot_farm_pars
-            Parameters for :meth:`FarmLayoutOutput.get_figure` on the point-plot
+            Farm-layout rendering options on the point-plot
             axes. ``None`` preserves the default overlay. Use
             ``{"title": "", "alpha": 0, "annotate": 0}`` for a title-free,
             transparent turbine overlay. Caller dictionaries are copied.
@@ -179,24 +180,39 @@ class NEWAStates(DatasetStates):
         verbosity: int = 0,
     ) -> None:
         """
-        Preprocesses the first file.
+        Prepare NEWA coordinates and write the configured WRF support plot.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            Loading algorithm supplying horizontal farm bounds and the turbine
+            overlay.
         data
-            The dataset to preprocess
+            First WRF dataset supplying longitude and latitude on the horizontal
+            WRF axes and the configured vertical coordinates.
         bounds_extra_space
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
+            Horizontal farm-bound margin in metres or rotor-diameter units such
+            as ``"2.5D"``. ``None`` retains the full horizontal grid.
         height_bounds
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+            Vertical loading bounds ``(h_min, h_max)`` in metres, forwarded to
+            base preprocessing.
         loaded_data
-            If given, optionally add to this loaded data dict with entries
-            {"coords": {}, "data_vars": {}, "extra_data": {}}
+            Shared ``LoadedData`` mapping accepted by the loading interface.
+            This override passes ``None`` to base preprocessing.
         verbosity
-            The verbosity level, 0 = silent
+            Loading, bounds and plot-path verbosity; ``0`` is silent.
+
+        Raises
+        ------
+        ValueError
+            If the requested vertical bounds lie outside the available heights.
+
+        Notes
+        -----
+        During loading, this hook prepares model-private projected coordinates
+        and may extend ``self.isel`` to cover the farm bounds. The diagnostic
+        plot uses UTM metre coordinates and the shared farm renderer; it does not
+        alter scientific grid sampling.
 
         """
 
@@ -325,7 +341,9 @@ class NEWAStates(DatasetStates):
                 "fontsize": 12,
                 **self.wrf_point_plot_farm_pars,
             }
-            FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig, ax=ax, **layout_pars)
+            _get_figure(
+                algo.farm, None, None, FarmLayoutOutput(), fig=fig, ax=ax, **layout_pars
+            )
             handles, labels = ax.get_legend_handles_labels()
             legend_entries = dict(zip(labels, handles))
             if legend_entries:

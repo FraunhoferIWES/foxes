@@ -286,7 +286,7 @@ def test_state_selection_is_global(tmp_path, monkeypatch, selection, expected, b
     assert [s.tolist() for s in calls] == ([expected] if expected else [])
 
 
-def _target_chunk(state_chunk, target_chunk):
+def _target_chunk(output, state_chunk, target_chunk):
     # Use multiple target points and broadcast fields to expose shape mistakes.
     states = np.array([4 * state_chunk, 4 * state_chunk + 2])
     mdata = MData(
@@ -295,6 +295,7 @@ def _target_chunk(state_chunk, target_chunk):
         chunki_states=state_chunk,
         chunki_points=target_chunk,
     )
+    mdata.add(output._order_key, states.copy(), (FC.STATE,))
     points = np.zeros((2, 2, 2, 3))
     points[..., 0] = (target_chunk * 4 + np.arange(4)).reshape(1, 2, 2)
     tdata = TData.from_tpoints(points, np.array([0.5, 0.5]), mdata=mdata)
@@ -312,7 +313,7 @@ def test_target_tiles_are_copied_buffered_and_combined(tmp_path, monkeypatch):
     calls, results = [], Dict()
     monkeypatch.setattr(output, "_render", lambda algo, payload: calls.append(payload))
     for key in [(1, 1), (0, 1), (1, 0), (0, 0)]:
-        md, fd, td = _target_chunk(*key)
+        md, fd, td = _target_chunk(output, *key)
         before = deepcopy(td)
         chunk = output.calculate(None, md, fd, td, {})
         for variable in td:
@@ -401,10 +402,51 @@ def test_generated_grid_matches_independent_point_calculation(
             farm,
             payload["points"][0],
             ambient=ambient,
-            ambient_keep=True,
         )
     for variable in (FV.WS, FV.WD):
         np.testing.assert_allclose(payload["values"][variable], points[variable])
+
+
+def test_calc_outputs_uses_output_calculation_points(tmp_path, monkeypatch):
+    # calc_outputs obtains the grid from the output and delegates point chunking.
+    algo = _algorithm()
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        farm = algo.calc_farm(outputs="farm_results_all")
+
+    output = FlowAnimation(out_dir=tmp_path, grid_pars={"n_img_points": (2, 2)})
+    payloads = []
+    monkeypatch.setattr(
+        output, "_render", lambda algo, payload: payloads.append(payload)
+    )
+    outputs = foxes.core.OutputList(outputs=[output])
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=2, verbosity=0
+    ):
+        algo.calc_outputs(farm_results=farm, outputs=outputs)
+
+    assert len(payloads) == 1
+    assert payloads[0]["points"].shape == (4, 4, 3)
+    assert payloads[0]["states"].tolist() == [2, 4, 8, 16]
+
+
+def test_output_list_rejects_different_calculation_points(tmp_path):
+    # One calc_points run cannot satisfy outputs with different point grids.
+    outputs = foxes.core.OutputList(
+        outputs=[
+            FlowAnimation(
+                out_dir=tmp_path / "first", grid_pars={"n_img_points": (2, 2)}
+            ),
+            FlowAnimation(
+                out_dir=tmp_path / "second", grid_pars={"n_img_points": (3, 3)}
+            ),
+        ]
+    )
+    algo = _algorithm()
+    algo.initialize()
+    algo.init_model(outputs)
+
+    with pytest.raises(ValueError, match="different calculation points"):
+        outputs.get_calc_points(algo)
 
 
 @pytest.mark.parametrize("backend", ["numpy", "threads", "process"])
@@ -425,7 +467,11 @@ def test_calc_points_uses_existing_fields(tmp_path, monkeypatch, backend):
         chunk_size_points=2,
         verbosity=0,
     ):
-        actual = algo.calc_points(farm, points, output=output)
+        actual = algo.calc_points(
+            farm,
+            points,
+            outputs=[foxes.models.outputs.PointResultsOutput(), output],
+        )[FC.POINT_RESULTS]
     xr.testing.assert_allclose(actual, expected)
     with Image.open(tmp_path / "chunk_animation_WS.gif") as gif:
         assert gif.n_frames == 4
@@ -487,7 +533,7 @@ def test_save_failure_propagates_and_closes_figure(tmp_path, monkeypatch, point_
             farm = algo.calc_farm(outputs="farm_results_all")
         with pytest.raises(OSError, match="synthetic animation"):
             if point_run:
-                algo.calc_points(farm, np.array([[400.0, 0.0, 90.0]]), output=output)
+                algo.calc_points(farm, np.array([[400.0, 0.0, 90.0]]), outputs=output)
             else:
                 algo.calc_farm(outputs=output)
     assert plt.get_fignums() == before
@@ -497,7 +543,7 @@ def test_save_failure_propagates_and_closes_figure(tmp_path, monkeypatch, point_
 def test_missing_target_fields_are_contextual(tmp_path):
     # Missing external fields must identify the offending animation variable.
     output = _initialize_output(FlowAnimation(out_dir=tmp_path, variables=[FV.TI]))
-    md, fd, td = _target_chunk(0, 0)
+    md, fd, td = _target_chunk(output, 0, 0)
     with pytest.raises(KeyError, match="Missing target field 'TI'"):
         output.calculate(None, md, fd, td, {})
 
@@ -576,9 +622,9 @@ def test_iterative_writes_only_after_convergence(tmp_path, backend):
 def test_missing_tiles_are_rejected(tmp_path):
     # Finalization cannot silently create an incomplete animation.
     output = _initialize_output(FlowAnimation(out_dir=tmp_path))
-    md, fd, td = _target_chunk(0, 0)
+    md, fd, td = _target_chunk(output, 0, 0)
     chunk = output.calculate(None, md, fd, td, {})[output._result_key]
-    with pytest.raises(ValueError, match="Missing animation chunks"):
+    with pytest.raises(ValueError, match="Missing slice chunks"):
         output.finalize_results(None, 1, 2, Dict({output._result_key: {(0, 0): chunk}}))
 
 
@@ -630,7 +676,7 @@ def test_default_engine_supports_animation(tmp_path, point_run):
     if point_run:
         with foxes.Engine.new("numpy", verbosity=0):
             farm = algo.calc_farm(outputs="farm_results_all")
-        algo.calc_points(farm, np.array([[400.0, 0.0, 90.0]]), output=output)
+        algo.calc_points(farm, np.array([[400.0, 0.0, 90.0]]), outputs=output)
     else:
         algo.calc_farm(outputs=output)
     with Image.open(tmp_path / "chunk_animation_WS.gif") as gif:
@@ -662,7 +708,7 @@ def test_invalid_point_limit_unwinds_started_models(tmp_path):
 def test_model_book_defers_animation_preparation(monkeypatch, name, chunk, base_name):
     # Registering defaults must not build grids or initialize scientific models.
     monkeypatch.setattr(
-        "foxes.output.grids.get_grid_xy",
+        "foxes.models.outputs.grids.get_grid_xy",
         lambda *args, **kwargs: pytest.fail("grid generated during construction"),
     )
     output = foxes.ModelBook().outputs[name]

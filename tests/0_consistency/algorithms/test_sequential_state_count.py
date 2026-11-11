@@ -59,3 +59,6 @@ def test_sequential_uses_state_labels_for_generated_selections():
     assert algo.point_results is not None
     np.testing.assert_array_equal(algo.point_results[FC.STATE], state_index)
     np.testing.assert_allclose(algo.point_results[FV.WS].to_numpy()[:, 0], [7, 8, 9])
+    for variable, expected in ((FV.X, 0.0), (FV.Y, 0.0), (FV.H, 100.0)):
+        assert algo.point_results[variable].dims == (FC.STATE, FC.POINT)
+        np.testing.assert_allclose(algo.point_results[variable], expected)

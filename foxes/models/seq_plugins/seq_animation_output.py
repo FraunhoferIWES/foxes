@@ -13,7 +13,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 
 from .seq_wake_debug_plugin import SeqWakeDebugPlugin
-from foxes.models.outputs import FlowAnimation
+from foxes.models.outputs import FlowAnimation, PointResultsOutput
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -65,6 +65,14 @@ class SeqAnimationOutputPlugin(SequentialPlugin):
             If an output model-book name is unavailable.
         TypeError
             If a selected model is not a flow animation.
+        ValueError
+            If a selected animation does not supply calculation points.
+
+        Notes
+        -----
+        Grids are retrieved from initialized output models without storing
+        runtime arrays on those models. Selections and numerical buffers belong
+        to this plugin for the duration of one iterator run.
         """
         # Resolve against the caller's model book, retaining no rendered frames.
         super().initialize(algo)
@@ -84,7 +92,11 @@ class SeqAnimationOutputPlugin(SequentialPlugin):
                 if output._selection is None
                 else loaded["data_vars"][output._selection][1]
             )
-            points = loaded["extra_data"][output._grid_key]
+            points = output.get_calc_points(algo)
+            if points is None:
+                raise ValueError(
+                    f"{output.name}: Animation requires calculation points"
+                )
             self._runs.append((output, points, selection, {}))
         self._debug = SeqWakeDebugPlugin() if self.debug and self._runs else None
         if self._debug is not None:
@@ -100,9 +112,19 @@ class SeqAnimationOutputPlugin(SequentialPlugin):
         algo
             Iterator at its current state.
         fres
-            Current farm results in original turbine order.
+            Current farm results on ``(FC.STATE, FC.TURBINE)`` in original
+            turbine order, with exactly one state.
         pres
-            Optional iterator point results; animation grids are evaluated separately.
+            Current iterator point results on ``(FC.STATE, FC.POINT)``, if
+            available. Animation grids are evaluated separately.
+
+        Notes
+        -----
+        Selected state-step payloads copy farm fields, state labels and
+        ``(FC.STATE, FC.POINT)`` point values into plugin-owned buffers.
+        Ordinary field names are selected explicitly through ``PointResultsOutput``;
+        the output's ``ambient`` option controls whether wake effects are run.
+        Running animation model configuration is not mutated.
         """
         # Use the normal point path so engine point chunk limits still apply.
         super().update(algo, fres, pres)
@@ -117,7 +139,10 @@ class SeqAnimationOutputPlugin(SequentialPlugin):
                 continue
             variables = list(dict.fromkeys([*output._variables, FV.WD, FV.WS]))
             data = algo.calc_points(
-                fres, points, outputs=variables, ambient=output.ambient
+                fres,
+                points,
+                outputs=PointResultsOutput(variables=variables),
+                ambient=output.ambient,
             )
             chunks[(index, 0)] = dict(
                 states=fres[FC.STATE].to_numpy().copy(),

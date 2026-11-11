@@ -33,13 +33,12 @@ algorithm:
 
 outputs:
   - output_type: FarmLayoutOutput
-    functions:
-      - function: get_figure
-        color_by: mean_P
-        title: Mean power
-        figsize: [3, 6]
-        s: 100
-        annotate: 0
+    parameters:
+      color_by: mean_P
+      title: Mean power
+      figsize: [3, 6]
+      s: 100
+      annotate: 0
   - output_type: plt
     functions:
       - function: show

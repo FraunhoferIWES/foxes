@@ -8,7 +8,8 @@ from scipy.interpolate import griddata
 from scipy.spatial import Delaunay, QhullError
 
 from foxes.config import config, get_output_path
-from foxes.output import FarmLayoutOutput
+from foxes.models.outputs import FarmLayoutOutput
+from foxes.models.outputs._layout import _get_figure
 from foxes.utils import weibull_weights
 import foxes.variables as FV
 import foxes.constants as FC
@@ -23,7 +24,27 @@ def _write_point_cloud_plot(
     points: np.ndarray,
     verbosity: int,
 ) -> None:
-    """Write horizontal support coordinates with the current farm layout."""
+    """Write horizontal support locations with the current farm layout.
+
+    Parameters
+    ----------
+    states
+        Provider supplying the configured plot path and marker/layout options.
+        No file is written when ``grid_point_plot`` is ``None``.
+    algo
+        Loading algorithm supplying the farm overlay in original turbine order.
+    points
+        Support locations in metres, with shape ``(n_points, 3)`` and components
+        ``x``, ``y`` and height. Only horizontal coordinates are drawn; empty
+        input suppresses plotting. The array is not modified.
+    verbosity
+        Emit the resolved output path when positive.
+
+    Notes
+    -----
+    Paths use FOXES output-path resolution. The created figure is closed even
+    if rendering or saving fails; exceptions propagate to the caller.
+    """
     if states.grid_point_plot is None or points.size == 0:
         return
     fpath = get_output_path(states.grid_point_plot)
@@ -40,7 +61,9 @@ def _write_point_cloud_plot(
             "zorder": 10,
             **states.grid_point_plot_farm_pars,
         }
-        FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig, ax=ax, **layout_pars)
+        _get_figure(
+            algo.farm, None, None, FarmLayoutOutput(), fig=fig, ax=ax, **layout_pars
+        )
         ax.set_xlabel(f"{FV.X} [m]")
         ax.set_ylabel(f"{FV.Y} [m]")
         ax.set_aspect("equal", adjustable="box")
@@ -287,7 +310,7 @@ class PointCloudData(DatasetStates):
             Parameters for :meth:`matplotlib.axes.Axes.plot`, merged with blue
             point markers, alpha ``0.2``, and no connecting line.
         grid_point_plot_farm_pars
-            Parameters for :meth:`FarmLayoutOutput.get_figure` on the same axes.
+            Farm-layout rendering options on the same axes.
             ``None`` preserves the usual farm overlay. For a title-free,
             transparent overlay, use ``{"title": "", "alpha": 0, "annotate": 0}``.
             Caller parameter dictionaries are copied rather than mutated.
@@ -984,7 +1007,7 @@ class TurbinePointCloud(DatasetStates):
             Parameters for :meth:`matplotlib.axes.Axes.plot`, merged with blue
             point markers, alpha ``0.2``, and no connecting line.
         grid_point_plot_farm_pars
-            Parameters for :meth:`FarmLayoutOutput.get_figure` on the same axes.
+            Farm-layout rendering options on the same axes.
             ``None`` preserves the usual overlay. Parameter dictionaries are copied.
         kwargs
             Keyword arguments for the base class

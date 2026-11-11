@@ -92,7 +92,7 @@ def cloud_plot(monkeypatch):
     )
     monkeypatch.setattr(point_cloud_module.plt, "close", Mock())
     layout = Mock()
-    monkeypatch.setattr(point_cloud_module, "FarmLayoutOutput", layout)
+    monkeypatch.setattr(point_cloud_module, "_get_figure", layout)
     algo = SimpleNamespace(farm=SimpleNamespace(wind_farm_names=["farm"]))
     return algo, fig, ax, layout
 
@@ -116,7 +116,7 @@ def test_point_cloud_grid_point_plot_selected_points(cloud_plot, tmp_path, load_
     np.testing.assert_array_equal(ax.plot.call_args.args[0], [200.0])
     np.testing.assert_array_equal(ax.plot.call_args.args[1], [400.0])
     assert ax.plot.call_args.kwargs == states.grid_point_plot_pars
-    assert layout.return_value.get_figure.call_args.kwargs == {
+    assert layout.call_args.kwargs == {
         "fig": fig,
         "ax": ax,
         "annotate": 0,
@@ -732,7 +732,7 @@ def test_dataset_states_reconstruct_downwind_order_without_cross_state_expansion
     algo, expected = _dataset_reconstruction_case(dimension, state_dependent, n_states)
     selections = _guard_dataset_reconstruction(monkeypatch, algo.states)
     with foxes.Engine.new("single", verbosity=0):
-        results = algo.calc_farm()
+        results = algo.calc_farm(outputs="farm_results_all")
 
     assert results[FV.AMB_REWS].dims == (FC.STATE, FC.TURBINE)
     np.testing.assert_allclose(results[FV.AMB_REWS], expected)
@@ -846,7 +846,7 @@ def _run_ambient_rews(
         verbosity=0,
     )
     with foxes.core.Engine.new("single", verbosity=0):
-        return algo.calc_farm()[FV.AMB_REWS].to_numpy()
+        return algo.calc_farm(outputs="farm_results_all")[FV.AMB_REWS].to_numpy()
 
 
 def test_turbine_point_cloud_preserves_values_for_mixed_hub_heights():
@@ -933,7 +933,12 @@ def test_turbine_point_cloud_load_modes_preserve_timestamp_labels(tmp_path, load
         )
 
     with foxes.Engine.new("single", chunk_size_states=2, verbosity=0):
-        results = algo.calc_farm(outputs=outputs)
+        results = algo.calc_farm(
+            outputs=[
+                algo.mbook.outputs[item] if isinstance(item, str) else item
+                for item in outputs
+            ]
+        )
     if isinstance(results, dict):
         results = results[FC.FARM_RESULTS]
 

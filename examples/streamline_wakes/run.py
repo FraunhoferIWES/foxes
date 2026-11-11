@@ -168,14 +168,16 @@ if __name__ == "__main__":
         print("\nCalc time =", time1 - time0, "\n")
 
         if not args.nofig:
-            o = foxes.output.FlowPlots2D(algo, farm_results)
-            plot_data = o.get_states_data_xy(
-                FV.WS,
-                resolution=10,
-                xmin=0,
-                xmax=2500,
-                ymin=0,
-                ymax=2500,
+            plot_data = algo.calc_outputs(
+                outputs=foxes.models.outputs.FlowPlots2D(
+                    plane="xy",
+                    reduction="states",
+                    plot=False,
+                    data_format="numpy",
+                    var=FV.WS,
+                    grid_pars=dict(resolution=10, xmin=0, xmax=2500, ymin=0, ymax=2500),
+                ),
+                farm_results=farm_results,
             )
 
     print(farm_results, "\n")
@@ -184,12 +186,22 @@ if __name__ == "__main__":
     print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
     if not args.nofig:
-        for fig in o.gen_states_fig_xy(
-            plot_data,
-            figsize=(8, 8),
-            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
-            quiver_n=15,
-            rotor_color="red",
+        for fig in algo.calc_outputs(
+            outputs=foxes.models.outputs.FlowPlots2D(
+                plane="xy",
+                reduction="states",
+                plot=True,
+                data_format="numpy",
+                var=FV.WS,
+                grid_pars=dict(resolution=10, xmin=0, xmax=2500, ymin=0, ymax=2500),
+                plot_pars=dict(
+                    figsize=(8, 8),
+                    quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
+                    quiver_n=15,
+                    rotor_color="red",
+                ),
+            ),
+            farm_results=farm_results,
         ):
             plt.show()
             plt.close(fig)

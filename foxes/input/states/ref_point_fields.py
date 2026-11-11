@@ -15,7 +15,8 @@ from foxes.core import (
     WindFarm,
     Turbine,
 )
-from foxes.output import FarmLayoutOutput
+from foxes.models.outputs import FarmLayoutOutput
+from foxes.models.outputs._layout import _get_figure
 from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv, uv2wd
 from foxes.algorithms import Downwind
 import foxes.constants as FC
@@ -133,31 +134,38 @@ class SectorSimRefPointField(States):
         **kwargs: Any,
     ) -> Any:
         """
-        Creates a figure showing farm layout, reference point, and support points.
+        Create a figure showing the farm, reference point and support locations.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            Loading algorithm supplying the farm overlay and shared data.
         loaded_data
-            The loaded data dictionary. If None, ``algo.loaded_data`` is used.
+            Initialized field-support data. ``None`` uses ``algo.loaded_data``;
+            the mapping is read without modification.
         all_heights
-            If True, plot support points from all heights, otherwise only one height.
+            Draw supports from every available height instead of one plane.
         height
-            The support-point height to plot. If None and all_heights is False,
-            the highest available support-point height is used.
+            Support-plane height in metres. ``None`` chooses the highest
+            available plane when ``all_heights`` is false.
         figsize
-            The figsize for plt.Figure
+            Figure width and height in inches.
         annotate
-            Farm annotation mode. If None, wind farm names are annotated for
+            Farm annotation mode. If ``None``, wind farm names are annotated for
             multi-farm layouts, otherwise turbine labels are omitted.
         kwargs
-            Parameters forwarded to :meth:`FarmLayoutOutput.get_figure`.
+            Rendering options forwarded to the shared farm-layout renderer.
 
         Returns
         -------
         ax
-            The axis object
+            Newly created axes showing support and reference coordinates in
+            metres with the farm overlay. The caller owns the figure.
+
+        Notes
+        -----
+        Geographic reference coordinates are converted before rendering. Call
+        during loading or inspection, not while the model is running.
 
         """
         self._lonlat_to_utm()
@@ -190,7 +198,11 @@ class SectorSimRefPointField(States):
         farm_annotate = 3 if annotate is None and len(wind_farm_names) > 1 else 0
         if annotate is not None:
             farm_annotate = annotate
-        FarmLayoutOutput(farm=algo.farm).get_figure(
+        _get_figure(
+            algo.farm,
+            None,
+            None,
+            FarmLayoutOutput(),
             fig=fig,
             ax=ax,
             annotate=farm_annotate,

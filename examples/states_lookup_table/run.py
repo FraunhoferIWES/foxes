@@ -143,10 +143,23 @@ if __name__ == "__main__":
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.WEIGHT]])
 
-    o = foxes.output.FarmResultsEval(farm_results, algo=algo)
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
+    P0 = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_mean_farm_power", parameters=dict(ambient=True)
+        ),
+        farm_results=farm_results,
+    )
+    P = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_mean_farm_power", parameters=dict()
+        ),
+        farm_results=farm_results,
+    )
     print(f"\nFarm power        : {P / 1000:.1f} MW")
     print(f"Farm ambient power: {P0 / 1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
-    print(f"Annual farm yield : {o.calc_farm_yield():.2f} GWh")
+    print(
+        f"Farm efficiency   : {algo.calc_outputs(outputs=foxes.models.outputs.FarmResultsEval(operation='calc_farm_efficiency', parameters=dict()), farm_results=farm_results) * 100:.2f} %"
+    )
+    print(
+        f"Annual farm yield : {algo.calc_outputs(outputs=foxes.models.outputs.FarmResultsEval(operation='calc_farm_yield', parameters=dict()), farm_results=farm_results):.2f} GWh"
+    )

@@ -135,7 +135,17 @@ if __name__ == "__main__":
     )
 
     if not args.nofig and args.show_layout:
-        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+        ax = foxes.algorithms.Downwind(
+            farm,
+            foxes.input.states.SingleStateStates(ws=8, wd=270, ti=0.08, rho=1.225),
+            wake_models=[],
+            mbook=mbook,
+            verbosity=0,
+        ).calc_outputs(
+            outputs=foxes.models.outputs.FarmLayoutOutput(
+                operation="get_figure", parameters=dict()
+            )
+        )
         plt.show()
         plt.close(ax.get_figure())
 
@@ -176,9 +186,18 @@ if __name__ == "__main__":
             fr = farm_results.to_dataframe()
             print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.MAX_P]])
 
-            o = foxes.output.FarmResultsEval(farm_results)
-            P0 = o.calc_mean_farm_power(ambient=True)
-            P = o.calc_mean_farm_power()
+            P0 = algo.calc_outputs(
+                outputs=foxes.models.outputs.FarmResultsEval(
+                    operation="calc_mean_farm_power", parameters=dict(ambient=True)
+                ),
+                farm_results=farm_results,
+            )
+            P = algo.calc_outputs(
+                outputs=foxes.models.outputs.FarmResultsEval(
+                    operation="calc_mean_farm_power", parameters=dict()
+                ),
+                farm_results=farm_results,
+            )
             print(f"\nFarm power: {P / 1000:.1f} MW, Efficiency = {P / P0 * 100:.2f} %")
 
             o1 = foxes.output.StateTurbineMap(farm_results)
@@ -204,9 +223,18 @@ if __name__ == "__main__":
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT]])
 
-    o = foxes.output.FarmResultsEval(farm_results)
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
+    P0 = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_mean_farm_power", parameters=dict(ambient=True)
+        ),
+        farm_results=farm_results,
+    )
+    P = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_mean_farm_power", parameters=dict()
+        ),
+        farm_results=farm_results,
+    )
     print(f"\nFarm power: {P / 1000:.1f} MW, Efficiency = {P / P0 * 100:.2f} %")
 
     if not args.nofig:

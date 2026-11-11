@@ -17,7 +17,8 @@ from foxes.core import (
     WindFarm,
     Turbine,
 )
-from foxes.output import FarmLayoutOutput
+from foxes.models.outputs import FarmLayoutOutput
+from foxes.models.outputs._layout import _get_figure
 from foxes.utils import get_utm_zone, from_lonlat, delta_wd, wd2uv, uv2wd
 from foxes.algorithms import Downwind
 import foxes.constants as FC
@@ -111,7 +112,7 @@ class MesoMicroField(States):
             Additional parameters for ``matplotlib.pyplot.scatter`` when drawing
             the reference points. Defaults to red crosses.
         support_point_plot_farm_pars
-            Parameters for :meth:`FarmLayoutOutput.get_figure` on the support-plot
+            Farm-layout rendering options on the support-plot
             axes. ``None`` preserves the default overlay. Use
             ``{"title": "", "alpha": 0, "annotate": 0}`` for a title-free,
             transparent turbine overlay. Caller dictionaries are copied.
@@ -218,18 +219,19 @@ class MesoMicroField(States):
         Parameters
         ----------
         algo
-            The calculation algorithm
+            Loading algorithm supplying the farm overlay and shared data.
         loaded_data
-            The loaded data dictionary. If None, ``algo.loaded_data`` is used.
+            Initialized micro-field support data. ``None`` uses
+            ``algo.loaded_data``; the mapping is read without modification.
         all_heights
-            If True, plot support points from all heights, otherwise only one height.
+            Draw supports from every available height instead of one plane.
         height
-            The support-point height to plot. If None and all_heights is False,
-            the highest available support-point height is used.
+            Support-plane height in metres. ``None`` chooses the highest
+            available plane when ``all_heights`` is false.
         figsize
-            The figsize for plt.Figure
+            Figure width and height in inches.
         annotate
-            Farm annotation mode. If None, wind farm names are annotated for
+            Farm annotation mode. If ``None``, wind farm names are annotated for
             multi-farm layouts, otherwise turbine labels are omitted.
         kwargs
             Farm-layout parameters overriding ``support_point_plot_farm_pars``.
@@ -237,7 +239,18 @@ class MesoMicroField(States):
         Returns
         -------
         ax
-            The axis object
+            Newly created axes showing support and reference coordinates in
+            metres with the farm overlay. The caller owns the figure.
+
+        Raises
+        ------
+        ValueError
+            If reference points have not been prepared.
+
+        Notes
+        -----
+        Geographic reference coordinates are converted before rendering. Call
+        during loading or inspection, not while the model is running.
 
         """
         self._lonlat_to_utm()
@@ -283,7 +296,9 @@ class MesoMicroField(States):
         }
         if annotate is not None:
             layout_pars["annotate"] = annotate
-        FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig, ax=ax, **layout_pars)
+        _get_figure(
+            algo.farm, None, None, FarmLayoutOutput(), fig=fig, ax=ax, **layout_pars
+        )
         ax.set_xlabel(f"{FV.X} [m]")
         ax.set_ylabel(f"{FV.Y} [m]")
         ax.set_aspect("equal", adjustable="box")

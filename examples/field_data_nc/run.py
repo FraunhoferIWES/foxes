@@ -133,16 +133,41 @@ if __name__ == "__main__":
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
-    o = foxes.output.SlicesData(algo, farm_results)
     with engine:
-        ds = o.get_states_data_xy(
-            z_list=[90, 100], variables=[FV.WS], resolution=50, verbosity=1
+        ds = algo.calc_outputs(
+            outputs=foxes.models.outputs.SlicesData(
+                plane="xy",
+                reduction="states",
+                positions=[90, 100],
+                variables=[FV.WS],
+                grid_pars=dict(resolution=50),
+            ),
+            farm_results=farm_results,
         )
     print(ds)
 
     if not args.nofig:
-        o = foxes.output.FlowPlots2D(algo, farm_results)
         with engine:
-            mean_data = o.get_mean_data_xy(FV.WS, resolution=10)
-        fig = o.get_mean_fig_xy(mean_data)
+            mean_data = algo.calc_outputs(
+                outputs=foxes.models.outputs.FlowPlots2D(
+                    plane="xy",
+                    reduction="mean",
+                    plot=False,
+                    data_format="numpy",
+                    var=FV.WS,
+                    grid_pars=dict(resolution=10),
+                ),
+                farm_results=farm_results,
+            )
+        fig = algo.calc_outputs(
+            outputs=foxes.models.outputs.FlowPlots2D(
+                plane="xy",
+                reduction="mean",
+                plot=True,
+                data_format="numpy",
+                var=FV.WS,
+                grid_pars=dict(resolution=10),
+            ),
+            farm_results=farm_results,
+        )
         plt.show()

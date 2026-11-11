@@ -78,7 +78,9 @@ def test_ambient_keep_respects_outputs(ambient_algorithm, calculation):
                 np.array([[800.0, 0.0, 90.0]]),
                 ambient=True,
                 ambient_keep=True,
-                outputs=[FV.WS, FV.AMB_WS],
+                outputs=foxes.models.outputs.PointResultsOutput(
+                    variables=[FV.WS, FV.AMB_WS]
+                ),
             )
             assert FV.WS in results and FV.AMB_WS in results
             assert FV.WD not in results and FV.AMB_WD not in results

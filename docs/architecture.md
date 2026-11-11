@@ -71,7 +71,7 @@ flowchart LR
 3. Optionally customize a `ModelBook`; otherwise use its registered defaults.
 4. Construct `Downwind`, `Iterative`, or `Sequential` with the farm, states, and
 	model selections.
-5. Call `calc_farm()` and optionally `calc_points()`.
+5. Call `calc_farm()`, `calc_points()` or `calc_outputs()` with selected outputs.
 6. Select farm collection or writing through `ModelBook.outputs` or concrete
 	`foxes.models.outputs` instances. Evaluate collected datasets with downstream
 	scientific code. Existing `foxes.output` consumers await adoption into the
@@ -278,6 +278,98 @@ All adopted output classes derive from `foxes.core.Output` and live in
 executes children in declaration order. An empty requirement requests no fields;
 `None` requests all available fields.
 
+The public `outputs` argument retains model-book names, output instances and
+lists of either. Outputs are fully configured in their constructors; scientific
+datasets, algorithms and grids are not constructor inputs or retained instance
+state. `get_calc_points(algo)` retrieves static `(n_points, 3)` or state-dependent
+`(n_states, n_points, 3)` locations from initialized configuration/loaded data.
+`OutputList` rejects disagreeing nonempty point requests instead of silently
+choosing a child's grid.
+
+`calc_farm` evaluates requested grids in bounded point slices within each state
+chunk. `calc_outputs` uses the ordinary point engine to chunk requested locations,
+or collects supplied farm results without rerunning farm physics. When points
+are requested without farm results it first calculates the required farm inputs.
+`calc_points` uses only supplied points or precomputed point results and never
+calls `get_calc_points`. Precomputed public point datasets include `FV.X`,
+`FV.Y` and `FV.H` coordinates and bypass scientific point calculations.
+
+The promoted consumer family is `FarmResultsEval`, `FarmLayoutOutput`,
+`SliceData`, `SlicesData`, `FlowPlots2D`, `RosePlotOutput`,
+`StatesRosePlotOutput` and `WindRoseBinPlot`. Their former `foxes.output`
+modules and exports are removed. Plane, reduction, fields, binning, evaluation
+operation and rendering choices are constructor configuration. Data collection
+uses private result keys. Workers reduce eliminated dimensions into sufficient
+statistics; finalization merges those statistics and handles formatting,
+rendering and whole-result writing with explicit run-local data. Private stateless
+helpers preserve the established numerical and plotting implementations.
+Unadopted grouped `foxes.output` consumers use these numerical helpers directly,
+not inheritance from a dataset-bound evaluator.
+
+`SliceData` owns numerical slice formatting above a private, non-rendering point
+collector. `SlicesData`, `FlowPlots2D` and `FlowAnimation` derive from `SliceData`;
+static data and plots never depend on animation settings or validation.
+Shared grids, masks and chunk buffers use neutral slice keys. Only mean
+reductions require point weights; state-resolved animations still accept
+supplied point fields without weights. See
+[ADR-0018](adr/0018-slice-first-output-hierarchy.md).
+
+Output payloads contain only fields and axes required by the configured result.
+Mean slices return weighted point sums, not state frames or per-state weights;
+selected state labels are retained only when explicitly returned. Farm
+evaluations use additive sums, extrema or mergeable valid counts/centred moments.
+Scalar additive farm summaries also eliminate the turbine axis, converting
+mixed turbine power units before summing farm yield. Roses return fixed-size
+bin numerators and denominators, with normalization thresholds applied globally.
+Layouts return selected turbine geometry and reduced colour values; algorithm
+layouts and metadata evaluations need no scientific payload. Negative positional
+selections retain bounded trailing candidates until final selection.
+Full-result datasets, file writers and animations retain the state-resolved
+fields their results actually require. Static coordinates cross worker boundaries
+once per tile and regain full public dimensions during dataset assembly. This
+private serialization contract does not change full-shaped data containers.
+See [ADR-0019](adr/0019-reduced-output-payloads.md).
+
+`ModelBook.outputs` registers all promoted classes as lightweight presets.
+Slice families additionally expose plane/reduction factories with validated
+`xy`/`xz`/`yz` and `states`/`mean` choices. State-rose and multi-plane presets
+use an explicit 100-metre reference height/normal coordinate; binned roses
+default to power with 5 m/s speed bins. Callers configure preset attributes
+before initialization or supply their own output instance.
+
+Plotting output constructors default to `show=False`; static model-book plotting
+presets and factories enable it, while animation presets/factories keep it
+disabled. Display is parent-side and blocking, after any
+configured file is saved. Animation objects remain locally referenced while
+playing at their configured frame rate; their figures close even on failure.
+`plot=False` returns numerical data without display, and `nofig=True` suppresses
+plot/animation generation. Numerical outputs and frame generators do not force
+display. Caller-selected Matplotlib backends and figure-return schemas are
+preserved. Tests keep every output noninteractive, including mocked checks.
+See [ADR-0020](adr/0020-output-display-control.md) and
+[ADR-0021](adr/0021-noninteractive-animation-and-tests.md).
+
+Model-book registration declarations live in private basics, wake and output
+population modules; the public `ModelBook` owns independent registries and lookup.
+`Animator` owns generator composition in `foxes.models.outputs.animator`;
+flow-animation models delegate parent-local rendering and encoding to
+`_flow_animation_render`. Farm payload assembly/serialization is separate from
+collection/count buffering and chunk/calendar writer policies. These boundaries
+do not change package exports, model-book selectors or result schemas.
+Grid geometry, data-format conversion, farm statistics and layout rendering have
+focused private helper modules rather than sharing monolithic utility bodies.
+
+Output-only runs with supplied farm data bypass Iterative convergence dispatch
+and honor their own state selection. They do not reuse cached convergence
+arrays or recalculate scientific farm models.
+
+YAML/WindIO entries for promoted outputs specify constructor options and execute
+through `calc_outputs`, without a `functions` list. Nested `$name` references
+resolve before construction; `result_labels` stores the resulting value.
+YAML `add_*` evaluations explicitly update the pipeline's farm dataset so later
+unadopted consumers see those fields. See
+[ADR-0017](adr/0017-constructor-defined-output-contract.md).
+
 The implemented farm family is:
 
 - `FarmResultsOutput`: retain ordered chunks and construct one dataset under
@@ -303,7 +395,7 @@ finalization. It does not rewrite files or renormalize each file independently.
 
 `FlowAnimation` replaces engine-owned animation hooks. It uses supplied
 `tdata` coordinates and fields when available. Otherwise, initialization loads
-one static XY point array into `loaded_data["extra_data"]`, eligible for engine
+one static XY, XZ or YZ point array into `loaded_data["extra_data"]`, eligible for engine
 shared storage. Grid bounds include all turbine positions. Farm workers evaluate
 the shared points in blocks bounded by the active engine's `chunk_size_points`,
 using initialized point models and private copies of farm-ordered chunk inputs.
@@ -508,9 +600,11 @@ state/target product merely to slice it per engine chunk.
 - Let engines choose and propagate chunk metadata.
 - Preserve compact backing storage for repeated values with full-shaped
 	broadcast views; copy explicitly before writing to such arrays.
-- Slice means currently collect point results before reducing over states.
-	Static output grids avoid state-expanded coordinate storage, but do not bound
-	the memory used by complete state-by-point result arrays.
+- Mean slice workers return state-weighted sums per point tile. Farm-run point
+	calculations remain bounded by the selected point chunk size; raw state frames
+	are temporary worker inputs, not parent-side mean buffers. Numerical slices
+	collect only configured fields. Flow plots add vector fields for quivers and
+	farm geometry for rotor overlays only when requested.
 - Dataset-backed states reconstruct interpolated point and height ordering with
 	paired state/point index gathers, without a field-state/target-state
 	cross-product. This includes fixed locations permuted by downwind order.
@@ -583,6 +677,24 @@ subprocess.
 	`foxes.models.outputs`; farm files use explicit count limits or calendar
 	periods, including ISO week years. See
 	[ADR-0010](adr/0010-chunk-based-farm-outputs.md).
+- Constructor-defined outputs execute through algorithm entry points; loaded
+	grids and run-local data remain outside model instances. The public `outputs`
+	name/string/list selector is unchanged. See
+	[ADR-0017](adr/0017-constructor-defined-output-contract.md).
+- Slice data owns numerical point/grid collection independently of rendering;
+	flow plots and animations specialize `SliceData`, using neutral slice keys.
+	See [ADR-0018](adr/0018-slice-first-output-hierarchy.md).
+- Output workers eliminate dimensions not required by the final result and
+	return mergeable sufficient statistics instead of full state frames. Private
+	coordinate payloads may be compact while data containers/public datasets keep
+	their declared dimensions. See
+	[ADR-0019](adr/0019-reduced-output-payloads.md).
+- Plotting constructors default to no display; model-book plotting selectors
+	enable blocking parent-side display after saving, with run-local ownership.
+	Animation presets retain `show=False`, and tests never enable display,
+	including mocked checks. See
+	[ADR-0020](adr/0020-output-display-control.md) and
+	[ADR-0021](adr/0021-noninteractive-animation-and-tests.md).
 - Engine output execution uses ordered batches and parent-owned adaptive progress;
 	point collection and iterative callers use the same output lifecycle. Corporate
 	design remains confirmed for progress displays. See

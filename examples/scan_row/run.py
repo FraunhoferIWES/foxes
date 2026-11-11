@@ -136,10 +136,24 @@ if __name__ == "__main__":
 
     print("\nFarm results:\n", farm_results)
 
-    o = foxes.output.FarmResultsEval(farm_results, algo=algo)
-    o.add_capacity_factor(ambient=False)
-    o.add_capacity_factor(ambient=True)
-    o.add_efficiency()
+    farm_results = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="add_capacity_factor", parameters=dict(ambient=False)
+        ),
+        farm_results=farm_results,
+    )
+    farm_results = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="add_capacity_factor", parameters=dict(ambient=True)
+        ),
+        farm_results=farm_results,
+    )
+    farm_results = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="add_efficiency", parameters=dict()
+        ),
+        farm_results=farm_results,
+    )
 
     # state-turbine results
     farm_df = farm_results.to_dataframe()
@@ -162,26 +176,54 @@ if __name__ == "__main__":
     print()
 
     # results by turbine
-    turbine_results = o.reduce_states(
-        {
-            FV.AMB_P: "weights",
-            FV.P: "weights",
-            FV.AMB_CAPF: "weights",
-            FV.CAPF: "weights",
-        }
+    turbine_results = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="reduce_states",
+            parameters=dict(
+                vars_op={
+                    FV.AMB_P: "weights",
+                    FV.P: "weights",
+                    FV.AMB_CAPF: "weights",
+                    FV.CAPF: "weights",
+                }
+            ),
+        ),
+        farm_results=farm_results,
     )
-    turbine_results[FV.AMB_YLD] = o.calc_yield(annual=True, ambient=True)
-    turbine_results[FV.YLD] = o.calc_yield(annual=True)
+    turbine_results[FV.AMB_YLD] = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_yield", parameters=dict(annual=True, ambient=True)
+        ),
+        farm_results=farm_results,
+    )
+    turbine_results[FV.YLD] = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_yield", parameters=dict(annual=True)
+        ),
+        farm_results=farm_results,
+    )
     turbine_results[FV.EFF] = turbine_results[FV.P] / turbine_results[FV.AMB_P]
     print("\nResults by turbine:\n")
     print(turbine_results)
 
     # power results
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
+    P0 = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_mean_farm_power", parameters=dict(ambient=True)
+        ),
+        farm_results=farm_results,
+    )
+    P = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_mean_farm_power", parameters=dict()
+        ),
+        farm_results=farm_results,
+    )
     print(f"\nFarm power        : {P / 1000:.1f} MW")
     print(f"Farm ambient power: {P0 / 1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
+    print(
+        f"Farm efficiency   : {algo.calc_outputs(outputs=foxes.models.outputs.FarmResultsEval(operation='calc_farm_efficiency', parameters=dict()), farm_results=farm_results) * 100:.2f} %"
+    )
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
     print()
 
@@ -213,8 +255,27 @@ if __name__ == "__main__":
         plt.close(fig)
 
     if not args.nofig and args.calc_mean:
-        o = foxes.output.FlowPlots2D(algo, farm_results)
         with engine:
-            mean_data = o.get_mean_data_xy(FV.WS, resolution=10)
-        fig = o.get_mean_fig_xy(mean_data)
+            mean_data = algo.calc_outputs(
+                outputs=foxes.models.outputs.FlowPlots2D(
+                    plane="xy",
+                    reduction="mean",
+                    plot=False,
+                    data_format="numpy",
+                    var=FV.WS,
+                    grid_pars=dict(resolution=10),
+                ),
+                farm_results=farm_results,
+            )
+        fig = algo.calc_outputs(
+            outputs=foxes.models.outputs.FlowPlots2D(
+                plane="xy",
+                reduction="mean",
+                plot=True,
+                data_format="numpy",
+                var=FV.WS,
+                grid_pars=dict(resolution=10),
+            ),
+            farm_results=farm_results,
+        )
         plt.show()

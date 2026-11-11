@@ -98,6 +98,35 @@ process scheduling and resolves bounded batches concurrently.
 
 For adopted animations, run
 `uv run pytest tests/2_models/test_flow_animations.py -q`.
+For constructor-defined evaluation, layout, rose and slice outputs, also run
+`uv run pytest tests/2_models/test_output_contract.py tests/0_consistency/test_output_grids.py tests/2_models/model_smoke/test_output_nc_writers.py -q`.
+These tests exercise all three algorithm entry points, unchanged string/list
+selectors, actual supplied target ordering, precomputed reuse without science,
+disagreeing composed grids, bounded point blocks, all planes, state selection,
+YAML execution and single-write multi-plane datasets. They also verify that all
+adopted consumers are registered as lightweight model-book presets, that slice
+factories validate plane/reduction choices, and that named presets execute
+through the unchanged string/list selector. Slice-first hierarchy regressions
+verify that static flow plots never initialize animation behavior or expose
+animation-labelled shared data. Exact precomputed values, target reordering and
+weighted means are checked in every plane in both NumPy and xarray formats.
+Run `uv run pytest tests/2_models/test_output_payloads.py -q` for compact worker
+payloads. Synthetic cases assert eliminated dimensions, fixed-size rose bins,
+scalar farm summaries, selected layout geometry and singleton static coordinates,
+not just final numerical parity. They cover uneven chunks, zero-weight NaNs,
+stable population deviations, turbine-dependent weights, mixed power units,
+negative point/state positions, global denominator thresholds, optional flow
+vectors/overlays and NumPy/thread/process parity. Full datasets, animation frames
+and interval writers deliberately retain their required state-resolved fields.
+Run `MPLBACKEND=Agg uv run pytest tests/2_models/test_output_show.py -q` for
+noninteractive rendering. Tests never use `show=True`, including mocked checks.
+The shared pytest configuration disables display on test-owned model-book
+presets/factories and rejects enabled display at the output hook. Tests verify
+suppression, unchanged results, real encoded files, frame rates and figure
+cleanup. Static model-book plotting presets normally enable display; animation
+presets do not. Set `show=False` for headless scripts rather than changing the
+library's backend or swallowing warnings. See
+[ADR-0021](adr/0021-noninteractive-animation-and-tests.md).
 Synthetic tests verify actual GIF frames, finalization-only rendering, numerical
 point parity, bounded grid blocks, shared coordinates, target reuse, private
 payloads, selection errors and writer cleanup. NumPy, single-chunk, threads,

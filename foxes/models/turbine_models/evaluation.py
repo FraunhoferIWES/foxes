@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 _Selection: TypeAlias = slice | np.ndarray | tuple[slice | np.ndarray | int, ...]
 _YIELD_FACTORS = {FV.YLD: 0.0, FV.P75: 0.675, FV.P90: 1.282}
-_BASE_VARIABLES = {FV.CAP, FV.EFF, FV.CAPF, FV.FLF, *_YIELD_FACTORS}
+_BASE_VARIABLES = {FV.CAP, FV.EFF, FV.CAPF, *_YIELD_FACTORS}
 _SUPPORTED_VARIABLES = _BASE_VARIABLES | {
     FV.var2amb[v] for v in _BASE_VARIABLES if v in FV.var2amb
 }
@@ -40,6 +40,9 @@ class TurbineEvaluation(TurbineModel):
         Relative power uncertainty used for P75/P90 yields.
     """
 
+    BASE_VARIABLES = _BASE_VARIABLES
+    SUPPORTED_VARIABLES = _SUPPORTED_VARIABLES
+
     def __init__(
         self,
         variables: list[str] | None = None,
@@ -53,9 +56,9 @@ class TurbineEvaluation(TurbineModel):
         Parameters
         ----------
         variables
-            Requested ``FV.CAP``, ``FV.EFF``, ``FV.CAPF``, ``FV.FLF``,
-            ``FV.YLD``, ``FV.P75``, ``FV.P90``, or ambient counterparts of
-            capacity factor, full-load fraction and yields. Merged with
+            Requested ``FV.CAP``, ``FV.EFF``, ``FV.CAPF``, ``FV.YLD``,
+            ``FV.P75``, ``FV.P90``, or ambient counterparts of capacity factor
+            and yields. Merged with
             variables supplied to ``calculate()``; ``None`` requests none.
         name
             The model name.
@@ -174,11 +177,9 @@ class TurbineEvaluation(TurbineModel):
             )
             return power / ambient
 
-        if base in {FV.CAPF, FV.FLF}:
+        if base == FV.CAPF:
             assert capacity is not None
-            if base == FV.CAPF:
-                return power / capacity
-            return (power == capacity).astype(config.dtype_double)
+            return power / capacity
 
         # Convert the turbine's power unit before annualizing, without weights.
         assert power_units is not None
@@ -236,7 +237,7 @@ class TurbineEvaluation(TurbineModel):
         Notes
         -----
         ``CAP`` is nominal turbine power in the turbine type's power unit.
-        ``CAPF = P / CAP``; ``FLF`` is 1 exactly at nominal power, otherwise 0.
+        ``CAPF = P / CAP``.
         ``EFF = P / AMB_P`` is not clipped or guarded against zero division.
         Yield is ``P * P_unit_W * 8760 / 1e9`` in GWh/a. Apply state weights
         only during later aggregation. ``P75 = YLD * (1 - 0.675 * power_uncert)``
@@ -254,12 +255,12 @@ class TurbineEvaluation(TurbineModel):
 
         # Align metadata with the same selection used for the power arrays.
         capacity = power_units = None
-        if bases.intersection({FV.CAP, FV.CAPF, FV.FLF, *_YIELD_FACTORS}):
+        if bases.intersection({FV.CAP, FV.CAPF, *_YIELD_FACTORS}):
             if FV.ORDER in fdata:
                 order = fdata[FV.ORDER][st_sel]
             else:
                 order = np.broadcast_to(np.arange(n_turbines), shape)[st_sel]
-            if bases.intersection({FV.CAP, FV.CAPF, FV.FLF}):
+            if bases.intersection({FV.CAP, FV.CAPF}):
                 capacity = self._turbine_values(algo, order, "P_nominal")
             if bases.intersection(_YIELD_FACTORS):
                 power_units = self._turbine_values(algo, order, "P_unit")

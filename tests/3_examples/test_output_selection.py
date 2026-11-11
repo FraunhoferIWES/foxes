@@ -162,7 +162,7 @@ def test_real_dynamic_animation(
     monkeypatch.setattr(
         foxes.Engine,
         "new",
-        lambda **kwargs: engine_new(
+        lambda *args, **kwargs: engine_new(
             "numpy", chunk_size_states=2, chunk_size_points=2000, verbosity=0
         ),
     )

@@ -1,3 +1,4 @@
+from _output_contract_helpers import run_output
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -362,16 +363,26 @@ def test_binned_mean_flow_respects_cfd_support(fill_value, tmp_path):
         farm, states, wake_models=[], rotor_model="centre", verbosity=0
     )
     with foxes.Engine.new("single", verbosity=0):
-        farm_results = algo.calc_farm()
-        flow_output = foxes.output.FlowPlots2D(algo, farm_results)
-        mean_flow_data = flow_output.get_mean_data_xy(
-            FV.WS,
-            n_img_points=(4, 3),
-            xmin=-1000.0,
-            xmax=500.0,
-            ymin=0.0,
-            ymax=500.0,
-            z=90.0,
+        farm_results = algo.calc_farm(outputs="farm_results_all")
+
+        mean_flow_data = run_output(
+            foxes.models.outputs.FlowPlots2D(
+                plane="xy",
+                reduction="mean",
+                plot=False,
+                data_format="numpy",
+                var=FV.WS,
+                grid_pars=dict(
+                    n_img_points=(4, 3),
+                    xmin=-1000.0,
+                    xmax=500.0,
+                    ymin=0.0,
+                    ymax=500.0,
+                    z=90.0,
+                ),
+            ),
+            farm_results=farm_results,
+            algo=algo,
         )
     parameters, data, _ = mean_flow_data
     wind_speed = data[..., parameters["variables"].index(FV.WS)]
@@ -381,7 +392,26 @@ def test_binned_mean_flow_respects_cfd_support(fill_value, tmp_path):
         assert np.isnan(wind_speed[0]).all()
     np.testing.assert_allclose(wind_speed[1:], 8.0)
 
-    figure = flow_output.get_mean_fig_xy(mean_flow_data, levels=40, title="")
+    figure = run_output(
+        foxes.models.outputs.FlowPlots2D(
+            plane="xy",
+            reduction="mean",
+            plot=True,
+            data_format="numpy",
+            var=FV.WS,
+            grid_pars=dict(
+                n_img_points=(4, 3),
+                xmin=-1000.0,
+                xmax=500.0,
+                ymin=0.0,
+                ymax=500.0,
+                z=90.0,
+            ),
+            plot_pars=dict(levels=40, title=""),
+        ),
+        farm_results=farm_results,
+        algo=algo,
+    )
     try:
         plot_file = tmp_path / "binned_mean_flow.png"
         figure.savefig(plot_file)
@@ -487,17 +517,17 @@ def test_meso_micro_field_support_plot_farm_pars(monkeypatch):
     monkeypatch.setattr(
         meso_micro_field_module.plt, "subplots", Mock(return_value=(fig, ax))
     )
-    monkeypatch.setattr(meso_micro_field_module, "FarmLayoutOutput", layout)
+    monkeypatch.setattr(meso_micro_field_module, "_get_figure", layout)
     states.get_support_point_figure(algo, loaded_data)
-    assert layout.return_value.get_figure.call_args.kwargs == {
+    assert layout.call_args.kwargs == {
         "fig": fig,
         "ax": ax,
         "fontsize": 12,
         **overrides,
     }
     states.get_support_point_figure(algo, loaded_data, annotate=2, title="Caller title")
-    assert layout.return_value.get_figure.call_args.kwargs["title"] == "Caller title"
-    assert layout.return_value.get_figure.call_args.kwargs["annotate"] == 2
+    assert layout.call_args.kwargs["title"] == "Caller title"
+    assert layout.call_args.kwargs["annotate"] == 2
     with pytest.raises(
         TypeError, match="support_point_plot_farm_pars must be a dictionary"
     ):

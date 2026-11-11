@@ -14,6 +14,7 @@ from foxes.config import config, get_input_path, get_output_path
 from foxes.core import States, Turbine, WindFarm, run_with_engine
 from foxes.input.states.dataset_states import DatasetStates
 from foxes.input.states.field_data import FieldData
+from foxes.models.outputs import PointResultsOutput
 from foxes.utils import (
     regular_grid_from_points,
     select_grid_axes,
@@ -325,7 +326,55 @@ def _evaluate_mean(
     wd_histo_width: float,
     verbosity: int,
 ) -> dict[str, np.ndarray]:
-    """Evaluate and reduce states without retaining the state-point cube."""
+    """Calculate weighted point means without retaining the state-point cube.
+
+    Parameters
+    ----------
+    states
+        Ambient-state provider, initialized and finalized through a temporary
+        no-wake algorithm.
+    axes
+        Coordinate-name-to-grid-axis mapping used to position the temporary farm.
+    points
+        Static support locations in metres, with shape ``(n_points, 3)`` and
+        components ``x``, ``y`` and height. Input order is retained.
+    variables
+        Requested physical fields. ``FV.WS`` uses vector means of ``FV.U`` and
+        ``FV.V``, from which mean speed and direction are reconstructed.
+    states_batch_size
+        Maximum number of state labels evaluated in each point calculation.
+    points_batch_size
+        Maximum number of support locations evaluated in each outer batch.
+    vname_main_wd
+        Output name for the modal wind direction, or ``None`` to omit it.
+    wd_histo_width
+        Direction-bin width in degrees for modal-direction histograms.
+    verbosity
+        Temporary-algorithm and point-batch progress verbosity; ``0`` is silent.
+
+    Returns
+    -------
+    means
+        Variable-to-mean-array mapping with shape ``(n_points,)``, in input point
+        order and each variable's physical units. Vector wind means also expose
+        ``FV.U``, ``FV.V`` and ``FV.WD``. Arrays belong to this calculation.
+
+    Raises
+    ------
+    TypeError
+        If the farm calculation does not return a collected dataset.
+    ValueError
+        If source-state labels are duplicated or a reduced variable has
+        nonpositive total weight.
+    KeyError
+        If point results omit a requested variable.
+
+    Notes
+    -----
+    The temporary farm collector selects ``farm_results_all`` to retain only
+    available scientific fields for point evaluation. The default farm-output
+    field set may require atmospheric variables absent from a minimal provider.
+    """
     mean_vars = [var for var in variables if var not in {FV.WS, FV.WD}]
     if FV.WS in variables:
         mean_vars += [FV.U, FV.V]
@@ -341,8 +390,17 @@ def _evaluate_mean(
     algo = _new_algorithm(states, axes, verbosity)
 
     def _calculate() -> None:
+        """Accumulate batched point statistics and always finalize the algorithm.
+
+        Closed-over sum arrays and optional modal directions are updated in
+        place. Scientific fields use ``(FC.STATE, FC.POINT)`` and retain the
+        current point slice's order. No state-point cube survives a batch.
+        """
         try:
-            farm_results = algo.calc_farm(ambient=True, finalize=False)
+            # Collect available point-evaluation inputs, not fixed default fields.
+            farm_results = algo.calc_farm(
+                outputs="farm_results_all", ambient=True, finalize=False
+            )
             if not isinstance(farm_results, xr.Dataset):
                 raise TypeError(
                     "Mean-field calculation requires collected farm results"
@@ -362,9 +420,8 @@ def _evaluate_mean(
                     results = algo.calc_points(
                         farm_results,
                         points[point_slice],
-                        outputs=variables + [FV.WEIGHT],
+                        outputs=PointResultsOutput(variables=variables + [FV.WEIGHT]),
                         ambient=True,
-                        ambient_keep=True,
                         finalize=False,
                         states_sel=state_index[state_start:state_stop].tolist(),
                     )

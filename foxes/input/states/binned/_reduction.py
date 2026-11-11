@@ -26,6 +26,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 from foxes.config import config, get_input_path
 from foxes.core import States, Turbine, WindFarm, run_with_engine
+from foxes.models.outputs import PointResultsOutput
 from foxes.utils import uv2wd, wd2uv, write_nc
 
 from ._output import wind_rose_dataset
@@ -1204,7 +1205,9 @@ class _BinnedStateReduction:
 
         The wrapped states are calculated at every support point without wake
         effects. Source-state weights populate a separate histogram at each
-        support location. Wind-direction means use vector averaging.
+        support location. Wind-direction means use vector averaging. The
+        temporary farm collector selects ``farm_results_all`` so minimal source
+        providers need not supply unrelated default farm-output fields.
 
         Parameters
         ----------
@@ -1219,8 +1222,9 @@ class _BinnedStateReduction:
 
         Returns
         -------
-        xarray.Dataset
-            Canonical sparse binned artifact.
+        binned_states
+            Newly assembled sparse histogram artifact, with support coordinates,
+            bin-state identities, normalized weights and requested statistics.
 
         Raises
         ------
@@ -1256,13 +1260,24 @@ class _BinnedStateReduction:
         source_algo.initialize(force=True)
 
         def _calc_source() -> xr.Dataset:
-            farm_results = source_algo.calc_farm(ambient=True)
+            """Evaluate unwaked support fields through the active engine.
+
+            Returns
+            -------
+            source_results
+                Collected fields on ``(FC.STATE, FC.POINT)`` in source-state
+                and supplied support-point order. The collector retains ordinary
+                field names without changing ambient scientific evaluation.
+            """
+            # Collect available point-evaluation inputs, not fixed default fields.
+            farm_results = source_algo.calc_farm(
+                outputs="farm_results_all", ambient=True
+            )
             results = source_algo.calc_points(
                 farm_results,
                 support,
-                outputs=calculation_vars,
+                outputs=PointResultsOutput(variables=calculation_vars),
                 ambient=True,
-                ambient_keep=True,
             )
             return results
 

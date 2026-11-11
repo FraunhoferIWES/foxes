@@ -29,10 +29,10 @@ calc_farm:    # this section is optional; will run by default
   run: True   # this triggers algo.calc_farm
 
 outputs:                          # this section is optional
-  - output_type: FarmResultsEval  # class from foxes.output
-    functions:                    # list of functions from that class below
-      - function: add_capacity
-      - function: add_efficiency
+  - output_type: FarmResultsEval  # constructor-defined model output
+    operation: add_capacity
+  - output_type: FarmResultsEval
+    operation: add_efficiency
   - output_type: StateTurbineMap  # class from foxes.output
     functions:                    # list of functions from that class below
       - function: plot_map        # name of the function

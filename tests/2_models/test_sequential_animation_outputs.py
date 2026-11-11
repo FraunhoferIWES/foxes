@@ -17,10 +17,7 @@ from foxes.models.outputs import FlowAnimation
 
 def test_animation_namespace_ownership():
     # Animation composition and Sequential plugins have separate owning packages.
-    assert (
-        foxes.models.outputs.Animator.__module__
-        == "foxes.models.outputs.flow_animations"
-    )
+    assert foxes.models.outputs.Animator.__module__ == "foxes.models.outputs.animator"
     assert not hasattr(foxes.output, "Animator")
     assert not hasattr(foxes.output, "seq_plugins")
     for name in (

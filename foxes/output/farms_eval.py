@@ -1,49 +1,55 @@
 from __future__ import annotations
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
+
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.lines import Line2D
 from xarray import DataArray, Dataset, merge
 
-from foxes.utils import write_nc
 import foxes.constants as FC
 import foxes.variables as FV
-
-from .farm_results_eval import FarmResultsEval
+from foxes.core import Output
+from foxes.models.outputs import _farm_evaluation
+from foxes.utils import write_nc
 
 if TYPE_CHECKING:
-    from foxes.core import WindFarm
+    from foxes.core import Algorithm, WindFarm
 
 
-class WindFarmsEval(FarmResultsEval):
-    """
-    Output class for aggregating and splitting multiple wind farms.
-    """
+class WindFarmsEval(Output):
+    """A dataset-bound evaluator aggregating turbines into named wind farms."""
 
     def __init__(
         self,
         farm: WindFarm,
         farm_results: Dataset | None = None,
         results: Dataset | None = None,
+        algo: Algorithm | None = None,
         **kwargs: Any,
     ) -> None:
-        """
+        """Configure farm grouping and optional precomputed aggregate results.
+
         Parameters
         ----------
         farm
-            The wind farm object
+            Ordered farm supplying each turbine's wind-farm membership.
         farm_results
-            The farm results, if available
+            Turbine-level fields on ``(FC.STATE, FC.TURBINE)``. A merged dataset
+            attaches ``FC.FARM`` membership without changing the supplied dataset.
+            Required when aggregated ``results`` have not been supplied.
         results
-            The aggregated results, if already computed
+            Precomputed aggregate dataset, retained without copying. ``None``
+            defers aggregation until ``results`` is first accessed.
         algo
-            The algorithm object, used to get the nominal power for the farms if available
+            Algorithm for this same farm, providing nominal turbine capacities
+            and power-unit conversions. Required for capacity and unit queries.
         kwargs
-            Additional parameters for the base class
+            Additional ``Output`` configuration, including output paths.
         """
-        super().__init__(farm_results=farm_results, **kwargs)
+        super().__init__(**kwargs)
+        self.algo = algo
         self.farm = farm
         if farm_results is not None:
             self.farm_results = cast(
@@ -69,15 +75,24 @@ class WindFarmsEval(FarmResultsEval):
 
     def get_power_units(self) -> np.ndarray:
         """
-        Gets the power units in Watts for all elements
+        Get each aggregated farm's power-unit conversion to watts.
 
         Returns
         -------
-        P_unit_W
-            The power units in Watts for all elements, shape: (n_elements,)
+        power_units
+            Conversion factors in watts per power unit, with shape
+            ``(n_farms,)`` in ``self.results`` farm-coordinate order.
+            All turbines within a farm must use the same power unit.
+
+        Raises
+        ------
+        KeyError
+            If no algorithm is available for turbine-type power units.
+        ValueError
+            If farm-to-turbine mapping is unavailable.
 
         """
-        data = super().get_power_units()
+        data = _farm_evaluation._get_power_units(self.farm_results, self.algo, self)
 
         mapping = self.get_mapping()
         if mapping is None:
@@ -97,16 +112,41 @@ class WindFarmsEval(FarmResultsEval):
         return P_unit_W_arr
 
     def _aggregate(self, mapping: dict[str | None, list[int]] | None = None) -> Dataset:
+        """Aggregate turbine fields by farm without mutating source results.
+
+        Parameters
+        ----------
+        mapping
+            Farm-name-to-original-turbine-index mapping. ``None`` queries the
+            farm when capacities or turbine-dependent weights need it.
+
+        Returns
+        -------
+        farm_results
+            Newly assembled dataset sorted by farm name. Extensive fields are
+            summed and intensive fields averaged over turbines, retaining
+            ``FC.STATE``. Turbine counts and, when available, nominal capacities
+            use the farm axis. State-only weights are retained; state-turbine
+            weights are averaged within each farm then normalized over states.
+
+        Raises
+        ------
+        ValueError
+            If a required mapping is unavailable, weights have unsupported
+            dimensions or nonpositive farm totals, or NaN-validation weights
+            cannot be aligned with their physical field.
+
+        Notes
+        -----
+        Turbine results must be supplied. NaN fields are allowed only at zero
+        weight. The returned dataset is cached by the ``results`` property,
+        not by this helper.
+        """
         assert self.farm_results is not None, (
             "farm_results are required for aggregation"
         )
 
-        original_results = self._results
-        self._results = self.farm_results
-        try:
-            self._validate_nan_results()
-        finally:
-            self._results = original_results
+        _farm_evaluation._validate_nan_results(self.farm_results, self.algo, self)
 
         needs_mapping = self.algo is not None
         if (
@@ -231,16 +271,23 @@ class WindFarmsEval(FarmResultsEval):
 
     def get_capacity(self) -> np.ndarray:
         """
-        Gets the capacity values for each turbine, equals nominal power
+        Get summed nominal turbine capacity for each aggregated farm.
 
         Returns
         -------
-        capacity_array
-            The capacity array (nominal power) for all turbines, shape: (n_turbines,)
+        capacity
+            Nominal capacities with shape ``(n_farms,)``, in ``self.results``
+            farm-coordinate order and the turbines' native power units.
+            Requires an algorithm supplying turbine capacities.
+
+        Raises
+        ------
+        ValueError
+            If farm-to-turbine mapping is unavailable.
 
         """
         mapping = self.get_mapping()
-        Pnom = super().get_capacity()
+        Pnom = _farm_evaluation._get_capacity(self.farm_results, self.algo, self)
         if mapping is None:
             raise ValueError("Mapping is required to get capacity per farm")
         cap = np.array(

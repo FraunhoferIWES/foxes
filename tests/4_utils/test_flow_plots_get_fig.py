@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.patches import Ellipse
 
-from foxes.output.flow_plots_2d.get_fig import get_fig
+from foxes.models.outputs._get_fig import get_fig
 
 
 def _show_rotor_dict():

@@ -98,7 +98,17 @@ if __name__ == "__main__":
     )
 
     if not args.nofig and args.show_layout:
-        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+        ax = foxes.algorithms.Downwind(
+            farm,
+            foxes.input.states.SingleStateStates(ws=8, wd=270, ti=0.08, rho=1.225),
+            wake_models=[],
+            mbook=mbook,
+            verbosity=0,
+        ).calc_outputs(
+            outputs=foxes.models.outputs.FarmLayoutOutput(
+                operation="get_figure", parameters=dict()
+            )
+        )
         plt.show()
         plt.close(ax.get_figure())
 
@@ -131,15 +141,26 @@ if __name__ == "__main__":
             raise SystemExit(0)
 
         if not args.nofig:
-            rose_out = foxes.output.StatesRosePlotOutput(
-                states, point=[0.0, 0.0, 100.0]
-            )
             if args.calc_mean:
-                flow_out = foxes.output.FlowPlots2D(algo, farm_results)
-                plot_data_yz = flow_out.get_mean_data_yz(FV.WS, resolution=30)
+                plot_data_yz = algo.calc_outputs(
+                    outputs=foxes.models.outputs.FlowPlots2D(
+                        plane="yz",
+                        reduction="mean",
+                        plot=False,
+                        data_format="numpy",
+                        var=FV.WS,
+                        grid_pars=dict(resolution=30),
+                    ),
+                    farm_results=farm_results,
+                )
 
     if not args.nofig:
-        rose_out.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20], add_inf=True)
+        algo.calc_outputs(
+            outputs=foxes.models.outputs.StatesRosePlotOutput(
+                point=[0.0, 0.0, 100.0], add_inf=True
+            ),
+            farm_results=farm_results,
+        )
         plt.show()
 
     print("\nCalc time =", time1 - time0, "\n")
@@ -148,14 +169,37 @@ if __name__ == "__main__":
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.WEIGHT]])
 
-    o = foxes.output.FarmResultsEval(farm_results, algo=algo)
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
+    P0 = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_mean_farm_power", parameters=dict(ambient=True)
+        ),
+        farm_results=farm_results,
+    )
+    P = algo.calc_outputs(
+        outputs=foxes.models.outputs.FarmResultsEval(
+            operation="calc_mean_farm_power", parameters=dict()
+        ),
+        farm_results=farm_results,
+    )
     print(f"\nFarm power        : {P / 1000:.1f} MW")
     print(f"Farm ambient power: {P0 / 1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
-    print(f"Annual farm yield : {o.calc_farm_yield():.2f} GWh")
+    print(
+        f"Farm efficiency   : {algo.calc_outputs(outputs=foxes.models.outputs.FarmResultsEval(operation='calc_farm_efficiency', parameters=dict()), farm_results=farm_results) * 100:.2f} %"
+    )
+    print(
+        f"Annual farm yield : {algo.calc_outputs(outputs=foxes.models.outputs.FarmResultsEval(operation='calc_farm_yield', parameters=dict()), farm_results=farm_results):.2f} GWh"
+    )
 
     if not args.nofig and args.calc_mean:
-        fig = flow_out.get_mean_fig_yz(plot_data_yz)
+        fig = algo.calc_outputs(
+            outputs=foxes.models.outputs.FlowPlots2D(
+                plane="yz",
+                reduction="mean",
+                plot=True,
+                data_format="numpy",
+                var=FV.WS,
+                grid_pars=dict(resolution=30),
+            ),
+            farm_results=farm_results,
+        )
         plt.show()

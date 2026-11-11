@@ -32,7 +32,7 @@ def output_algo():
     return SimpleNamespace(farm=farm)
 
 
-def _chunk(output, algo, labels, start, index, n_chunks, weights=None):
+def _chunk(output, algo, labels, start, index, n_chunks, weights=None, point_index=0):
     """Calculate one synthetic chunk with recognizable state/turbine values."""
     # Build valid chunk containers and stable global values.
     n_states = len(labels)
@@ -42,7 +42,7 @@ def _chunk(output, algo, labels, start, index, n_chunks, weights=None):
         dims={FC.STATE: (FC.STATE,)},
         states_i0=start,
         chunki_states=index,
-        chunki_points=0,
+        chunki_points=point_index,
         n_chunks_states=n_chunks,
         n_chunks_points=1,
     )
@@ -66,6 +66,15 @@ def _chunk(output, algo, labels, start, index, n_chunks, weights=None):
 
     # Execute the same output hook used by engine runners.
     return output.calculate(algo, mdata, fdata, None, {})
+
+
+@pytest.mark.parametrize("point_index", [None, 0, 1])
+def test_farm_collection_uses_only_first_or_unindexed_point_chunk(
+    output_algo, point_index
+):
+    output = FarmResultsOutput(variables=[FV.P])
+    results = _chunk(output, output_algo, [0, 1], 0, 0, 1, point_index=point_index)
+    assert (FC.FARM_RESULTS in results) == (point_index in (None, 0))
 
 
 def _run(output, algo, labels, chunk_sizes, batched=False):
@@ -564,8 +573,8 @@ def test_downwind_outputs_are_chunk_independent(
     assert [ds.sizes[FC.STATE] for ds in _read_files(tmp_path / "count")] == [2, 2, 1]
 
 
-@pytest.mark.parametrize("outputs", [None, []])
-def test_downwind_can_skip_output_collection(tmp_path, outputs, capsys):
+@pytest.mark.parametrize("output", [None, OutputList()])
+def test_downwind_can_skip_output_collection(tmp_path, output, capsys):
     # A calculation with no output must not dereference a missing output model.
     farm = foxes.WindFarm()
     farm.add_turbine(
@@ -574,7 +583,7 @@ def test_downwind_can_skip_output_collection(tmp_path, outputs, capsys):
     states = foxes.input.states.SingleStateStates(ws=8.0, wd=270.0, ti=0.08, rho=1.225)
     algo = foxes.algorithms.Downwind(farm, states, wake_models=[], verbosity=0)
     with foxes.Engine.new("numpy", verbosity=0):
-        result = algo.calc_farm(outputs=outputs)
+        result = algo.calc_farm(outputs=output)
     assert result == {}
     assert capsys.readouterr().out == ""
 

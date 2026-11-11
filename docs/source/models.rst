@@ -283,7 +283,7 @@ The list of available turbine model classes can be found
 * :class:`YAW2YAWM<foxes.models.turbine_models.yaw2yawm.YAW2YAWM>` and :class:`YAWM2YAW<foxes.models.turbine_models.yawm2yaw.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
 * :class:`Calculator<foxes.models.turbine_models.calculator.Calculator>`: Apply any user-written function that calculates values of farm variables.
 * :class:`LookupTable<foxes.models.turbine_models.lookup_table.LookupTable>`: Use a lookup-table for the computation of farm variables.
-* :class:`TurbineEvaluation<foxes.models.turbine_models.evaluation.TurbineEvaluation>`: Compute nominal capacity, efficiency, capacity factor, full-load fraction, annualized yield and P75/P90 yield at every state and turbine.
+* :class:`TurbineEvaluation<foxes.models.turbine_models.evaluation.TurbineEvaluation>`: Compute nominal capacity, efficiency, capacity factor, annualized yield and P75/P90 yield at every state and turbine.
 
 ``TurbineEvaluation`` is placed after the turbine type and all power-changing
 models. Register an instance with the desired output variables, for example:
@@ -296,7 +296,7 @@ models. Register an instance with the desired output variables, for example:
 
     mbook = foxes.ModelBook()
     mbook.turbine_models["performance"] = TurbineEvaluation(
-        variables=[FV.CAP, FV.EFF, FV.CAPF, FV.FLF, FV.YLD, FV.P75, FV.P90],
+        variables=[FV.CAP, FV.EFF, FV.CAPF, FV.YLD, FV.P75, FV.P90],
         power_uncert=0.1,
     )
     farm = foxes.WindFarm()
@@ -314,7 +314,7 @@ the default farm-output field selection is unchanged.
 
 Every result retains dimensions ``(state, turbine)`` in ``fdata``. Capacity is
 the turbine type's nominal power in its configured power unit. Capacity factor
-is ``P / CAP``; full-load fraction is 1 exactly at nominal power, otherwise 0.
+is ``P / CAP``.
 Efficiency remains the unclipped ratio ``P / AMB_P``, including ordinary NumPy
 zero-division and NaN behavior. Nominal power must be finite and positive for
 capacity-based metrics.
@@ -328,7 +328,7 @@ approximation. ``power_uncert`` is required for these metrics, finite and
 nonnegative; ``0.1`` means 10 percent. These are not empirical percentiles over
 states, and summing them assumes the same relative-uncertainty model.
 
-Ambient variants use ``AMB_P``: ``AMB_CAPF``, ``AMB_FLF``, ``AMB_YLD``,
+Ambient variants use ``AMB_P``: ``AMB_CAPF``, ``AMB_YLD``,
 ``AMB_P75`` and ``AMB_P90``. Request them independently or alongside waked
 metrics. Downwind performs an evaluation-only pass before output preparation
 so unwaked turbines and ambient-only calculations receive valid metrics.

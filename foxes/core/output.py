@@ -36,9 +36,10 @@ class Output(DataCalcModel):
         mdata_variables: Sequence[str] | None = (),
         fdata_variables: list[str] | None = None,
         tdata_variables: list[str] | None = None,
+        show: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Configure input requirements and output file paths.
+        """Configure input requirements, output paths and optional figure display.
 
         Parameters
         ----------
@@ -48,7 +49,8 @@ class Output(DataCalcModel):
         out_fname_fun
             Transform each filename before joining it to the output directory.
         nofig
-            Suppress figure display for outputs that create figures.
+            Suppress figure creation for plotting outputs; takes precedence over
+            ``show``.
         mdata_variables
             Required model variables during ``calculate``; ``None`` requests all,
             and an empty sequence requests none. The sequence is copied.
@@ -56,6 +58,10 @@ class Output(DataCalcModel):
             Required farm variables; ``None`` requests all. The list is copied.
         tdata_variables
             Required target variables; ``None`` requests all. The list is copied.
+        show
+            Display figures for plotting outputs during parent-side finalization.
+            Display blocks until the windows close. Numerical results are
+            unchanged, and figure creation does not itself enable display.
         kwargs
             Additional parameters for ``DataCalcModel``.
         """
@@ -66,6 +72,7 @@ class Output(DataCalcModel):
         )
         self.out_fname_fun = out_fname_fun
         self.nofig = nofig
+        self.show = show
         self._mdata_variables = (
             None if mdata_variables is None else list(mdata_variables)
         )
@@ -80,6 +87,18 @@ class Output(DataCalcModel):
         if not self.out_dir.is_dir():
             print(f"{type(self).__name__}: Creating output dir {self.out_dir}")
             self.out_dir.mkdir(parents=True)
+
+    def _show_figures(self) -> None:
+        """Display completed plots from finalization when explicitly enabled.
+
+        Call after writing configured files and while any displayed animation
+        remains referenced locally. Blocking display keeps animation playback
+        alive without retaining figures or scientific data on the output model.
+        """
+        if self.show and not self.nofig:
+            import matplotlib.pyplot as plt
+
+            plt.show(block=True)
 
     @property
     def mdata_variables(self) -> list[str] | None:
@@ -129,16 +148,27 @@ class Output(DataCalcModel):
         """
         raise NotImplementedError
 
-    def get_calc_points(self) -> np.ndarray | None:
-        """
-        Get the points to be used in algo.calc_points during 
-        algo.calc_outputs calculation.
+    def get_calc_points(self, algo: Algorithm) -> np.ndarray | None:
+        """Return the calculation points required by this initialized output.
+
+        Parameters
+        ----------
+        algo
+            Initialized algorithm owning the output's loaded calculation data.
 
         Returns
         -------
         points
-            The points
+            Static coordinates shaped ``(n_points, 3)`` or state-dependent
+            coordinates shaped ``(n_states, n_points, 3)``. ``None`` means
+            no point calculation is requested.
 
+        Notes
+        -----
+        ``calc_outputs`` obtains these points before dispatching engine chunks.
+        Farm outputs evaluate their points in bounded slices per state chunk.
+        ``calc_points`` ignores this hook and uses its supplied points or
+        precomputed point results.
         """
         return None
 
@@ -381,6 +411,39 @@ class OutputList(Output):
         """
         # Expose the child order used by the engine output hooks.
         return self._outputs
+
+    def get_calc_points(self, algo: Algorithm) -> np.ndarray | None:
+        """Return the common calculation points required by child outputs.
+
+        Parameters
+        ----------
+        algo
+            Initialized algorithm owning the children's loaded calculation data.
+
+        Returns
+        -------
+        points
+            Shared points for all point-dependent outputs, or ``None`` when
+            none of the child outputs requests calculation points.
+
+        Raises
+        ------
+        ValueError
+            If child outputs request different calculation points.
+        """
+        # A single calc_points call can only evaluate one shared point set.
+        points = None
+        for output in self.outputs:
+            output_points = output.get_calc_points(algo)
+            if output_points is None:
+                continue
+            if points is None:
+                points = output_points
+            elif not np.array_equal(points, output_points):
+                raise ValueError(
+                    f"{self.name}: Child outputs request different calculation points"
+                )
+        return points
 
     def add_output(self, output: Output) -> None:
         """

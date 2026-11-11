@@ -19,12 +19,10 @@ METRICS = [
     FV.CAP,
     FV.EFF,
     FV.CAPF,
-    FV.FLF,
     FV.YLD,
     FV.P75,
     FV.P90,
     FV.AMB_CAPF,
-    FV.AMB_FLF,
     FV.AMB_YLD,
     FV.AMB_P75,
     FV.AMB_P90,
@@ -57,8 +55,6 @@ def _case(ordered=False):
         FV.EFF: power / ambient,
         FV.CAPF: power / capacity,
         FV.AMB_CAPF: ambient / capacity,
-        FV.FLF: (power == capacity).astype(float),
-        FV.AMB_FLF: np.ones_like(power),
         FV.YLD: annual_yield,
         FV.AMB_YLD: ambient_yield,
         FV.P75: annual_yield * 0.9325,
@@ -77,6 +73,17 @@ def _case(ordered=False):
         data[FV.ORDER] = order
     fdata = FData(data=data, dims={v: (FC.STATE, FC.TURBINE) for v in data})
     return algo, fdata, expected
+
+
+def test_supported_metrics_match_public_metadata():
+    assert TurbineEvaluation.SUPPORTED_VARIABLES == set(METRICS)
+    assert TurbineEvaluation.BASE_VARIABLES == {
+        FV.amb2var.get(variable, variable) for variable in METRICS
+    }
+    for variable in METRICS:
+        assert getattr(FV, variable) == variable
+        if variable in FV.amb2var:
+            assert FV.var2amb[FV.amb2var[variable]] == variable
 
 
 def test_efficiency_returns_full_selected_farm_array():
@@ -347,7 +354,6 @@ def test_real_farm_metrics_match_power_across_chunks_and_engines(
         power = results[power_var].to_numpy()
         for metric, expected in {
             FV.CAPF: power / capacity,
-            FV.FLF: (power == capacity).astype(float),
             FV.YLD: power * 0.00876,
             FV.P75: power * 0.00876 * 0.9325,
             FV.P90: power * 0.00876 * 0.8718,
@@ -364,7 +370,7 @@ def test_real_farm_metrics_match_power_across_chunks_and_engines(
 def test_ambient_only_metrics_and_single_turbine_need_final_evaluation(
     ambient, with_wakes
 ):
-    variables = [FV.EFF, FV.AMB_CAPF, FV.AMB_FLF, FV.AMB_YLD, FV.AMB_P75, FV.AMB_P90]
+    variables = [FV.EFF, FV.AMB_CAPF, FV.AMB_YLD, FV.AMB_P75, FV.AMB_P90]
     mbook = foxes.ModelBook()
     mbook.turbine_models["metrics"] = TurbineEvaluation(variables, power_uncert=0.1)
     farm = foxes.WindFarm()
@@ -395,7 +401,6 @@ def test_ambient_only_metrics_and_single_turbine_need_final_evaluation(
     np.testing.assert_allclose(results[FV.EFF], 1.0)
     for metric, expected in {
         FV.AMB_CAPF: power / mbook.turbine_types["NREL5MW"].P_nominal,
-        FV.AMB_FLF: np.zeros_like(power),
         FV.AMB_YLD: power * 0.00876,
         FV.AMB_P75: power * 0.00876 * 0.9325,
         FV.AMB_P90: power * 0.00876 * 0.8718,

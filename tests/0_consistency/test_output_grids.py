@@ -8,7 +8,7 @@ import xarray as xr
 import foxes
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.output import grids
+from foxes.models.outputs import grids
 
 
 @pytest.fixture
@@ -148,12 +148,28 @@ def test_flow_slices_use_static_points_across_chunks(
     ):
         # Null turbines have no power fields; retain the available point inputs.
         farm_data = flow_algorithm.calc_farm(outputs="farm_results_all", finalize=False)
-        output = foxes.output.FlowPlots2D(flow_algorithm, farm_data)
-        mean_output = getattr(output, f"get_mean_data_{orientation}")(
-            FV.WS, n_img_points=(2, 3), **selection
+
+        mean_output = flow_algorithm.calc_outputs(
+            farm_results=farm_data,
+            outputs=foxes.models.outputs.FlowPlots2D(
+                plane=orientation,
+                reduction="mean",
+                plot=False,
+                data_format="numpy",
+                grid_pars={"n_img_points": (2, 3)},
+                **selection,
+            ),
         )
-        state_output = getattr(output, f"get_states_data_{orientation}")(
-            FV.WS, n_img_points=(2, 3), **selection
+        state_output = flow_algorithm.calc_outputs(
+            farm_results=farm_data,
+            outputs=foxes.models.outputs.FlowPlots2D(
+                plane=orientation,
+                reduction="states",
+                plot=False,
+                data_format="numpy",
+                grid_pars={"n_img_points": (2, 3)},
+                **selection,
+            ),
         )
     assert mean_output[-1][-1].shape == (6, 3)
     mean_ws_index = mean_output[0]["variables"].index(FV.WS)

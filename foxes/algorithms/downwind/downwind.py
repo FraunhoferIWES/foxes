@@ -1,16 +1,24 @@
 from __future__ import annotations
-# mypy: disable-error-code=override
 
-import numpy as np
-from xarray import Dataset
 from typing import TYPE_CHECKING, Any
 
-from foxes.core import Algorithm, FarmDataModelList, Output, OutputList
-from foxes.core import PointDataModel, PointDataModelList, FarmController
-from foxes.utils import Dict
+# mypy: disable-error-code=override
+import numpy as np
+from xarray import Dataset
+
+import foxes.constants as FC
 import foxes.models as fm
 import foxes.variables as FV
-import foxes.constants as FC
+from foxes.core import (
+    Algorithm,
+    FarmController,
+    FarmDataModelList,
+    Output,
+    OutputList,
+    PointDataModel,
+    PointDataModelList,
+)
+from foxes.utils import Dict
 
 from . import models as mdls
 
@@ -26,6 +34,7 @@ if TYPE_CHECKING:
         WindFarm,
     )
     from foxes.models import ModelBook
+
     from .models.population import PopulationModel
 
 
@@ -528,12 +537,20 @@ class Downwind(Algorithm):
 
     def _print_model_oder(
         self,
-        mlist: FarmDataModelList,
+        mlist: FarmDataModelList | PointDataModelList,
         calc_pars: list[dict[str, Any]],
         outputs: Any | None = None,
     ) -> None:
-        """
-        Helper function for printing model names
+        """Print the ordered calculation chain at the configured verbosity.
+
+        Parameters
+        ----------
+        mlist
+            Farm- or point-model chain in execution order.
+        calc_pars
+            Per-model calculation keyword mappings aligned with ``mlist``.
+        outputs
+            Selected output model or chain, included in the printed summary.
         """
         if self.verbosity > 0:
             deco = "-" * 50
@@ -711,29 +728,49 @@ class Downwind(Algorithm):
         self.point_vars = sorted(list(mlist.output_point_vars(self)))
 
     def _resolve_outputs(
-        self, 
+        self,
         outputs: str | Output | list[str | Output] | None,
     ) -> tuple[Output | None, bool]:
-        """ Helper functions for resolving outputs parameter """
-        output: Output | None
+        """Resolve output selectors without copying or initializing models.
+
+        Parameters
+        ----------
+        outputs
+            An output instance, a ``ModelBook.outputs`` name or factory name,
+            or a list of either. ``None`` disables output collection.
+
+        Returns
+        -------
+        output
+            The supplied or registered instance, an ordered ``OutputList`` for
+            zero or multiple list entries, or ``None``. Instances are reused,
+            not copied.
+        single_output
+            Whether a scalar selector or one-entry list selected one model.
+            This permits unwrapping a mapping only when it has one result.
+
+        Raises
+        ------
+        KeyError
+            If an output model-book name is unavailable.
+        TypeError
+            If ``outputs`` is neither a supported selector nor ``None``.
+        """
+        # Preserve instance identity and declaration order across selector forms.
         if isinstance(outputs, Output):
-            output = outputs
-            oneout = True
-        elif isinstance(outputs, str):
-            output = self.mbook.outputs[outputs]
-            oneout = True
-        elif isinstance(outputs, list):
-            output_models: list[Output] = [
+            return outputs, True
+        if isinstance(outputs, str):
+            return self.mbook.outputs[outputs], True
+        if isinstance(outputs, list):
+            models = [
                 self.mbook.outputs[o] if isinstance(o, str) else o for o in outputs
             ]
-            oneout = len(output_models) == 1
-            output = output_models[0] if oneout else OutputList(outputs=output_models)
-        elif outputs is None:
-            output = None
-        else:
-            raise TypeError(f"{self.name}: Expected output models or model-book names")
-        return output, oneout
-        
+            oneout = len(models) == 1
+            return models[0] if oneout else OutputList(outputs=models), oneout
+        if outputs is None:
+            return None, False
+        raise TypeError(f"{self.name}: Expected output models or model-book names")
+
     def calc_farm(
         self,
         outputs: str | Output | list[str | Output] | None = "farm_results",
@@ -749,29 +786,49 @@ class Downwind(Algorithm):
         Parameters
         ----------
         outputs
-            An ``Output`` instance, a name from ``ModelBook.outputs``, or a
-            list of instances and names. A single output returning one result
-            yields that result directly. Multiple outputs return a result-name
-            mapping. ``None`` disables output collection; an empty list also
-            returns an empty mapping. Choose farm variables through
+            An ``Output`` instance, a name from ``ModelBook.outputs``, or a list
+            of instances and names. A single output with one result returns that
+            result directly. Multiple outputs return a result-name mapping.
+            ``None`` or an empty list disables collection.
+            Outputs requiring points evaluate point slices per state chunk,
+            bounded by the engine's point chunk size. Choose farm variables through
             ``FarmResultsOutput(variables=...)``, not a list of variable names.
         calc_parameters
-            Parameters for model calculation.
-            Key: model name str, value: parameter dict
+            Model-name-to-keyword-parameter mapping for scientific calculation.
         ambient
             Skip wake effects and calculate ambient results only.
         finalize
-            Flag for finalization after calculation
+            Finalize initialized models and the algorithm after calculation.
         clear_mem
-            Clear idata memory after starting the run
+            Remove loaded model data when launching the run and finalize
+            afterward, even if ``finalize`` is false.
         kwargs
-            Additional parameters for run_calculation
+            Additional engine calculation options passed through the base
+            algorithm, including state selections.
 
         Returns
         -------
         results
-            The selected unified output. The default is a farm dataset with
-            state/turbine physical fields and explicit coordinates.
+            The sole result of a single selected output, otherwise a
+            result-name-to-value mapping. ``None`` or an empty output list gives
+            an empty mapping. The default dataset preserves input state order
+            and original farm turbine order, with physical fields on
+            ``(FC.STATE, FC.TURBINE)`` and explicit coordinates.
+
+        Raises
+        ------
+        KeyError
+            If an output model-book name is unavailable.
+        TypeError
+            If ``outputs`` is not a supported output selector.
+        ValueError
+            If composed outputs request different calculation points.
+
+        Notes
+        -----
+        Output models are initialized before execution and remain read-only
+        while running. Numerical buffers belong to chunk data or result mappings;
+        rendering and result assembly occur during parent-side finalization.
 
         """
         # initialize algorithm:
@@ -786,6 +843,8 @@ class Downwind(Algorithm):
             self.init_model(output)
 
         # collect models:
+        if isinstance(output, OutputList):
+            output.get_calc_points(self)
         mlist, calc_pars = self._collect_farm_models(
             calc_parameters, ambient, output=output
         )
@@ -888,42 +947,48 @@ class Downwind(Algorithm):
         self,
         mlist: PointDataModelList,
         *data: Dataset,
-        output: Output,
+        output: Output | None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> dict[str, Any]:
         """
-        Runs the main points calculation, launching parallelization
+        Calculate point chunks and expose collected public point dimensions.
 
         Parameters
         ----------
         mlist
-            The model list
+            Initialized scientific point-model chain.
         data
-            The (mdata, fdata) inputs
+            Model, farm and target input datasets passed to the base algorithm.
         output
-            Initialized point-results collector.
+            Initialized output model or chain; ``None`` disables collection.
         kwargs
-            Additional parameters for running
+            Additional base-algorithm engine options.
 
         Returns
         -------
-        point_results
-            The point results. The calculated variables have
-            dimensions (state, point)
+        results
+            Engine-owned output mapping, modified in place only at
+            ``FC.POINT_RESULTS`` when present. Its dataset selects target point
+            zero, drops ``FC.TPOINT`` and renames ``FC.TARGET`` to ``FC.POINT``,
+            preserving state and supplied point order.
 
         """
         # Collect target chunks through the same Output lifecycle as farm chunks.
         results = super()._launch_parallel_points_calc(
             mlist, *data, output=output, **kwargs
         )
-        return (
-            results[FC.POINT_RESULTS].sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
-        )
+        if FC.POINT_RESULTS in results:
+            results[FC.POINT_RESULTS] = (
+                results[FC.POINT_RESULTS]
+                .sel({FC.TPOINT: 0}, drop=True)
+                .rename({FC.TARGET: FC.POINT})
+            )
+        return results
 
     def calc_points(
         self,
-        farm_results: Dataset,
-        points: np.ndarray,
+        farm_results: Dataset | None,
+        points: np.ndarray | None = None,
         outputs: str | Output | list[str | Output] | None = "point_results",
         point_models: Any = None,
         calc_parameters: dict[str, dict[str, Any]] = {},
@@ -941,46 +1006,74 @@ class Downwind(Algorithm):
         Parameters
         ----------
         farm_results
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+            Farm fields on ``(FC.STATE, FC.TURBINE)`` in original turbine
+            order. Required for waked scientific calculations; ``None`` is
+            accepted for ambient calculations or precomputed point results.
         points
             Static points with shape ``(n_points, 3)`` or state-dependent
             points with shape ``(n_states, n_points, 3)``. Static coordinates
-            are broadcast to each engine state chunk.
+            are broadcast to each engine state chunk. Components are ``x``,
+            ``y`` and height in metres. Mutually exclusive with
+            ``point_results``; one of them must be provided. Supplied point
+            order is preserved.
         outputs
-            An ``Output`` instance, a name from ``ModelBook.outputs``, or a
-            list of instances and names. A single output returning one result
-            yields that result directly. Multiple outputs return a result-name
-            mapping. ``None`` disables output collection; an empty list also
-            returns an empty mapping. Choose farm variables through
-            ``FarmResultsOutput(variables=...)``, not a list of variable names.
+            An ``Output`` instance, a name from ``ModelBook.outputs``, or a list
+            of instances and names. A single output with one result returns that
+            result directly. Multiple outputs return a result-name mapping.
+            ``None`` or an empty list disables collection.
+            ``get_calc_points`` is ignored: supplied points or point results
+            determine the calculation locations.
         point_models
-            Additional point models to be executed
+            Additional point-model instances or ``ModelBook.point_models``
+            names, supplied singly or in execution-order lists.
         calc_parameters
-            Parameters for model calculation.
-            Key: model name str, value: parameter dict
+            Model-name-to-keyword-parameter mapping for scientific calculation.
         persist_pdata
-            Switch for forcing dask to load all farm data
-            into memory
+            Persist the newly constructed point-input dataset before execution.
+            Has no effect when ``point_results`` is supplied.
         finalize
-            Flag for finalization after calculation
+            Finalize initialized models and the algorithm after calculation.
         ambient
             Skip wake effects and calculate ambient results only.
         states_sel
-            Reduce to selected states
+            Unique state-coordinate labels, in requested result order.
+            ``None`` retains all states. Positional ``states_isel`` is rejected.
         clear_mem
-            Clear idata memory after starting the run
+            Remove loaded model data when launching the run and finalize
+            afterward, even if ``finalize`` is false.
         point_results
-            Precomputed point results dataset. If provided, calculation at points is skipped.
-            Cannot be used simultaneously with the ``points`` argument.
+            Precomputed fields on ``(FC.STATE, FC.POINT)``; scientific point
+            calculation is skipped. Locations must be present as ``FC.TARGETS``
+            or the metre-valued ``FV.X``, ``FV.Y`` and ``FV.H`` fields.
+            Input arrays are read, not modified.
         kwargs
-            Additional parameters for run_calculation
+            Additional base-algorithm engine options.
 
         Returns
         -------
         results
-            The selected unified output. The default is a point result dataset with
-            state/point physical fields and explicit coordinates.
+            The sole result of a single selected output, otherwise a
+            result-name-to-value mapping. Disabled collection gives an empty
+            mapping. The default dataset has ``(FC.STATE, FC.POINT)`` physical
+            fields and location coordinates in supplied point order.
+
+        Raises
+        ------
+        KeyError
+            If an output model-book name is unavailable.
+        TypeError
+            If an output selector or point model is unsupported, or
+            ``states_isel`` is supplied.
+        ValueError
+            If neither or both point inputs are supplied, a waked calculation
+            lacks farm results, precomputed locations are missing, selected
+            state labels are duplicated, or unlabelled model data cannot be
+            aligned with the farm state count.
+
+        Notes
+        -----
+        Scientific models and outputs participate in the ordinary running and
+        unsetting lifecycle. No output-requested replacement grid is generated.
 
         """
         # initialize:
@@ -994,33 +1087,48 @@ class Downwind(Algorithm):
         if output is not None:
             self.init_model(output)
 
-        if not ambient and farm_results is None:
+        if not ambient and farm_results is None and point_results is None:
             raise ValueError(
                 f"Cannot calculate point results without farm results for ambient = {ambient}"
             )
+        if farm_results is None:
+            farm_results = Dataset(
+                coords={
+                    FC.STATE: self.states.index(),
+                    FC.TURBINE: np.arange(self.n_turbines),
+                }
+            )
 
         # collect models and initialize:
-        mlist, calc_pars = self._collect_point_models(
-            calc_parameters, point_models, ambient
-        )
+        if point_results is None:
+            mlist, calc_pars = self._collect_point_models(
+                calc_parameters, point_models, ambient
+            )
+        else:
+            mlist, calc_pars = PointDataModelList(), []
 
         # initialize models:
         if not mlist.initialized:
             self.init_model(mlist)
             self._calc_point_vars(mlist)
+            if point_results is not None:
+                self.point_vars = list(point_results.data_vars)
             if farm_results is None:
                 self.farm_vars = []
             else:
-                self.farm_vars = sorted([
-                    v for v in farm_results.data_vars.keys()
-                    if farm_results[v].dims == (FC.STATE, FC.TURBINE)
-                    or v == FV.WEIGHT
-                ])
+                self.farm_vars = sorted(
+                    [
+                        v
+                        for v in farm_results.data_vars.keys()
+                        if farm_results[v].dims == (FC.STATE, FC.TURBINE)
+                        or v == FV.WEIGHT
+                    ]
+                )
 
         # welcome:
-        if point_results is not None and points is not None:
+        if (point_results is None) == (points is None):
             raise ValueError(
-                f"{self.name}: output calc points and point_results cannot both be provided"
+                f"{self.name}: Provide exactly one of points or point_results"
             )
         elif point_results is not None:
             n_points = point_results.sizes[FC.POINT]
@@ -1029,8 +1137,6 @@ class Downwind(Algorithm):
             n_points = points.shape[-2]
         self.print_deco("calc_points", n_points=n_points, outputs=output)
         self._print_model_oder(mlist, calc_pars, output)
-
-        self.init_model(output)
 
         if "states_isel" in kwargs:
             raise TypeError(
@@ -1082,7 +1188,7 @@ class Downwind(Algorithm):
             if persist_pdata:
                 point_data = point_data.persist()
         else:
-            point_data = point_results
+            point_data = self._prepare_point_results(point_results)
         self.print("\nInput point data:\n\n", point_data, "\n")
         self.print("\nFarm variables:", ", ".join(self.farm_vars))
         self.print("\nPoint variables:", ", ".join(self.point_vars))
@@ -1111,6 +1217,70 @@ class Downwind(Algorithm):
 
         return results
 
+    def _prepare_point_results(self, point_results: Dataset) -> Dataset:
+        """Adapt precomputed point fields without changing their point order.
+
+        Parameters
+        ----------
+        point_results
+            Public dataset with ``FC.STATE`` and ``FC.POINT`` axes, and either
+            ``FC.TARGETS`` or ``FV.X``, ``FV.Y`` and ``FV.H`` in metres.
+            Coordinate and physical fields may broadcast across states or points.
+
+        Returns
+        -------
+        point_data
+            Dataset using ``FC.TARGET`` instead of ``FC.POINT``. When locations
+            are constructed from coordinate fields, physical variables have
+            ``(FC.STATE, FC.TARGET, FC.TPOINT)`` dimensions with one target
+            point. The caller's dataset is not mutated.
+
+        Raises
+        ------
+        ValueError
+            If ``FC.TARGETS`` is absent and any required coordinate field is
+            missing.
+        """
+        # Require actual locations rather than generating replacement points.
+        if FC.TARGETS in point_results:
+            data = point_results.rename({FC.POINT: FC.TARGET})
+        else:
+            coordinates = (FV.X, FV.Y, FV.H)
+            missing = [v for v in coordinates if v not in point_results]
+            if missing:
+                raise ValueError(
+                    f"{self.name}: Precomputed point results require coordinates "
+                    f"{missing}"
+                )
+            points = np.stack(
+                [
+                    point_results[v]
+                    .broadcast_like(point_results)
+                    .transpose(FC.STATE, FC.POINT)
+                    .to_numpy()
+                    for v in coordinates
+                ],
+                axis=-1,
+            )
+            data = self.new_point_data(points, point_results[FC.STATE])
+            template = Dataset(
+                coords={
+                    FC.STATE: point_results[FC.STATE].to_numpy(),
+                    FC.POINT: point_results[FC.POINT].to_numpy(),
+                }
+            )
+            for variable in point_results.data_vars:
+                values = (
+                    point_results[variable]
+                    .reset_coords(drop=True)
+                    .broadcast_like(template)
+                    .transpose(FC.STATE, FC.POINT)
+                )
+                data[variable] = values.rename({FC.POINT: FC.TARGET}).expand_dims(
+                    {FC.TPOINT: [0]}, axis=-1
+                )
+        return data
+
     def calc_outputs(
         self,
         outputs: str | Output | list[str | Output] | None = "point_results",
@@ -1123,39 +1293,60 @@ class Downwind(Algorithm):
         **kwargs: Any,
     ) -> Dataset | dict[str, Any]:
         """
-        Calculate data at a given set of points.
+        Run selected outputs on supplied results or their requested points.
 
         Parameters
         ----------
         outputs
-            An ``Output`` instance, a name from ``ModelBook.outputs``, or a
-            list of instances and names. A single output returning one result
-            yields that result directly. Multiple outputs return a result-name
-            mapping. ``None`` disables output collection; an empty list also
-            returns an empty mapping. Choose farm variables through
-            ``FarmResultsOutput(variables=...)``, not a list of variable names.
+            An ``Output`` instance, a name from ``ModelBook.outputs``, or a list
+            of instances and names. Point-dependent children in a composed
+            output must request identical calculation points.
         farm_results
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+            Precomputed farm fields in original turbine order on
+            ``(FC.STATE, FC.TURBINE)``. These are collected without rerunning farm
+            physics. Missing state coordinates are filled from ``self.states``.
+            If absent and an output requests points, all required farm fields
+            are calculated first.
         point_results
-            The point results. The calculated variables have
-            dimensions (state, point)
+            Precomputed ``(FC.STATE, FC.POINT)`` fields with location coordinates
+            as required by ``calc_points``. These take precedence over requested
+            grids and are consumed without scientific point recalculation.
         calc_parameters
-            Parameters for model calculation.
-            Key: model name str, value: parameter dict
+            Model-name-to-keyword-parameter mapping forwarded to point
+            calculations when point evaluation is needed.
         finalize
-            Flag for finalization after calculation
+            Finalize initialized models and the algorithm after execution.
         states_sel
-            Reduce to selected states
+            State-coordinate labels forwarded to collection or point execution.
+            ``None`` retains all states; point execution requires unique labels.
         clear_mem
-            Clear idata memory after starting the run
+            Remove loaded model data for execution and finalize afterward,
+            even if ``finalize`` is false.
         kwargs
-            Additional parameters for calculation method
+            Additional engine or point-calculation options.
 
         Returns
         -------
         results
-            The selected unified output.
+            The sole result of a single selected output, otherwise a
+            result-name-to-value mapping. ``None`` disables collection and
+            returns an empty mapping. Without supplied data or requested points,
+            only the output's parent-side ``finalize_results`` hook is run.
+
+        Raises
+        ------
+        KeyError
+            If an output model-book name is unavailable.
+        TypeError
+            If ``outputs`` is not a supported selector.
+        ValueError
+            If composed outputs request different grids or supplied point
+            results violate the ``calc_points`` contract.
+
+        Notes
+        -----
+        Constructor configuration remains on output models; chunk buffers and
+        assembled values belong to the run's explicit result mappings.
 
         """
         # initialize:
@@ -1164,33 +1355,64 @@ class Downwind(Algorithm):
 
         # Resolve output names and preserve the single-versus-multiple return contract.
         output, oneout = self._resolve_outputs(outputs)
+        if output is None:
+            return {}
 
         # Initialize the resolved output chain before preparing model inputs.
         if output is not None:
             self.init_model(output)
 
         # welcome:
-        points = output.get_calc_points()
-        if point_results is not None:
-            assert points is None, (
-                f"{self.name}: output calc points and point_results cannot both be provided"
+        points = output.get_calc_points(self) if point_results is None else None
+        if farm_results is not None and FC.STATE not in farm_results.sizes:
+            farm_results = farm_results.assign_coords({FC.STATE: self.states.index()})
+        if farm_results is None and point_results is not None:
+            kwargs.setdefault("ambient", True)
+            return self.calc_points(
+                farm_results=None,
+                points=points,
+                point_results=point_results,
+                outputs=output,
+                calc_parameters=calc_parameters,
+                finalize=finalize,
+                states_sel=states_sel,
+                clear_mem=clear_mem,
+                **kwargs,
             )
+        if farm_results is None and points is not None:
+            farm_results = self.calc_farm(outputs="farm_results_all", finalize=False)
 
         # run calculation:
         if farm_results is not None and points is None and point_results is None:
-            results = self.calc_farm(
-                farm_data=farm_results, 
-                outputs=output,
+            # Run only output collection on already farm-ordered arrays.
+            mlist = FarmDataModelList()
+            self.init_model(mlist)
+            model_data, extra_data = self.get_model_data(pop=clear_mem)
+            results = super().calc_farm(
+                mlist,
+                model_data,
+                farm_data=farm_results,
+                extra_data=extra_data,
+                output=output,
+                sel=None if states_sel is None else {FC.STATE: states_sel},
+                clear_mem=clear_mem,
                 **kwargs,
             )
-        elif farm_results is not None and (points is not None or point_results is not None):
+        elif farm_results is not None and (
+            points is not None or point_results is not None
+        ):
             results = self.calc_points(
                 farm_results=farm_results,
                 points=points,
                 point_results=point_results,
                 outputs=output,
+                calc_parameters=calc_parameters,
+                finalize=finalize,
+                states_sel=states_sel,
+                clear_mem=clear_mem,
                 **kwargs,
             )
+            return results
         else:
             self.print(f"{self.name}: Computing finalize_results for output {output}")
             results = Dict[str, Any](_name="output_results")
@@ -1199,9 +1421,10 @@ class Downwind(Algorithm):
                 n_chunks_states=1,
                 n_chunks_targets=1,
                 output_results=results,
-                **kwargs,
             )
 
+        if clear_mem or finalize:
+            self.finalize(clear_mem=clear_mem)
         if results is not None and oneout and len(results) == 1:
             results = next(iter(results.values()))
 

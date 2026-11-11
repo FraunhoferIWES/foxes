@@ -6,6 +6,167 @@ the output's ``update_results()`` and ``finalize_results()`` hooks unify them.
 ``OutputList`` composes models in declaration order and merges their required
 input variables.
 
+Constructor-defined consumers
+-----------------------------
+``FarmResultsEval``, ``FarmLayoutOutput``, ``SliceData``, ``SlicesData``,
+``FlowPlots2D``, ``RosePlotOutput``, ``StatesRosePlotOutput`` and
+``WindRoseBinPlot`` are exported only from ``foxes.models.outputs``.
+Configure the entire operation before execution; do not pass an algorithm or
+results to an output constructor or call dataset-bound consumer methods.
+Constructors retain configuration only, not large scientific data.
+
+The public ``outputs`` selector is unchanged: model-book strings, instances
+and lists of either are supported by ``calc_farm``, ``calc_points`` and
+``calc_outputs``. For example:
+
+.. code-block:: python
+
+    from foxes.models.outputs import FarmResultsEval, SliceData
+
+    with foxes.Engine.new("numpy", chunk_size_states=64, chunk_size_points=500):
+        slice_data = algo.calc_farm(outputs=SliceData(
+            plane="xz", variables=[FV.WS], reduction="mean",
+            grid_pars={"n_img_points": (30, 20)},
+        ))
+        farm_results = algo.calc_farm(outputs="farm_results_all")
+        means = algo.calc_outputs(
+            farm_results=farm_results,
+            outputs=FarmResultsEval(
+                operation="calc_farm_mean", parameters={"vars": [FV.P]},
+            ),
+        )
+
+``SliceData`` returns NumPy, pandas or xarray data according to ``data_format``.
+``SlicesData(positions=[...], plane=...)`` combines parallel planes into one
+xarray dataset and writes it once. ``FlowPlots2D`` selects ``var``, ``plane``,
+``reduction`` and ``plot`` in its constructor: plots return one mean figure or
+a rendered list of state figures; numerical mode returns
+``(parameters, data, grid)`` or ``(parameters, data, states, grid)``.
+``ret_data=True`` adds the formatted data to a plotted result.
+``FlowAnimation`` derives from ``SliceData``; ``SliceData``, ``SlicesData`` and
+``FlowPlots2D`` do not inherit animation settings or validation. Shared grids
+appear under model-private ``slice_points`` keys, with numerical buffers named
+``slice_chunks`` and optional loaded selection masks named ``slice_selection``.
+Flow-plot data uses the same point ordering and weighted reduction as slices.
+Farm evaluation selects ``operation`` and its ``parameters``;
+``add_*`` operations return a dataset, which Python callers assign explicitly.
+Layout outputs select an operation such as ``get_figure`` or ``write_csv``
+and pass its options in ``parameters``.
+Rose outputs configure bins, location and rendering; ``plot=False`` returns a
+frequency dataset and ``plot=True`` returns ``(axes, dataset)``.
+``StatesRosePlotOutput(point=(x, y, z))`` evaluates the executing algorithm's
+states at that location without constructor-time calculations.
+
+Point requests use ``get_calc_points(algo)`` after initialization. Farm runs
+evaluate bounded point slices inside each state chunk; ``calc_outputs`` delegates
+both chunk axes to the point engine. Composed outputs must request identical
+points. ``calc_points`` ignores output requests and consumes its ``points`` or
+``point_results`` instead. Precomputed datasets retain ``X``, ``Y`` and ``H``
+coordinates and are not recalculated.
+
+Displaying plots and animations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Plotting constructors default to ``show=False``: they create/return figures or
+save animations without explicitly opening a display window. Set ``show=True``
+on ``FarmLayoutOutput``, ``FlowPlots2D``, rose outputs or ``FlowAnimation``
+(including ``FlowTurbineAnimation``) to call blocking Matplotlib display during
+parent-side finalization. Files are saved before display. Animations play at
+their configured ``fps`` while the window is open, then release their figure;
+figures/animations are never stored on running output models.
+
+Static model-book plotting presets and factories instead enable ``show=True``,
+including ``flow_plot_<plane>_<reduction>``. Animation presets such as
+``create_gif``, ``create_mp4``, their turbine variants and chunk-animation
+factories keep ``show=False``. Disable display before executing static plotting
+presets in scripts and headless workflows:
+
+.. code-block:: python
+
+    algo.mbook.outputs["flow_plot_xy_mean"].show = False
+    result = algo.calc_farm(outputs="flow_plot_xy_mean")
+
+``plot=False`` selects numerical results without display. ``nofig=True`` also
+suppresses figure generation, including layout plot files and animations.
+Data-only layout operations, numerical outputs and returned frame generators
+do not force display. Showing windows or playing animations requires an
+interactive Matplotlib backend; FOXES does not select a backend or silence
+Matplotlib's headless-backend warnings.
+Tests never enable ``show``, including mocked checks.
+
+Compact calculation payloads
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``calculate()`` returns only data required by the final output, under a private
+model key. Means are reduced on workers, not collected as full state histories:
+
+* Mean slices, multi-plane slices and mean flow plots return weighted sums of
+  shape ``(1, n_points)`` per variable and point tile. Global weights are not
+  renormalized per chunk or selected subset. Raw weights and state frames are
+  not transported. ``ret_states=True`` additionally retains selected labels.
+* Farm evaluations return per-turbine sums, extrema or sufficient statistics for
+  means and population deviations. Additive scalar farm summaries return scalars;
+  farm yield combines turbine power units before reducing the turbine axis.
+  Metadata-only capacity/unit queries return no worker arrays.
+* Wind roses return bin accumulators rather than samples. Weighted means combine
+  numerators and denominators globally before division and thresholding.
+* Layouts return only the selected state geometry and reduced colour values.
+  Algorithm-owned layouts without scientific colours return no worker arrays.
+  Negative state/point indices use bounded trailing candidates for final selection.
+
+Flow plots collect their selected variable, adding wind speed/direction only for
+configured quivers and farm geometry only for rotor overlays. Static point
+coordinates have a singleton state axis in worker payloads; final public point
+datasets restore full dimensions. State-resolved datasets, writers and animations
+retain the requested state fields because their final results require them.
+These payload reductions do not alter the full-shaped scientific data containers.
+
+YAML execution
+~~~~~~~~~~~~~~
+Configured YAML entries specify ``output_type`` and constructor options without
+``functions``. They run through ``calc_outputs``; ``with_engine`` selects the
+execution phase and defaults to true. ``result_labels`` stores the result, and
+nested ``$name`` references can supply previously created axes. YAML ``add_*``
+evaluations update the pipeline farm dataset for subsequent consumers.
+Unadopted ``foxes.output`` consumers keep their separate configuration surface.
+
+Model-book consumer presets
+---------------------------
+The adopted consumers are available through ``ModelBook.outputs`` without
+constructing grids, loading scientific data or running calculations:
+
+====================== =========================== ============================
+Name                   Output class                Preset
+====================== =========================== ============================
+``farm_layout``        ``FarmLayoutOutput``        Layout figure
+``farm_results_eval``  ``FarmResultsEval``         Weighted state reduction
+``rose_plot``          ``RosePlotOutput``          Farm wind rose, turbine zero
+``states_rose_plot``   ``StatesRosePlotOutput``    Rose at ``(0, 0, 100)`` metres
+``wind_rose_bin_plot`` ``WindRoseBinPlot``         Power in wind-speed bins
+``slice_data``         ``SliceData``               State-resolved XY data
+``slices_data``        ``SlicesData``              XY plane at 100 metres
+``flow_plot``          ``FlowPlots2D``              Mean XY wind-speed figure
+====================== =========================== ============================
+
+The binned power preset uses speed edges ``(0, 5, 10, 15, 20, 25)`` m/s.
+The slice families also support ``slice_data_<plane>_<reduction>``,
+``slices_data_<plane>_<reduction>`` and
+``flow_plot_<plane>_<reduction>``, with ``plane`` in ``xy``, ``xz``, ``yz``
+and ``reduction`` in ``states``, ``mean``. Multi-plane presets use the single
+normal-axis position ``100`` metres; change ``positions`` before execution
+for multiple planes or different locations. Configure other preset attributes
+before initialization, or supply a fully configured output instance directly.
+For example:
+
+.. code-block:: python
+
+    algo.mbook.outputs["slice_data_xz_mean"].grid_pars = {
+        "n_img_points": (30, 20),
+    }
+    data = algo.calc_farm(outputs="slice_data_xz_mean")
+
+For a static mean XY flow figure use ``outputs="flow_plot_xy_mean"``.
+Setting ``algo.mbook.outputs["flow_plot_xy_mean"].plot = False`` returns its
+numerical data tuple instead; neither mode initializes an animation.
+
 Implemented farm outputs
 ------------------------
 
@@ -128,10 +289,10 @@ are closed even after failures.
 Both animation classes announce ``Writing <path>`` when their ``verbosity``
 is positive. It defaults to ``None``, inheriting ``algo.verbosity``; an explicit
 zero suppresses the message independently of algorithm progress.
-Both animation classes accept ``layout_pars`` for flow-axis annotations through
-``FarmLayoutOutput.get_figure``; do not supply ``fig`` or ``ax``.
+Both animation classes accept ``layout_pars`` for horizontal flow-axis layout
+annotations; do not supply ``fig`` or ``ax``.
 
-For farm-only chunks, a static XY grid is loaded once into
+For farm-only chunks, a static grid in the constructor-selected ``plane`` is loaded once into
 ``loaded_data["extra_data"]`` as a top-level NumPy array, making it eligible for
 engine shared storage. Bounds include all turbine positions, including moving
 layouts; the default plane is the midpoint of the minimum/maximum hub heights.
@@ -145,9 +306,9 @@ wakes; supplied target data is always reused unchanged.
 
 When ``tdata`` is provided, its coordinates and calculated fields are used
 directly, without grid evaluation. All target quadrature locations are retained.
-Static rectangular XY targets use the existing flow-plot renderer; irregular
-or moving targets use coloured XY scatter frames without interpolation.
-``plot_pars`` passes to ``FlowPlots2D.gen_states_fig_xy`` for rectangular grids,
+Static rectangular targets use the configured plane's flow-plot renderer; irregular
+or moving targets use coloured scatter frames in that plane without interpolation.
+``plot_pars`` configures the shared flow-plot renderer for rectangular grids,
 or to Matplotlib ``scatter`` for other targets; ``vmin`` and ``vmax`` select a
 shared colour scale in either case, and ``vlabel`` overrides the colour-bar
 label. Known variables use existing FOXES unit labels. Requested fields, wind
@@ -202,7 +363,8 @@ the standard collector without changing the dataset return contract.
 Flow animations with turbine traces
 -----------------------------------
 ``FlowTurbineAnimation`` derives from ``FlowAnimation`` and adds
-a synchronized lower panel using ``FarmResultsEval.gen_stdata``. Set
+a synchronized lower panel using the same trace preparation as
+``FarmResultsEval(operation="gen_stdata")``. Set
 ``turbines`` to original farm indices (all turbines by default) and
 ``turbine_variable`` to a state-turbine farm field (``FV.REWS`` by default).
 Trace data follows the same state/chunk selection as the flow field and remains
@@ -210,7 +372,7 @@ in private numerical payloads rather than on the running model.
 Both rectangular and arbitrary-target flow rendering use this panel.
 
 ``layout_pars`` optionally forwards annotation settings to
-``FarmLayoutOutput.get_figure`` on the flow axes; do not supply ``fig`` or
+the shared layout renderer on the flow axes; do not supply ``fig`` or
 ``ax``. ``ref_xy`` optionally draws a red cross at two finite coordinates
 in metres. The panels have a three-to-one height ratio and use inherited
 ``figsize``, grid/plot settings, filename suffixes, writers and cleanup.
@@ -285,15 +447,16 @@ existing import paths use the core base directly. Evaluation methods
 with names such as ``calculate`` or ``get_data`` remain consumer APIs, not
 chunk hooks; passing such consumers to ``calc_farm(outputs=...)`` is unsupported.
 
-``SliceData`` and ``FlowPlots2D`` return grid-data tuples whose final item is a
-static coordinate array with shape ``(n_points, 3)``. XY, XZ, and YZ grids share
+``SliceData`` and ``FlowPlots2D`` share static grid coordinates. When coordinates
+are returned alongside data, the grid array has shape ``(n_points, 3)``.
+XY, XZ, and YZ grids share
 those coordinates across all selected states. Point calculations use the active
 engine to broadcast coordinates over each state chunk; callers do not need to
 repeat the grid themselves.
 
-Mean slices still collect state-by-point results before applying their weights.
-Static coordinate storage removes grid replication, but does not make that
-result collection memory-bounded.
+Mean slices reduce state-by-point fields inside each worker and transport only
+weighted point sums. State-resolved slice results necessarily retain their
+selected state frames.
 
 .. toctree::
     :maxdepth: 2
@@ -301,5 +464,4 @@ result collection memory-bounded.
     _autoapi/foxes/core/output/index
     _autoapi/foxes/models/outputs/index
     _autoapi/foxes/output/index
-    _autoapi/foxes/output/flow_plots_2d/index
     _autoapi/foxes/models/seq_plugins/index

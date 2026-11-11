@@ -176,7 +176,17 @@ if __name__ == "__main__":
     )
 
     if not args.nofig and args.show_layout:
-        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+        ax = foxes.algorithms.Downwind(
+            farm,
+            foxes.input.states.SingleStateStates(ws=8, wd=270, ti=0.08, rho=1.225),
+            wake_models=[],
+            mbook=mbook,
+            verbosity=0,
+        ).calc_outputs(
+            outputs=foxes.models.outputs.FarmLayoutOutput(
+                operation="get_figure", parameters=dict()
+            )
+        )
         plt.show()
         plt.close(ax.get_figure(figsize=(8, 8)))
 

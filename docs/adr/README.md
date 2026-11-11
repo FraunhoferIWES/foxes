@@ -28,6 +28,11 @@ all of them.
 | [0014](0014-sequential-animation-outputs.md) | Accepted | Adapt flow-animation outputs to Sequential with step-local point evaluation and completion-only shared rendering. |
 | [0015](0015-animation-helper-ownership.md) | Accepted | Keep animation composition in adopted outputs and all Sequential plugins in `foxes.models.seq_plugins`. |
 | [0016](0016-state-turbine-performance-evaluation.md) | Accepted | Keep turbine performance metrics in state-turbine data, annualize unweighted power and require explicit uncertainty for P75/P90. |
+| [0017](0017-constructor-defined-output-contract.md) | Accepted | Promote animation dependencies to constructor-defined output models, keep scientific data run-local and preserve algorithm string/list selectors. |
+| [0018](0018-slice-first-output-hierarchy.md) | Accepted | Derive flow animations and static plots from numerical slice data, with neutral point-grid collection and shared-data keys. |
+| [0019](0019-reduced-output-payloads.md) | Accepted | Eliminate unnecessary output dimensions on workers and merge sufficient statistics, histograms and selected layout data without reconstructing state frames. |
+| [0020](0020-output-display-control.md) | Accepted; animation defaults and test policy superseded by [0021](0021-noninteractive-animation-and-tests.md) | Default plotting constructors to no display, enable model-book plotting display and keep blocking animation playback parent-owned and run-local. |
+| [0021](0021-noninteractive-animation-and-tests.md) | Accepted | Keep animation presets noninteractive and prohibit enabled display in tests, including mocked checks; static plotting presets remain interactive. |
 
 ## When To Add An ADR
 

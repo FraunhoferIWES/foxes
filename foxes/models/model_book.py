@@ -1,28 +1,49 @@
+"""Model registries, parameterized factories and model-book lookup."""
+
 from __future__ import annotations
 
-from math import sqrt
 from typing import TYPE_CHECKING, Any
 
 import foxes.models as fm
-import foxes.variables as FV
+from foxes.core import (
+    AxialInductionModel,
+    FarmController,
+    FarmDataModel,
+    GroundModel,
+    Output,
+    PartialWakesModel,
+    PointDataModel,
+    RotorModel,
+    TurbineModel,
+    TurbineType,
+    WakeDeflection,
+    WakeFrame,
+    WakeModel,
+    WakeSuperposition,
+)
+from foxes.models.wake_models import TurbineInductionModel
 from foxes.utils import FDict
 
-from foxes.models.wake_models import TurbineInductionModel
-from foxes.core import (
-    PointDataModel,
-    FarmDataModel,
-    FarmController,
-    RotorModel,
-    TurbineType,
-    TurbineModel,
-    PartialWakesModel,
-    WakeFrame,
-    WakeSuperposition,
-    WakeModel,
-    AxialInductionModel,
-    GroundModel,
-    WakeDeflection,
-    Output,
+from ._model_book_basics import (
+    _populate_farm_models,
+    _populate_point_models,
+    _populate_rotor_models,
+    _populate_turbine_models,
+    _populate_turbine_types,
+)
+from ._model_book_outputs import _populate_outputs
+from ._model_book_wakes import (
+    _populate_axial_induction,
+    _populate_gaussian_wakes,
+    _populate_ground_models,
+    _populate_induction_wakes,
+    _populate_park_wakes,
+    _populate_partial_wakes,
+    _populate_reference_wakes,
+    _populate_superpositions,
+    _populate_turbulence_wakes,
+    _populate_wake_deflections,
+    _populate_wake_frames,
 )
 
 if TYPE_CHECKING:
@@ -30,817 +51,96 @@ if TYPE_CHECKING:
 
 
 class ModelBook:
+    """Independent model registries and parameterized name factories.
+
+    The ``outputs`` registry contains lightweight presets and factories for
+    collectors, writers, animations, evaluation, layout, roses and slices.
+    Configure selected outputs before algorithm initialization. Registry entries
+    are model instances owned by this book, not shared between books.
+
+    Attributes
+    ----------
+    point_models
+        Point-field conversions and parameterized point models.
+    rotor_models
+        Rotor quadrature presets and point-count factories.
+    turbine_types
+        Turbine performance models, including any custom ``Pct`` preset.
+    turbine_models
+        Turbine-local scientific operations.
+    farm_models
+        Farm-wide wrappers around the turbine operations.
+    farm_controllers
+        Controllers selecting and ordering turbine operations.
+    partial_wakes
+        Partial-wake integration models and quadrature factories.
+    wake_deflections
+        Wake-deflection models and parameterized path integrations.
+    wake_frames
+        Spatial and time-dependent wake coordinate systems.
+    wake_superpositions
+        Wind-speed and turbulence combination rules.
+    axial_induction
+        Axial-induction models.
+    wake_models
+        Wake-deficit, turbulence and turbine-induction models.
+    ground_models
+        Ground and boundary-layer reflection models.
+    outputs
+        Constructor-defined consumers, collectors and file writers.
+    sources
+        Collection-name index referring to the registries above.
+    base_classes
+        Collection-name index of the base classes used for dynamic creation.
     """
-    Container for all kinds of models.
-    """
+
+    point_models: FDict
+    rotor_models: FDict
+    turbine_types: FDict
+    turbine_models: FDict
+    farm_models: FDict
+    farm_controllers: FDict
+    partial_wakes: FDict
+    wake_deflections: FDict
+    wake_frames: FDict
+    wake_superpositions: FDict
+    axial_induction: FDict
+    wake_models: FDict
+    ground_models: FDict
+    outputs: FDict
+    sources: FDict
+    base_classes: FDict
 
     def __init__(self, Pct_file: str | None = None) -> None:
-        """
+        """Create independent model registries and their parameterized factories.
+
         Parameters
         ----------
-        Pct_file: str, optional
-            Path to power/ct curve file, for creation
-            of default turbine type model
+        Pct_file
+            Power/ct curve path for an additional turbine-type preset named
+            ``"Pct"``; ``None`` registers only the built-in turbine types.
         """
-        self.point_models = FDict(_name="point_models")
-        self.point_models["tke2ti"] = fm.point_models.TKE2TI()
-        self.point_models["ustar2ti"] = fm.point_models.Ustar2TI()
+        _populate_point_models(self)
+        _populate_rotor_models(self)
+        _populate_turbine_types(self, Pct_file)
+        _populate_turbine_models(self)
+        _populate_farm_models(self)
+        _populate_partial_wakes(self)
+        _populate_wake_deflections(self)
+        _populate_wake_frames(self)
+        _populate_superpositions(self)
+        _populate_axial_induction(self)
+        _populate_reference_wakes(self)
+        _populate_gaussian_wakes(self)
+        _populate_park_wakes(self)
+        _populate_turbulence_wakes(self)
+        _populate_induction_wakes(self)
+        _populate_ground_models(self)
+        _populate_outputs(self)
+        self._connect_registries()
 
-        self.rotor_models = FDict(_name="rotor_models")
-        self.rotor_models["centre"] = fm.rotor_models.CentreRotor()
-        self.rotor_models["direct_mdata"] = fm.rotor_models.DirectMDataInfusion()
-
-        def _n2n(n2: str | float | int) -> int:
-            n2 = float(n2)
-            n = int(sqrt(n2))
-            if n**2 != n2:
-                raise Exception(
-                    f"GridRotor factory: Value {n2} is not the square of an integer"
-                )
-            return n
-
-        self.rotor_models.add_factory(
-            fm.rotor_models.GridRotor,
-            "grid<n2>",
-            kwargs=dict(reduce=True),
-            var2arg={"n2": "n"},
-            n2=_n2n,
-            hints={"n2": "(Number of points in square grid)"},
-        )
-        self.rotor_models.add_factory(
-            fm.rotor_models.GridRotor,
-            "grid<n2>_raw",
-            kwargs=dict(reduce=False),
-            var2arg={"n2": "n"},
-            n2=_n2n,
-            hints={"n2": "(Number of points in square grid)"},
-        )
-        self.rotor_models.add_factory(
-            fm.rotor_models.LevelRotor,
-            "level<n>",
-            kwargs=dict(reduce=True),
-            n=lambda x: int(x),
-            hints={"n": "(Number of vertical levels)"},
-        )
-        self.rotor_models.add_factory(
-            fm.rotor_models.LevelRotor,
-            "level<n>_raw",
-            kwargs=dict(reduce=False),
-            n=lambda x: int(x),
-            hints={"n": "(Number of vertical levels)"},
-        )
-
-        self.turbine_types = FDict(_name="turbine_types")
-        self.turbine_types["null_type"] = fm.turbine_types.NullType()
-        self.turbine_types["NREL5MW"] = fm.turbine_types.PCtFile(
-            "NREL-5MW-D126-H90.csv", rho=1.225
-        )
-        self.turbine_types["DTU10MW"] = fm.turbine_types.PCtFile(
-            "DTU-10MW-D178d3-H119.csv", rho=1.225
-        )
-        self.turbine_types["IEA15MW"] = fm.turbine_types.PCtFile(
-            "IEA-15MW-D240-H150.csv", rho=1.225
-        )
-        self.turbine_types["IWT7.5MW"] = fm.turbine_types.PCtFile(
-            "IWT-7d5MW-D164-H100.csv", rho=1.225
-        )
-        if Pct_file is not None:
-            self.turbine_types["Pct"] = fm.turbine_types.PCtFile(Pct_file)
-
-        self.turbine_models = FDict(
-            _name="turbine_models",
-            kTI=fm.turbine_models.kTI(),
-            kTI_amb=fm.turbine_models.kTI(ti_var=FV.AMB_TI),
-            thrust2ct=fm.turbine_models.Thrust2Ct(),
-            PMask=fm.turbine_models.PowerMask(),
-            yaw2yawm=fm.turbine_models.YAW2YAWM(),
-            yawm2yaw=fm.turbine_models.YAWM2YAW(),
-        )
-        self.turbine_models.add_factory(
-            fm.turbine_models.kTI,
-            "kTI_<kTI>",
-            kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 02 for 0.2)"},
-        )
-        self.turbine_models.add_factory(
-            fm.turbine_models.kTI,
-            "kTI_amb_<kTI>",
-            kwargs=dict(ti_var=FV.AMB_TI),
-            kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 04 for 0.4)"},
-        )
-        self.turbine_models.add_factory(
-            fm.turbine_models.kTI,
-            "kTI_<kTI>_<kb>",
-            kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={
-                "kTI": "(Value, e.g. 04 for 0.4)",
-                "kb": "(Value, e.g. 004 for 0.04)",
-            },
-        )
-        self.turbine_models.add_factory(
-            fm.turbine_models.kTI,
-            "kTI_amb_<kTI>_<kb>",
-            kwargs=dict(ti_var=FV.AMB_TI),
-            kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={
-                "kTI": "(Value, e.g. 04 for 0.4)",
-                "kb": "(Value, e.g. 004 for 0.04)",
-            },
-        )
-
-        self.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc(
-            {
-                f"{FV.WD}_HH": FV.WD,
-                f"{FV.WS}_HH": FV.WS,
-                f"{FV.TI}_HH": FV.TI,
-                f"{FV.RHO}_HH": FV.RHO,
-            }
-        )
-
-        self.farm_models = FDict(
-            {
-                f"farm_{mname}": fm.farm_models.Turbine2FarmModel(m)
-                for mname, m in self.turbine_models.items()
-            },
-            _name="farm_models",
-        )
-
-        self.farm_controllers = FDict(
-            _name="farm_controllers",
-            basic_ctrl=fm.farm_controllers.BasicFarmController(),
-        )
-
-        self.partial_wakes = FDict(
-            _name="partial_wakes",
-            rotor_points=fm.partial_wakes.RotorPoints(),
-            top_hat=fm.partial_wakes.PartialTopHat(),
-            centre=fm.partial_wakes.PartialCentre(),
-            gaussian=fm.partial_wakes.PartialGaussian(),
-            gaussian_lookup=fm.partial_wakes.PartialGaussianLookup(),
-        )
-        self.partial_wakes.add_factory(
-            fm.partial_wakes.PartialAxiwake,
-            "axiwake<n>",
-            n=lambda x: int(x),
-            hints={"n": "(Number of evaluation points)"},
-        )
-        self.partial_wakes.add_factory(
-            fm.partial_wakes.PartialGrid,
-            "grid<n2>",
-            var2arg={"n2": "n"},
-            n2=_n2n,
-            hints={"n2": "(Number of points in square grid)"},
-        )
-
-        self.wake_deflections = FDict(
-            _name="wake_deflections",
-            no_deflection=fm.wake_deflections.NoDeflection(),
-            Bastankhah2016=fm.wake_deflections.Bastankhah2016Deflection(),
-            Jimenez=fm.wake_deflections.JimenezDeflection(rotate=True),
-            JimenezProj=fm.wake_deflections.JimenezDeflection(rotate=False),
-            JimenezPath=fm.wake_deflections.JimenezDeflection(rotate=None),
-        )
-
-        self.wake_deflections.add_factory(
-            fm.wake_deflections.JimenezDeflection,
-            "Jimenez_b<beta>",
-            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
-            kwargs=dict(rotate=True),
-        )
-        self.wake_deflections.add_factory(
-            fm.wake_deflections.JimenezDeflection,
-            "Jimenez_b<beta>_dx<dx>",
-            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            dx=lambda dx: float(dx),
-            var2arg={"dx": "step_x"},
-            hints={
-                "beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)",
-                "dx": "(The step size in m for integration along wake path, e.g. 10)",
-            },
-            kwargs=dict(rotate=True),
-        )
-        self.wake_deflections.add_factory(
-            fm.wake_deflections.JimenezDeflection,
-            "JimenezProj_b<beta>",
-            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
-            kwargs=dict(rotate=False),
-        )
-        self.wake_deflections.add_factory(
-            fm.wake_deflections.JimenezDeflection,
-            "JimenezProj_b<beta>_dx<dx>",
-            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            dx=lambda dx: float(dx),
-            var2arg={"dx": "step_x"},
-            hints={
-                "beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)",
-                "dx": "(The step size in m for integration along wake path, e.g. 10)",
-            },
-            kwargs=dict(rotate=False),
-        )
-        self.wake_deflections.add_factory(
-            fm.wake_deflections.JimenezDeflection,
-            "JimenezPath_b<beta>",
-            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
-            kwargs=dict(rotate=None),
-        )
-        self.wake_deflections.add_factory(
-            fm.wake_deflections.JimenezDeflection,
-            "JimenezPath_b<beta>_dx<dx>",
-            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            dx=lambda dx: float(dx),
-            var2arg={"dx": "step_x"},
-            hints={
-                "beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)",
-                "dx": "(The step size in m for integration along wake path, e.g. 10)",
-            },
-            kwargs=dict(rotate=None),
-        )
-
-        self.wake_frames = FDict(
-            _name="wake_frames",
-            rotor_wd=fm.wake_frames.RotorWD(),
-            rotor_wd_farmo=fm.wake_frames.FarmOrder(),
-        )
-        self.wake_frames.add_factory(
-            fm.wake_frames.Streamlines2D,
-            "streamlines_<step>",
-            step=lambda x: float(x),
-            hints={"step": "(Step size in m)"},
-        )
-        self.wake_frames.add_factory(
-            fm.wake_frames.Streamlines2D,
-            "streamlines_<step>_c<chunksize>",
-            step=lambda x: float(x),
-            chunksize=lambda x: int(x),
-            var2arg={"chunksize": "chunksize_steps"},
-            hints={
-                "step": "(Step size in m)",
-                "chunksize": "(Chunk size in steps)",
-            },
-        )
-
-        self.wake_frames["timelines"] = fm.wake_frames.Timelines()
-        self.wake_frames["dyn_wakes"] = fm.wake_frames.DynamicWakes()
-        self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
-
-        def _todt(x: str) -> float:
-            if x[-1] == "s":
-                return float(x[:-1]) / 60
-            elif x[-3:] == "min":
-                return float(x[:-3])
-            else:
-                raise NotImplementedError(f"Cannot translate '{x}' into minutes")
-
-        def _tokm(x: str) -> float:
-            if x[-2:] == "km":
-                return float(x[:-2])
-            elif x[-1] == "m":
-                return float(x[:-1]) / 1e3
-            else:
-                raise NotImplementedError(f"Cannot translate '{x}' into km")
-
-        self.wake_frames.add_factory(
-            fm.wake_frames.Timelines,
-            "timelines_<dt>",
-            dt=_todt,
-            var2arg={"dt": "dt_min"},
-            hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
-        )
-        self.wake_frames.add_factory(
-            fm.wake_frames.SeqDynamicWakes,
-            "seq_dyn_wakes_<dt>",
-            dt=_todt,
-            var2arg={"dt": "dt_min"},
-            hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
-        )
-
-        self.wake_superpositions = FDict(
-            _name="wake_superpositions",
-            ws_product=fm.wake_superpositions.WSProduct(),
-            ws_product_lim=fm.wake_superpositions.WSProduct(lim_low=1e-4),
-            ti_linear=fm.wake_superpositions.TILinear(superp_to_amb="quadratic"),
-            ti_quadratic=fm.wake_superpositions.TIQuadratic(superp_to_amb="quadratic"),
-            ti_cubic=fm.wake_superpositions.TIPow(pow=3, superp_to_amb="quadratic"),
-            ti_quartic=fm.wake_superpositions.TIPow(pow=4, superp_to_amb="quadratic"),
-            ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
-        )
-
-        def add_ws_superposition_factories(
-            name: str,
-            superposition: type,
-            kwargs: dict[str, Any] | None = None,
-            prefix: str = "ws",
-        ) -> None:
-            """Register source-target scaling variants of a superposition."""
-            base_kwargs = {} if kwargs is None else kwargs
-            variants = {
-                "": {},
-                "_amb": {"scale_amb": True},
-                "_target": {"scale_target": True},
-                "_amb_target": {"scale_amb": True, "scale_target": True},
-                "_loc": {"scale_amb": True, "scale_target": True},
-                "_lim": {"lim_low": 1e-4},
-                "_amb_lim": {"scale_amb": True, "lim_low": 1e-4},
-                "_target_lim": {"scale_target": True, "lim_low": 1e-4},
-                "_amb_target_lim": {
-                    "scale_amb": True,
-                    "scale_target": True,
-                    "lim_low": 1e-4,
-                },
-                "_loc_lim": {
-                    "scale_amb": True,
-                    "scale_target": True,
-                    "lim_low": 1e-4,
-                },
-            }
-            self.wake_superpositions.add_factory(
-                superposition,
-                f"{prefix}{'_' if name else ''}{name}<suffix>",
-                kwargs=base_kwargs,
-                suffix=variants,
-                var2arg={"suffix": None},
-            )
-
-        add_ws_superposition_factories("linear", fm.wake_superpositions.WSLinear)
-        add_ws_superposition_factories("quadratic", fm.wake_superpositions.WSQuadratic)
-        add_ws_superposition_factories(
-            "cubic", fm.wake_superpositions.WSPow, {"pow": 3}
-        )
-        add_ws_superposition_factories(
-            "quartic", fm.wake_superpositions.WSPow, {"pow": 4}
-        )
-        add_ws_superposition_factories("max", fm.wake_superpositions.WSMax)
-        add_ws_superposition_factories(
-            "", fm.wake_superpositions.WindVectorLinear, prefix="vector"
-        )
-
-        self.axial_induction = FDict(_name="induction_models")
-        self.axial_induction["Betz"] = fm.axial_induction.BetzAxialInduction()
-        self.axial_induction["Madsen"] = fm.axial_induction.MadsenAxialInduction()
-
-        self.wake_models = FDict(_name="wake_models")
-
-        # Reference for the IEA37Gaussian wake deficit model:
-        # https://github.com/byuflowlab/iea37-wflo-casestudies/blob/master/cs1-2/iea37-wakemodel.pdf
-        self.wake_models["IEA37Gaussian"] = fm.wake_models.wind.Bastankhah2014(
-            superposition="ws_quadratic",
-            k=0.0324555,
-            sbeta=1 / sqrt(8),
-        )
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.Bastankhah2014,
-            "IEA37Gaussian_<superposition>_[wake_k]",
-            kwargs=dict(sbeta=1 / sqrt(8)),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.JensenWake,
-            "Jensen_<superposition>_[wake_k]",
-            kwargs=dict(induction="Betz"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.JensenTurbOParkWake,
-            "JensenTurbOPark_<superposition>_[wake_k]",
-            kwargs=dict(induction="Betz"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.JensenTurbOParkWake,
-            "JensenTurbOPark_<superposition>_[wake_k]",
-            kwargs=dict(induction="Betz"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.wake_models["Bastankhah2014"] = fm.wake_models.wind.Bastankhah2014(
-            superposition="ws_linear",
-            k=0.04,
-            induction="Madsen",
-        )
-        self.wake_models["Niayifar"] = fm.wake_models.wind.Bastankhah2014(
-            superposition="ws_linear",
-            ka=0.3837,
-            kb=0.003678,
-            ti_var=FV.TI,
-            induction="Madsen",
-        )
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.Bastankhah2014,
-            "Bastankhah2014_<superposition>_[wake_k]",
-            kwargs=dict(sbeta_factor=0.2, induction="Madsen"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.Bastankhah2014,
-            "Bastankhah2014B_<superposition>_[wake_k]",
-            kwargs=dict(sbeta_factor=0.2, induction="Betz"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.Bastankhah2014,
-            "Bastankhah025_<superposition>_[wake_k]",
-            kwargs=dict(sbeta_factor=0.25, induction="Madsen"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.Bastankhah2014,
-            "Bastankhah025B_<superposition>_[wake_k]",
-            kwargs=dict(sbeta_factor=0.25, induction="Betz"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.Bastankhah2016,
-            "Bastankhah2016_<superposition>_[wake_k]",
-            kwargs=dict(induction="Madsen"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.Bastankhah2016,
-            "Bastankhah2016B_<superposition>_[wake_k]",
-            kwargs=dict(induction="Betz"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.wake_models["TurbOPark"] = fm.wake_models.wind.TurbOParkWake(
-            superposition="ws_quadratic_amb_target",
-            ka=0.04,
-            ti_var=FV.AMB_TI,
-            induction="Betz",
-        )
-
-        self.wake_models["TurbOPark"] = fm.wake_models.wind.TurbOParkWake(
-            superposition="ws_quadratic_amb_target",
-            ka=0.04,
-            ti_var=FV.AMB_TI,
-            induction="Betz",
-        )
-
-        self.wake_models["TurbOPark0045"] = fm.wake_models.wind.TurbOParkWake(
-            superposition="ws_quadratic_amb_target",
-            ka=0.045,
-            ti_var=FV.AMB_TI,
-            induction="Betz",
-        )
-
-        self.wake_models["JensenTurbOPark"] = fm.wake_models.wind.JensenTurbOParkWake(
-            superposition="ws_quadratic_amb_target",
-            ka=0.6,
-            ti_var=FV.AMB_TI,
-            induction="Betz",
-        )
-
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.TurbOParkWake,
-            "TurbOPark_<superposition>_[wake_k]",
-            kwargs=dict(induction="Betz"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.TurbOParkWake,
-            "TurbOParkB_<superposition>_[wake_k]",
-            kwargs=dict(induction="Betz"),
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.wake_models.add_k_factory(
-            fm.wake_models.wind.TurbOParkWakeIX,
-            "TurbOParkIX_<superposition>_[wake_k]_dx<dx>",
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            dx=lambda x: float(x),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)",
-                "dx": "(Integration step in m)",
-            },
-        )
-
-        self.wake_models.add_k_factory(
-            fm.wake_models.ti.CrespoHernandezTIWake,
-            "CrespoHernandez_<superposition>_[wake_k]",
-            kwargs=dict(use_ambti=False),
-            superposition=lambda s: f"ti_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
-        )
-
-        self.wake_models.add_factory(
-            fm.wake_models.ti.IECTIWake,
-            "IECTI2019_<superposition>",
-            kwargs=dict(iec_type="2019"),
-            superposition=lambda s: f"ti_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
-        )
-        self.wake_models.add_k_factory(
-            fm.wake_models.ti.IECTIWake,
-            "IECTI2019k_<superposition>_[wake_k]",
-            kwargs=dict(iec_type="2019", opening_angle=None),
-            superposition=lambda s: f"ti_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
-        )
-
-        self.wake_models.add_factory(
-            fm.wake_models.ti.IECTIWake,
-            "IECTI2005_<superposition>",
-            kwargs=dict(iec_type="2005"),
-            superposition=lambda s: f"ti_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
-        )
-        self.wake_models.add_k_factory(
-            fm.wake_models.ti.IECTIWake,
-            "IECTI2005k_<superposition>_[wake_k]",
-            kwargs=dict(iec_type="2005", opening_angle=None),
-            superposition=lambda s: f"ti_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
-        )
-
-        self.wake_models["RHB"] = fm.wake_models.induction.RankineHalfBody()
-
-        self.wake_models["VortexSheet"] = fm.wake_models.induction.VortexSheet()
-        self.wake_models.add_factory(
-            fm.wake_models.induction.VortexSheet,
-            "VortexSheet_<superposition>",
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.wake_models["Rathmann"] = fm.wake_models.induction.Rathmann()
-        self.wake_models.add_factory(
-            fm.wake_models.induction.Rathmann,
-            "Rathmann_<superposition>",
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.wake_models["SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
-        self.wake_models["SelfSimilar2020"] = fm.wake_models.induction.SelfSimilar2020()
-        self.wake_models.add_factory(
-            fm.wake_models.induction.SelfSimilar,
-            "SelfSimilar_<superposition>",
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-        self.wake_models.add_factory(
-            fm.wake_models.induction.SelfSimilar2020,
-            "SelfSimilar2020_<superposition>",
-            superposition=lambda s: (
-                f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s
-            ),
-            hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
-            },
-        )
-
-        self.ground_models = FDict(_name="ground_models")
-        self.ground_models["no_ground"] = fm.ground_models.NoGround()
-        self.ground_models["ground_mirror"] = fm.ground_models.GroundMirror()
-        self.ground_models.add_factory(
-            fm.ground_models.WakeMirror,
-            "blh_mirror_h<height>",
-            var2arg={"height": "heights"},
-            height=lambda h: [0.0, float(h)],
-            hints={"height": "(Boundary layer wake reflection height)"},
-            example_vars={"height": 500},
-        )
-
-        FARM_OUTPUTS_MAP = {
-            "all": None,
-            "default": [
-                FV.X,
-                FV.Y,
-                FV.H,
-                FV.D,
-                FV.WD,
-                FV.YAW,
-                FV.AMB_RHO,
-                FV.AMB_REWS,
-                FV.REWS,
-                FV.AMB_TI,
-                FV.TI,
-                FV.AMB_P,
-                FV.P,
-                FV.WEIGHT,
-            ],
-            "P": [
-                FV.AMB_P,
-                FV.P,
-                FV.WEIGHT,
-            ],
-            "wsP": [
-                FV.AMB_REWS,
-                FV.REWS,
-                FV.AMB_P,
-                FV.P,
-                FV.WEIGHT,
-            ],
-            "wstiP": [
-                FV.AMB_REWS,
-                FV.REWS,
-                FV.AMB_TI,
-                FV.TI,
-                FV.AMB_P,
-                FV.P,
-                FV.WEIGHT,
-            ],
-            "rhowstiP": [
-                FV.AMB_RHO,
-                FV.AMB_REWS,
-                FV.REWS,
-                FV.AMB_TI,
-                FV.TI,
-                FV.AMB_P,
-                FV.P,
-                FV.WEIGHT,
-            ],
-        }
-
-        self.outputs = FDict(_name="outputs")
-
-        # Register animations and factories selecting one state chunk.
-        self.outputs["create_gif"] = fm.outputs.FlowAnimation(base_name="ani.gif")
-        self.outputs["create_mp4"] = fm.outputs.FlowAnimation(base_name="ani.mp4")
-        self.outputs["create_turbine_gif"] = fm.outputs.FlowTurbineAnimation(
-            base_name="ani.gif"
-        )
-        self.outputs["create_turbine_mp4"] = fm.outputs.FlowTurbineAnimation(
-            base_name="ani.mp4"
-        )
-        self.outputs.add_factory(
-            fm.outputs.FlowAnimation,
-            "chunk_gif_<chunk>",
-            chunk=lambda c: int(c),
-            hints={"chunk": "(Chunk index)"},
-            kwargs=dict(base_name="ani.gif"),
-        )
-        self.outputs.add_factory(
-            fm.outputs.FlowAnimation,
-            "chunk_mp4_<chunk>",
-            chunk=lambda c: int(c),
-            hints={"chunk": "(Chunk index)"},
-            kwargs=dict(base_name="ani.mp4"),
-        )
-
-        # Register farm result collectors and NetCDF writers.
-        self.outputs["farm_results"] = fm.outputs.FarmResultsOutput(
-            ambient_vars=True,
-            waked_vars=True,
-            variables=FARM_OUTPUTS_MAP["default"],
-        )
-        self.outputs["farm_results_amb"] = fm.outputs.FarmResultsOutput(
-            ambient_vars=True,
-            waked_vars=False,
-            variables=FARM_OUTPUTS_MAP["default"],
-        )
-        self.outputs.add_factory(
-            fm.outputs.FarmResultsOutput,
-            "farm_results_amb_<variables>",
-            variables=lambda v: FARM_OUTPUTS_MAP[v],
-            hints={
-                "variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"
-            },
-            kwargs=dict(ambient_vars=True, waked_vars=False),
-        )
-        self.outputs.add_factory(
-            fm.outputs.FarmResultsOutput,
-            "farm_results_waked_<variables>",
-            variables=lambda v: FARM_OUTPUTS_MAP[v],
-            hints={
-                "variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"
-            },
-            kwargs=dict(ambient_vars=False, waked_vars=True),
-        )
-        self.outputs.add_factory(
-            fm.outputs.FarmResultsCountWriter,
-            "farm_results_write_n<n_states_per_file>",
-            n_states_per_file=lambda n: int(n),
-            hints={"states_per_file": "(Number of states per file)"},
-            kwargs=dict(base_name="farm_results", ambient_vars=True, waked_vars=True),
-        )
-        self.outputs.add_factory(
-            fm.outputs.FarmResultsOutput,
-            "farm_results_<variables>",
-            variables=lambda v: FARM_OUTPUTS_MAP[v],
-            hints={
-                "variables": f"(Variable set: {', '.join(FARM_OUTPUTS_MAP.keys())})"
-            },
-            kwargs=dict(ambient_vars=True, waked_vars=True),
-        )
-        self.outputs["farm_results_write_chunks"] = fm.outputs.FarmResultsChunkWriter(
-            base_name="farm_results",
-            ambient_vars=True,
-            waked_vars=True,
-            variables=FARM_OUTPUTS_MAP["default"],
-        )
-        self.outputs["farm_results_write_day"] = fm.outputs.FarmResultsPeriodWriter(
-            base_name="farm_results",
-            period="day",
-            ambient_vars=True,
-            waked_vars=True,
-            variables=FARM_OUTPUTS_MAP["default"],
-        )
-        self.outputs["farm_results_write_week"] = fm.outputs.FarmResultsPeriodWriter(
-            base_name="farm_results",
-            period="week",
-            ambient_vars=True,
-            waked_vars=True,
-            variables=FARM_OUTPUTS_MAP["default"],
-        )
-        self.outputs["farm_results_write_month"] = fm.outputs.FarmResultsPeriodWriter(
-            base_name="farm_results",
-            period="month",
-            ambient_vars=True,
-            waked_vars=True,
-            variables=FARM_OUTPUTS_MAP["default"],
-        )
-        self.outputs["farm_results_write_year"] = fm.outputs.FarmResultsPeriodWriter(
-            base_name="farm_results",
-            period="year",
-            ambient_vars=True,
-            waked_vars=True,
-            variables=FARM_OUTPUTS_MAP["default"],
-        )
-
+    def _connect_registries(self) -> None:
+        """Index all registries and assign preset names to their model instances."""
         self.sources = FDict(
             _name="sources",
             point_models=self.point_models,
@@ -881,43 +181,60 @@ class ModelBook:
                 m.name = k
 
     def __getitem__(self, key: str) -> Any:
+        """Return a model registry by its collection name.
+
+        Parameters
+        ----------
+        key
+            Collection name, such as ``"wake_models"`` or ``"outputs"``.
+
+        Returns
+        -------
+        registry
+            Mutable registry of model instances and parameterized factories.
+
+        Raises
+        ------
+        KeyError
+            If the collection does not exist.
+        """
         return self.sources.get_item(key)
 
     def print_toc(
         self, subset: list[str] | None = None, search: str | None = None
     ) -> None:
-        """
-        Print the contents.
+        """Print registered models and factory templates.
 
         Parameters
         ----------
-        subset: list of str, optional
-            Selection of model types
-        search:  str, optional
-            String that has to be part of the model name
-
+        subset
+            Collection names to include; ``None`` includes every collection.
+        search
+            Substring required in a model name or factory template; ``None``
+            disables filtering.
         """
 
-        for k in sorted(list(self.sources.keys())):
-            ms = self.sources[k]
-            if subset is None or k in subset:
-                print(k)
-                print("-" * len(k))
-                any = False
-                for mname in sorted(list(ms.keys())):
-                    if search is None or search in mname:
-                        print(f"{mname}: {ms[mname]}")
-                        any = True
-                if isinstance(ms, FDict):
-                    for f in ms.factories:
-                        if search is None or search in f.name_template:
-                            if any:
-                                print()
-                            print(f)
-                            any = True
-                if not any:
-                    print("(none)")
-                print()
+        for collection in sorted(self.sources):
+            if subset is not None and collection not in subset:
+                continue
+            registry = self.sources[collection]
+            print(collection)
+            print("-" * len(collection))
+            found = False
+            for name in sorted(registry):
+                if search is None or search in name:
+                    print(f"{name}: {registry[name]}")
+                    found = True
+            if isinstance(registry, FDict):
+                for factory in registry.factories:
+                    if search is None or search in factory.name_template:
+                        if found:
+                            print()
+                        print(factory)
+                        found = True
+            if not found:
+                print("(none)")
+            print()
 
     def get(
         self,
@@ -927,29 +244,35 @@ class ModelBook:
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        """
-        Gets a model object.
+        """Resolve a registered model or construct and register a new one.
 
-        If not found, dynamically creates it (given the class name)
+        Parameterized factory names are resolved by the selected registry.
+        Existing instances are returned without copying.
 
         Parameters
         ----------
         model_type
-            The model type
+            Collection name, such as ``"outputs"``.
         name
-            The model name
+            Registered model name or parameterized factory name.
         class_name
-            Name of the model class
+            Class name used to construct an unregistered model; ``None``
+            requires an existing entry or matching factory.
         args
-            Arguments for the model class
+            Positional constructor arguments for a new model.
         kwargs
-            Arguments for the model class
+            Keyword constructor arguments for a new model.
 
         Returns
         -------
         model
-            The model object
+            Model instance owned by this book.
 
+        Raises
+        ------
+        KeyError
+            If the collection is unknown or no model, factory or class resolves
+            the requested name.
         """
         if name not in self.sources[model_type]:
             if class_name is None:
@@ -961,20 +284,22 @@ class ModelBook:
         return self.sources[model_type][name]
 
     def default_partial_wakes(self, wake_model: WakeModel) -> str:
-        """
-        Gets a default partial wakes model name
-        for a given wake model
+        """Choose a partial-wake integration suitable for the wake geometry.
 
         Parameters
         ----------
         wake_model
-            The wake model
+            Wake model whose geometric family determines the integration.
 
         Returns
         -------
-        pwake
-            The partial wake model name
+        partial_wakes
+            Registered partial-wake model or factory name.
 
+        Raises
+        ------
+        TypeError
+            If the wake-model family has no default partial-wake integration.
         """
         if isinstance(wake_model, TurbineInductionModel):
             return "grid9"
@@ -992,16 +317,14 @@ class ModelBook:
             )
 
     def finalize(self, algo: Algorithm, verbosity: int = 0) -> None:
-        """
-        Finalizes the model.
+        """Finalize every initialized model in this book.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            Algorithm supplying finalization context.
         verbosity
-            The verbosity level, 0 = silent
-
+            Diagnostic verbosity; zero is silent.
         """
         for ms in self.sources.values():
             if isinstance(ms, FDict):

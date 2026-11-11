@@ -121,12 +121,14 @@ def test_binned_point_cloud_data_chunks_target_dependent_weights():
         progress_bar=False,
         verbosity=0,
     ):
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs="farm_results_all")
         states.weight_chunks.clear()
         algo.calc_points(
             farm_results,
             np.array([[0.0, 0.0, 90.0], [100.0, 0.0, 90.0]]),
-            outputs=[FV.AMB_WS, FV.AMB_WD],
+            outputs=foxes.models.outputs.PointResultsOutput(
+                variables=[FV.AMB_WS, FV.AMB_WD]
+            ),
             ambient=True,
         )
 

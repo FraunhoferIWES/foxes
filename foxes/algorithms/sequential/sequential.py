@@ -193,7 +193,27 @@ class Sequential(Iterative):
         return self
 
     def __next__(self) -> Dataset | tuple[Dataset, Dataset]:
-        """Run calculation for current step, then iterate to next"""
+        """Calculate the current state and advance the sequential iterator.
+
+        Returns
+        -------
+        state_results
+            Current farm results on ``(FC.STATE, FC.TURBINE)`` in original
+            turbine order, or a pair of farm and point datasets when iterator
+            points are configured. Point fields use ``(FC.STATE, FC.POINT)``.
+            Each dataset contains one state; point order is unchanged.
+
+        Raises
+        ------
+        StopIteration
+            After all states finish and plugins are finalized.
+
+        Notes
+        -----
+        Accumulated farm fields, point fields and state-dependent point
+        coordinates are updated in iterator-owned result datasets. Plugins
+        receive each state's results while its wake history is available.
+        """
 
         assert self._i is not None
         assert self._inds is not None
@@ -244,25 +264,12 @@ class Sequential(Iterative):
                 )
 
                 if self._point_results is None:
-                    assert self._model_data is not None
-                    n_states = self._model_data.sizes[FC.STATE]
-                    self._point_results = Dataset(
-                        coords={
-                            FC.STATE: self._model_data[FC.STATE].to_numpy(),
-                            **{c: d for c, d in pres.coords.items() if c != FC.STATE},
-                        },
-                        data_vars={
-                            v: (
-                                d.dims,
-                                np.zeros([n_states] + list(d.shape[1:]), dtype=d.dtype),
-                            )
-                            for v, d in pres.data_vars.items()
-                            if d.dims[0] == FC.STATE
-                        },
-                    )
-                    for v, d in pres.data_vars.items():
-                        if FC.STATE not in d.dims:
-                            self._point_results[v] = d
+                    self._point_results = self._new_point_results(pres)
+
+                # Retain moving point locations alongside each state's fields.
+                for c, d in pres.coords.items():
+                    if c != FC.STATE and FC.STATE in d.dims:
+                        self._point_results[c].loc[{FC.STATE: [sstate._indx]}] = d
 
                 for v in self._point_results.data_vars.keys():
                     if FC.STATE in self._point_results[v].dims:
@@ -297,6 +304,63 @@ class Sequential(Iterative):
                 pass
 
             raise StopIteration
+
+    def _new_point_results(self, point_results: Dataset) -> Dataset:
+        """Allocate iterator-owned point buffers from the first state's results.
+
+        Parameters
+        ----------
+        point_results
+            First-step dataset whose fields lead with ``FC.STATE`` when they
+            vary by state. Coordinates may place ``FC.STATE`` on any axis.
+            The input dataset is not mutated.
+
+        Returns
+        -------
+        accumulated_results
+            Dataset with the full model-state coordinate. State-dependent fields
+            and coordinates receive zero-filled arrays of the original dtype;
+            static values and supplied point order are retained. Static arrays
+            may share storage with ``point_results``.
+        """
+        # Expand only state-dependent arrays to the iterator's full state axis.
+        assert self._model_data is not None
+        n_states = self._model_data.sizes[FC.STATE]
+        results = Dataset(
+            coords={
+                FC.STATE: self._model_data[FC.STATE].to_numpy(),
+                **{
+                    name: (
+                        values.dims,
+                        np.zeros(
+                            [
+                                n_states if dim == FC.STATE else size
+                                for dim, size in zip(values.dims, values.shape)
+                            ],
+                            dtype=values.dtype,
+                        ),
+                    )
+                    if FC.STATE in values.dims
+                    else values
+                    for name, values in point_results.coords.items()
+                    if name != FC.STATE
+                },
+            },
+            data_vars={
+                name: (
+                    values.dims,
+                    np.zeros([n_states] + list(values.shape[1:]), dtype=values.dtype),
+                )
+                for name, values in point_results.data_vars.items()
+                if values.dims[0] == FC.STATE
+            },
+        )
+
+        # Preserve state-independent variables without allocating repeated data.
+        for name, values in point_results.data_vars.items():
+            if FC.STATE not in values.dims:
+                results[name] = values
+        return results
 
     @property
     def size(self) -> int:
@@ -447,30 +511,42 @@ class Sequential(Iterative):
     def calc_points(
         self,
         farm_results: Dataset,
-        points: np.ndarray,
+        points: np.ndarray | None = None,
         **kwargs: Any,
     ) -> Dataset:
         """
-        Calculate data at a given set of points.
+        Calculate selected point outputs during the current iterator step.
 
         Parameters
         ----------
         farm_results
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+            Current-state farm fields on ``(FC.STATE, FC.TURBINE)`` in original
+            turbine order.
         points
-            The points of interest, shape: (n_states, n_points, 3)
-        states_sel
-            Reduce to selected states
+            Static ``(n_points, 3)`` or state-dependent
+            ``(n_states, n_points, 3)`` locations in metres, with components
+            ``x``, ``y`` and height. May be ``None`` when ``point_results`` is
+            supplied through ``kwargs``.
+        kwargs
+            ``Downwind.calc_points`` options, including model-book output names,
+            output instances or lists, and precomputed point results.
+            ``finalize`` is always forced to false so the iterator remains usable.
 
         Returns
         -------
-        point_results
-            The point results. The calculated variables have
-            dimensions (state, point)
+        results
+            Selected output value or result-name mapping, following
+            ``Downwind.calc_points``. The default dataset uses
+            ``(FC.STATE, FC.POINT)`` and preserves supplied point order.
+
+        Raises
+        ------
+        ValueError
+            If called outside an active iteration.
 
         """
         if not self.iterating:
             raise ValueError("calc_points call is only allowed during iterations")
 
-        return super().calc_points(farm_results, points, finalize=False, **kwargs)
+        kwargs["finalize"] = False
+        return super().calc_points(farm_results, points, **kwargs)

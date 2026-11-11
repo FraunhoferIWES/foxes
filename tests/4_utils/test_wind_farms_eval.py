@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import xarray as xr
+from _output_contract_helpers import run_output
 
 import foxes
 import foxes.constants as FC
@@ -87,13 +88,23 @@ def test_aggregate_ignores_only_zero_weight_nans():
     )
 
     out = foxes.output.WindFarmsEval(farm, farm_results=farm_results)
-    state_mean = out.calc_states_mean(FV.REWS)
+    state_mean = run_output(
+        foxes.models.outputs.FarmResultsEval(
+            operation="calc_states_mean", parameters={"vars": FV.REWS}
+        ),
+        farm_results=out.results.rename({FC.FARM: FC.TURBINE}),
+    )
     np.testing.assert_allclose(state_mean[FV.REWS], [4.0, 2.0])
 
     farm_results[FV.WEIGHT].data[0, 1] = 0.5
     out = foxes.output.WindFarmsEval(farm, farm_results=farm_results)
     with pytest.raises(AssertionError, match="nonzero weights"):
-        out.calc_states_mean(FV.REWS)
+        run_output(
+            foxes.models.outputs.FarmResultsEval(
+                operation="calc_states_mean", parameters={"vars": FV.REWS}
+            ),
+            farm_results=out.results.rename({FC.FARM: FC.TURBINE}),
+        )
 
 
 def test_farm_eval_allows_missing_farm_results():

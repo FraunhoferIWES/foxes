@@ -88,6 +88,18 @@ chain, not a list of physical variables. Adopted concrete classes belong in
 `foxes.models.outputs`. `ModelBook.outputs` maps output model-book names and
 factories to these instances.
 
+Newly adopted consumers use the snake-case names `farm_layout`,
+`farm_results_eval`, `rose_plot`, `states_rose_plot`, `wind_rose_bin_plot`,
+`slice_data`, `slices_data` and `flow_plot`. Slice-family factories append
+`_<plane>_<reduction>`, where plane is `xy`, `xz` or `yz` and reduction is
+`states` or `mean`. Names are selectors, not physical variable lists; constructor
+configuration remains on the selected output model.
+
+For plotting outputs, `show` controls blocking display, `plot` selects figures
+instead of numerical results, and `nofig` suppresses figure generation.
+Constructor `show` defaults are false; model-book plotting presets/factories
+enable it. These flags do not rename result keys or change scientific payloads.
+
 `FC.FARM_RESULTS` names the unified in-memory farm dataset. Buffered writers
 use `model.var(FC.FARM_RESULTS)` as their private result key. A writer's file
 `index` is distinct from the engine's `chunki_states`: count/period intervals
@@ -103,14 +115,25 @@ Count/chunk filenames use six-digit zero-padded indices. Calendar files use
 week year (`iso_year`), not necessarily the sample's calendar `year`. See
 [ADR-0010](adr/0010-chunk-based-farm-outputs.md).
 
-`FlowAnimation` uses model-private `var("chunk_animation")` buffers and
-`var("animation_points")` shared extra data. Its final filenames are
+`SliceData`, `SlicesData`, `FlowPlots2D` and `FlowAnimation` share model-private
+`var("slice_chunks")` buffers, `var("slice_points")` shared extra data and,
+for partial state selections, `var("slice_selection")` loaded masks.
+`FlowAnimation` derives from `SliceData`, not the reverse; static slice and
+flow-plot data have no animation configuration or animation-labelled keys.
+Mean-slice payload fields use a singleton state axis for weighted point sums;
+they are not state frames. Farm sufficient-statistic payloads use `value`,
+`count` and, for population deviations, centred `m2` arrays. Rose `sum` and
+`weight` arrays are direction-by-speed bin accumulators, not scientific samples.
+These private payload shapes do not change data-container dimensions or the
+public xarray schemas.
+Animation filenames are
 `<base_name stem>_<variable>.gif` or `.mp4`, without per-chunk indices. `chunk`
 selects engine indices; `states_isel` selects input-state positions, retaining
 input order rather than repeating positions in every chunk. All-state selection
 is `None`; partial selection is a boolean `(FC.STATE,)` loaded variable named by
-`var("animation_selection")`, not an instance-held array. For point calculations,
-`outputs` selects returned physical fields and `output` adds a chunk output model.
+`var("slice_selection")`, not an instance-held array. For point calculations,
+`outputs` selects models by name, instance or list, as for farm/output-only runs;
+`PointResultsOutput.variables` selects returned physical fields.
 The model-book output names are `"create_gif"` and `"create_mp4"`, using
 `ani.gif` and `ani.mp4` as base filenames. The `"chunk_gif_<chunk>"` and
 `"chunk_mp4_<chunk>"` factories select one state chunk. Construction is
@@ -219,6 +242,17 @@ shape `(n_points, 3)`, not state-by-point arrays. Grid bounds may depend on the
 selected farm states, but the resulting plane is shared by those states. See
 [ADR-0005](adr/0005-static-output-grid-coordinates.md).
 
+Adopted slice outputs use `plane` for the constructor choice `"xy"`, `"xz"` or
+`"yz"` and `reduction` for `"states"` or `"mean"`. `grid_pars` defines the
+requested coordinates, while `get_calc_points(algo)` exposes initialized points
+without retaining their arrays on the output. `result_name` names a composed
+output's returned value; private chunk-buffer keys use `Model.var()`.
+The algorithm selector remains `outputs`, accepting names, instances and lists.
+Public point results retain `FV.X`, `FV.Y` and `FV.H` coordinate fields for
+precomputed reuse. NumPy slices use `(a, b, variable)` or
+`(state, a, b, variable)`; xarray fields use `(b, a)` or `(state, b, a)`,
+where `a` and `b` are the two axes named by `plane`.
+
 Use established count and chunk names: `n_states`, `n_turbines`, `n_targets`,
 `n_tpoints`, `chunk_size_states`, `chunk_size_points`, `chunki_states`,
 `chunki_points`, `n_chunks_states`, `n_chunks_points`, and `states_i0`. Use
@@ -252,7 +286,7 @@ those original indices.
 - Turbine operation: `FV.OPERATING`, `FV.YAW`, `FV.YAWM`, `FV.P`, `FV.CT`,
 	`FV.CAP`, and `FV.MAX_P`.
 - Derived evaluation: `FV.YLD`, `FV.P75`, `FV.P90`, `FV.EFF`, `FV.CAPF`,
-	`FV.FLF`, and the rotor effective wind-speed variables.
+	and the rotor effective wind-speed variables.
 
 `FV.P75` and `FV.P90` name annual exceedance yields in GWh/a, not power
 percentiles. Their ambient counterparts are `FV.AMB_P75` and `FV.AMB_P90`;
@@ -315,7 +349,7 @@ available alternatives.
 	actual variable, dimensions, shape, key, or backend.
 - State support-point diagnostics use `grid_point_plot`, `wrf_point_plot`, or
 	`support_point_plot` for the output path. Their `_pars` suffix names support
-	marker options; `_farm_pars` names the separate `FarmLayoutOutput.get_figure`
+	marker options; `_farm_pars` names the separate shared farm-layout renderer's
 	overlay options. Use the same grid-point names for regular, scattered,
 	Weibull, binned, and turbine-backed states.
 - Temporary loading-farm reference turbines use the names `reference point`

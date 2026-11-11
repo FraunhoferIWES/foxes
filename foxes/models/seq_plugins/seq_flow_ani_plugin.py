@@ -3,40 +3,61 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
+from typing import Any
+
+from matplotlib.axes import Axes
+from xarray import Dataset
+
+import foxes.variables as FV
 from foxes.algorithms.sequential import SequentialPlugin
 from foxes.algorithms.sequential.sequential import Sequential
-from matplotlib.axes import Axes
-from typing import Any, Callable, Iterator
-from xarray import Dataset
+from foxes.models.outputs import FlowPlots2D, _flow_figures
 
 
 class SeqFlowAnimationPlugin(SequentialPlugin):
-    """
-    Plugin for creating data for a 2D flow animation
-    during sequential iterations
-    """
+    """An iterator plugin buffering plane data for later flow-animation frames."""
 
     def __init__(
         self,
         orientation: str,
         title_fun: Callable[[int, Any], str] | None = None,
+        var: str = FV.WS,
+        grid_pars: dict[str, Any] | None = None,
         **data_pars: Any,
     ) -> None:
-        """
+        """Configure the animation plane, plotted field and grid evaluation.
+
         Parameters
         ----------
         orientation
-            The orientation, either "yx", "xz" or "yz"
+            Plane orientation: ``"xy"``, ``"xz"`` or ``"yz"``.
         title_fun
-            A function that takes the current iteration and state index
-            and returns a title string.
+            Callback ``title_fun(iteration, state_label)`` producing a frame
+            title during each update. ``None`` allows a fixed plotting title.
+        var
+            Physical point field to plot, in its established ``FV`` units.
+        grid_pars
+            Grid resolution or point count, bounds and fixed plane coordinate
+            in metres. The mapping is copied.
         data_pars
-            Additional parameters for plot data calculation
+            Additional ``FlowPlots2D`` constructor options for numerical data.
+
+        Raises
+        ------
+        ValueError
+            If ``orientation`` is not one of the supported planes.
         """
         super().__init__()
         self.orientation = orientation
         self.data_pars = data_pars
         self._tfun = title_fun
+        self.variable = var
+        self.grid_pars = {} if grid_pars is None else dict(grid_pars)
+        if orientation not in ("xy", "xz", "yz"):
+            raise ValueError(
+                f"Unknown orientation '{orientation}'; choose xy, xz or yz"
+            )
 
     def initialize(self, algo: Sequential) -> None:
         """
@@ -56,39 +77,43 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         self, algo: Sequential, fres: Dataset, pres: Dataset | None = None
     ) -> None:
         """
-        Updates data based on current iteration
+        Buffer one state's numerical plane data and optional frame title.
 
         Parameters
         ----------
         algo
-            The latest sequential algorithm
+            Active sequential iterator, supplying wake history for this step.
         fres
-            The latest farm results
+            Current farm fields on ``(FC.STATE, FC.TURBINE)`` in original farm
+            order. The dataset is retained for later frame overlays, not copied.
         pres
-            The latest point results
+            Current iterator point results, if available; plane data are
+            calculated independently through ``algo.calc_outputs``.
+
+        Notes
+        -----
+        The plugin owns buffered arrays and titles. Shared plane metadata is
+        retained only for the first frame; later frames reuse it during image
+        generation. Output models remain configuration-only.
 
         """
         super().update(algo, fres, pres)
 
-        from foxes.output.flow_plots_2d import FlowPlots2D
-
-        o = FlowPlots2D(algo, fres)
+        output = FlowPlots2D(
+            var=self.variable,
+            plane=self.orientation,
+            reduction="states",
+            plot=False,
+            data_format="numpy",
+            grid_pars=self.grid_pars,
+            **self.data_pars,
+        )
 
         if self._tfun is not None:
             assert algo.counter is not None
             self._titles.append(self._tfun(algo.counter, algo.states.index()[0]))
 
-        d: Any
-        if self.orientation == "xy":
-            d = o.get_states_data_xy(**self.data_pars, data_format="numpy")
-        elif self.orientation == "xz":
-            d = o.get_states_data_xz(**self.data_pars, data_format="numpy")
-        elif self.orientation == "yz":
-            d = o.get_states_data_yz(**self.data_pars, data_format="numpy")
-        else:
-            raise KeyError(
-                f"Unkown orientation '{self.orientation}', choises: xy, xz, yz"
-            )
+        d = algo.calc_outputs(outputs=output, farm_results=fres, finalize=False)
 
         # minimize stored data:
         d = list(d)
@@ -96,22 +121,30 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
             d[0] = None
             d[-1] = None
 
-        self._data.append((o, d))
+        self._data.append((fres, d))
 
     def gen_images(self, ax: Axes, **plot_pars: Any) -> Iterator[tuple[Any, Any]]:
-        """
+        """Yield buffered plane frames and consume their stored numerical data.
 
         Parameters
         ----------
         ax
-            The plotting axis
+            Existing plotting axes, reused for every yielded frame. The caller
+            owns its figure and controls display and saving.
         plot_pars
-            Additional parameters for plotting
+            Plane-renderer options, including colour limits and a fixed
+            ``title`` only when no ``title_fun`` was configured.
 
         Yields
         ------
-        imgs
-            The (figure, artists) tuple
+        frame
+            ``(figure, artists)`` pair in iterator-state order. Fields and
+            overlays use the configured plane and original farm turbine order.
+
+        Notes
+        -----
+        Each advanced frame is removed from the plugin's buffers. Stopping
+        iteration early leaves unconsumed frames available for a later call.
 
         """
         add_bar = (
@@ -122,7 +155,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         parameters = None
         gdata = None
         while len(self._data):
-            o, d = self._data.pop(0)
+            farm_results, d = self._data.pop(0)
 
             if "title" in plot_pars:
                 assert self._tfun is None, (
@@ -143,7 +176,9 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
                 d[-1] = gdata
 
             yield next(
-                o.gen_states_fig_xy(
+                getattr(_flow_figures, f"_gen_states_fig_{self.orientation}")(
+                    farm_results,
+                    FlowPlots2D(plane=self.orientation),
                     d,
                     ax=ax,
                     fig=fig,

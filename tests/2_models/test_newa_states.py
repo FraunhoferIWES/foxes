@@ -72,6 +72,8 @@ def test_newa_forwards_wrf_point_plot_pars(monkeypatch, tmp_path, farm_pars):
     )
     monkeypatch.setattr(newa_states_module.plt, "close", Mock())
     monkeypatch.setattr(newa_states_module, "FarmLayoutOutput", Mock())
+    layout_figure = Mock()
+    monkeypatch.setattr(newa_states_module, "_get_figure", layout_figure)
 
     states.preproc_first(algo, data)
 
@@ -83,10 +85,14 @@ def test_newa_forwards_wrf_point_plot_pars(monkeypatch, tmp_path, farm_pars):
     }
     layout_pars = {"fig": fig, "ax": ax, "annotate": 0, "fontsize": 12}
     layout_pars.update(farm_pars or {})
-    assert (
-        newa_states_module.FarmLayoutOutput.return_value.get_figure.call_args.kwargs
-        == layout_pars
+    newa_states_module.FarmLayoutOutput.assert_called_once_with()
+    assert layout_figure.call_args.args == (
+        algo.farm,
+        None,
+        None,
+        newa_states_module.FarmLayoutOutput.return_value,
     )
+    assert layout_figure.call_args.kwargs == layout_pars
     ax.legend.assert_called_once_with(
         legend_handles,
         ["WRF grid points", "farm turbines"],

@@ -1,3 +1,4 @@
+from _output_contract_helpers import run_output
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -11,7 +12,6 @@ import foxes.input.states.field_data as field_data_module
 import foxes.variables as FV
 from foxes.input.states import FieldData, LatLonFieldData
 from foxes.input.states.dataset_states import DatasetStates
-from foxes.output import FarmLayoutOutput
 from foxes.utils.geom2d.polygon import ClosedPolygon
 
 
@@ -155,6 +155,8 @@ def test_grid_point_plot_pars_are_forwarded(
     monkeypatch.setattr(field_data_module.plt, "subplots", Mock(return_value=(fig, ax)))
     monkeypatch.setattr(field_data_module.plt, "close", Mock())
     monkeypatch.setattr(field_data_module, "FarmLayoutOutput", Mock())
+    layout_figure = Mock()
+    monkeypatch.setattr(field_data_module, "_get_figure", layout_figure)
 
     states.preproc_first(algo, data)
 
@@ -171,10 +173,14 @@ def test_grid_point_plot_pars_are_forwarded(
     if states_type is FieldData:
         layout_pars["zorder"] = 10
     layout_pars.update(farm_pars or {})
-    assert (
-        field_data_module.FarmLayoutOutput.return_value.get_figure.call_args.kwargs
-        == layout_pars
+    field_data_module.FarmLayoutOutput.assert_called_once_with()
+    assert layout_figure.call_args.args == (
+        algo.farm,
+        None,
+        None,
+        field_data_module.FarmLayoutOutput.return_value,
     )
+    assert layout_figure.call_args.kwargs == layout_pars
     fig.savefig.assert_called_once()
 
 
@@ -285,8 +291,8 @@ def test_field_grid_plot_ignores_temporary_reference_points_for_plot_bounds(
 @pytest.mark.parametrize("mode", ["default", "override", "disabled"])
 def test_farm_boundary_override_changes_only_the_figure(mode):
     points = np.array([[0.0, 0.0], [1000.0, 0.0], [0.0, 1000.0]])
-    original = Mock(wraps=ClosedPolygon(points))
-    replacement = Mock(wraps=ClosedPolygon(points + 2000.0))
+    original = ClosedPolygon(points)
+    replacement = ClosedPolygon(points + 2000.0)
     farm = foxes.WindFarm(boundary=original)
     farm.add_turbine(foxes.Turbine([100.0, 100.0], H=100.0, D=182.0), verbosity=0)
     bounds = farm.get_xy_bounds()
@@ -296,10 +302,19 @@ def test_farm_boundary_override_changes_only_the_figure(mode):
     expected_bargs = bargs.copy()
     figure, axis = plt.subplots()
     try:
-        FarmLayoutOutput(farm).get_figure(fig=figure, ax=axis, bargs=bargs)
+        run_output(
+            foxes.models.outputs.FarmLayoutOutput(
+                operation="get_figure",
+                parameters=dict(fig=figure, ax=axis, bargs=bargs),
+            ),
+            farm=farm,
+        )
         assert len(axis.patches) == (0 if mode == "disabled" else 1)
-        assert original.add_to_figure.call_count == (1 if mode == "default" else 0)
-        assert replacement.add_to_figure.call_count == (1 if mode == "override" else 0)
+        if mode != "disabled":
+            expected_points = points + (2000.0 if mode == "override" else 0.0)
+            np.testing.assert_array_equal(
+                axis.patches[0].get_path().vertices[: len(points)], expected_points
+            )
         assert farm.boundary is original
         np.testing.assert_array_equal(farm.get_xy_bounds(), bounds)
         assert bargs == expected_bargs

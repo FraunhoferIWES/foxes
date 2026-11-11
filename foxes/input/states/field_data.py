@@ -7,7 +7,8 @@ from foxes.core import Algorithm, LoadedData, MData
 
 from foxes.utils import weibull_weights, get_utm_zone, to_lonlat, from_lonlat
 from foxes.config import config, get_output_path
-from foxes.output import FarmLayoutOutput
+from foxes.models.outputs import FarmLayoutOutput
+from foxes.models.outputs._layout import _get_figure
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -120,10 +121,10 @@ class FieldData(DatasetStates):
             Path to a plot file, e.g. grid_points.png, to visualize the
             selected data grid points and the layout of the farm.
         grid_point_plot_pars
-            Additional parameters for `matplotlib.pyplot.plot` when drawing
+            Additional parameters for ``matplotlib.pyplot.plot`` when drawing
             the grid points. Defaults to blue points with alpha 0.2.
         grid_point_plot_farm_pars
-            Parameters for :meth:`FarmLayoutOutput.get_figure` on the point-plot
+            Farm-layout rendering options on the point-plot
             axes. ``None`` preserves the default overlay. Use
             ``{"title": "", "alpha": 0, "annotate": 0}`` for a title-free,
             transparent turbine overlay. Caller dictionaries are copied.
@@ -201,24 +202,39 @@ class FieldData(DatasetStates):
         verbosity: int = 0,
     ) -> None:
         """
-        Preprocesses the first file.
+        Prepare the first grid dataset and write its configured support plot.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            Loading algorithm supplying the farm bounds and turbine overlay.
         data
-            The dataset to preprocess
+            First input dataset with mapped ``FV.X`` and ``FV.Y`` support axes.
+            Plot selections use local dataset views, not in-place data changes.
         bounds_extra_space
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
+            Extra horizontal farm-bound margin in metres, or a rotor-diameter
+            expression such as ``"2.5D"``. ``None`` leaves horizontal loading
+            unrestricted; diagnostic plot bounds use ``self.bounds_extra_space``.
         height_bounds
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+            Vertical loading bounds ``(h_min, h_max)`` in metres. ``None`` uses
+            the farm's rotor-height range.
         loaded_data
-            If given, optionally add to this loaded data dict with entries
-            {"coords": {}, "data_vars": {}, "extra_data": {}}
+            Shared ``LoadedData`` mapping that base preprocessing may extend.
+            ``None`` leaves shared-data collection to the loading caller.
         verbosity
-            The verbosity level, 0 = silent
+            Loading and plot-path verbosity; ``0`` is silent.
+
+        Raises
+        ------
+        ValueError
+            If the requested vertical bounds lie outside the available heights.
+
+        Notes
+        -----
+        This loading-time hook prepares configuration before the running phase.
+        A configured plot uses the selected, bounded horizontal support axes
+        and the shared farm renderer. Empty selections or unavailable plot
+        coordinate keys suppress the diagnostic plot.
 
         """
 
@@ -296,8 +312,14 @@ class FieldData(DatasetStates):
                     "zorder": 10,
                     **self.grid_point_plot_farm_pars,
                 }
-                FarmLayoutOutput(farm=algo.farm).get_figure(
-                    fig=fig, ax=ax, **layout_pars
+                _get_figure(
+                    algo.farm,
+                    None,
+                    None,
+                    FarmLayoutOutput(),
+                    fig=fig,
+                    ax=ax,
+                    **layout_pars,
                 )
                 ax.set_xlabel(f"{FV.X} [m]")
                 ax.set_ylabel(f"{FV.Y} [m]")
@@ -356,10 +378,10 @@ class LatLonFieldData(DatasetStates):
             - None: do not set UTM zone, assume it is already set,
             typically during the wind farm creation.
         grid_point_plot_pars
-            Additional parameters for `matplotlib.pyplot.plot` when drawing
+            Additional parameters for ``matplotlib.pyplot.plot`` when drawing
             the grid points. Defaults to blue points with alpha 0.2.
         grid_point_plot_farm_pars
-            Parameters for :meth:`FarmLayoutOutput.get_figure` on the point-plot
+            Farm-layout rendering options on the point-plot
             axes. ``None`` preserves the default overlay. Caller dictionaries
             are copied; ``title=""``, ``alpha=0``, and ``annotate=0`` suppress
             the title and make turbines transparent.
@@ -442,24 +464,40 @@ class LatLonFieldData(DatasetStates):
         verbosity: int = 0,
     ) -> None:
         """
-        Preprocesses the first file.
+        Prepare geographic grid loading and plot support points in UTM metres.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            Loading algorithm supplying farm bounds and the turbine overlay.
         data
-            The dataset to preprocess
+            First input dataset with mapped longitude and latitude support axes.
+            Plot selections create local views without modifying input fields.
         bounds_extra_space
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
+            Extra horizontal farm-bound margin in metres or rotor-diameter
+            units such as ``"2.5D"``, forwarded to base preprocessing.
+            ``None`` leaves horizontal loading unrestricted.
         height_bounds
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+            Vertical loading bounds ``(h_min, h_max)`` in metres. ``None`` uses
+            the farm's rotor-height range.
         loaded_data
-            If given, optionally add to this loaded data dict with entries
-            {"coords": {}, "data_vars": {}, "extra_data": {}}
+            Shared ``LoadedData`` mapping that base preprocessing may extend.
         verbosity
-            The verbosity level, 0 = silent
+            Loading and plot-path verbosity; ``0`` is silent.
+
+        Raises
+        ------
+        ValueError
+            If no UTM zone is configured or supplied, the supplied zone is
+            invalid, the determined zone conflicts with FOXES configuration,
+            or the vertical bounds lie outside the available heights.
+
+        Notes
+        -----
+        This loading-time hook may set the global UTM zone when it is unset.
+        A configured diagnostic plot converts selected longitude/latitude pairs
+        to UTM coordinates and overlays the farm; it does not change scientific
+        grid resolution or point ordering.
 
         """
         if not config.utm_zone_set and self.__utm_zone is None:
@@ -546,8 +584,14 @@ class LatLonFieldData(DatasetStates):
                     "fontsize": 12,
                     **self.grid_point_plot_farm_pars,
                 }
-                FarmLayoutOutput(farm=algo.farm).get_figure(
-                    fig=fig, ax=ax, **layout_pars
+                _get_figure(
+                    algo.farm,
+                    None,
+                    None,
+                    FarmLayoutOutput(),
+                    fig=fig,
+                    ax=ax,
+                    **layout_pars,
                 )
                 ax.set_xlabel(f"{FV.X} [m]")
                 ax.set_ylabel(f"{FV.Y} [m]")
