@@ -36,8 +36,9 @@ Derived farm fields are evaluated automatically by ``TurbineEvaluation``
 through output preparation. No turbine-model registration is needed.
 ``variables=None`` collects available fields without adding derived metrics.
 The ``farm_results_analysis`` collector selects capacity, capacity factors,
-efficiency and weights. Metrics retain ``(state, turbine)`` dimensions;
-aggregate farm/cluster summaries are not currently provided.
+efficiency and weights. Metrics initially retain ``(state, turbine)``
+dimensions; configure the collector's independent spatial/state reductions
+described below for aggregated summaries.
 
 ``SliceData`` returns NumPy, pandas or xarray data according to ``data_format``.
 ``SlicesData(positions=[...], plane=...)`` combines parallel planes into one
@@ -131,6 +132,10 @@ configured quivers and farm geometry only for rotor overlays. Static point
 coordinates have a singleton state axis in worker payloads; final public point
 datasets restore full dimensions. State-resolved datasets, writers and animations
 retain the requested state fields because their final results require them.
+Aggregated collectors and writers eliminate state histories on workers.
+Count/calendar writers partition each worker chunk into exact file intervals
+and return only per-entity weighted statistics for those intervals. Spatial-only
+point aggregation returns target sums/counts rather than averages of tile means.
 These payload reductions do not alter the full-shaped scientific data containers.
 
 YAML execution
@@ -159,8 +164,8 @@ Name                   Output class                Preset
 ====================== =========================== ============================
 
 Additional presets are ``state_turbine_map`` (power heat map),
-``state_turbine_table`` (power/rotor-speed table), ``results_writer``
-(``farm_results.csv``), ``point_calculator`` (supplied point wind speed),
+``state_turbine_table`` (power/rotor-speed table),
+``point_calculator`` (supplied point wind speed),
 ``rotor_point_plot`` (executing rotor metadata), and ``turbine_type_curves``
 (power/thrust curves from an explicit scan). Configure arbitrary point locations
 or curve scan states on the appropriate input before execution.
@@ -216,6 +221,68 @@ through ``outputs`` and compose it with ``FarmResultsOutput`` when an in-memory
 dataset is also required. Engine backends only dispatch chunk calculations and
 coordinate the output lifecycle.
 
+Physical aggregation
+~~~~~~~~~~~~~~~~~~~~
+Farm collectors and every farm writer accept
+``aggregate_turbines=None | "wind_farm" | "cluster" | "all"``.
+Point collectors and every point writer accept ``aggregate_points=None | "all"``.
+Both have independent ``aggregate_states=False``. The default retains the
+original dimensions. Configure aggregation on an instance before execution;
+no separate evaluation class or generic results writer is used.
+
+Farm/cluster grouping uses original turbine identities and first-appearance
+group order, including a reserved ``<unassigned>`` label for missing memberships.
+Grouping replaces ``turbine`` with ``farm`` or ``cluster``; ``"all"`` removes
+the spatial axis. Point grouping removes ``target``, retaining each
+``target_point`` position in files.
+
+Power, capacity, maximum power and annualized yield fields are summed over
+turbines. Intensive fields use arithmetic means; wind/yaw directions use
+circular means (NaN for cancelling vectors). Point fields are averaged.
+Power/capacity stay in turbine-native units; mixed-unit sums within a group
+raise ``ValueError``. Yields stay in GWh/a.
+
+``aggregate_states=True`` computes weighted means over selected states,
+normalizing weights independently for every turbine or target/target-point
+position, before spatial grouping. This also applies to partial selections
+and each writer file independently. Efficiency and capacity factor are
+recomputed from reduced power/capacity, never averaged. Zero power gives zero
+ratios, nonzero power over zero gives positive infinity, and NaNs propagate
+otherwise. Zero-weight NaN samples are ignored; negative/nonfinite weights
+and zero total weight raise ``ValueError``.
+
+Workers retain per-entity sufficient statistics without a state dimension.
+Exact count/calendar file boundaries can split or span engine chunks without
+transporting individual samples. Chunk writers reduce only their supplied
+engine tile, not targets/states belonging to other chunk files.
+Raw and grouped collectors can be composed: their buffers and public result
+keys are distinct. ``result_name`` overrides a collector's public key.
+
+Model-book names and default public keys are ``farm_results_mean``,
+``farm_results_aggregate_wind_farm``, ``farm_results_aggregate_cluster``,
+``farm_results_aggregate_all``, ``point_results_mean`` and
+``point_results_aggregate_all``. Spatial names also accept a trailing ``_mean``.
+These presets select each family's default fields; set ``variables`` on an
+explicit collector to request derived metrics. ``farm_results_all`` and
+``point_results_all`` remain unrestricted field selectors, not aggregation.
+Writer presets inherit their domain-specific aggregation options when
+configured before initialization.
+
+.. code-block:: python
+
+    from foxes.models.outputs import FarmResultsOutput, PointResultsOutput
+
+    farm_summary = FarmResultsOutput(
+        variables=[FV.P, FV.EFF, FV.CAPF, FV.YLD],
+        aggregate_turbines="wind_farm",
+        aggregate_states=True,
+    )
+    point_summary = PointResultsOutput(
+        variables=[FV.WS],
+        aggregate_points="all",
+        aggregate_states=True,
+    )
+
 ``Downwind.calc_farm(outputs=...)`` accepts a model-book output name, an
 ``Output`` instance, or a list of either. It does not accept physical variable
 names as output models. A single output with one returned result is unwrapped.
@@ -265,16 +332,79 @@ Iterative initializes and executes requested outputs only in its final evaluatio
 pass; convergence iterations use a separate internal collector. Use Iterative
 for streamline wake frames. Animations therefore contain final states once,
 not repeated intermediate iterations.
-``normalize=True`` normalizes collected farm weights after finalization and
-requires a collected weighted dataset; it does not rewrite output files.
+Unaggregated collectors preserve supplied weights; normalized state means are
+selected explicitly through ``aggregate_states=True``.
 
-Point collection
-----------------
+Point collection and writers
+---------------------------
 ``PointResultsOutput`` assembles state/target tiles under ``FC.POINT_RESULTS``.
+Select fields through ``variables``, ``ambient_vars`` and ``waked_vars``, as
+for farm collection. Coordinates remain present for empty field selections.
 ``calc_points()`` retains the public ``(state, point)`` dataset interface.
 The model-book default farm field set is unchanged. For a downstream wake-point
 calculation, request ``algo.calc_farm(outputs="farm_results_all")`` to retain
 all required wake inputs instead of expanding the default selection.
+
+The collectors live in ``foxes.models.outputs.farm_results`` and
+``foxes.models.outputs.point_results``. All farm writers live in
+``foxes.models.outputs.farm_results_writers``; all point writers live in
+``foxes.models.outputs.point_results_writers``. Public classes are re-exported
+from ``foxes.models.outputs``.
+
+* ``PointResultsChunkWriter`` writes each engine-supplied ``TData`` tile on
+  its worker to ``<base_name>_<state chunk:06d>_<target chunk:06d>.nc``.
+  The engine, not the output, determines both chunk axes.
+* ``PointResultsCountWriter`` assembles complete target slabs and writes
+  ``<base_name>_<file index:06d>.nc`` with exactly ``n_states_per_file`` states,
+  except for the final remainder.
+* ``PointResultsPeriodWriter`` assembles complete target slabs and writes
+  day/ISO-week/month/year files with the same chronology validation, suffixes
+  and empty-period handling as farm writers.
+
+Unaggregated point files preserve internal ``(state, target, target_point)`` coordinates and
+fields, including dynamic ``X``, ``Y`` and ``H`` and every target point.
+They do not apply the algorithm-return conversion that selects target point
+zero and renames ``target`` to ``point``. Writers return no dataset and have
+independent field selections/private buffers; compose a collector to obtain
+an in-memory dataset too. All writers support ``out_dir``, ``out_fname_fun``,
+``write_nc_pars`` and inherited/explicit write verbosity; failures propagate.
+
+The separate point variable-set dictionary defines ``default`` as WS, WD, TI,
+RHO, their ambient counterparts and weights, and ``all`` as every available
+point field. Model-book selectors mirror farm outputs:
+
+* ``point_results`` / ``point_results_default`` and ``point_results_all``.
+* ``point_results_amb``, ``point_results_amb_<variables>`` and
+  ``point_results_waked_<variables>``.
+* ``point_results_write_n<n_states_per_file>`` (all available fields),
+  ``point_results_write_chunks`` and ``point_results_write_day``,
+  ``point_results_write_week``, ``point_results_write_month``,
+  ``point_results_write_year`` (default fields).
+
+Use ``point_results_all`` instead of the default collector when custom point
+models or precomputed datasets supply additional fields. For example:
+
+.. code-block:: python
+
+    import numpy as np
+    from foxes.models.outputs import PointResultsCountWriter
+
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=2, verbosity=0
+    ):
+        farm_results = algo.calc_farm(outputs="farm_results_all")
+        results = algo.calc_points(
+            farm_results,
+            np.array([[400.0, 0.0, 90.0], [600.0, 0.0, 90.0]]),
+            outputs=[
+                "point_results",
+                PointResultsCountWriter(
+                    "points", 2, variables=[FV.WS], out_dir="results",
+                    write_nc_pars={"verbosity": 0},
+                ),
+            ],
+        )
+    assert FC.POINT_RESULTS in results
 
 All engines share parent-side progress. ``progress_bar=True`` chooses terminal
 or notebook tqdm bars, including Unicode terminal bars where supported, and
@@ -471,12 +601,6 @@ The optional NetCDF file is written once after parent-side assembly.
 ``StateTurbineMap(variable=FV.P, plot_pars={...})`` renders the selected table;
 ``plot=False`` or ``nofig=True`` returns its numerical dataset. Singleton,
 datetime and string state coordinates are supported.
-
-``ResultsWriter(file_name="farm.csv", variables={FV.P: "power"})`` writes one
-CSV or NetCDF file and returns its path. ``turbine_names=True`` uses original
-farm names; ``state_turbine_table=True`` writes a single CSV field in turbine
-columns. Single-file writers retain selected state history; use the existing
-count/chunk/period farm writers when bounded files are required.
 
 ``PointCalculator(points=[...], variables=[FV.WS], states_mean=True)`` evaluates
 arbitrary static or state-dependent metre coordinates with normal point chunks.

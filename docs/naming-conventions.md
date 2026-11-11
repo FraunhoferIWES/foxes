@@ -96,7 +96,7 @@ Newly adopted consumers use the snake-case names `farm_layout`,
 configuration remains on the selected output model.
 
 The final adoption adds `state_turbine_map`, `state_turbine_table`,
-`results_writer`, `point_calculator`, `rotor_point_plot` and `turbine_type_curves`.
+`point_calculator`, `rotor_point_plot` and `turbine_type_curves`.
 These names follow the same constructor-defined lifecycle. YAML `plt` is an
 exception handled directly by the reader, not a model-book output.
 Arbitrary-point results include metre coordinates
@@ -120,6 +120,39 @@ dataset. Public point results rename `FC.TARGET` to `FC.POINT`. The model-book
 Count/chunk filenames use six-digit zero-padded indices. Calendar files use
 `YYYY-MM-DD`, `YYYY-Www`, `YYYY-MM` or `YYYY` suffixes. Weekly `YYYY` is the ISO
 week year (`iso_year`), not necessarily the sample's calendar `year`. See
+Point chunk filenames include both state and target chunk indices:
+`<base_name>_<state chunk:06d>_<target chunk:06d>.nc`. The indices come from
+engine-supplied `MData`; point writers do not define calculation chunks.
+
+Collector-only modules are `farm_results` and `point_results`; the matching
+`farm_results_writers` and `point_results_writers` modules own every count,
+chunk and calendar writer. No singular writer module or generic `ResultsWriter`
+remains. Unaggregated point files retain internal `state`, `target` and
+`target_point` dimensions and every target point, unlike the algorithm's public
+`(state, point)` conversion.
+
+`aggregate_turbines` selects `None`, `wind_farm`, `cluster` or `all`;
+`aggregate_points` selects `None` or `all`. Independent `aggregate_states`
+removes the state dimension after per-turbine/point weight normalization.
+Grouping replaces `turbine` with `farm`/`cluster` or removes the spatial axis
+for `all`. Missing memberships use the reserved `<unassigned>` group label.
+Reduced public keys and model-book selectors use
+`farm_results_aggregate_<group>` or `point_results_aggregate_all`, with `_mean`
+appended for state reduction; state-only keys are `farm_results_mean` and
+`point_results_mean`. `result_name` overrides the public key. These are distinct
+from `*_results_all`, which selects available fields without grouping.
+Writers inherit the domain-specific options. See
+[ADR-0027](adr/0027-domain-result-aggregation.md).
+
+The independent point variable-set dictionary defines `default` (WS, WD, TI,
+RHO, ambient counterparts and weights) and `all` (every available point field).
+`point_results` and `point_results_default` select the former;
+`point_results_all` selects the latter. Ambient/waked selectors follow farm
+syntax: `point_results_amb`, `point_results_amb_<variables>` and
+`point_results_waked_<variables>`. Writer names are
+`point_results_write_n<n_states_per_file>`, `point_results_write_chunks` and
+`point_results_write_<period>` for day/week/month/year. Buffered writers use
+model-private result and incomplete-tile keys, never `FC.POINT_RESULTS`. See
 [ADR-0010](adr/0010-chunk-based-farm-outputs.md).
 
 `SliceData`, `SlicesData`, `FlowPlots2D` and `FlowAnimation` share model-private
@@ -311,7 +344,9 @@ Select derived farm fields through output variables, for example
 `farm_results_analysis` model-book collector. `PrepareForOutput` applies
 `TurbineEvaluation` automatically for missing selected metrics; no manual
 turbine-model registration is needed. An unrestricted selection collects only
-available fields. Farm/cluster aggregation is not an output evaluation API.
+available fields. Collectors/writers perform physical aggregation through
+`aggregate_turbines`, `aggregate_points` and `aggregate_states`, not a separate
+evaluation API.
 
 Create temporary model-specific keys with `model.var(variable)` and recover the
 base name with `model.unvar(name)`. Do not reproduce its prefixing logic by

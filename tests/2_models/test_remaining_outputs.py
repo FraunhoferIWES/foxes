@@ -17,7 +17,6 @@ from foxes.models.outputs import (
     FarmResultsCountWriter,
     FarmResultsPeriodWriter,
     PointCalculator,
-    ResultsWriter,
     RotorPointPlot,
     SliceData,
     SlicesData,
@@ -42,7 +41,6 @@ def test_yaml_engine_inherits_quiet_level_without_overriding_options(
 @pytest.mark.parametrize(
     "cls,parameters",
     [
-        (ResultsWriter, {"file_name": "data.nc"}),
         (StateTurbineTable, {"to_file": "data.nc"}),
         (PointCalculator, {"to_file": "data.nc", "points": [[0, 0, 90]]}),
         (SliceData, {"to_file": "data.nc", "data_format": "xarray"}),
@@ -206,7 +204,6 @@ def algorithm():
     [
         "state_turbine_map",
         "state_turbine_table",
-        "results_writer",
         "point_calculator",
         "rotor_point_plot",
         "turbine_type_curves",
@@ -216,16 +213,11 @@ def test_remaining_model_book_presets_execute(algorithm, name, tmp_path):
     output = algorithm.mbook.outputs[name]
     output.nofig = True
     output.show = False
-    if name == "results_writer":
-        output.file_name = str(tmp_path / "preset.csv")
-    elif name == "point_calculator":
+    if name == "point_calculator":
         output.points = [[0.0, 0.0, 90.0]]
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
         result = algorithm.calc_farm(outputs=name)
-    if name == "results_writer":
-        assert result.is_file()
-    else:
-        assert isinstance(result, xr.Dataset)
+    assert isinstance(result, xr.Dataset)
     assert "plt" not in algorithm.mbook.outputs
 
 
@@ -332,62 +324,6 @@ def test_precomputed_points_retain_order_and_ignore_zero_weight_nan(algorithm):
     np.testing.assert_allclose(result[FV.WS], 12.2)
     np.testing.assert_array_equal(result[FC.POINT], [7, 2, 5])
     np.testing.assert_allclose(result.x, [20.0, 0.0, 10.0])
-
-
-@pytest.mark.parametrize("suffix", ["csv", "nc"])
-@pytest.mark.parametrize("names", [False, True])
-def test_writers_renaming_nonzero_labels_and_no_mutation(
-    algorithm, tmp_path, suffix, names
-):
-    mapping = {FV.P: "power", FV.REWS: "speed", FC.STATE: "time", FC.TURBINE: "machine"}
-    expected_mapping = dict(mapping)
-    output = ResultsWriter(
-        file_name=f"result.{suffix}",
-        variables=mapping,
-        turbine_names=names,
-        write_pars={"verbosity": 0} if suffix == "nc" else {},
-        out_dir=tmp_path,
-    )
-    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
-        farm = algorithm.calc_farm(outputs="farm_results_all", finalize=False)
-        result = algorithm.calc_outputs(outputs=output, farm_results=farm)
-    assert result == tmp_path / f"result.{suffix}"
-    assert mapping == expected_mapping
-    if suffix == "nc":
-        with xr.open_dataset(result) as data:
-            np.testing.assert_allclose(data.power, farm[FV.P])
-            np.testing.assert_array_equal(data.time, [10, 20, 30, 40, 50])
-            np.testing.assert_array_equal(
-                data.machine, algorithm.farm.turbine_names if names else [0, 1]
-            )
-    else:
-        frame = pd.read_csv(result)
-        assert list(frame.columns) == ["time", "machine", "power", "speed"]
-        np.testing.assert_allclose(
-            frame.power, farm[FV.P].to_numpy().ravel(), atol=0.001
-        )
-
-
-@pytest.mark.parametrize("names", [False, True])
-def test_wide_csv(algorithm, tmp_path, names):
-    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
-        path = algorithm.calc_farm(
-            outputs=ResultsWriter(
-                file_name="wide.csv",
-                variables={FV.P: "power"},
-                turbine_names=names,
-                state_turbine_table=True,
-                out_dir=tmp_path,
-            )
-        )
-    frame = pd.read_csv(path, index_col=0)
-    expected = (
-        ["power_Turbine 0", "power_Turbine 1"]
-        if names
-        else ["power_T0000", "power_T0001"]
-    )
-    assert list(frame.columns) == expected
-    assert frame.shape == (5, 2)
 
 
 def test_table_fields_transposition_selection_and_auto_evaluation(
@@ -513,8 +449,6 @@ def test_yaml_matplotlib_composes_constructor_outputs(algorithm, tmp_path):
 @pytest.mark.parametrize(
     "factory,options,match",
     [
-        (ResultsWriter, {"file_name": "bad.txt"}, ".csv or .nc"),
-        (ResultsWriter, {"state_turbine_table": True}, "exactly one"),
         (StateTurbineTable, {"variables": []}, "field names"),
         (PointCalculator, {"variables": []}, "field names"),
     ],

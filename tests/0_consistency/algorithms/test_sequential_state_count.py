@@ -2,6 +2,7 @@ import inspect
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import foxes
 import foxes.constants as FC
@@ -17,18 +18,19 @@ def test_sequential_does_not_override_global_n_states():
     assert "self.n_states = len(self._inds)" not in source
 
 
-def test_sequential_uses_state_labels_for_generated_selections():
+@pytest.mark.parametrize("extra_point_field", [False, True])
+def test_sequential_uses_state_labels_for_generated_selections(extra_point_field):
     state_index = pd.date_range("2020-01-01", periods=3, freq="h")
+    data = {
+        FV.WS: [7.0, 8.0, 9.0],
+        FV.WD: [270.0, 270.0, 270.0],
+        FV.TI: [0.06, 0.06, 0.06],
+    }
+    if extra_point_field:
+        data["custom"] = [10.0, 20.0, 30.0]
     states = foxes.input.states.StatesTable(
-        data_source=pd.DataFrame(
-            {
-                FV.WS: [7.0, 8.0, 9.0],
-                FV.WD: [270.0, 270.0, 270.0],
-                FV.TI: [0.06, 0.06, 0.06],
-            },
-            index=state_index,
-        ),
-        output_vars=[FV.WS, FV.WD, FV.TI],
+        data_source=pd.DataFrame(data, index=state_index),
+        output_vars=list(data),
     )
     farm = foxes.WindFarm()
     farm.add_turbine(
@@ -59,6 +61,11 @@ def test_sequential_uses_state_labels_for_generated_selections():
     assert algo.point_results is not None
     np.testing.assert_array_equal(algo.point_results[FC.STATE], state_index)
     np.testing.assert_allclose(algo.point_results[FV.WS].to_numpy()[:, 0], [7, 8, 9])
+    assert FV.RHO not in algo.point_results
+    if extra_point_field:
+        np.testing.assert_array_equal(
+            algo.point_results["custom"].to_numpy()[:, 0], data["custom"]
+        )
     for variable, expected in ((FV.X, 0.0), (FV.Y, 0.0), (FV.H, 100.0)):
         assert algo.point_results[variable].dims == (FC.STATE, FC.POINT)
         np.testing.assert_allclose(algo.point_results[variable], expected)

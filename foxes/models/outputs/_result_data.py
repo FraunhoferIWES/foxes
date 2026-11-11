@@ -1,4 +1,4 @@
-"""Farm-payload assembly, state selection and dataset serialization."""
+"""Result-payload assembly, state selection and farm dataset serialization."""
 
 from __future__ import annotations
 
@@ -15,16 +15,16 @@ from foxes.config import config
 from foxes.utils import write_nc
 
 
-class _FarmResults(TypedDict):
-    """Chunk-local farm coordinates, dimensioned field arrays and dataset attributes."""
+class _Results(TypedDict):
+    """Chunk coordinates, dimensioned field arrays and dataset attributes."""
 
     coords: dict[str, np.ndarray]
     data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]]
     attrs: dict[str, Any]
 
 
-def _combine_chunks(chunks: list[_FarmResults]) -> _FarmResults:
-    """Join ordered farm payloads without mutating source chunks.
+def _combine_chunks(chunks: list[_Results]) -> _Results:
+    """Join ordered result payloads without mutating source chunks.
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ def _combine_chunks(chunks: list[_FarmResults]) -> _FarmResults:
     Returns
     -------
     payload
-        Newly concatenated state coordinates and ``(state, turbine)`` arrays,
+        Newly concatenated state coordinates and state-dependent arrays,
         with copied static coordinates and attributes.
 
     Raises
@@ -46,11 +46,28 @@ def _combine_chunks(chunks: list[_FarmResults]) -> _FarmResults:
     first = chunks[0]
     for chunk in chunks[1:]:
         if chunk["data_vars"].keys() != first["data_vars"].keys():
-            raise ValueError("Farm results: Variable selections differ between chunks")
+            raise ValueError("Results: Variable selections differ between chunks")
+        if chunk["coords"].keys() != first["coords"].keys():
+            raise ValueError("Results: Coordinates differ between chunks")
+        for coordinate in first["coords"]:
+            if coordinate != FC.STATE and not np.array_equal(
+                chunk["coords"][coordinate], first["coords"][coordinate]
+            ):
+                raise ValueError(
+                    f"Results: Coordinate '{coordinate}' differs between chunks"
+                )
         for variable, (dims, _) in chunk["data_vars"].items():
             if dims != first["data_vars"][variable][0]:
                 raise ValueError(
-                    f"Farm results: Dimensions differ between chunks for '{variable}'"
+                    f"Results: Dimensions differ between chunks for '{variable}'"
+                )
+            if FC.STATE not in dims and not np.array_equal(
+                chunk["data_vars"][variable][1],
+                first["data_vars"][variable][1],
+                equal_nan=True,
+            ):
+                raise ValueError(
+                    f"Results: Static field '{variable}' differs between chunks"
                 )
 
     # Preserve static coordinates and concatenate along the state axis.
@@ -60,21 +77,24 @@ def _combine_chunks(chunks: list[_FarmResults]) -> _FarmResults:
         variable: (
             dims,
             np.concatenate(
-                [chunk["data_vars"][variable][1] for chunk in chunks], axis=0
-            ),
+                [chunk["data_vars"][variable][1] for chunk in chunks],
+                axis=dims.index(FC.STATE),
+            )
+            if FC.STATE in dims
+            else values,
         )
-        for variable, (dims, _) in first["data_vars"].items()
+        for variable, (dims, values) in first["data_vars"].items()
     }
     return dict(coords=coords, data_vars=data_vars, attrs=first["attrs"].copy())
 
 
-def _select_states(payload: _FarmResults, start: int, stop: int) -> _FarmResults:
-    """Select a half-open state interval from a farm payload.
+def _select_states(payload: _Results, start: int, stop: int) -> _Results:
+    """Select a half-open state interval from a result payload.
 
     Parameters
     ----------
     payload
-        Farm payload with state-leading field arrays.
+        Result payload with dimensioned field arrays.
     start
         Inclusive state position.
     stop
@@ -83,7 +103,7 @@ def _select_states(payload: _FarmResults, start: int, stop: int) -> _FarmResults
     Returns
     -------
     selected
-        Payload containing views of selected state arrays, shared static turbine
+        Payload containing views of selected state arrays, shared static
         coordinates and a shallow copy of the attributes.
     """
     # Slice each state-dependent array without modifying the full payload.
@@ -93,7 +113,15 @@ def _select_states(payload: _FarmResults, start: int, stop: int) -> _FarmResults
             for name, values in payload["coords"].items()
         },
         data_vars={
-            name: (dims, values[start:stop])
+            name: (
+                dims,
+                values[
+                    tuple(
+                        slice(start, stop) if dim == FC.STATE else slice(None)
+                        for dim in dims
+                    )
+                ],
+            )
             for name, (dims, values) in payload["data_vars"].items()
         },
         attrs=payload["attrs"].copy(),
@@ -101,7 +129,7 @@ def _select_states(payload: _FarmResults, start: int, stop: int) -> _FarmResults
 
 
 def _create_dataset(
-    payload: _FarmResults,
+    payload: _Results,
     turbine_names: Sequence[str] | None,
     wind_farm_list: Sequence[str | None] | None,
     cluster_list: Sequence[str | None] | None,
@@ -137,11 +165,15 @@ def _create_dataset(
         (FC.FARM, wind_farm_list),
         (FC.CLUSTER, cluster_list),
     ]:
-        if values is not None and any(value is not None for value in values):
+        if (
+            FC.TURBINE in dataset.dims
+            and values is not None
+            and any(value is not None for value in values)
+        ):
             dataset[name] = ((FC.TURBINE,), values)
 
     # Compress weights only after all states for this dataset are available.
-    if FV.WEIGHT in dataset:
+    if FV.WEIGHT in dataset and dataset[FV.WEIGHT].dims == (FC.STATE, FC.TURBINE):
         weights = dataset[FV.WEIGHT].to_numpy()
         if weights.shape[1] > 0 and np.all(weights == weights[:, :1]):
             dataset[FV.WEIGHT] = ((FC.STATE,), weights[:, 0])
@@ -152,7 +184,7 @@ def _create_dataset(
 
 def _data_to_nc(
     fpath: Path,
-    payload: _FarmResults,
+    payload: _Results,
     turbine_names: Sequence[str] | None,
     wind_farm_list: Sequence[str | None] | None,
     cluster_list: Sequence[str | None] | None,

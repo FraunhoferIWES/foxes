@@ -9,7 +9,7 @@ import foxes
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.config import config
-from foxes.models.outputs import PointCalculator, ResultsWriter, StateTurbineTable
+from foxes.models.outputs import PointCalculator, StateTurbineTable
 
 
 def _calc_farm_results():
@@ -42,37 +42,6 @@ def _calc_farm_results():
         farm_results = algo.calc_farm(outputs="farm_results_all")
 
     return algo, farm_results
-
-
-def test_results_writer_write_nc_smoke_and_cleanup(tmp_path):
-    algo, farm_results = _calc_farm_results()
-    fname = "results_writer_smoke.nc"
-    run_output(
-        ResultsWriter(
-            file_name=fname,
-            variables=[FV.P, FV.REWS],
-            turbine_names=True,
-            out_dir=tmp_path,
-            write_pars={"verbosity": 0},
-        ),
-        algo=algo,
-        farm_results=farm_results,
-    )
-
-    fpath = tmp_path / fname
-    assert fpath.is_file()
-
-    ds = xr.open_dataset(fpath, engine=config.nc_engine)
-    try:
-        assert FV.P in ds.data_vars
-        assert FV.REWS in ds.data_vars
-        assert ds[FV.P].shape[0] == farm_results.sizes[FC.STATE]
-        assert ds[FV.P].shape[1] == farm_results.sizes[FC.TURBINE]
-    finally:
-        ds.close()
-
-    fpath.unlink()
-    assert not fpath.exists()
 
 
 def test_state_turbine_table_write_nc_smoke_and_cleanup(tmp_path):

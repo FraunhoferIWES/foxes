@@ -1194,6 +1194,9 @@ This major version introduces the concept of `Engines` which handle the chunking
     division warnings. Preserve unclipped ratios, NaNs otherwise, selections
     and nominal-capacity validation, including output-selected evaluation.
 - Maintenance:
+  - Keep collectors in `farm_results.py` and `point_results.py`; put every
+    domain writer in the corresponding plural `*_results_writers.py` module.
+    Remove the generic `ResultsWriter`, its module and model-book preset.
   - Put implementation comments below docstrings and check placement across
     package code, tests, examples and notebooks. Remove an unused point-cloud
     dimension helper and superseded dataset-only rose reductions; consolidate
@@ -1222,6 +1225,20 @@ This major version introduces the concept of `Engines` which handle the chunking
     loading messages without hiding errors. Numerical NetCDF outputs inherit algorithm
     verbosity unless explicitly configured otherwise.
 - Outputs:
+  - Add independent `aggregate_turbines` (wind farm, cluster, all),
+    `aggregate_points` (all) and `aggregate_states` controls to collectors and
+    their writers. Reduce worker payloads to physical sufficient statistics,
+    including exact count/calendar intervals and uneven target tiles.
+    Normalize state weights independently per turbine/point before grouping;
+    recompute power ratios, sum extensive fields and average intensive fields.
+    Include unassigned memberships and reject mixed native-unit power sums.
+    Add distinct grouped/mean model-book presets and result keys.
+  - Align point results with farm collection/count/chunk/calendar writers and
+    model-book selectors. Add independent point `default`/`all` wind-field sets
+    and ambient/waked filtering; keep scientific chunking owned by the engine.
+    Preserve every target point and dynamic geometry in files, and share
+    count/calendar policies with farm writers. Keep iterator-internal and
+    custom-model collection explicitly unrestricted.
   - Honor script verbosity for all selected animations in dynamic-wake,
     timeline and Sequential examples, including MP4-only selections.
     Announce creation at verbosity one; writing and successful completion at
@@ -1239,8 +1256,8 @@ This major version introduces the concept of `Engines` which handle the chunking
     Request turbine metrics through output variables instead; output preparation
     applies `TurbineEvaluation` automatically without turbine-model registration.
     Unrestricted collectors retain available fields without requesting new
-    metrics. Remove aggregate summaries from examples and notebooks pending
-    replacement aggregation, and keep turbine-trace rendering with animations.
+    metrics. Remove superseded aggregate reports from examples and notebooks,
+    and keep turbine-trace rendering with animations.
   - Polish adopted output and helper docstrings, split model-book registration
     by concern, and separate animation composition/rendering and farm writer
     policies from collection and payload assembly without changing result schemas.

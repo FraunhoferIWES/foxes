@@ -9,6 +9,8 @@ import foxes.variables as FV
 from foxes.utils import FDict
 
 if TYPE_CHECKING:
+    from foxes.core import Output
+
     from .model_book import ModelBook
 
 
@@ -21,11 +23,31 @@ def _populate_outputs(book: ModelBook) -> None:
         Model book receiving fresh output instances and factory configuration.
     """
     book.outputs = FDict(_name="outputs")
-    book.outputs["point_results"] = fm.outputs.PointResultsOutput()
     _populate_plot_outputs(book)
     _populate_slice_outputs(book)
     _populate_animation_outputs(book)
-    _populate_farm_result_outputs(book)
+    _populate_result_outputs(
+        book,
+        "farm_results",
+        _farm_variable_sets(),
+        (
+            fm.outputs.FarmResultsOutput,
+            fm.outputs.FarmResultsCountWriter,
+            fm.outputs.FarmResultsChunkWriter,
+            fm.outputs.FarmResultsPeriodWriter,
+        ),
+    )
+    _populate_result_outputs(
+        book,
+        "point_results",
+        _point_variable_sets(),
+        (
+            fm.outputs.PointResultsOutput,
+            fm.outputs.PointResultsCountWriter,
+            fm.outputs.PointResultsChunkWriter,
+            fm.outputs.PointResultsPeriodWriter,
+        ),
+    )
 
 
 def _populate_plot_outputs(book: ModelBook) -> None:
@@ -46,7 +68,6 @@ def _populate_plot_outputs(book: ModelBook) -> None:
     )
     book.outputs["state_turbine_map"] = fm.outputs.StateTurbineMap(show=True)
     book.outputs["state_turbine_table"] = fm.outputs.StateTurbineTable()
-    book.outputs["results_writer"] = fm.outputs.ResultsWriter()
     book.outputs["point_calculator"] = fm.outputs.PointCalculator()
     book.outputs["rotor_point_plot"] = fm.outputs.RotorPointPlot(show=True)
     book.outputs["turbine_type_curves"] = fm.outputs.TurbineTypeCurves(show=True)
@@ -182,84 +203,120 @@ def _farm_variable_sets() -> dict[str, list[str] | None]:
     }
 
 
-def _populate_farm_result_outputs(book: ModelBook) -> None:
-    """Populate farm collectors and bounded NetCDF writers.
+def _point_variable_sets() -> dict[str, list[str] | None]:
+    """Create independent point-variable selections for collectors and writers.
+
+    Returns
+    -------
+    selections
+        Standard ambient/waked wind fields and weights under ``default``;
+        ``all`` retains every available point field.
+    """
+    return {
+        "all": None,
+        "default": [
+            FV.WD,
+            FV.WS,
+            FV.TI,
+            FV.RHO,
+            FV.AMB_WD,
+            FV.AMB_WS,
+            FV.AMB_TI,
+            FV.AMB_RHO,
+            FV.WEIGHT,
+        ],
+    }
+
+
+def _populate_result_outputs(
+    book: ModelBook,
+    prefix: str,
+    variable_sets: dict[str, list[str] | None],
+    classes: tuple[type[Output], type[Output], type[Output], type[Output]],
+) -> None:
+    """Populate analogous farm or point collectors and NetCDF writer selectors.
 
     Parameters
     ----------
     book
         Model book whose output registry is extended in place.
+    prefix
+        ``farm_results`` or ``point_results`` selector and filename prefix.
+    variable_sets
+        Independent named variable selections including ``default`` and ``all``.
+    classes
+        Collector, count writer, chunk writer and calendar-period writer classes.
     """
-    farm_outputs = _farm_variable_sets()
-    book.outputs["farm_results"] = fm.outputs.FarmResultsOutput(
+    collector, count_writer, chunk_writer, period_writer = classes
+    hints = {"variables": f"(Variable set: {', '.join(variable_sets)})"}
+    book.outputs[prefix] = collector(
         ambient_vars=True,
         waked_vars=True,
-        variables=farm_outputs["default"],
+        variables=variable_sets["default"],
     )
-    book.outputs["farm_results_amb"] = fm.outputs.FarmResultsOutput(
+    book.outputs[f"{prefix}_amb"] = collector(
         ambient_vars=True,
         waked_vars=False,
-        variables=farm_outputs["default"],
+        variables=variable_sets["default"],
     )
     book.outputs.add_factory(
-        fm.outputs.FarmResultsOutput,
-        "farm_results_amb_<variables>",
-        variables=lambda v: farm_outputs[v],
-        hints={"variables": f"(Variable set: {', '.join(farm_outputs.keys())})"},
+        collector,
+        f"{prefix}_amb_<variables>",
+        variables=lambda v: variable_sets[v],
+        hints=hints,
         kwargs=dict(ambient_vars=True, waked_vars=False),
     )
     book.outputs.add_factory(
-        fm.outputs.FarmResultsOutput,
-        "farm_results_waked_<variables>",
-        variables=lambda v: farm_outputs[v],
-        hints={"variables": f"(Variable set: {', '.join(farm_outputs.keys())})"},
+        collector,
+        f"{prefix}_waked_<variables>",
+        variables=lambda v: variable_sets[v],
+        hints=hints,
         kwargs=dict(ambient_vars=False, waked_vars=True),
     )
     book.outputs.add_factory(
-        fm.outputs.FarmResultsCountWriter,
-        "farm_results_write_n<n_states_per_file>",
+        count_writer,
+        f"{prefix}_write_n<n_states_per_file>",
         n_states_per_file=lambda n: int(n),
         hints={"states_per_file": "(Number of states per file)"},
-        kwargs=dict(base_name="farm_results", ambient_vars=True, waked_vars=True),
+        kwargs=dict(base_name=prefix, ambient_vars=True, waked_vars=True),
     )
     book.outputs.add_factory(
-        fm.outputs.FarmResultsOutput,
-        "farm_results_<variables>",
-        variables=lambda v: farm_outputs[v],
-        hints={"variables": f"(Variable set: {', '.join(farm_outputs.keys())})"},
+        collector,
+        f"{prefix}_<variables>",
+        variables=lambda v: variable_sets[v],
+        hints=hints,
         kwargs=dict(ambient_vars=True, waked_vars=True),
     )
-    book.outputs["farm_results_write_chunks"] = fm.outputs.FarmResultsChunkWriter(
-        base_name="farm_results",
+    book.outputs[f"{prefix}_write_chunks"] = chunk_writer(
+        base_name=prefix,
         ambient_vars=True,
         waked_vars=True,
-        variables=farm_outputs["default"],
+        variables=variable_sets["default"],
     )
-    book.outputs["farm_results_write_day"] = fm.outputs.FarmResultsPeriodWriter(
-        base_name="farm_results",
-        period="day",
-        ambient_vars=True,
-        waked_vars=True,
-        variables=farm_outputs["default"],
+    for period in ("day", "week", "month", "year"):
+        book.outputs[f"{prefix}_write_{period}"] = period_writer(
+            base_name=prefix,
+            period=period,
+            ambient_vars=True,
+            waked_vars=True,
+            variables=variable_sets["default"],
+        )
+    book.outputs[f"{prefix}_mean"] = collector(
+        variables=variable_sets["default"], aggregate_states=True
     )
-    book.outputs["farm_results_write_week"] = fm.outputs.FarmResultsPeriodWriter(
-        base_name="farm_results",
-        period="week",
-        ambient_vars=True,
-        waked_vars=True,
-        variables=farm_outputs["default"],
+    aggregates = (
+        ("wind_farm", "cluster", "all") if prefix == "farm_results" else ("all",)
     )
-    book.outputs["farm_results_write_month"] = fm.outputs.FarmResultsPeriodWriter(
-        base_name="farm_results",
-        period="month",
-        ambient_vars=True,
-        waked_vars=True,
-        variables=farm_outputs["default"],
-    )
-    book.outputs["farm_results_write_year"] = fm.outputs.FarmResultsPeriodWriter(
-        base_name="farm_results",
-        period="year",
-        ambient_vars=True,
-        waked_vars=True,
-        variables=farm_outputs["default"],
-    )
+    for aggregate in aggregates:
+        options: dict[str, Any] = {
+            "aggregate_turbines"
+            if prefix == "farm_results"
+            else "aggregate_points": aggregate
+        }
+        for states in (False, True):
+            name = f"{prefix}_aggregate_{aggregate}" + ("_mean" if states else "")
+            book.outputs[name] = collector(
+                variables=variable_sets["default"],
+                **options,
+                aggregate_states=states,
+            )

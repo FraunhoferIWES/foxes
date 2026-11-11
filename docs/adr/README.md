@@ -33,10 +33,12 @@ all of them.
 | [0019](0019-reduced-output-payloads.md) | Accepted; evaluation scope superseded by [0022](0022-output-selected-turbine-evaluation.md) | Eliminate unnecessary output dimensions on workers and merge sufficient statistics, histograms and selected layout data without reconstructing state frames. |
 | [0020](0020-output-display-control.md) | Accepted; animation defaults and test policy superseded by [0021](0021-noninteractive-animation-and-tests.md) | Default plotting constructors to no display, enable model-book plotting display and keep blocking animation playback parent-owned and run-local. |
 | [0021](0021-noninteractive-animation-and-tests.md) | Accepted | Keep animation presets noninteractive and prohibit enabled display in tests, including mocked checks; static plotting presets remain interactive. |
-| [0022](0022-output-selected-turbine-evaluation.md) | Accepted | Apply turbine metrics through output selection; remove competing evaluation/aggregation outputs and keep unrestricted collectors limited to available fields. |
+| [0022](0022-output-selected-turbine-evaluation.md) | Accepted; deferred aggregation superseded by [0027](0027-domain-result-aggregation.md) | Apply turbine metrics through output selection; remove competing evaluation/aggregation outputs and keep unrestricted collectors limited to available fields. |
 | [0023](0023-in-process-example-runs.md) | Accepted | Run every example once through callable mains/Python APIs, with isolated cleanup and independent bounded-input/headless choices. |
 | [0024](0024-complete-output-adoption.md) | Accepted | Complete output adoption, reduce arbitrary-point means on workers, require explicit curve scans and retain direct YAML-only Matplotlib calls as an explicit exception. |
 | [0025](0025-turbine-evaluation-zero-division.md) | Accepted | Return zero for zero-power efficiency, including zero ambient power, and positive infinity for nonzero power over zero ambient power, without division warnings. |
+| [0026](0026-analogous-point-result-outputs.md) | Accepted; module ownership superseded by [0027](0027-domain-result-aggregation.md) | Mirror farm collectors and count/chunk/calendar writers for point results, with independent default/all wind-field sets and engine-owned target chunking. |
+| [0027](0027-domain-result-aggregation.md) | Accepted | Separate domain collectors from all domain writers; aggregate physical fields using worker/file-interval statistics and independently normalized entity weights. |
 
 ## When To Add An ADR
 

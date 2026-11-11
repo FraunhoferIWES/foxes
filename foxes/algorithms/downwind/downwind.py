@@ -969,8 +969,9 @@ class Downwind(Algorithm):
         results
             Engine-owned output mapping, modified in place only at
             ``FC.POINT_RESULTS`` when present. Its dataset selects target point
-            zero, drops ``FC.TPOINT`` and renames ``FC.TARGET`` to ``FC.POINT``,
-            preserving state and supplied point order.
+            zero and drops ``FC.TPOINT``. Any retained ``FC.TARGET`` dimension
+            becomes ``FC.POINT``, preserving supplied point order. Spatial/state
+            aggregation may remove the corresponding dimensions.
 
         """
         # Collect target chunks through the same Output lifecycle as farm chunks.
@@ -978,11 +979,10 @@ class Downwind(Algorithm):
             mlist, *data, output=output, **kwargs
         )
         if FC.POINT_RESULTS in results:
-            results[FC.POINT_RESULTS] = (
-                results[FC.POINT_RESULTS]
-                .sel({FC.TPOINT: 0}, drop=True)
-                .rename({FC.TARGET: FC.POINT})
-            )
+            point_results = results[FC.POINT_RESULTS].sel({FC.TPOINT: 0}, drop=True)
+            if FC.TARGET in point_results.dims:
+                point_results = point_results.rename({FC.TARGET: FC.POINT})
+            results[FC.POINT_RESULTS] = point_results
         return results
 
     def calc_points(

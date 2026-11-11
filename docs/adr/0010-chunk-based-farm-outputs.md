@@ -7,7 +7,8 @@
 ## Context
 
 The output-development branch introduces `foxes.core.Output` and four concrete
-farm-result outputs in `foxes.models.outputs.farm_results`. Output calculations
+farm-result outputs in `foxes.models.outputs.farm_results_writer` and
+`foxes.models.outputs.farm_results_writers`. Output calculations
 run on engine chunks before their results are unified. Dataset collection and
 file writing must compose without sharing variable selections or consuming
 each other's payloads.

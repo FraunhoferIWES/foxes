@@ -191,7 +191,9 @@ enforcing the requested result ownership.
 	with exactly one returned result is unwrapped; multiple outputs return a
 	result-name keyed mapping. Writer-only or disabled collection returns an
 	empty mapping. `calc_points()` collects state/target tiles through
-	`PointResultsOutput`, retaining its dataset-facing contract.
+	`PointResultsOutput`, retaining its dataset-facing contract. Point collectors
+	and writers select named default/all wind-field sets independently of farm
+	variable sets.
 - Concrete output models consume NumPy data in workers and construct xarray
 	only when collecting a full dataset or writing an individual file.
 - Point calculations use target dimensions internally. `calc_points()` selects
@@ -236,8 +238,9 @@ Output variable selection is the ordinary evaluation entry point.
 fields before filtering and restoring original farm order. No manual
 turbine-model registration is required. An unrestricted selection retains
 available fields without synthesizing additional metrics. Collection and
-writing remain output responsibilities; farm/cluster aggregation and aggregate
-evaluation outputs are absent pending their new implementation. Turbine-trace
+writing and physical aggregation remain output responsibilities, configured
+through collectors and their writer subclasses, not competing evaluators.
+Turbine-trace
 animation rendering belongs to `_flow_animation_render`, not an evaluator.
 See [ADR-0022](adr/0022-output-selected-turbine-evaluation.md).
 
@@ -346,7 +349,7 @@ calls `get_calc_points`. Precomputed public point datasets include `FV.X`,
 The promoted consumer family is `FarmLayoutOutput`,
 `SliceData`, `SlicesData`, `FlowPlots2D`, `RosePlotOutput`,
 `StatesRosePlotOutput`, `WindRoseBinPlot`, `StateTurbineMap`,
-`StateTurbineTable`, `ResultsWriter`, `PointCalculator`, `RotorPointPlot`,
+`StateTurbineTable`, `PointCalculator`, `RotorPointPlot`,
 and `TurbineTypeCurves`. The former output package and root export
 are removed. Plane, reduction, fields, binning,
 operation and rendering choices are constructor configuration. Data collection
@@ -416,9 +419,13 @@ Model-book registration declarations live in private basics, wake and output
 population modules; the public `ModelBook` owns independent registries and lookup.
 `Animator` owns generator composition in `foxes.models.outputs.animator`;
 flow-animation models delegate parent-local rendering and encoding to
-`_flow_animation_render`. Farm payload assembly/serialization is separate from
-collection/count buffering and chunk/calendar writer policies. These boundaries
-do not change package exports, model-book selectors or result schemas.
+`_flow_animation_render`. Farm and point collectors live in `farm_results` and
+`point_results`; all domain writers live in `farm_results_writers` and
+`point_results_writers`. There is no generic results-writer class or module.
+Both families share physical sufficient-statistic reductions in `_aggregation`,
+dimension-aware NumPy
+payload operations in `_result_data` and count/calendar policies in
+`_result_writers`, while retaining their separate dataset serializers.
 Grid geometry, data-format conversion and layout rendering have
 focused private helper modules rather than sharing monolithic utility bodies.
 Polar rendering for both rose families shares `_rose`; their only numerical
@@ -448,14 +455,57 @@ The implemented farm family is:
 
 Writers select their own fields. Buffered writers use model-private keys so
 they can run before or after a dataset collector without consuming its result.
-Farm field arrays keep state/turbine dimensions during chunk processing;
-uniform weights are reduced to state-only dimensions only at dataset creation.
+Without aggregation, farm fields keep state/turbine dimensions during chunk
+processing; uniform weights become state-only only at dataset creation.
 Writer options and standard path transformations apply to every file. Count
 limits must be positive integers; period states must be chronological datetime
 values without `NaT`. See [ADR-0010](adr/0010-chunk-based-farm-outputs.md).
 
-`normalize=True` normalizes the collected weighted farm dataset after output
-finalization. It does not rewrite files or renormalize each file independently.
+The analogous point family is `PointResultsOutput`,
+`PointResultsChunkWriter`, `PointResultsCountWriter` and
+`PointResultsPeriodWriter`. The engine alone defines state/target chunks;
+`calculate()` consumes the supplied `TData`, never generates or rechunks points.
+Chunk writers write each tile on its worker, with both engine indices in the
+filename. Count/calendar writers assemble complete target slabs in run-local
+buffers before applying the shared state-interval policy. Unaggregated files preserve
+`(state, target, target_point)` fields and dynamic geometry, including all
+target points. Only algorithm-returned point datasets select target point zero
+and rename `target` to `point`.
+
+The point model-book family mirrors farm selectors, including ambient/waked
+filtering and count/chunk/day/week/month/year writers. Its separate variable
+dictionary provides `default` (WS, WD, TI, RHO, their ambient counterparts and
+weights) and `all`. `point_results` now uses `default`; choose
+`point_results_all` for additional calculated or precomputed fields. See
+[ADR-0026](adr/0026-analogous-point-result-outputs.md).
+Sequential's internal point collection explicitly retains all calculated fields,
+as its internal farm collection does, independently of model-book defaults.
+
+Collectors and all corresponding writers accept independent spatial and state
+reductions. `aggregate_turbines=None | "wind_farm" | "cluster" | "all"` groups
+original-order farm turbines; `aggregate_points=None | "all"` groups targets.
+Missing farm/cluster memberships form an explicit `<unassigned>` group.
+Spatial reduction sums power, capacity, maximum power and annualized yields,
+averages intensive fields and uses circular means for directions. Turbine
+power/capacity stay in native type units; mixed-unit sums within a group fail
+explicitly. Annualized yields remain GWh/a.
+
+`aggregate_states=True` normalizes weights independently for each turbine or
+target/target-point position over the selected states. Normalize per entity
+before spatial grouping; recompute efficiency and capacity factor from reduced
+power and capacity, never from averaged ratios. Zero-weight NaNs are ignored;
+negative/nonfinite weights or zero total mass fail explicitly. Raw outputs
+retain their supplied weights unchanged.
+
+Workers eliminate state histories into per-entity weighted sums/masses and
+sine/cosine sums. Interval writers partition each worker chunk at exact
+count/calendar boundaries and transport only those interval statistics.
+Parents merge unfinished intervals before normalization and writing; point
+tiles retain individual entities until per-entity normalization is possible.
+Spatial-only point workers return additive target sums/counts, preserving
+uneven-tile weighting. Reductions apply to each output's full selection or each
+writer file's own interval/tile. See
+[ADR-0027](adr/0027-domain-result-aggregation.md).
 
 ### Chunk-Based Flow Animations
 
@@ -712,6 +762,11 @@ subprocess.
 
 ## Cross-Cutting Decisions
 
+- Point collection and writers mirror farm outputs, with independent default/all
+  wind-field selections and engine-owned target chunking. Files preserve all
+  target points; both families share count/calendar policies. See
+  [ADR-0026](adr/0026-analogous-point-result-outputs.md).
+
 - Examples run once each in-process with independent quick/headless choices;
   monolithic tutorial mains are a documented size exception. See
   [ADR-0023](adr/0023-in-process-example-runs.md).
@@ -798,6 +853,10 @@ subprocess.
 	implementation. Unrestricted collectors retain available fields; aggregate
 	farm/cluster evaluators, output helpers and model-book entries are removed.
 	See [ADR-0022](adr/0022-output-selected-turbine-evaluation.md).
+- Physical result aggregation belongs to domain collectors and their writer
+	subclasses, with independent `aggregate_turbines`/`aggregate_points` and
+	`aggregate_states` controls, per-entity weight normalization and worker-side
+	sufficient statistics. See [ADR-0027](adr/0027-domain-result-aggregation.md).
 - Output slice grids have no state axis and use the existing static-point
 	calculation contract. See
 	[ADR-0005](adr/0005-static-output-grid-coordinates.md).

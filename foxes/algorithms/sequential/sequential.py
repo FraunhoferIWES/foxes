@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 from foxes.algorithms import Iterative
 from foxes.config import config
 from foxes.core import Algorithm, get_engine
-from foxes.models.outputs import FarmResultsOutput
+from foxes.models.outputs import FarmResultsOutput, PointResultsOutput
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -260,7 +260,12 @@ class Sequential(Iterative):
             else:
                 pres = cast(
                     Dataset,
-                    super().calc_points(fres, points=self.points, finalize=False),
+                    super().calc_points(
+                        fres,
+                        points=self.points,
+                        outputs=PointResultsOutput(),
+                        finalize=False,
+                    ),
                 )
 
                 if self._point_results is None:

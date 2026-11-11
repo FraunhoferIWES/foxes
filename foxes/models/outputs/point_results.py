@@ -1,8 +1,8 @@
-"""Collect point model results through the engine output lifecycle."""
+"""Chunk-local point result collection and physical aggregation."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from xarray import Dataset
@@ -11,6 +11,18 @@ import foxes.constants as FC
 import foxes.variables as FV
 from foxes.core import Output
 from foxes.utils import Dict
+
+from ._result_data import _Results
+from ._aggregation import (
+    _finish,
+    _finish_states,
+    _join,
+    _merge_statistics,
+    _point_spatial_statistics,
+    _requirements,
+    _spatial,
+    _state_statistics,
+)
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, FData, MData, TData
@@ -23,6 +35,10 @@ class PointResultsOutput(Output):
         self,
         variables: list[str] | None = None,
         ambient_vars: bool = True,
+        waked_vars: bool = True,
+        aggregate_points: Literal["all"] | None = None,
+        aggregate_states: bool = False,
+        result_name: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Select point fields to collect.
@@ -34,9 +50,33 @@ class PointResultsOutput(Output):
             collects all available state/target fields.
         ambient_vars
             Include ambient point fields such as ``FV.AMB_WS``.
+        waked_vars
+            Include requested ordinary fields that have ambient counterparts.
+        aggregate_points
+            ``all`` averages all targets, retaining each target-point position.
+            ``None`` retains targets. Point farm/cluster membership is not
+            inferred from coordinates and is not supported.
+        aggregate_states
+            Use normalized state weights independently per target and target
+            point. Workers retain only sufficient statistics for this reduction.
+        result_name
+            Public dataset key, or ``None`` for the aggregation-specific name.
         kwargs
             Common output configuration.
+
+        Raises
+        ------
+        ValueError
+            If ``aggregate_points`` is neither ``None`` nor ``all``.
         """
+        if aggregate_points not in (None, "all"):
+            raise ValueError(
+                f"Invalid point aggregation: {aggregate_points!r}; expected None or 'all'"
+            )
+        self.aggregate_points = aggregate_points
+        self.aggregate_states = aggregate_states
+        self.result_name = result_name
+
         # Point collectors read prepared target data and model return values.
         super().__init__(
             mdata_variables=[FC.STATE],
@@ -46,6 +86,42 @@ class PointResultsOutput(Output):
         )
         self.variables = None if variables is None else list(variables)
         self.ambient_vars = ambient_vars
+        self.waked_vars = waked_vars
+
+    @property
+    def tdata_variables(self) -> list[str] | None:
+        """Target input fields, including reduction dependencies.
+
+        Returns
+        -------
+        variables
+            Selected fields and weights for independent normalized state means;
+            ``None`` retains all available fields.
+        """
+        return _requirements(
+            super().tdata_variables,
+            self.aggregate_points,
+            self.aggregate_states,
+            self.ambient_vars,
+            self.waked_vars,
+        )
+
+    @property
+    def _collection_key(self) -> str:
+        return (
+            self.var("point_collection")
+            if self.aggregate_points or self.aggregate_states or self.result_name
+            else FC.POINT_RESULTS
+        )
+
+    @property
+    def _public_key(self) -> str:
+        if self.result_name is not None:
+            return self.result_name
+        name = (
+            "point_results_aggregate_all" if self.aggregate_points else FC.POINT_RESULTS
+        )
+        return name + "_mean" if self.aggregate_states else name
 
     def calculate(  # type: ignore[override]
         self,
@@ -79,6 +155,8 @@ class PointResultsOutput(Output):
             Shared mapping with requested point arrays and explicit chunk
             coordinates. Static coordinate payloads have a singleton state axis;
             final assembly restores full public coordinate dimensions.
+            State reductions return per-entity sufficient statistics without
+            state histories; spatial-only reductions return tile sums/counts.
 
         Raises
         ------
@@ -91,6 +169,39 @@ class PointResultsOutput(Output):
         results = super().calculate(
             algo, mdata, fdata, tdata, model_results, chunk_results
         )
+        if self._collection_key not in results:
+            raw = self._collect_chunk(mdata, tdata, model_results)
+            if self.aggregate_points or self.aggregate_states:
+                payload = self._as_result_data({(0, 0): raw}, 1, 1)
+                results[self._collection_key] = (
+                    _state_statistics(payload)
+                    if self.aggregate_states
+                    else _point_spatial_statistics(payload)
+                )
+            else:
+                results[self._collection_key] = raw
+        return results
+
+    def _collect_chunk(
+        self, mdata: MData, tdata: TData, model_results: Any
+    ) -> dict[str, Any]:
+        """Collect point fields and compact coordinates without changing inputs.
+
+        Parameters
+        ----------
+        mdata
+            Engine-supplied state labels and chunk dimensions.
+        tdata
+            Engine-supplied target data, read without mutation.
+        model_results
+            Calculated point fields taking precedence over target data.
+
+        Returns
+        -------
+        payload
+            Selected values, dimensions, labels and singleton-state coordinates
+            for static targets. State-dependent coordinates retain every state.
+        """
         values, dims = self._field_arrays(tdata, model_results)
         points = np.broadcast_to(
             tdata[FC.TARGETS],
@@ -98,7 +209,7 @@ class PointResultsOutput(Output):
         )
         if np.array_equal(points, np.broadcast_to(points[:1], points.shape)):
             points = points[:1].copy()
-        results[FC.POINT_RESULTS] = dict(
+        return dict(
             values=values,
             dims=dims,
             states=mdata[FC.STATE],
@@ -106,7 +217,6 @@ class PointResultsOutput(Output):
             tpoints=np.arange(tdata.sizes[FC.TPOINT]),
             points=points,
         )
-        return results
 
     def _field_arrays(
         self, tdata: TData, model_results: Any
@@ -135,17 +245,24 @@ class PointResultsOutput(Output):
         values = {}
         dims = {}
         variables = (
-            [
-                v
-                for v, dimensions in tdata.dims.items()
-                if FC.TARGET in dimensions and v != FC.TARGETS and v not in tdata.sizes
-            ]
-            if self.variables is None
-            else self.variables
+            _requirements(
+                [
+                    v
+                    for v, dimensions in tdata.dims.items()
+                    if FC.TARGET in dimensions
+                    and v != FC.TARGETS
+                    and v not in tdata.sizes
+                ],
+                self.aggregate_points,
+                self.aggregate_states,
+                self.ambient_vars,
+                self.waked_vars,
+            )
+            if self.tdata_variables is None
+            else self.tdata_variables
         )
+        assert variables is not None
         for variable in variables:
-            if not self.ambient_vars and variable in FV.amb2var:
-                continue
             values[variable] = model_results.get(variable, tdata.get(variable))
             if values[variable] is None:
                 raise KeyError(f"{self.name}: Missing point variable '{variable}'")
@@ -178,8 +295,8 @@ class PointResultsOutput(Output):
             Run-local output buffers.
         """
         # Keep buffers outside model instances so workers share no mutable state.
-        output_results.setdefault(FC.POINT_RESULTS, {}).update(
-            new_chunk_results.pop(FC.POINT_RESULTS)
+        output_results.setdefault(self._collection_key, {}).update(
+            new_chunk_results.pop(self._collection_key)
         )
 
     def finalize_results(
@@ -189,7 +306,7 @@ class PointResultsOutput(Output):
         n_chunks_targets: int,
         output_results: Dict[str, Any],
     ) -> None:
-        """Assemble a dataset with internal state/target/target-point dimensions.
+        """Assemble the point dataset, retaining axes not selected for reduction.
 
         Parameters
         ----------
@@ -200,15 +317,139 @@ class PointResultsOutput(Output):
         n_chunks_targets
             Total target chunks.
         output_results
-            Mapping whose point buffer is replaced with the unified dataset.
+            Mapping whose private point buffer is replaced with the dataset
+            under its grouping/state-specific key or ``result_name``. Raw
+            collection under ``FC.POINT_RESULTS`` retains internal dimensions
+            for algorithm-side public conversion. Other public keys select
+            target point zero and rename retained targets to public points.
         """
         # Concatenate target tiles before joining state slabs in global order.
-        chunks = output_results[FC.POINT_RESULTS]
-        data_vars = self._assembled_fields(chunks, n_chunks_states, n_chunks_targets)
+        chunks = output_results.pop(self._collection_key)
+        if self.aggregate_states:
+            tiles = [
+                _finish_states(
+                    _merge_statistics([chunks[(s, t)] for s in range(n_chunks_states)])
+                )
+                for t in range(n_chunks_targets)
+            ]
+            payload = _join(tiles, FC.TARGET)
+            if self.aggregate_points:
+                payload = _spatial(
+                    payload,
+                    FC.TARGET,
+                    [np.arange(len(payload["coords"][FC.TARGET]))],
+                    farm=False,
+                )
+            payload = self._finish_payload(payload)
+        elif self.aggregate_points:
+            slabs = [
+                _finish_states(
+                    _merge_statistics([chunks[(s, t)] for t in range(n_chunks_targets)])
+                )
+                for s in range(n_chunks_states)
+            ]
+            payload = self._finish_payload(_join(slabs, FC.STATE))
+        else:
+            payload = self._as_result_data(chunks, n_chunks_states, n_chunks_targets)
+        dataset = Dataset(
+            data_vars=payload["data_vars"],
+            coords=payload["coords"],
+            attrs=payload["attrs"],
+        ).set_coords([FV.X, FV.Y, FV.H])
+        if self._public_key != FC.POINT_RESULTS:
+            dataset = dataset.sel({FC.TPOINT: 0}, drop=True)
+            if FC.TARGET in dataset.dims:
+                dataset = dataset.rename({FC.TARGET: FC.POINT})
+        output_results[self._public_key] = dataset
 
-        # Preserve the public state labels and the original target index.
+    def _finish_payload(self, payload: _Results) -> _Results:
+        """Retain geometry while removing private aggregation dependencies."""
+        if self.aggregate_points:
+            payload["attrs"]["aggregate_points"] = self.aggregate_points
+        variables = (
+            None
+            if self.variables is None
+            else [
+                v
+                for v in self.variables
+                if (self.ambient_vars or v not in FV.amb2var)
+                and (self.waked_vars or v not in FV.var2amb)
+            ]
+            + [FV.X, FV.Y, FV.H]
+        )
+        return _finish(payload, variables, self.aggregate_states)
+
+    def _file_payload(self, payload: _Results) -> _Results:
+        """Reduce one complete file interval without changing scientific chunking."""
+        if self.aggregate_states:
+            if FC.STATE in payload["coords"]:
+                payload = _state_statistics(payload)
+            payload = _finish_states(payload)
+        elif self.aggregate_points and FC.TARGET not in payload["coords"]:
+            payload = _finish_states(payload)
+        if self.aggregate_points and FC.TARGET in payload["coords"]:
+            payload = _spatial(
+                payload,
+                FC.TARGET,
+                [np.arange(len(payload["coords"][FC.TARGET]))],
+                farm=False,
+            )
+        return (
+            self._finish_payload(payload)
+            if self.aggregate_points or self.aggregate_states
+            else payload
+        )
+
+    def _as_result_data(
+        self,
+        chunks: dict[tuple[int, int], Any],
+        n_chunks_states: int,
+        n_chunks_targets: int,
+    ) -> _Results:
+        """Assemble NumPy target tiles for collection or buffered file intervals.
+
+        Parameters
+        ----------
+        chunks
+            Complete state/target-indexed payloads in engine-defined chunks.
+        n_chunks_states
+            Number of state slabs being assembled.
+        n_chunks_targets
+            Number of target tiles per state slab.
+
+        Returns
+        -------
+        payload
+            Dimensioned fields and geometry, explicit dimension labels and an
+            independent attributes mapping; no xarray objects are constructed.
+
+        Raises
+        ------
+        ValueError
+            If engine tiles disagree on fields, dimensions or shared coordinates.
+        """
+        first = chunks[(0, 0)]
+        for (state, target), chunk in chunks.items():
+            if (
+                chunk["dims"] != first["dims"]
+                or chunk["values"].keys() != first["values"].keys()
+            ):
+                raise ValueError(f"{self.name}: Point fields differ between chunks")
+            for name, reference in (
+                ("states", chunks[(state, 0)]["states"]),
+                ("targets", chunks[(0, target)]["targets"]),
+                ("tpoints", first["tpoints"]),
+            ):
+                if not np.array_equal(
+                    chunk[name],
+                    reference,
+                    equal_nan=chunk[name].dtype.kind in "fcMm",
+                ):
+                    raise ValueError(f"{self.name}: Point {name} differ between chunks")
         coords = self._assembled_coordinates(chunks, n_chunks_states, n_chunks_targets)
-        output_results[FC.POINT_RESULTS] = Dataset(data_vars=data_vars, coords=coords)
+        fields = self._assembled_fields(chunks, n_chunks_states, n_chunks_targets)
+        fields.update({v: coords.pop(v) for v in (FV.X, FV.Y, FV.H)})
+        return dict(coords=coords, data_vars=fields, attrs={})
 
     def _assembled_coordinates(
         self,

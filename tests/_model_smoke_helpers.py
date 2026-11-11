@@ -1067,7 +1067,10 @@ def _run_point_model_smoke(cls):
         farm_results = algo.calc_farm()
         points = np.array([[[0.0, 0.0, 90.0], [100.0, 0.0, 90.0]]], dtype=float)
         point_results = algo.calc_points(
-            farm_results, points=points, point_models=[alias]
+            farm_results,
+            points=points,
+            point_models=[alias],
+            outputs="point_results_all",
         )
     _assert_point_results(point_results)
     if name == "WakeDeltas":

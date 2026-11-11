@@ -96,8 +96,8 @@ ensure the final evaluation pass does not rerun other turbine models.
 Output-selection regressions request derived fields without registering any
 turbine evaluation model, covering Downwind/Iterative, original turbine order,
 ambient runs and NumPy/thread/process chunks. Unrestricted collectors retain
-available fields only. Farm/cluster aggregation tests are removed with their
-superseded evaluation APIs; no replacement aggregation is implemented.
+available fields only. Collector/writer aggregation is tested separately from
+the superseded evaluation APIs.
 Iterative cases include final power under-relaxation and original-order model
 selection masks.
 
@@ -134,7 +134,14 @@ not just final numerical parity. They cover uneven chunks, zero-weight NaNs,
 turbine-dependent weights,
 negative point/state positions, global denominator thresholds, optional flow
 vectors/overlays and NumPy/thread/process parity. Full datasets, animation frames
-and interval writers deliberately retain their required state-resolved fields.
+and unaggregated interval writers retain their required state-resolved fields.
+Run `uv run pytest tests/2_models/test_result_aggregation.py -q` for domain
+aggregation. Verify `aggregate_turbines`, `aggregate_points` and independent
+`aggregate_states`, physical sums/means, recomputed power ratios, native-unit
+errors, unassigned groups and per-entity normalization over partial selections.
+Inspect worker payloads for eliminated dimensions, including file-interval
+statistics before parent assembly. Compare uneven state/target tiles and exact
+count/calendar files, not averages of chunk means.
 Run `MPLBACKEND=Agg uv run pytest tests/2_models/test_output_show.py -q` for
 noninteractive rendering. Tests never use `show=True`, including mocked checks.
 The shared pytest configuration disables display on test-owned model-book
@@ -369,6 +376,21 @@ suite as certification of every runtime. The full suite collects successfully;
 older tests still expose unsupported calculation options and default-field
 expectations that differ from the committed model-book selection. Report exact
 failing test IDs separately from regressions in the current change.
+
+For the analogous point outputs and their shared farm-writer policies, run:
+
+```console
+uv run pytest tests/2_models/test_point_results_outputs.py tests/2_models/test_farm_results_outputs.py -q
+```
+
+Point regressions use immutable synthetic `TData` and temporary real NetCDF
+files. They cover both engine chunk axes, exact count/calendar intervals,
+ISO week years, ambient/waked selections, independent writer buffers, dynamic
+geometry and every target point. Real NumPy/thread/process calculations and
+precomputed-point runs verify model-book default/all selectors without giving
+outputs responsibility for scientific chunking. Packing, filename transforms,
+invalid coordinates, incomplete/duplicate tiles and worker errors are explicit
+checks.
 
 Before closure, broaden to the repository gates:
 
