@@ -5,8 +5,11 @@ import numpy as np
 import foxes
 import foxes.variables as FV
 
-if __name__ == "__main__":
+
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
+    parser.add_argument("--start-state", type=int, default=240)
     parser.add_argument(
         "-F",
         "--fps",
@@ -113,19 +116,26 @@ if __name__ == "__main__":
         "--outputs",
         help="Farm collector and animation output models",
         nargs="+",
-        default=["farm_results"],
+        default=["farm_results", "create_turbine_gif"],
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: sequential")
 
     mbook = foxes.models.ModelBook()
-
     # Keep flow-only output content and settings local to this example.
     for suffix in ("gif", "mp4"):
         mbook.outputs[f"create_{suffix}"] = foxes.models.outputs.FlowAnimation(
             base_name=f"ani.{suffix}",
             variables=[args.variable],
             fps=args.fps,
-            verbosity=1,
             figsize=(6.4, 4.8),
             grid_pars=dict(resolution=10, xmin=-1000, ymin=-1000, xmax=4000, ymax=3000),
             plot_pars=dict(
@@ -141,6 +151,14 @@ if __name__ == "__main__":
                 title="", annotate=1, anno_delx=-120, anno_dely=-60, alpha=0, s=10
             ),
         )
+
+    # Keep animation diagnostics at the script's verbosity level.
+    for name in args.outputs:
+        selected = mbook.outputs[name]
+        if isinstance(selected, foxes.models.outputs.FlowAnimation):
+            selected.verbosity = args.verbosity
+        if args.nofig and hasattr(selected, "show"):
+            selected.show = False
 
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -163,7 +181,7 @@ if __name__ == "__main__":
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         # fixed_vars={FV.WD: 270},
         var2col={FV.WD: "WD", FV.WS: "WS", FV.TI: "TI", FV.RHO: "RHO"},
-        states_sel=range(240, 240 + args.n_states),
+        states_sel=range(args.start_state, args.start_state + args.n_states),
     )
 
     farm = foxes.WindFarm()
@@ -173,6 +191,7 @@ if __name__ == "__main__":
         step_vectors=np.array([[1000.0, 0], [0, 800.0]]),
         steps=(N, N),
         turbine_models=ymodels + args.tmodels + [ttype.name],
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     if not args.nofig and args.show_layout:
@@ -181,7 +200,7 @@ if __name__ == "__main__":
             foxes.input.states.SingleStateStates(ws=8, wd=270, ti=0.08, rho=1.225),
             wake_models=[],
             mbook=mbook,
-            verbosity=0,
+            verbosity=max(args.verbosity - 1, 0),
         ).calc_outputs(
             outputs=foxes.models.outputs.FarmLayoutOutput(
                 operation="get_figure", parameters=dict()
@@ -195,6 +214,7 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     algo = foxes.algorithms.Sequential(
@@ -213,14 +233,22 @@ if __name__ == "__main__":
                 debug=args.debug,
             )
         ],
-        verbosity=0,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     # run all states sequentially:
     with engine:
         for r in algo:
-            print(algo.index)
+            if args.verbosity > 1:
+                print(algo.index)
 
     if "farm_results" in args.outputs:
-        print("\nFarm results:\n")
-        print(algo.farm_results)
+        if args.verbosity > 1:
+            print("\nFarm results:\n")
+            print(algo.farm_results)
+    else:
+        print("Skipping farm reporting: -o farm_results was not selected.")
+
+
+if __name__ == "__main__":
+    main()

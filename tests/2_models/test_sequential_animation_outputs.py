@@ -18,8 +18,8 @@ from foxes.models.outputs import FlowAnimation
 def test_animation_namespace_ownership():
     # Animation composition and Sequential plugins have separate owning packages.
     assert foxes.models.outputs.Animator.__module__ == "foxes.models.outputs.animator"
-    assert not hasattr(foxes.output, "Animator")
-    assert not hasattr(foxes.output, "seq_plugins")
+    assert not hasattr(foxes, "output")
+    assert not hasattr(foxes, "output")
     for name in (
         "SeqFlowAnimationPlugin",
         "SeqWakeDebugPlugin",
@@ -27,7 +27,7 @@ def test_animation_namespace_ownership():
     ):
         cls = getattr(foxes.models.seq_plugins, name)
         assert cls.__module__.startswith("foxes.models.seq_plugins.")
-        assert not hasattr(foxes.output, name)
+        assert not hasattr(foxes, "output")
         assert not hasattr(foxes.models.outputs, name)
 
 

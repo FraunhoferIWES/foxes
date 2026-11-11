@@ -285,39 +285,46 @@ The list of available turbine model classes can be found
 * :class:`LookupTable<foxes.models.turbine_models.lookup_table.LookupTable>`: Use a lookup-table for the computation of farm variables.
 * :class:`TurbineEvaluation<foxes.models.turbine_models.evaluation.TurbineEvaluation>`: Compute nominal capacity, efficiency, capacity factor, annualized yield and P75/P90 yield at every state and turbine.
 
-``TurbineEvaluation`` is placed after the turbine type and all power-changing
-models. Register an instance with the desired output variables, for example:
+Request turbine metrics through output variable selection.
+``PrepareForOutput`` applies ``TurbineEvaluation`` automatically after the
+ambient/wake power calculations and before restoring original turbine order.
+No manual turbine-model registration is needed:
 
 .. code-block:: python
 
     import foxes
     import foxes.variables as FV
-    from foxes.models.turbine_models import TurbineEvaluation
+    from foxes.models.outputs import FarmResultsOutput
 
-    mbook = foxes.ModelBook()
-    mbook.turbine_models["performance"] = TurbineEvaluation(
-        variables=[FV.CAP, FV.EFF, FV.CAPF, FV.YLD, FV.P75, FV.P90],
-        power_uncert=0.1,
-    )
     farm = foxes.WindFarm()
     farm.add_turbine(
         foxes.Turbine(
             xy=[0.0, 0.0],
-            turbine_models=["NREL5MW", "performance"],
+            turbine_models=["NREL5MW"],
         ),
         verbosity=0,
     )
+    states = foxes.input.states.SingleStateStates(
+        ws=8.0, wd=270.0, ti=0.08, rho=1.225,
+    )
+    algo = foxes.algorithms.Downwind(farm, states, wake_models=[], verbosity=0)
+    farm_results = algo.calc_farm(outputs=FarmResultsOutput(
+        variables=[FV.CAP, FV.EFF, FV.CAPF, FV.YLD, FV.AMB_YLD],
+    ))
 
-Pass this model book to the algorithm. Request the derived fields through
-``FarmResultsOutput(variables=...)`` or ``calc_farm(outputs="farm_results_all")``;
-the default farm-output field selection is unchanged.
+The ``farm_results_analysis`` model-book collector selects capacity, capacity
+factors, efficiency and weights. Unrestricted collectors such as
+``farm_results_all`` retain already available fields; they do not request new
+metrics. The default farm-output field selection is unchanged.
 
 Every result retains dimensions ``(state, turbine)`` in ``fdata``. Capacity is
 the turbine type's nominal power in its configured power unit. Capacity factor
 is ``P / CAP``.
-Efficiency remains the unclipped ratio ``P / AMB_P``, including ordinary NumPy
-zero-division and NaN behavior. Nominal power must be finite and positive for
-capacity-based metrics.
+Efficiency is the unclipped ratio ``P / AMB_P``. A zero numerator gives zero,
+including ``0 / 0``; a nonzero numerator over either signed zero gives positive
+``np.inf`` without division warnings. NaNs propagate otherwise, including an
+unknown numerator over zero. Nominal power must still be finite and positive
+for capacity-based metrics.
 
 Yield is ``P * P_unit_W * 8760 / 1e9`` in GWh/a, using each turbine type's
 power-unit conversion. These are annualized per-state values: apply state
@@ -327,12 +334,13 @@ weights only during subsequent aggregation, not inside this model.
 approximation. ``power_uncert`` is required for these metrics, finite and
 nonnegative; ``0.1`` means 10 percent. These are not empirical percentiles over
 states, and summing them assumes the same relative-uncertainty model.
+Automatic evaluation rejects probability-yield requests when uncertainty is
+unavailable rather than assuming a value.
 
 Ambient variants use ``AMB_P``: ``AMB_CAPF``, ``AMB_YLD``,
 ``AMB_P75`` and ``AMB_P90``. Request them independently or alongside waked
-metrics. Downwind performs an evaluation-only pass before output preparation
-so unwaked turbines and ambient-only calculations receive valid metrics.
-Iterative reevaluates final under-relaxed powers before collecting outputs.
+metrics. Output preparation evaluates final powers, including unwaked turbines,
+ambient-only calculations and Iterative's final under-relaxed powers.
 State slices, boolean masks and controller turbine selections update only
 selected entries; returned arrays always retain the full state-turbine shape.
 

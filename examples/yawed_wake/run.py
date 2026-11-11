@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import foxes
 import foxes.variables as FV
 
-if __name__ == "__main__":
+
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     # define arguments and options:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -48,7 +50,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
-    parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
+    parser.add_argument("--var", help="The plot variable", default=FV.WS)
     parser.add_argument(
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
     )
@@ -78,10 +80,26 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: yawed_wake")
 
     # create model book
     mbook = foxes.ModelBook()
+    mbook.outputs["farm_results"].fdata_variables.extend([FV.AMB_WD, FV.YAWM])
+
+    if args.nofig:
+        for name in args.outputs:
+            output = mbook.outputs[name]
+            if hasattr(output, "show"):
+                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -96,7 +114,8 @@ if __name__ == "__main__":
     )
 
     # create wind farm
-    print("\nCreating wind farm")
+    if args.verbosity > 1:
+        print("\nCreating wind farm")
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_row(
         farm=farm,
@@ -104,6 +123,7 @@ if __name__ == "__main__":
         xy_step=np.array([args.deltax, args.deltay]),
         n_turbines=2,
         turbine_models=args.tmodels + ["set_yawm", "yawm2yaw", ttype.name],
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     # create algorithm
@@ -117,7 +137,7 @@ if __name__ == "__main__":
         wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        verbosity=1,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     engine = foxes.Engine.new(
@@ -125,6 +145,7 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     with engine:
@@ -134,146 +155,103 @@ if __name__ == "__main__":
         # Evaluate collected farm data only; writer-only outputs are already complete.
         if isinstance(farm_results, dict):
             farm_results = farm_results.get("farm_results")
-        if farm_results is None:
-            raise SystemExit(0)
-
-        print("\nResults data:\n", farm_results)
+        elif not any(
+            isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+            for name in args.outputs
+        ):
+            farm_results = None
+        if farm_results is not None and args.verbosity > 1:
+            print("\nFarm results:\n", farm_results)
+        required = {
+            FV.AMB_P,
+            FV.AMB_REWS,
+            FV.AMB_TI,
+            FV.P,
+            FV.REWS,
+            FV.TI,
+            FV.WD,
+            FV.X,
+            FV.YAW,
+            FV.YAWM,
+        }
+        if farm_results is None or not required.issubset(farm_results.data_vars):
+            print(
+                "Skipping farm reporting: selected outputs do not collect the required fields:",
+                sorted(required),
+            )
+            return
 
         if not args.nofig:
-            print("\nComputing data for horizontal flow figure")
+            if args.verbosity > 1:
+                print("\nComputing data for horizontal flow figure")
 
-            print("Computing data for vertical flow figure")
+                print("Computing data for vertical flow figure")
 
     if not args.nofig:
         # xy horizontal flow plot
-        g = algo.calc_outputs(
-            outputs=foxes.models.outputs.FlowPlots2D(
-                plane="xy",
-                reduction="states",
-                plot=True,
-                data_format="numpy",
-                var=args.var,
-                grid_pars=dict(resolution=10, xmin=-500, xmax=3000),
-                plot_pars=dict(
-                    rotor_color="red", cmap="BuPu" if args.var == FV.WD else None
+        with engine:
+            g = algo.calc_outputs(
+                outputs=foxes.models.outputs.FlowPlots2D(
+                    plane="xy",
+                    reduction="states",
+                    plot=True,
+                    data_format="numpy",
+                    var=args.var,
+                    grid_pars=dict(resolution=10, xmin=-500, xmax=3000),
+                    plot_pars=dict(
+                        rotor_color="red", cmap="BuPu" if args.var == FV.WD else None
+                    ),
                 ),
-            ),
-            farm_results=farm_results,
-        )
+                farm_results=farm_results,
+            )
         fig = g[0]
         plt.show()
         plt.close(fig)
 
         # yz flow plot
-        g = algo.calc_outputs(
-            outputs=foxes.models.outputs.FlowPlots2D(
-                plane="yz",
-                reduction="states",
-                plot=True,
-                data_format="numpy",
-                var=args.var,
-                grid_pars=dict(
-                    resolution=5, x=1500, ymin=-200, ymax=200, zmin=0, zmax=250
+        with engine:
+            g = algo.calc_outputs(
+                outputs=foxes.models.outputs.FlowPlots2D(
+                    plane="yz",
+                    reduction="states",
+                    plot=True,
+                    data_format="numpy",
+                    var=args.var,
+                    grid_pars=dict(
+                        resolution=5, x=1500, ymin=-200, ymax=200, zmin=0, zmax=250
+                    ),
+                    plot_pars=dict(
+                        rotor_color="red", cmap="BuPu" if args.var == FV.WD else None
+                    ),
                 ),
-                plot_pars=dict(
-                    rotor_color="red", cmap="BuPu" if args.var == FV.WD else None
-                ),
-            ),
-            farm_results=farm_results,
-        )
+                farm_results=farm_results,
+            )
         fig = g[0]
         plt.show()
         plt.close(fig)
 
-    # add capacity and efficiency to farm results
-
-    farm_results = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="add_capacity_factor", parameters=dict(ambient=False)
-        ),
-        farm_results=farm_results,
-    )
-    farm_results = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="add_capacity_factor", parameters=dict(ambient=True)
-        ),
-        farm_results=farm_results,
-    )
-    farm_results = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="add_efficiency", parameters=dict()
-        ),
-        farm_results=farm_results,
-    )
-
     # state-turbine results
     farm_df = farm_results.to_dataframe()
-    print("\nFarm results data:\n")
-    print(
-        farm_df[
-            [
-                FV.X,
-                FV.AMB_REWS,
-                FV.REWS,
-                FV.AMB_TI,
-                FV.TI,
-                FV.AMB_P,
-                FV.P,
-                FV.WD,
-                FV.YAW,
-                FV.YAWM,
+    if args.verbosity > 1:
+        print("\nFarm results data:\n")
+        print(
+            farm_df[
+                [
+                    FV.X,
+                    FV.AMB_REWS,
+                    FV.REWS,
+                    FV.AMB_TI,
+                    FV.TI,
+                    FV.AMB_P,
+                    FV.P,
+                    FV.WD,
+                    FV.YAW,
+                    FV.YAWM,
+                ]
             ]
-        ]
-    )
-    print()
+        )
+        print()
 
-    # results by turbine
-    turbine_results = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="reduce_states",
-            parameters=dict(
-                vars_op={
-                    FV.AMB_P: "weights",
-                    FV.P: "weights",
-                    FV.AMB_CAPF: "weights",
-                    FV.CAPF: "weights",
-                }
-            ),
-        ),
-        farm_results=farm_results,
-    )
-    turbine_results[FV.AMB_YLD] = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="calc_yield", parameters=dict(annual=True, ambient=True)
-        ),
-        farm_results=farm_results,
-    )
-    turbine_results[FV.YLD] = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="calc_yield", parameters=dict(annual=True)
-        ),
-        farm_results=farm_results,
-    )
-    turbine_results[FV.EFF] = turbine_results[FV.P] / turbine_results[FV.AMB_P]
-    print("\nResults by turbine:\n")
-    print(turbine_results)
 
-    # power results
-    P0 = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="calc_mean_farm_power", parameters=dict(ambient=True)
-        ),
-        farm_results=farm_results,
-    )
-    P = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="calc_mean_farm_power", parameters=dict()
-        ),
-        farm_results=farm_results,
-    )
-    print(f"\nFarm power        : {P / 1000:.1f} MW")
-    print(f"Farm ambient power: {P0 / 1000:.1f} MW")
-    print(
-        f"Farm efficiency   : {algo.calc_outputs(outputs=foxes.models.outputs.FarmResultsEval(operation='calc_farm_efficiency', parameters=dict()), farm_results=farm_results) * 100:.2f} %"
-    )
-    print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
+if __name__ == "__main__":
+    main()

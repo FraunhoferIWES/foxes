@@ -1,17 +1,19 @@
-import matplotlib.pyplot as plt
 import pandas as pd
 from xarray import Dataset
-from inspect import signature
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
+from matplotlib.artist import Artist
+
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
 from foxes.models import ModelBook
-from foxes.core import Output
-from foxes.utils import Dict, new_cls
-from foxes.config import config
+from foxes.core import Output, OutputList
+from foxes.models.outputs import FarmResultsOutput
+from foxes.utils import Dict
+from foxes.config import config, get_output_path
 import foxes.constants as FC
 
 
@@ -136,7 +138,7 @@ def read_dict(
             for lyt in lyts:
                 add_fun = getattr(farm_layout, lyt.pop_item("function"))
                 if verbosity is not None:
-                    lyt["verbosity"] = verbosity - 1
+                    lyt["verbosity"] = max(verbosity - 1, 0)
                 add_fun(farm, **lyt)
         else:
             farm = algo.farm
@@ -148,16 +150,23 @@ def read_dict(
     # create engine:
     engine = None
     if engine_pars is not None:
-        engine = Engine.new(**engine_pars)
+        options = dict(engine_pars)
+        if verbosity is not None:
+            options.setdefault("verbosity", max(verbosity - 1, 0))
+        engine = Engine.new(**options)
         _print(f"Using engine: {engine}")
     elif "engine" in idict:
+        options = dict(idict["engine"])
         if verbosity is not None:
-            idict["verbosity"] = verbosity - 1
-        engine = Engine.new(**idict["engine"])
+            options.setdefault("verbosity", max(verbosity - 1, 0))
+        engine = Engine.new(**options)
         _print(f"Using engine: {engine}")
     else:
         _print("Using default engine")
-        engine = Engine.new(engine_type="default")
+        engine = Engine.new(
+            engine_type="default",
+            verbosity=1 if verbosity is None else max(verbosity - 1, 0),
+        )
 
     # create algorithm:
     if algo is None:
@@ -167,7 +176,7 @@ def read_dict(
         _print("Creating algorithm :", adict["algo_type"])
         adict.update(dict(farm=farm, states=states, mbook=mbook))
         if verbosity is not None:
-            adict["verbosity"] = verbosity - 1
+            adict["verbosity"] = max(verbosity - 1, 0)
         if algo_pars is not None:
             adict.update({v: d for v, d in algo_pars.items() if d is not None})
         algo = Algorithm.new(**adict)
@@ -175,66 +184,6 @@ def read_dict(
     _print("------------------------------------------------------------------------\n")
 
     return algo, engine
-
-
-def get_output_obj(
-    ocls: str,
-    odict: dict[str, Any],
-    algo: Algorithm | None,
-    farm_results: Dataset | None = None,
-    point_results: Any = None,
-    base_class: type[Output] = Output,
-    extra_sig: dict[str, Any] = {},
-) -> Output | None:
-    """
-    Create the output object
-
-    Parameters
-    ----------
-    ocls
-        Name of the output class
-    odict
-        The output dict
-    algo
-        The algorithm
-    farm_results
-        The farm results
-    point_results
-        The point results
-    base_class
-        The output's base class
-    extra_sig
-        Extra function signature check, sets
-        arguments (key) with data (value)
-
-    Returns
-    -------
-    obj
-        The output object
-
-
-    """
-    cls = new_cls(base_class, ocls)
-    assert cls is not None, f"Output class '{ocls}' was not found"
-    prs = list(signature(cls.__init__).parameters.keys())
-    if "algo" in prs:
-        assert algo is not None, f"Output of type '{ocls}' requires algo"
-        odict["algo"] = algo
-    if "farm" in prs:
-        assert algo is not None, f"Output of type '{ocls}' requires algo"
-        odict["farm"] = algo.farm
-    if "farm_results" in prs:
-        if farm_results is None:
-            print(f"No farm results; skipping output {ocls}")
-            return None
-        odict["farm_results"] = farm_results
-    if "point_results" in prs:
-        odict["point_results"] = point_results
-    for k, v in extra_sig.items():
-        if k in prs:
-            odict[k] = v
-
-    return cls(**odict)
 
 
 def _get_object(results_storage: dict[Any, Any], d: str) -> Any:
@@ -323,7 +272,6 @@ def _run_output_model(
     algo: Algorithm | None,
     farm_results: Dataset | None,
     point_results: Any,
-    extra_sig: dict[str, Any],
     results_storage: dict[Any, Any],
     nofig: bool,
 ) -> Any:
@@ -339,12 +287,10 @@ def _run_output_model(
     algo
         Initialized algorithm exposing ``calc_outputs``.
     farm_results
-        Supplied farm fields on ``(FC.STATE, FC.TURBINE)``. An ``add_*`` output
-        updates this dataset in place for subsequent pipeline entries.
+        Supplied farm fields on ``(FC.STATE, FC.TURBINE)``, forwarded without
+        mutation or additional evaluation columns.
     point_results
         Supplied point fields, forwarded to ``calc_outputs`` without copying.
-    extra_sig
-        Additional constructor arguments injected by matching parameter names.
     results_storage
         Shared result-reference mapping, read during construction and updated
         with explicitly requested result labels.
@@ -377,16 +323,7 @@ def _run_output_model(
     labels = definition.pop("result_labels", None)
     for key, value in definition.items():
         definition[key] = _resolve_labels(value, results_storage)
-    output = get_output_obj(
-        output_type,
-        definition,
-        algo,
-        farm_results,
-        point_results,
-        extra_sig=extra_sig,
-    )
-    if output is None:
-        raise ValueError(f"Output {index}: Could not construct {output_type}")
+    output = Output.new(output_type=output_type, **definition)
     if not type(output).__module__.startswith("foxes.models.outputs."):
         raise ValueError(
             f"Output {index}: Constructor-defined outputs must belong "
@@ -395,108 +332,63 @@ def _run_output_model(
 
     # Execute through the ordinary output lifecycle and publish pipeline results.
     output.nofig = nofig or output.nofig
+    if output.nofig:
+        output.show = False
     result = algo.calc_outputs(
         outputs=output, farm_results=farm_results, point_results=point_results
     )
     if labels is not None:
         _store_labels(results_storage, labels, result)
-    if (
-        isinstance(result, Dataset)
-        and getattr(output, "operation", "").startswith("add_")
-        and farm_results is not None
-    ):
-        farm_results.update(result)
     return result
 
 
-def run_obj_function(
-    obj: Any,
-    fdict: Dict[Any, Any],
-    algo: Algorithm | None,
-    with_engine: bool,
-    results_storage: dict[Any, Any],
-    nofig: bool = False,
-    verbosity: int | None = None,
-) -> Any:
+def _run_plot_functions(
+    definition: Dict[Any, Any],
+    storage: dict[Any, Any],
+    nofig: bool,
+) -> list[Any]:
+    """Run YAML-only pyplot or stored Matplotlib artist methods.
+
+    No output model, algorithm injection or evaluation-method dispatch is used.
+    Figure-less runs skip every call and register ``None`` for result labels,
+    so later constructor references remain resolvable without creating figures.
     """
-    Run one configured object method and register its returned values.
-
-    Parameters
-    ----------
-    obj
-        Object exposing the configured method.
-    fdict
-        Mutable method-call configuration. Control keys are consumed and
-        top-level ``$name`` arguments are replaced with stored result objects.
-    algo
-        Algorithm injected when the method declares ``algo`` or ``farm``.
-    with_engine
-        Whether execution is inside the engine context, used in progress output.
-    results_storage
-        Shared reference mapping, updated in place for requested result labels.
-    nofig
-        Suppress the ``plt_show`` and ``plt_close`` shortcuts in ``fdict``.
-    verbosity
-        Progress verbosity; ``0`` is silent and ``None`` prints all messages.
-
-    Returns
-    -------
-    results
-        Method return value, or ``None`` when the enabled ``plt_close`` shortcut
-        closes its figure. Stored references point to this same value.
-
-    Raises
-    ------
-    KeyError
-        If the method name or a referenced result is missing.
-    ValueError
-        If an explicit result label is invalid.
-
-    """
-
-    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
-        if verbosity is None or verbosity >= level:
-            print(*args, **kwargs)
-
-    fname = fdict.pop_item("function")
-    _print(f"Running function {type(obj).__name__}.{fname} (with_engine={with_engine})")
-    plt_show = fdict.pop_item("plt_show", False)
-    plt_close = fdict.pop_item("plt_close", False)
-    rlbs = fdict.pop_item("result_labels", None)
-
-    # grab function:
-    ocls = type(obj).__name__
-    assert hasattr(obj, fname), f"Output of type '{ocls}': Function '{fname}' not found"
-    f = getattr(obj, fname)
-
-    # add required input data objects:
-    prs = list(signature(f).parameters.keys())
-    if "algo" in prs:
-        fdict["algo"] = algo
-    if "farm" in prs:
-        assert algo is not None, f"Output of type '{ocls}' requires algo"
-        fdict["farm"] = algo.farm
-
-    # replace result labels by objects:
-    for k, d in fdict.items():
-        if isinstance(d, str) and d[0] == "$":
-            fdict[k] = _get_object(results_storage, d)
-
-    # run function:
-    args = fdict.pop_item("args", tuple())
-    results = f(*args, **fdict)
-
-    # pyplot shortcuts:
-    if not nofig and plt_show:
-        plt.show()
-    if not nofig and plt_close:
-        results = None
-        plt.close()
-
-    # store results under result labels:
-    if rlbs is not None:
-        _store_labels(results_storage, rlbs, results)
-
+    reference = definition.pop("object", None)
+    definition.pop("output_type", None)
+    functions = definition.pop_item("functions")
+    if definition:
+        raise ValueError(f"Unexpected YAML plotting options: {list(definition)}")
+    obj = (
+        None if nofig else plt if reference is None else _get_object(storage, reference)
+    )
+    if not nofig and obj is not plt and not isinstance(obj, Artist):
+        raise TypeError("YAML object plotting requires a stored Matplotlib artist")
+    results = []
+    for parameters in functions:
+        options: Dict[Any, Any] = Dict(parameters)
+        name = options.pop_item("function")
+        labels = options.pop("result_labels", None)
+        result = None
+        if not nofig:
+            method = getattr(obj, name, None) if not name.startswith("_") else None
+            if not callable(method):
+                raise ValueError(f"Unknown public Matplotlib function: {name!r}")
+            options = _resolve_labels(options, storage)
+            args = options.pop("args", ())
+            if name == "savefig":
+                if args:
+                    args = (get_output_path(args[0]), *args[1:])
+                elif "fname" in options:
+                    options["fname"] = get_output_path(options["fname"])
+            result = method(*args, **options)
+        if labels is not None:
+            value = (
+                [None] * len(labels)
+                if nofig and not isinstance(labels, str)
+                else result
+            )
+            _store_labels(storage, labels, value)
+        results.append(result)
     return results
 
 
@@ -506,181 +398,86 @@ def run_outputs(
     farm_results: Dataset | None = None,
     point_results: Any = None,
     with_engine: bool = False,
-    extra_sig: dict[str, Any] = {},
     results_storage: Dict[Any, Any] | None = None,
     ret_results_storage: bool = False,
     nofig: bool = False,
     verbosity: int | None = None,
 ) -> tuple[list[tuple[dict[str, Any], list[Any] | None]], Dict[Any, Any]]:
-    """
-    Run configured output models and object methods for one engine phase.
-
-    Entries with ``output_type`` and no ``functions`` list construct output
-    models and call ``algo.calc_outputs``. Other entries execute their configured
-    method lists. Stored results can be referenced by later entries.
+    """Run output models and the YAML-only Matplotlib exception for one phase.
 
     Parameters
     ----------
     idict
-        Input dictionary containing an ``outputs`` list. Entries are copied
-        before consuming execution options or resolving references.
+        Constructor-defined outputs, or ``output_type: plt``/Matplotlib
+        ``object: $name`` entries with a ``functions`` list.
     algo
-        Algorithm used for constructor injection and output execution.
+        Algorithm exposing the ordinary ``calc_outputs`` lifecycle.
     farm_results
-        Supplied ``(FC.STATE, FC.TURBINE)`` farm fields. Constructor-defined
-        ``add_*`` evaluations update this dataset for subsequent entries.
+        Supplied farm fields, never captured by an output constructor.
     point_results
-        Supplied point results, forwarded without scientific recalculation when
-        the selected output supports precomputed fields.
+        Supplied point fields, forwarded without scientific recalculation.
     with_engine
-        Select entries or methods for this engine phase. Constructor-defined
-        outputs default to execution inside the engine context; method entries
-        default to execution outside it.
-    extra_sig
-        Parameter-name-to-value mapping injected into matching constructors.
+        Execute entries matching this phase. Models default to ``True``;
+        YAML-only Matplotlib calls default to ``False``.
     results_storage
-        Shared result-reference mapping, updated in place. ``None`` creates a
-        new mapping. Constructor options resolve nested ``$name`` references;
-        configured methods resolve top-level references.
+        Shared result references resolved recursively in constructor options.
     ret_results_storage
-        Request result-reference storage explicitly. The returned pair includes
-        this storage for either setting.
+        Request reference storage explicitly; both settings return the same pair.
     nofig
-        Suppress output-model figures and configured pyplot show/close shortcuts.
+        Suppress model figures and skip all YAML-only Matplotlib calls.
     verbosity
-        Progress verbosity; ``0`` is silent and ``None`` prints all messages.
+        Progress verbosity; zero is silent.
 
     Returns
     -------
     outputs
-        Ordered ``(definition, results)`` pairs. A constructor-defined output has
-        one result; method entries have one value per configured call, including
-        ``None`` for skipped calls. Skipped entries have ``results=None``.
+        Ordered definition/result pairs. Skipped phase entries have ``None``;
+        model entries have a single-element result list, and Matplotlib entries
+        have one value per function call.
     results_storage
-        The supplied or newly created reference mapping; values are not copied.
+        Supplied or newly created result-reference mapping.
 
     Raises
     ------
-    KeyError
-        If an entry specifies neither ``output_type`` nor ``object``, a required
-        option is missing, or a result reference is unavailable.
     ValueError
-        If a constructor-defined output lacks an algorithm, cannot be constructed,
-        belongs outside ``foxes.models.outputs``, or uses invalid result labels.
+        If a model entry uses imperative methods, lacks an algorithm, or has
+        invalid constructor options, plotting functions or result labels.
+    KeyError
+        If an output type or referenced result is unavailable.
     TypeError
-        If the algorithm lacks ``calc_outputs`` for a constructor-defined entry.
-
+        If ``object`` refers to something other than a Matplotlib artist.
     """
-
-    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
-        if verbosity is None or verbosity >= level:
-            print(*args, **kwargs)
-
     if results_storage is None:
         results_storage = Dict(_name="result_storage")
-
-    out: list[tuple[dict[str, Any], list[Any] | None]] = []
-    if "outputs" in idict:
-        odicts = idict["outputs"]
-
-        for i, d in enumerate(odicts):
-            d = deepcopy(d)
-            if "output_type" in d:
-                if "functions" not in d:
-                    # Preserve the input description before consuming model options.
-                    definition = dict(d)
-                    selected_engine = d.pop("with_engine", True)
-                    if selected_engine != with_engine:
-                        out.append((definition, None))
-                        continue
-                    result = _run_output_model(
-                        i,
-                        d,
-                        algo,
-                        farm_results,
-                        point_results,
-                        extra_sig,
-                        results_storage,
-                        nofig,
-                    )
-                    out.append((definition, [result]))
-                    continue
-                d["nofig"] = nofig
-                ocls = d.pop_item("output_type")
-                d0 = dict(output_type=ocls)
-                d0.update(d)
-
-                flist = d.pop_item("functions")
-                ematch = [fd.pop("with_engine", False) == with_engine for fd in flist]
-
-                if with_engine and any(ematch) and not all(ematch):
-                    ecount = sum(ematch)
-                    assert not any(ematch[ecount:]), (
-                        f"Output {i}, {ocls}: with_engine is True "
-                        f"but functions with with_engine=False are not at the end: {ematch}"
-                    )
-
-                if any(ematch) or (d.pop("with_engine", False) and with_engine):
-                    o = get_output_obj(
-                        ocls, d, algo, farm_results, point_results, extra_sig=extra_sig
-                    )
-                else:
-                    o = None
-
-            elif "object" in d:
-                ocls = d.pop_item("object")
-                d0 = dict(object=ocls)
-                d0.update(d)
-
-                flist = d.pop_item("functions")
-                ematch = [fd.pop("with_engine", False) == with_engine for fd in flist]
-
-                if with_engine and any(ematch) and not all(ematch):
-                    ecount = sum(ematch)
-                    assert not any(ematch[ecount:]), (
-                        f"Output {i}, {ocls}: with_engine is True "
-                        f"but functions with with_engine=False are not at the end: {ematch}"
-                    )
-
-                if any(ematch):
-                    o = _get_object(results_storage, ocls)
-                else:
-                    o = None
-
-            else:
-                raise KeyError(
-                    f"Output {i}: Please specify either 'output_type' or 'object'"
-                )
-
-            if o is None:
-                out.append((d0, None))
-            else:
-                _print(f"Entering output {i}, {ocls} (with_engine={with_engine})")
-                fres: list[Any | None] = []
-                for fdict, em in zip(flist, ematch):
-                    if em:
-                        results = (
-                            run_obj_function(
-                                o,
-                                fdict,
-                                algo,
-                                with_engine,
-                                results_storage,
-                                nofig,
-                                verbosity,
-                            )
-                            if em
-                            else None
-                        )
-                    else:
-                        results = None
-                    fres.append(results)
-                out.append((d0, fres))
-
-        if len(odicts):
-            _print()
-
-    return out if not ret_results_storage else out, results_storage
+    outputs: list[tuple[dict[str, Any], list[Any] | None]] = []
+    for index, entry in enumerate(idict.get("outputs", [])):
+        definition = deepcopy(entry)
+        plotting = definition.get("output_type") == "plt" or "object" in definition
+        if "functions" in definition and not plotting:
+            raise ValueError(
+                f"Output {index}: Configure an output_type through constructor options"
+            )
+        selected_engine = definition.pop("with_engine", not plotting)
+        if selected_engine != with_engine:
+            outputs.append((dict(entry), None))
+            continue
+        if verbosity is None or verbosity > 0:
+            print(f"Running output {index}: {definition.get('output_type')}")
+        if plotting:
+            results = _run_plot_functions(definition, results_storage, nofig)
+            outputs.append((dict(entry), results))
+            continue
+        result = _run_output_model(
+            index,
+            definition,
+            algo,
+            farm_results,
+            point_results,
+            results_storage,
+            nofig,
+        )
+        outputs.append((dict(entry), [result]))
+    return outputs, results_storage
 
 
 def run_dict(
@@ -698,51 +495,55 @@ def run_dict(
     output_dir: Path | str | None = None,
     **algo_pars: Any,
 ) -> tuple[Any, ...]:
-    """
-    Runs foxes from dictionary input
+    """Run configured farm/point calculations and output consumers.
 
     Parameters
     ----------
     idict
-        The input parameter dictionary
+        FOXES parameter dictionary. Nested calculation sections are consumed
+        in place when reading their execution switches.
     farm
-        The wind farm, overrules settings from idict
+        Wind farm overriding the corresponding dictionary configuration.
     states
-        The ambient states, overrules settings from idict
+        Ambient states overriding the dictionary configuration.
     mbook
-        The model book, overrules settings from idict
+        Model book overriding the dictionary configuration.
     algo
-        The algorithm, overrules settings from idict
+        Algorithm overriding the dictionary configuration.
     engine_pars
-        Parameters for engine generation, overrules idict
+        Engine constructor parameters overriding the dictionary configuration.
     iterative
-        Add iterative algorithm wrapper, overrules idict
+        Select an Iterative algorithm, overriding the dictionary configuration.
     nofig
-        Do not show figures, overrules settings from idict
+        Suppress figures, overriding configured output display settings.
     verbosity
-        Force a verbosity level, 0 = silent, overrules
-        settings from idict
+        Force a verbosity level, overriding settings from ``idict``.
+        Zero is silent; levels two and higher print collected farm results.
+        ``None`` retains unrestricted diagnostics.
     work_dir
-        The main working directory path
+        Working directory overriding the dictionary configuration.
     input_dir
-        The input directory path
+        Base directory for relative input paths.
     output_dir
-        The output directory path
+        Base directory for relative output paths.
     algo_pars
-        Additional parameters for read_dict
+        Additional algorithm configuration passed to ``read_dict()``.
 
     Returns
     -------
-    farm_results
-        The farm results
-    point_results
-        The point results
-    outputs
-        For each output enty, a tuple (dict, results),
-        where results is a list that represents one
-        entry per function call
+    execution_results
+        Tuple starting with the farm calculation result, or ``None`` when
+        disabled. A point result is appended when ``calc_points`` is configured,
+        followed by the configured output-consumer entries. Farm calculation
+        results retain the dataset or named-result mapping returned by the
+        algorithm; reporting does not unwrap or mutate the returned result.
 
-
+    Notes
+    -----
+    Each collected farm-results dataset is printed once at verbosity two or
+    higher, or with unrestricted verbosity. This does not require the fields
+    used by later reports. Writer-only and non-farm results are not printed as
+    farm datasets. Scientific component verbosity is reduced inside the reader.
     """
 
     def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
@@ -776,6 +577,29 @@ def run_dict(
         else:
             farm_results = None
         out: tuple[Any, ...] = (farm_results,)
+
+        # Report collected farm data independently of later output requirements.
+        if farm_results is not None and (verbosity is None or verbosity > 1):
+            collected = farm_results
+            if isinstance(collected, dict):
+                collected = collected.get(FC.FARM_RESULTS)
+            else:
+                selectors = rdict.get("outputs", "farm_results")
+                pending = (
+                    list(selectors) if isinstance(selectors, list) else [selectors]
+                )
+                while pending:
+                    selected = pending.pop()
+                    if isinstance(selected, str):
+                        selected = algo.mbook.outputs[selected]
+                    if isinstance(selected, FarmResultsOutput):
+                        break
+                    if isinstance(selected, OutputList):
+                        pending.extend(selected.outputs)
+                else:
+                    collected = None
+            if collected is not None:
+                _print("\nFarm results:\n", collected, level=2)
 
         # run points calculation:
         point_results = None

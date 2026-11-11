@@ -8,6 +8,6 @@ Running a wind farm simulation with `foxes` requires the following steps, usuall
 4. Create the `algorithm` with its parameters and model choices
 5. Run the farm calculation via the algorithm
 6. Optionally evaluate the flow field at arbitrary points of interest, also via the algorithm
-7. Post-process the results, for example using the `foxes.output` package
+7. Select constructor-defined post-processing from `foxes.models.outputs`
 
 The details will become clear in the sections on _Models_, _Examples_ and _Input parameter files_.

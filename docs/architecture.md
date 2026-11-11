@@ -46,7 +46,7 @@ flowchart LR
     Engine --> Models[Farm, rotor, wake, and point models]
     Models --> Output[foxes.core.Output / foxes.models.outputs]
     Output --> Results[Unified datasets or files]
-    Results --> Evaluation[foxes.output consumers awaiting migration]
+    Results --> Consumers[Scientific datasets, files and figures]
 ```
 
 - Runtime: Python 3.10 through 3.14 on operating-system-independent Python
@@ -74,20 +74,47 @@ flowchart LR
 5. Call `calc_farm()`, `calc_points()` or `calc_outputs()` with selected outputs.
 6. Select farm collection or writing through `ModelBook.outputs` or concrete
 	`foxes.models.outputs` instances. Evaluate collected datasets with downstream
-	scientific code. Existing `foxes.output` consumers await adoption into the
-	new output structure; they are not new chunk-output implementations.
+	scientific code, or select constructor-defined plotting/table outputs through
+	the same algorithm lifecycle. All concrete outputs live in that structure.
 
 YAML parameter files mirror this object graph. The YAML reader constructs the
 states, model book, farm, engine, and algorithm, then invokes the same runtime
 contracts as Python callers.
 
-Downwind/Iterative Python example scripts expose output model-book selection as
-`-o/--outputs`, defaulting to `farm_results`. They accept direct dataset and
-composed mapping returns, and skip dataset consumers for writer-only selections
-after completing every requested farm run. This example CLI does not change
-Sequential's iterator API, YAML configuration or the wake-field exporter.
-The Sequential example scripts also expose `-o`, limited to `farm_results` and
-flow-animation models through their iterator adapter.
+All Python example scripts expose `main(argv=None)` and `-o/--outputs` with
+intention-specific defaults: normally `farm_results`, with animation examples
+also selecting turbine traces, the field-data example selecting numerical slices,
+and the wake-field example selecting its NetCDF slice exporter. Dataset
+consumers require collected fields; writer-only selections still complete all
+requested comparison runs. Sequential selections remain limited to the farm
+collector and flow-animation models through their iterator adapter.
+
+`examples/run_all.py` executes one explicitly marked README command per example
+through Python APIs, in an isolated temporary copy. Its independent `--quick`
+and `--nofig` choices bound local inputs and suppress display, respectively.
+Configuration/UTM state, working directory and plotting state are restored;
+temporary files and example-owned figures are removed on success and failure.
+Quick ICON/EWW data is synthetic, Slurm runs locally, and public WindIO includes
+are inlined before translation, without requiring the optional WindIO loader.
+Every example accepts `-v`/`--verbosity`, with `-v` reserved for verbosity and
+`--var` for plot-variable selection. The aggregate runner passes `-v 0` by
+default, while standalone Python examples default to level-two reports.
+Level one selects a concise summary and level three enables library progress.
+Levels two and three print every collected farm-results dataset once, before
+checking the fields needed by later tables or plots. Comparison runs each
+report their own collected dataset; writer-only and non-farm outputs do not
+become farm results. YAML/WindIO entry points receive the unreduced example
+level and reduce scientific component verbosity themselves.
+Explicit command verbosity takes precedence over the runner default. Quiet runs
+retain contextual errors and
+missing-output diagnostics rather than discarding stdout/stderr globally.
+Numerical NetCDF outputs inherit algorithm verbosity unless their explicit
+write options select another level.
+Animation examples pass their script level directly to selected animation outputs:
+level one announces creation; two adds file-writing and successful-completion
+messages, frame counts and encoder settings; three reports composition and
+encoding per frame.
+Scientific algorithms and engines retain their separate, reduced library level.
 
 ## Module Boundaries
 
@@ -99,7 +126,6 @@ flow-animation models through their iterator adapter.
 | `foxes.algorithms` | Simulation orchestration and model-chain assembly | `Downwind`, `Iterative`, `Sequential`; depends on core contracts and registered models |
 | `foxes.engines` | Serial, process, thread, Dask, MPI, Ray, and related execution backends | `Engine` implementations and runners; optional backend dependencies stay here |
 | `foxes.input` | States, farm-layout readers, YAML/WindIO loading, and data-conversion CLIs | Produces core `States`, `WindFarm`, and algorithm inputs |
-| `foxes.output` | Existing evaluation, plotting, animation, writing and sequential consumers awaiting adoption | Not the destination for new adopted classes; migration remains incomplete |
 | `foxes.data` | Discovery and registration of packaged static farm, state, curve, and model data | `StaticData`, `DataBook` entries; package resources and filesystem inputs |
 | `foxes.utils` | Shared factories, dictionaries, geometry, interpolation, subclass lookup, and data access | Infrastructure used across modules; avoid domain orchestration here |
 | `examples` and `notebooks` | Executable user workflows and documentation examples | Public APIs only wherever practical |
@@ -192,6 +218,28 @@ conversion follow the original turbine identity through `FV.ORDER`. Annualized
 yield is unweighted power times 8760 hours, converted to GWh/a; apply state
 weights only during later aggregation. P75/P90 require explicit relative
 uncertainty. See [ADR-0016](adr/0016-state-turbine-performance-evaluation.md).
+Efficiency uses an unclipped power ratio with explicit zero handling: zero
+numerators give zero (including `0 / 0`), and nonzero numerators over either
+signed zero give positive infinity without division warnings. NaNs propagate
+otherwise; nominal-capacity validation remains unchanged. This supersedes raw
+NumPy zero-division semantics under
+[ADR-0025](adr/0025-turbine-evaluation-zero-division.md).
+Output preparation evaluates metrics in the incoming calculation order,
+before filtering or restoring physical arrays to original farm order through
+the inverse of `FV.ORDER`. The order variable itself remains downwind-sequence
+metadata. Intermediate Iterative preparation uses `reorder=False`; the final
+pass creates preparation with reordering enabled. Tests use three distinct
+turbine types, mixed units and non-self-inverse permutations across states.
+
+Output variable selection is the ordinary evaluation entry point.
+`PrepareForOutput` applies `TurbineEvaluation` to missing explicitly selected
+fields before filtering and restoring original farm order. No manual
+turbine-model registration is required. An unrestricted selection retains
+available fields without synthesizing additional metrics. Collection and
+writing remain output responsibilities; farm/cluster aggregation and aggregate
+evaluation outputs are absent pending their new implementation. Turbine-trace
+animation rendering belongs to `_flow_animation_render`, not an evaluator.
+See [ADR-0022](adr/0022-output-selected-turbine-evaluation.md).
 
 Downwind adds an evaluation-only controller pass after ambient copying and wake
 calculation, before output preparation. This covers unwaked turbines, no-wake
@@ -280,8 +328,9 @@ executes children in declaration order. An empty requirement requests no fields;
 
 The public `outputs` argument retains model-book names, output instances and
 lists of either. Outputs are fully configured in their constructors; scientific
-datasets, algorithms and grids are not constructor inputs or retained instance
-state. `get_calc_points(algo)` retrieves static `(n_points, 3)` or state-dependent
+datasets and algorithms are not constructor inputs or retained instance state.
+Point coordinate configuration is materialized in loaded data and stashed off
+running models. `get_calc_points(algo)` retrieves static `(n_points, 3)` or state-dependent
 `(n_states, n_points, 3)` locations from initialized configuration/loaded data.
 `OutputList` rejects disagreeing nonempty point requests instead of silently
 choosing a child's grid.
@@ -294,17 +343,34 @@ are requested without farm results it first calculates the required farm inputs.
 calls `get_calc_points`. Precomputed public point datasets include `FV.X`,
 `FV.Y` and `FV.H` coordinates and bypass scientific point calculations.
 
-The promoted consumer family is `FarmResultsEval`, `FarmLayoutOutput`,
+The promoted consumer family is `FarmLayoutOutput`,
 `SliceData`, `SlicesData`, `FlowPlots2D`, `RosePlotOutput`,
-`StatesRosePlotOutput` and `WindRoseBinPlot`. Their former `foxes.output`
-modules and exports are removed. Plane, reduction, fields, binning, evaluation
+`StatesRosePlotOutput`, `WindRoseBinPlot`, `StateTurbineMap`,
+`StateTurbineTable`, `ResultsWriter`, `PointCalculator`, `RotorPointPlot`,
+and `TurbineTypeCurves`. The former output package and root export
+are removed. Plane, reduction, fields, binning,
 operation and rendering choices are constructor configuration. Data collection
 uses private result keys. Workers reduce eliminated dimensions into sufficient
 statistics; finalization merges those statistics and handles formatting,
 rendering and whole-result writing with explicit run-local data. Private stateless
 helpers preserve the established numerical and plotting implementations.
-Unadopted grouped `foxes.output` consumers use these numerical helpers directly,
-not inheritance from a dataset-bound evaluator.
+
+Tables, maps, curve plots and single-file writers transport selected fields,
+then assemble their required state history once on the parent. Arbitrary-point
+means eliminate the state axis on workers, transporting weighted sums and mass;
+dynamic coordinates follow the same reduction. Rotor plots need only initialized
+rotor metadata and require no scientific fields.
+Curve scans are explicit caller-owned algorithms, never hidden calculations or
+shared model-book mutations inside outputs. YAML scientific outputs use
+constructor definitions and nested result references. The explicit `plt`
+exception calls Matplotlib directly in the YAML runner, with no output class.
+Stored Matplotlib artists support `object` method calls for shared axes and
+figure composition; figure-less runs skip all such calls.
+WindIO generates constructor-defined tables and slices, validates positional
+state selections, and retains WindIO field/dimension names in numerical files.
+Figure suppression propagates through its Python entry point without suppressing
+numerical output.
+See [ADR-0024](adr/0024-complete-output-adoption.md).
 
 `SliceData` owns numerical slice formatting above a private, non-rendering point
 collector. `SlicesData`, `FlowPlots2D` and `FlowAnimation` derive from `SliceData`;
@@ -316,13 +382,10 @@ supplied point fields without weights. See
 
 Output payloads contain only fields and axes required by the configured result.
 Mean slices return weighted point sums, not state frames or per-state weights;
-selected state labels are retained only when explicitly returned. Farm
-evaluations use additive sums, extrema or mergeable valid counts/centred moments.
-Scalar additive farm summaries also eliminate the turbine axis, converting
-mixed turbine power units before summing farm yield. Roses return fixed-size
+selected state labels are retained only when explicitly returned. Roses return fixed-size
 bin numerators and denominators, with normalization thresholds applied globally.
 Layouts return selected turbine geometry and reduced colour values; algorithm
-layouts and metadata evaluations need no scientific payload. Negative positional
+layouts need no scientific payload. Negative positional
 selections retain bounded trailing candidates until final selection.
 Full-result datasets, file writers and animations retain the state-resolved
 fields their results actually require. Static coordinates cross worker boundaries
@@ -356,8 +419,11 @@ flow-animation models delegate parent-local rendering and encoding to
 `_flow_animation_render`. Farm payload assembly/serialization is separate from
 collection/count buffering and chunk/calendar writer policies. These boundaries
 do not change package exports, model-book selectors or result schemas.
-Grid geometry, data-format conversion, farm statistics and layout rendering have
+Grid geometry, data-format conversion and layout rendering have
 focused private helper modules rather than sharing monolithic utility bodies.
+Polar rendering for both rose families shares `_rose`; their only numerical
+implementation is the chunk-wise `RoseOutput` histogram lifecycle. Superseded
+dataset-only reductions are removed rather than kept as test reference helpers.
 
 Output-only runs with supplied farm data bypass Iterative convergence dispatch
 and honor their own state selection. They do not reuse cached convergence
@@ -366,8 +432,8 @@ arrays or recalculate scientific farm models.
 YAML/WindIO entries for promoted outputs specify constructor options and execute
 through `calc_outputs`, without a `functions` list. Nested `$name` references
 resolve before construction; `result_labels` stores the resulting value.
-YAML `add_*` evaluations explicitly update the pipeline's farm dataset so later
-unadopted consumers see those fields. See
+Derived fields are selected on the farm collector before calculation, not added
+by a post-processing evaluation step. See
 [ADR-0017](adr/0017-constructor-defined-output-contract.md).
 
 The implemented farm family is:
@@ -646,6 +712,10 @@ subprocess.
 
 ## Cross-Cutting Decisions
 
+- Examples run once each in-process with independent quick/headless choices;
+  monolithic tutorial mains are a documented size exception. See
+  [ADR-0023](adr/0023-in-process-example-runs.md).
+
 - Animation composition lives in `foxes.models.outputs`; Sequential plugins
   live in `foxes.models.seq_plugins`. See
   [ADR-0015](adr/0015-animation-helper-ownership.md).
@@ -681,6 +751,10 @@ subprocess.
 	grids and run-local data remain outside model instances. The public `outputs`
 	name/string/list selector is unchanged. See
 	[ADR-0017](adr/0017-constructor-defined-output-contract.md).
+- All concrete outputs are adopted; arbitrary-point means reduce on workers and
+	curve scans remain explicit. YAML-only `plt`/Matplotlib artist calls are the
+	sole non-model exception. See
+	[ADR-0024](adr/0024-complete-output-adoption.md).
 - Slice data owns numerical point/grid collection independently of rendering;
 	flow plots and animations specialize `SliceData`, using neutral slice keys.
 	See [ADR-0018](adr/0018-slice-first-output-hierarchy.md).
@@ -720,6 +794,10 @@ subprocess.
 	yield is unweighted and P75/P90 use explicit relative uncertainty. A final
 	evaluation-only pass resolves metrics after ambient and wake powers exist.
 	See [ADR-0016](adr/0016-state-turbine-performance-evaluation.md).
+- Output-selected turbine evaluation is the sole built-in performance
+	implementation. Unrestricted collectors retain available fields; aggregate
+	farm/cluster evaluators, output helpers and model-book entries are removed.
+	See [ADR-0022](adr/0022-output-selected-turbine-evaluation.md).
 - Output slice grids have no state axis and use the existing static-point
 	calculation contract. See
 	[ADR-0005](adr/0005-static-output-grid-coordinates.md).

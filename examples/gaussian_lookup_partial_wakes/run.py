@@ -4,7 +4,7 @@ import foxes.variables as FV
 import matplotlib.pyplot as plt
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-w",
@@ -63,7 +63,7 @@ def parse_args() -> argparse.Namespace:
         help="Turbine type from model book",
         default="NREL5MW",
     )
-    parser.add_argument("-v", "--var", help="Flow plot variable", default=FV.WS)
+    parser.add_argument("--var", help="Flow plot variable", default=FV.WS)
     parser.add_argument(
         "-fsi",
         "--fig-state-index",
@@ -111,11 +111,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    return parser.parse_args(argv)
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv=None) -> None:
+    """Run this tutorial with an explicit argument list or command-line options."""
+    args = parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: gaussian_lookup_partial_wakes")
 
     states = foxes.input.states.Timeseries(
         args.timeseries,
@@ -127,9 +137,16 @@ def main() -> None:
         farm,
         args.layout,
         turbine_models=[args.turbine_type],
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     mbook = foxes.models.ModelBook()
+    mbook.outputs["farm_results"].fdata_variables.append(FV.AMB_WD)
+    if args.nofig:
+        for name in args.outputs:
+            output = mbook.outputs[name]
+            if hasattr(output, "show"):
+                output.show = False
     if args.partial_wakes == "gaussian_lookup":
         lookup_model = mbook.partial_wakes["gaussian_lookup"]
         if args.lookup_file is not None:
@@ -145,7 +162,7 @@ def main() -> None:
         partial_wakes=args.partial_wakes,
         wake_frame="rotor_wd",
         mbook=mbook,
-        verbosity=1,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     engine = foxes.Engine.new(
@@ -153,6 +170,7 @@ def main() -> None:
         n_procs=args.n_cpus,
         chunk_size_states=args.chunk_size_states,
         chunk_size_points=args.chunk_size_points,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     with engine:
@@ -161,7 +179,18 @@ def main() -> None:
         # Evaluate collected farm data only; writer-only outputs are already complete.
         if isinstance(farm_results, dict):
             farm_results = farm_results.get("farm_results")
-        if farm_results is None:
+        elif not any(
+            isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+            for name in args.outputs
+        ):
+            farm_results = None
+        if farm_results is not None and args.verbosity > 1:
+            print("\nFarm results:\n", farm_results)
+        required = set(mbook.outputs["farm_results"].fdata_variables)
+        if farm_results is None or not required.issubset(farm_results.data_vars):
+            print(
+                "Skipping farm reporting and plots: selected outputs lack the required fields."
+            )
             return
 
         plot_data = None
@@ -179,23 +208,24 @@ def main() -> None:
                 farm_results=farm_results,
             )
 
-    print("\nUsing partial_wakes:", args.partial_wakes)
-    print("\nFarm results:\n", farm_results)
+    if args.verbosity > 1:
+        print("\nUsing partial_wakes:", args.partial_wakes)
 
     if not args.nofig and plot_data is not None:
-        fig_gen = algo.calc_outputs(
-            outputs=foxes.models.outputs.FlowPlots2D(
-                plane="xy",
-                reduction="states",
-                plot=True,
-                data_format="numpy",
-                var=args.var,
-                states_isel=[args.fig_state_index],
-                grid_pars=dict(resolution=args.fig_resolution),
-                plot_pars=dict(rotor_color="red", figsize=(7, 6)),
-            ),
-            farm_results=farm_results,
-        )
+        with engine:
+            fig_gen = algo.calc_outputs(
+                outputs=foxes.models.outputs.FlowPlots2D(
+                    plane="xy",
+                    reduction="states",
+                    plot=True,
+                    data_format="numpy",
+                    var=args.var,
+                    states_isel=[args.fig_state_index],
+                    grid_pars=dict(resolution=args.fig_resolution),
+                    plot_pars=dict(rotor_color="red", figsize=(7, 6)),
+                ),
+                farm_results=farm_results,
+            )
         fig_gen[0]
         plt.show()
 

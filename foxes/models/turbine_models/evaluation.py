@@ -31,6 +31,8 @@ class TurbineEvaluation(TurbineModel):
     Apply after the turbine type and any power-changing models. Yield is the
     annualized value of each state's power, not a weighted state contribution.
     No reduction over states or turbines is performed.
+    Zero power gives zero efficiency, including when ambient power is zero;
+    nonzero power over zero ambient power gives positive infinity.
 
     Attributes
     ----------
@@ -170,12 +172,16 @@ class TurbineEvaluation(TurbineModel):
             power_var, FC.STATE_TURBINE, lookup="f", fdata=fdata, selection=st_sel
         )
 
-        # Efficiency intentionally retains raw division, including NaNs and infs.
+        # Guard zero denominators without clipping ratios or hiding missing power.
         if base == FV.EFF:
             ambient = self.get_data(
                 FV.AMB_P, FC.STATE_TURBINE, lookup="f", fdata=fdata, selection=st_sel
             )
-            return power / ambient
+            efficiency = np.full_like(power, np.inf, dtype=config.dtype_double)
+            np.divide(power, ambient, out=efficiency, where=ambient != 0.0)
+            efficiency[np.isnan(power)] = np.nan
+            efficiency[power == 0.0] = 0.0
+            return efficiency
 
         if base == FV.CAPF:
             assert capacity is not None
@@ -211,7 +217,9 @@ class TurbineEvaluation(TurbineModel):
             Farm data with dimensions ``(FC.STATE, FC.TURBINE)`` and power
             fields ``FV.P`` and/or ``FV.AMB_P`` as required by the metrics.
             ``FV.ORDER``, when present, maps calculation columns to original
-            farm indices. Output arrays are added or updated in place.
+            farm indices and aligns turbine-type metadata with the power
+            arrays. Without it, columns must already be in original farm
+            order. Output arrays are added or updated in place.
         st_sel
             NumPy selection in calculation order: a state slice, boolean
             state-turbine mask, or tuple such as ``(:, turbine_index)``.
@@ -238,7 +246,9 @@ class TurbineEvaluation(TurbineModel):
         -----
         ``CAP`` is nominal turbine power in the turbine type's power unit.
         ``CAPF = P / CAP``.
-        ``EFF = P / AMB_P`` is not clipped or guarded against zero division.
+        ``EFF = P / AMB_P`` is not clipped. A zero numerator gives zero,
+        including ``0 / 0``; a nonzero numerator over either signed zero gives
+        positive infinity. NaNs propagate otherwise.
         Yield is ``P * P_unit_W * 8760 / 1e9`` in GWh/a. Apply state weights
         only during later aggregation. ``P75 = YLD * (1 - 0.675 * power_uncert)``
         and ``P90 = YLD * (1 - 1.282 * power_uncert)``. Ambient metrics use

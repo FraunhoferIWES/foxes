@@ -123,7 +123,7 @@ class FlowPlots2D(SliceData):
             data = self._format_data(payload)
             parameters["data_format"] = self.data_format
             if self.to_file is not None:
-                self._write_data(data)
+                self._write_data(data, algo.verbosity)
             if self.reduction == "mean":
                 return parameters, data, grid
             return parameters, data, states, grid

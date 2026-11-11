@@ -98,7 +98,7 @@ def read_windio_dict(
             wake_models=[],
             farm_controller="farm_cntrl",
             _name="wio2fxs.algorithm",
-            verbosity=verbosity - 3,
+            verbosity=max(verbosity - 3, 0),
         ),
         calc_farm=Dict(run=True, _name="wio2fxs.calc_farm"),
         _name="wio2fxs",
@@ -191,50 +191,45 @@ def foxes_windio(
     iterative: bool = False,
     nofig: bool = False,
     verbosity: int = 1,
-) -> tuple[Any, Any, list[tuple[dict[str, Any], list[Any]]]]:
-    """Run foxes from windio yaml file input
+) -> tuple[Any, ...]:
+    """Run a WindIO YAML file through the ordinary FOXES output lifecycle.
 
     Parameters
     ----------
     yml_file
-        The yaml file path
+        WindIO YAML file path.
     output_dir
-        The output directory, default: None (same as input file)
+        Output directory override; ``None`` uses WindIO ``output_folder``.
     rotor
-        The rotor model, default: None (use the one from the yaml file)
+        Rotor model override; ``None`` retains the input setting.
     pwakes
-        The partial wakes models, default: None (use the ones from the yaml file)
+        Partial-wake model override; ``None`` retains the input setting.
     wakes
-        The wake models, default: None (use the ones from the yaml file)
+        Wake-model overrides; ``None`` retains the input settings.
     frame
-        The wake frame, default: None (use the one from the yaml file)
+        Wake-frame override; ``None`` retains the input setting.
     engine
-        The engine, default: None (use the one from the yaml file)
+        Engine selection; ``None`` uses the YAML runner's default.
     n_procs
-        The number of processes, default: None (use the one from the yaml file)
+        Engine worker-count override.
     chunksize_states
-        The chunk size for states, default: None (use the one from the yaml file)
+        Maximum states per engine chunk.
     chunksize_points
-        The chunk size for points, default: None (use the one from the yaml file)
+        Maximum points per engine chunk.
     iterative
-        Use iterative algorithm, default: False
+        Request iterative calculation.
     nofig
-        Do not show figures, default: False
+        Suppress figure creation and display without disabling numerical
+        turbine and flow-field NetCDF reports.
     verbosity
-        The verbosity level, 0 = silent, default: 1
+        Progress and file-writing verbosity; zero is silent.
 
     Returns
     -------
-    farm_results
-        The farm results
-    point_results
-        The point results
-    outputs
-        For each output enty, a tuple (dict, results),
-        where results is a list that represents one
-        entry per function call
-
-
+    results
+        YAML runner results: the farm dataset followed by output-definition/
+        result-list pairs. Each constructor-defined output contributes one
+        result rather than an imperative method-call list.
     """
 
     if (
@@ -268,6 +263,7 @@ def foxes_windio(
         wake_frame=frame,
         engine_pars=epars,
         iterative=iterative,
+        nofig=nofig,
         input_dir=wio_file.parent,
         output_dir=odir,
         verbosity=verbosity,

@@ -8,7 +8,7 @@ input variables.
 
 Constructor-defined consumers
 -----------------------------
-``FarmResultsEval``, ``FarmLayoutOutput``, ``SliceData``, ``SlicesData``,
+``FarmLayoutOutput``, ``SliceData``, ``SlicesData``,
 ``FlowPlots2D``, ``RosePlotOutput``, ``StatesRosePlotOutput`` and
 ``WindRoseBinPlot`` are exported only from ``foxes.models.outputs``.
 Configure the entire operation before execution; do not pass an algorithm or
@@ -21,20 +21,23 @@ and lists of either are supported by ``calc_farm``, ``calc_points`` and
 
 .. code-block:: python
 
-    from foxes.models.outputs import FarmResultsEval, SliceData
+    from foxes.models.outputs import FarmResultsOutput, SliceData
 
     with foxes.Engine.new("numpy", chunk_size_states=64, chunk_size_points=500):
         slice_data = algo.calc_farm(outputs=SliceData(
             plane="xz", variables=[FV.WS], reduction="mean",
             grid_pars={"n_img_points": (30, 20)},
         ))
-        farm_results = algo.calc_farm(outputs="farm_results_all")
-        means = algo.calc_outputs(
-            farm_results=farm_results,
-            outputs=FarmResultsEval(
-                operation="calc_farm_mean", parameters={"vars": [FV.P]},
-            ),
-        )
+        farm_results = algo.calc_farm(outputs=FarmResultsOutput(
+            variables=[FV.P, FV.AMB_P, FV.CAP, FV.CAPF, FV.EFF, FV.YLD],
+        ))
+
+Derived farm fields are evaluated automatically by ``TurbineEvaluation``
+through output preparation. No turbine-model registration is needed.
+``variables=None`` collects available fields without adding derived metrics.
+The ``farm_results_analysis`` collector selects capacity, capacity factors,
+efficiency and weights. Metrics retain ``(state, turbine)`` dimensions;
+aggregate farm/cluster summaries are not currently provided.
 
 ``SliceData`` returns NumPy, pandas or xarray data according to ``data_format``.
 ``SlicesData(positions=[...], plane=...)`` combines parallel planes into one
@@ -48,8 +51,6 @@ a rendered list of state figures; numerical mode returns
 appear under model-private ``slice_points`` keys, with numerical buffers named
 ``slice_chunks`` and optional loaded selection masks named ``slice_selection``.
 Flow-plot data uses the same point ordering and weighted reduction as slices.
-Farm evaluation selects ``operation`` and its ``parameters``;
-``add_*`` operations return a dataset, which Python callers assign explicitly.
 Layout outputs select an operation such as ``get_figure`` or ``write_csv``
 and pass its options in ``parameters``.
 Rose outputs configure bins, location and rendering; ``plot=False`` returns a
@@ -93,6 +94,23 @@ interactive Matplotlib backend; FOXES does not select a backend or silence
 Matplotlib's headless-backend warnings.
 Tests never enable ``show``, including mocked checks.
 
+Animation diagnostics
+~~~~~~~~~~~~~~~~~~~~~
+``FlowAnimation`` and ``FlowTurbineAnimation`` accept ``verbosity=None`` to
+inherit the executing algorithm's level, or an explicit level:
+
+* ``0``: no animation diagnostics.
+* ``1``: announce creation.
+* ``2``: additionally announce the output filename when writing begins and
+  completion only after a successful write; include frame/point counts,
+  encoder choice and frames per second.
+* ``3``: additionally report each composed and encoded frame.
+
+Animation examples use their ``-v``/``--verbosity`` level directly, independently
+of reduced library verbosity. Their default is ``2``; ``run_all.py`` explicitly
+passes ``-v 0`` unless configured otherwise. Figure-less example execution still
+writes explicitly selected animations.
+
 Compact calculation payloads
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``calculate()`` returns only data required by the final output, under a private
@@ -102,10 +120,6 @@ model key. Means are reduced on workers, not collected as full state histories:
   shape ``(1, n_points)`` per variable and point tile. Global weights are not
   renormalized per chunk or selected subset. Raw weights and state frames are
   not transported. ``ret_states=True`` additionally retains selected labels.
-* Farm evaluations return per-turbine sums, extrema or sufficient statistics for
-  means and population deviations. Additive scalar farm summaries return scalars;
-  farm yield combines turbine power units before reducing the turbine axis.
-  Metadata-only capacity/unit queries return no worker arrays.
 * Wind roses return bin accumulators rather than samples. Weighted means combine
   numerators and denominators globally before division and thresholding.
 * Layouts return only the selected state geometry and reduced colour values.
@@ -124,9 +138,8 @@ YAML execution
 Configured YAML entries specify ``output_type`` and constructor options without
 ``functions``. They run through ``calc_outputs``; ``with_engine`` selects the
 execution phase and defaults to true. ``result_labels`` stores the result, and
-nested ``$name`` references can supply previously created axes. YAML ``add_*``
-evaluations update the pipeline farm dataset for subsequent consumers.
-Unadopted ``foxes.output`` consumers keep their separate configuration surface.
+nested ``$name`` references can supply previously created axes.
+YAML-only ``plt`` calls are handled directly by the YAML reader, not output models.
 
 Model-book consumer presets
 ---------------------------
@@ -137,7 +150,6 @@ constructing grids, loading scientific data or running calculations:
 Name                   Output class                Preset
 ====================== =========================== ============================
 ``farm_layout``        ``FarmLayoutOutput``        Layout figure
-``farm_results_eval``  ``FarmResultsEval``         Weighted state reduction
 ``rose_plot``          ``RosePlotOutput``          Farm wind rose, turbine zero
 ``states_rose_plot``   ``StatesRosePlotOutput``    Rose at ``(0, 0, 100)`` metres
 ``wind_rose_bin_plot`` ``WindRoseBinPlot``         Power in wind-speed bins
@@ -145,6 +157,14 @@ Name                   Output class                Preset
 ``slices_data``        ``SlicesData``              XY plane at 100 metres
 ``flow_plot``          ``FlowPlots2D``              Mean XY wind-speed figure
 ====================== =========================== ============================
+
+Additional presets are ``state_turbine_map`` (power heat map),
+``state_turbine_table`` (power/rotor-speed table), ``results_writer``
+(``farm_results.csv``), ``point_calculator`` (supplied point wind speed),
+``rotor_point_plot`` (executing rotor metadata), and ``turbine_type_curves``
+(power/thrust curves from an explicit scan). Configure arbitrary point locations
+or curve scan states on the appropriate input before execution.
+``plt`` is deliberately not a model-book entry; it is YAML-only.
 
 The binned power preset uses speed edges ``(0, 5, 10, 15, 20, 25)`` m/s.
 The slice families also support ``slice_data_<plane>_<reduction>``,
@@ -287,8 +307,9 @@ No separate format option is needed. Write failures propagate, and figures
 are closed even after failures.
 ``fps`` accepts any positive finite frame rate, including fractional rates.
 Both animation classes announce ``Writing <path>`` when their ``verbosity``
-is positive. It defaults to ``None``, inheriting ``algo.verbosity``; an explicit
-zero suppresses the message independently of algorithm progress.
+is at least two, followed by ``Finished writing <path>`` after success.
+It defaults to ``None``, inheriting ``algo.verbosity``; explicit levels zero
+and one suppress both writing messages independently of algorithm progress.
 Both animation classes accept ``layout_pars`` for horizontal flow-axis layout
 annotations; do not supply ``fig`` or ``ax``.
 
@@ -363,8 +384,7 @@ the standard collector without changing the dataset return contract.
 Flow animations with turbine traces
 -----------------------------------
 ``FlowTurbineAnimation`` derives from ``FlowAnimation`` and adds
-a synchronized lower panel using the same trace preparation as
-``FarmResultsEval(operation="gen_stdata")``. Set
+a synchronized lower panel rendered by the animation helpers. Set
 ``turbines`` to original farm indices (all turbines by default) and
 ``turbine_variable`` to a state-turbine farm field (``FV.REWS`` by default).
 Trace data follows the same state/chunk selection as the flow field and remains
@@ -439,13 +459,46 @@ State selections refer to full input states; chunk indices refer to sequential
 step indices with target index zero. ``debug=True`` adds the existing wake
 point/vector overlays without changing their scientific calculations.
 
-Existing consumers awaiting adoption
-------------------------------------
-The remaining ``foxes.output`` classes have not been adopted into the new
-chunk-output structure. They are not newly supported chunk models; their
-existing import paths use the core base directly. Evaluation methods
-with names such as ``calculate`` or ``get_data`` remain consumer APIs, not
-chunk hooks; passing such consumers to ``calc_farm(outputs=...)`` is unsupported.
+Tables, maps, arbitrary points and metadata plots
+------------------------------------------------
+All concrete outputs belong to ``foxes.models.outputs`` and follow the same
+constructor-defined lifecycle. No separate dataset-bound output package remains.
+
+``StateTurbineTable(variables=[...], name_map={...}, isel={...}, sel={...},
+transpose=True, to_file="table.nc")`` collects only selected fields. Dimension
+selection uses names after renaming; transposition places turbine before state.
+The optional NetCDF file is written once after parent-side assembly.
+``StateTurbineMap(variable=FV.P, plot_pars={...})`` renders the selected table;
+``plot=False`` or ``nofig=True`` returns its numerical dataset. Singleton,
+datetime and string state coordinates are supported.
+
+``ResultsWriter(file_name="farm.csv", variables={FV.P: "power"})`` writes one
+CSV or NetCDF file and returns its path. ``turbine_names=True`` uses original
+farm names; ``state_turbine_table=True`` writes a single CSV field in turbine
+columns. Single-file writers retain selected state history; use the existing
+count/chunk/period farm writers when bounded files are required.
+
+``PointCalculator(points=[...], variables=[FV.WS], states_mean=True)`` evaluates
+arbitrary static or state-dependent metre coordinates with normal point chunks.
+Coordinates are loaded before execution and raw configuration is stashed while
+running. Supplied point results take precedence. State means transport only
+weighted sums and mass, normalize on the parent and ignore zero-weight NaNs.
+Returned datasets include ``x``, ``y``, ``z`` and configured fields; raw fields
+have ``(state, point)`` dimensions and means have ``(point,)``.
+
+``RotorPointPlot`` reads the executing algorithm's initialized rotor design,
+without farm-state payloads. ``TurbineTypeCurves`` consumes an explicitly
+configured no-wake wind-speed scan: each turbine is one comparison curve.
+Set scan states, turbine types and power-mask models on the algorithm; the
+output never launches hidden simulations or mutates a model book.
+
+YAML uses these same constructors and stored ``$name`` references. The small
+``output_type: plt`` exception dispatches its ``functions`` directly to
+``matplotlib.pyplot``, outside the output lifecycle. Stored Matplotlib figures
+and axes support ``object: $name`` method calls for composition and saving.
+``nofig`` skips all these calls, including display and file writing.
+``savefig`` paths resolve relative to the configured output directory.
+There is no pyplot output class or model-book entry.
 
 ``SliceData`` and ``FlowPlots2D`` share static grid coordinates. When coordinates
 are returned alongside data, the grid array has shape ``(n_points, 3)``.
@@ -463,5 +516,4 @@ selected state frames.
 
     _autoapi/foxes/core/output/index
     _autoapi/foxes/models/outputs/index
-    _autoapi/foxes/output/index
     _autoapi/foxes/models/seq_plugins/index

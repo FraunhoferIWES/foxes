@@ -6,12 +6,14 @@ from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 
 import foxes
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.core import FData, MData
-from foxes.models.outputs import FarmResultsOutput
+from foxes.algorithms.downwind.models.prepare_for_output import PrepareForOutput
+from foxes.core import FData, MData, OutputList
+from foxes.models.outputs import FarmResultsChunkWriter, FarmResultsOutput
 from foxes.models.turbine_models import TurbineEvaluation
 
 
@@ -84,6 +86,210 @@ def test_supported_metrics_match_public_metadata():
         assert getattr(FV, variable) == variable
         if variable in FV.amb2var:
             assert FV.var2amb[FV.amb2var[variable]] == variable
+
+
+def test_evaluation_is_not_registered_as_an_output():
+    for name in ("FarmResultsEval", "WindFarmsEval", "ClusterEval"):
+        assert not hasattr(foxes.models.outputs, name)
+        assert not hasattr(foxes, "output")
+    with pytest.raises(KeyError):
+        foxes.ModelBook().outputs["farm_results_eval"]
+
+
+@pytest.fixture(params=[foxes.algorithms.Downwind, foxes.algorithms.Iterative])
+def output_algorithm(request):
+    farm = foxes.WindFarm()
+    for i, ttype in enumerate(["NREL5MW", "DTU10MW"]):
+        farm.add_turbine(
+            foxes.Turbine([700.0 * i, 0.0], turbine_models=[ttype]), verbosity=0
+        )
+    states = foxes.input.states.StatesTable(
+        pd.DataFrame({FV.WD: [90.0, 270.0], FV.WEIGHT: [0.25, 0.75]}),
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        fixed_vars={FV.WS: 8.0, FV.TI: 0.08, FV.RHO: 1.225},
+    )
+    return request.param(
+        farm,
+        states,
+        rotor_model="centre",
+        wake_models=["Bastankhah2014_linear_lim_k005"],
+        verbosity=0,
+    )
+
+
+@pytest.mark.parametrize("engine", ["numpy", "threads", "process"])
+@pytest.mark.parametrize("ambient", [False, True])
+def test_output_selection_automatically_evaluates_metrics(
+    output_algorithm, engine, ambient
+):
+    algo = output_algorithm
+    variables = [
+        FV.P,
+        FV.AMB_P,
+        FV.CAP,
+        FV.CAPF,
+        FV.AMB_CAPF,
+        FV.EFF,
+        FV.YLD,
+        FV.AMB_YLD,
+    ]
+    with foxes.Engine.new(engine, n_procs=2, chunk_size_states=1, verbosity=0):
+        results = algo.calc_farm(
+            ambient=ambient,
+            outputs=FarmResultsOutput(variables=variables),
+        )
+    capacity = np.broadcast_to([5000.0, 10000.0], (2, 2))
+    np.testing.assert_allclose(results[FV.CAP], capacity)
+    np.testing.assert_allclose(results[FV.EFF], results[FV.P] / results[FV.AMB_P])
+    for power, factor, annual_yield in (
+        (FV.P, FV.CAPF, FV.YLD),
+        (FV.AMB_P, FV.AMB_CAPF, FV.AMB_YLD),
+    ):
+        np.testing.assert_allclose(results[factor], results[power] / capacity)
+        np.testing.assert_allclose(results[annual_yield], results[power] * 0.00876)
+    for variable in variables:
+        assert results[variable].dims == (FC.STATE, FC.TURBINE)
+    assert not any(
+        isinstance(model, TurbineEvaluation)
+        for model in algo.mbook.turbine_models.values()
+    )
+
+
+def test_unrestricted_output_keeps_only_available_fields(output_algorithm):
+    with foxes.Engine.new("numpy", chunk_size_states=1, verbosity=0):
+        results = output_algorithm.calc_farm(outputs="farm_results_all")
+    assert FV.P in results and FV.AMB_P in results
+    assert not TurbineEvaluation.SUPPORTED_VARIABLES.intersection(results.data_vars)
+
+
+@pytest.mark.parametrize("reorder", [False, True])
+def test_output_preparation_evaluates_before_restoring_order(reorder):
+    algo, fdata, ordered_expected = _case(ordered=True)
+    _, _, original_expected = _case()
+    variables = [FV.CAP, FV.CAPF, FV.EFF, FV.YLD, FV.AMB_CAPF, FV.AMB_YLD]
+    algo.farm_vars = [FV.P, FV.AMB_P]
+    model = PrepareForOutput(
+        output=FarmResultsOutput(variables=variables), reorder=reorder
+    )
+    model.initialize(algo, verbosity=0)
+
+    model.calculate(algo, MData(), fdata)
+
+    expected = original_expected if reorder else ordered_expected
+    for variable in variables:
+        np.testing.assert_allclose(fdata[variable], expected[variable])
+    assert FV.ORDER not in fdata
+    assert FV.P not in fdata
+    model.finalize(algo, verbosity=0)
+
+
+@pytest.fixture(params=[foxes.algorithms.Downwind, foxes.algorithms.Iterative])
+def mixed_unit_order_algorithm(request):
+    """Build distinct turbine identities with a non-involutive downwind order."""
+    mbook = foxes.ModelBook()
+    farm = foxes.WindFarm()
+    metadata = [(1000.0, "kW"), (2.0, "MW"), (3.0e6, "W")]
+    positions = [[0.0, 0.0], [800.0, 200.0], [250.0, 1100.0]]
+    for i, ((capacity, unit), position) in enumerate(zip(metadata, positions)):
+        name = f"mixed_unit_{i}"
+        mbook.turbine_types[name] = foxes.models.turbine_types.PCtFile(
+            pd.DataFrame(
+                {
+                    "ws": [0.0, 8.0, 30.0],
+                    "P": [0.0, capacity / 2, capacity],
+                    "ct": [0.0, 0.8, 0.8],
+                }
+            ),
+            name=name,
+            D=100.0,
+            H=100.0,
+            P_nominal=capacity,
+            P_unit=unit,
+        )
+        farm.add_turbine(foxes.Turbine(position, turbine_models=[name]), verbosity=0)
+    states = foxes.input.states.StatesTable(
+        pd.DataFrame({FV.WD: [90.0, 180.0, 270.0]}),
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        fixed_vars={FV.WS: 8.0, FV.TI: 0.08, FV.RHO: 1.225},
+    )
+    return request.param(
+        farm,
+        states,
+        mbook=mbook,
+        rotor_model="centre",
+        wake_models=["Jensen_linear_k004"],
+        verbosity=0,
+    )
+
+
+@pytest.mark.parametrize("engine", ["numpy", "threads", "process"])
+@pytest.mark.parametrize("chunk_size", [1, 2])
+def test_output_metrics_follow_original_identity_across_three_turbine_orders(
+    mixed_unit_order_algorithm, engine, chunk_size
+):
+    variables = [
+        FV.P,
+        FV.AMB_P,
+        FV.CAP,
+        FV.CAPF,
+        FV.AMB_CAPF,
+        FV.EFF,
+        FV.YLD,
+        FV.AMB_YLD,
+        FV.ORDER,
+        FV.X,
+        FV.Y,
+    ]
+    with foxes.Engine.new(engine, n_procs=2, chunk_size_states=chunk_size, verbosity=0):
+        results = mixed_unit_order_algorithm.calc_farm(
+            outputs=FarmResultsOutput(variables=variables)
+        )
+
+    np.testing.assert_array_equal(results[FV.ORDER], [[1, 2, 0], [0, 1, 2], [0, 2, 1]])
+    np.testing.assert_allclose(results[FV.CAP], np.tile([1000.0, 2.0, 3.0e6], (3, 1)))
+    np.testing.assert_allclose(results[FV.X], np.tile([0.0, 800.0, 250.0], (3, 1)))
+    np.testing.assert_allclose(results[FV.Y], np.tile([0.0, 200.0, 1100.0], (3, 1)))
+    for power, factor, annual_yield in (
+        (FV.P, FV.CAPF, FV.YLD),
+        (FV.AMB_P, FV.AMB_CAPF, FV.AMB_YLD),
+    ):
+        np.testing.assert_allclose(
+            results[factor], results[power] / [1000.0, 2.0, 3.0e6]
+        )
+        np.testing.assert_allclose(
+            results[annual_yield],
+            results[power] * np.array([1.0e3, 1.0e6, 1.0]) * 8760 / 1.0e9,
+        )
+
+
+@pytest.mark.parametrize("variable", [FV.P75, FV.AMB_P90])
+def test_output_selected_probability_yields_require_uncertainty(
+    output_algorithm, variable
+):
+    with foxes.Engine.new("numpy", verbosity=0):
+        with pytest.raises(ValueError, match="power_uncert is required"):
+            output_algorithm.calc_farm(outputs=FarmResultsOutput(variables=[variable]))
+
+
+@pytest.mark.parametrize("nested", [False, True])
+def test_explicit_metrics_survive_unrestricted_output_composition(
+    output_algorithm, tmp_path, nested
+):
+    collector = FarmResultsOutput()
+    writer = FarmResultsChunkWriter(
+        variables=[FV.EFF], base_name="metrics", out_dir=tmp_path
+    )
+    outputs = [collector, OutputList(outputs=[writer]) if nested else writer]
+    with foxes.Engine.new("numpy", chunk_size_states=1, verbosity=0):
+        results = output_algorithm.calc_farm(outputs=outputs)[FC.FARM_RESULTS]
+    np.testing.assert_allclose(results[FV.EFF], results[FV.P] / results[FV.AMB_P])
+    paths = sorted(tmp_path.glob("metrics*.nc"))
+    assert len(paths) == 2
+    for i, path in enumerate(paths):
+        with xr.open_dataset(path) as written:
+            np.testing.assert_allclose(
+                written[FV.EFF], results[FV.EFF].isel({FC.STATE: slice(i, i + 1)})
+            )
 
 
 def test_efficiency_returns_full_selected_farm_array():
@@ -266,19 +472,76 @@ def test_missing_power_field_is_contextual(variable, missing):
         model.calculate(algo, MData(), fdata)
 
 
-def test_efficiency_retains_unclipped_zero_division_and_nan_behavior():
+@pytest.mark.parametrize(
+    "selection",
+    [
+        slice(None),
+        slice(1, 3),
+        np.array([[True, False, True, False], [False, True, True, False], [True] * 4]),
+        np.s_[:, 0],
+        np.s_[0, 0],
+        np.zeros((3, 4), dtype=bool),
+    ],
+)
+def test_efficiency_handles_zero_division_without_warnings(selection):
     data = {
-        FV.P: np.array([[0.0, 1.0, 2.0, np.nan]]),
-        FV.AMB_P: np.array([[0.0, 0.0, 1.0, 1.0]]),
+        FV.P: np.array(
+            [[0.0, 1.0, -1.0, 2.0], [0.0, -0.0, np.nan, np.nan], [0.0, 2.0, 0.0, 0.0]]
+        ),
+        FV.AMB_P: np.array(
+            [
+                [0.0, 0.0, -0.0, 1.0],
+                [5.0, -2.0, 0.0, 1.0],
+                [np.nan, np.nan, np.inf, -np.inf],
+            ]
+        ),
+        FV.EFF: np.full((3, 4), -1.0),
+    }
+    reference = np.array(
+        [
+            [0.0, np.inf, np.inf, 2.0],
+            [0.0, 0.0, np.nan, np.nan],
+            [0.0, np.nan, 0.0, 0.0],
+        ]
+    )
+    expected = data[FV.EFF].copy()
+    expected[selection] = reference[selection]
+    fdata = FData(data=data, dims={v: (FC.STATE, FC.TURBINE) for v in data})
+    model = TurbineEvaluation([FV.EFF])
+    model.initialize(None, verbosity=0)
+
+    with np.errstate(divide="raise", invalid="raise"):
+        results = model.calculate(None, MData(), fdata, selection)
+
+    np.testing.assert_array_equal(results[FV.EFF], expected)
+    assert results[FV.EFF] is fdata[FV.EFF]
+
+
+def test_efficiency_accepts_integer_power_fields():
+    data = {
+        FV.P: np.array([[0, -2, 4]]),
+        FV.AMB_P: np.array([[0, 0, 2]]),
     }
     fdata = FData(data=data, dims={v: (FC.STATE, FC.TURBINE) for v in data})
     model = TurbineEvaluation([FV.EFF])
     model.initialize(None, verbosity=0)
 
-    with np.errstate(divide="ignore", invalid="ignore"):
+    with np.errstate(divide="raise", invalid="raise"):
         results = model.calculate(None, MData(), fdata)
 
-    np.testing.assert_allclose(results[FV.EFF], [[np.nan, np.inf, 2.0, np.nan]])
+    np.testing.assert_array_equal(results[FV.EFF], [[0.0, np.inf, 2.0]])
+
+
+@pytest.mark.parametrize("engine", ["numpy", "threads", "process"])
+def test_zero_power_ratios_are_automatically_evaluated(output_algorithm, engine):
+    algo = output_algorithm
+    algo.states.fixed_vars[FV.WS] = 0.0
+    variables = [FV.P, FV.AMB_P, FV.EFF, FV.CAPF, FV.AMB_CAPF]
+    with foxes.Engine.new(engine, n_procs=2, chunk_size_states=1, verbosity=0):
+        results = algo.calc_farm(outputs=FarmResultsOutput(variables=variables))
+
+    for variable in variables:
+        np.testing.assert_array_equal(results[variable], np.zeros((2, 2)))
 
 
 def test_probability_variable_metadata():

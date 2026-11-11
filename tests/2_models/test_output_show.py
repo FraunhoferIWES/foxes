@@ -194,7 +194,6 @@ def test_model_book_test_presets_disable_display(name, display):
     [
         "farm_results",
         "point_results",
-        "farm_results_eval",
         "slice_data_xy_mean",
         "slices_data_xz_states",
     ],
@@ -257,13 +256,11 @@ def test_animation_uses_configured_playback_rate_without_display(
     from foxes.models.outputs import Animator
 
     original = Animator.animate
-    animations = []
-    events = []
+    intervals = []
 
     def create(self, **kwargs):
         animation = original(self, **kwargs)
-        animations.append(animation)
-        events.append("created")
+        intervals.append(animation.event_source.interval)
         return animation
 
     monkeypatch.setattr(Animator, "animate", create)
@@ -277,8 +274,7 @@ def test_animation_uses_configured_playback_rate_without_display(
     before = set(plt.get_fignums())
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
         algorithm.calc_farm(outputs=output)
-    assert events == ["created"]
-    assert animations[0].event_source.interval == 400
+    assert intervals == [400]
     assert (tmp_path / "flow_WS.gif").is_file()
     assert not display
     assert set(plt.get_fignums()) == before

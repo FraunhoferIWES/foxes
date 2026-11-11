@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+from cycler import cycler
 from xarray import Dataset
 
 import foxes.constants as FC
@@ -18,10 +19,51 @@ from .grids import np2np_sp, project_points
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
+    from matplotlib.lines import Line2D
 
     from foxes.core import Algorithm
 
     from .flow_animations import FlowAnimation
+
+
+def turbine_frames(
+    farm: Dataset, turbines: tuple[int, ...], variable: str, fig: Figure, ax: Axes
+) -> Iterator[tuple[Figure, list[Line2D]]]:
+    """Reveal turbine histories in global state order without reducing data.
+
+    Parameters
+    ----------
+    farm
+        Read-only farm fields on ``(FC.STATE, FC.TURBINE)``.
+    turbines
+        Original turbine indices in plotting order.
+    variable
+        Farm field to plot against positional state counts.
+    fig
+        Caller-owned animation figure.
+    ax
+        Trace axes, receiving lines and an upper-right legend.
+
+    Yields
+    ------
+    frame
+        Figure and line artists for each state. Frame ``si`` shows
+        ``data[:si]``; the first history is empty. No figures are shown or saved.
+    """
+    ax.set_xlabel("State")
+    ax.set_ylabel(variable)
+    colors = cycler(color="bgrcmyk")
+    values = farm[variable].to_numpy()
+    labeled = set()
+    for si in range(len(values)):
+        artists = []
+        ax.set_prop_cycle(colors)
+        for ti in turbines:
+            label = None if ti in labeled else f"Turbine {ti}"
+            artists += ax.plot(range(si), values[:si, ti], label=label, animated=True)
+            labeled.add(ti)
+        ax.legend(loc="upper right")
+        yield fig, artists
 
 
 def _grid_data(
@@ -195,7 +237,14 @@ def _render_variable(
     path.parent.mkdir(parents=True, exist_ok=True)
     verbosity = algo.verbosity if output.verbosity is None else output.verbosity
     if verbosity > 0:
-        print(f"{output.name}: Writing {path}")
+        print(f"{output.name}: Creating animation {path}")
+    n_frames = len(payload["states"])
+    writer = "pillow" if path.suffix.lower() == ".gif" else "ffmpeg"
+    if verbosity > 1:
+        print(
+            f"{output.name}: Preparing {n_frames} frames with "
+            f"{payload['points'].shape[1]} points per frame"
+        )
     fig, ax = output._create_figure()
     try:
         animator = output._create_animator(algo, payload["farm_dataset"], fig, ax)
@@ -204,12 +253,29 @@ def _render_variable(
         animator.add_generator(
             _flow_generator(output, payload, variable, fig, ax, parameters, options)
         )
-        animation = animator.animate(verbosity=0, interval=1000 / output.fps)
+        animation = animator.animate(
+            verbosity=max(verbosity - 1, 0), interval=1000 / output.fps
+        )
+        if verbosity > 1:
+            print(f"{output.name}: Writing {path}")
+            print(
+                f"{output.name}: Encoding {n_frames} frames at "
+                f"{output.fps:g} fps with {writer}"
+            )
         animation.save(
             filename=path,
-            writer="pillow" if path.suffix.lower() == ".gif" else "ffmpeg",
+            writer=writer,
             fps=output.fps,
+            progress_callback=(
+                lambda frame, total: print(
+                    f"{output.name}: Encoding frame {frame + 1}/{total}"
+                )
+            )
+            if verbosity > 2
+            else None,
         )
+        if verbosity > 1:
+            print(f"{output.name}: Finished writing {path}")
         output._show_figures()
     finally:
         plt.close(fig)

@@ -235,7 +235,18 @@ def test_invalid_configuration_is_rejected(tmp_path, options, match):
 
 @pytest.mark.parametrize(
     "output_verbosity,algo_verbosity,announces",
-    [(None, 0, False), (None, 1, True), (0, 1, False), (1, 0, True)],
+    [
+        (None, 0, False),
+        (None, 1, True),
+        (None, 2, True),
+        (None, 3, True),
+        (0, 1, False),
+        (0, 3, False),
+        (1, 0, True),
+        (1, 3, True),
+        (2, 0, True),
+        (3, 0, True),
+    ],
 )
 @pytest.mark.parametrize(
     "animation_class", [FlowAnimation, foxes.models.outputs.FlowTurbineAnimation]
@@ -249,13 +260,28 @@ def test_writing_message_verbosity(
     animation = animation_class(
         out_dir=tmp_path,
         verbosity=output_verbosity,
+        fps=10,
         grid_pars={"n_img_points": (2, 2)},
         figsize=(2, 2),
     )
     with foxes.Engine.new("single", verbosity=0):
         algo.calc_farm(outputs=animation)
-    message = f"Writing {tmp_path / 'chunk_animation_WS.gif'}"
-    assert (message in capsys.readouterr().out) is announces
+    text = capsys.readouterr().out
+    path = tmp_path / "chunk_animation_WS.gif"
+    level = algo_verbosity if output_verbosity is None else output_verbosity
+    assert (f"Creating animation {path}" in text) is announces
+    assert (f"Writing {path}" in text) is (level > 1)
+    assert (f"Finished writing {path}" in text) is (level > 1)
+    assert ("Created 4 animation frames." in text) is (level > 1)
+    assert ("Encoding 4 frames at 10 fps with pillow" in text) is (level > 1)
+    frames = [line.strip() for line in text.splitlines() if line.startswith("  Frame ")]
+    assert frames == ([f"Frame {i}" for i in range(4)] if level > 2 else [])
+    assert text.count(": Encoding frame ") == (4 if level > 2 else 0)
+    if level > 1:
+        assert text.index("Creating animation") < text.index("Writing ")
+        assert text.index("Writing ") < text.index("Finished writing")
+    elif not announces and algo_verbosity == 0:
+        assert not text
 
 
 @pytest.mark.parametrize(
@@ -512,7 +538,10 @@ def test_multiple_outputs_have_private_buffers(tmp_path):
 
 
 @pytest.mark.parametrize("point_run", [False, True])
-def test_save_failure_propagates_and_closes_figure(tmp_path, monkeypatch, point_run):
+@pytest.mark.parametrize("verbosity", [0, 1, 2, 3])
+def test_save_failure_propagates_and_closes_figure(
+    tmp_path, monkeypatch, capsys, point_run, verbosity
+):
     # Finalization cannot report success or leak figures after a writer failure.
     import matplotlib.pyplot as plt
     from matplotlib.animation import Animation
@@ -526,6 +555,7 @@ def test_save_failure_propagates_and_closes_figure(tmp_path, monkeypatch, point_
     algo = _algorithm()
     output = FlowAnimation(
         out_dir=tmp_path,
+        verbosity=verbosity,
         grid_pars={"n_img_points": (2, 2)},
     )
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
@@ -538,6 +568,9 @@ def test_save_failure_propagates_and_closes_figure(tmp_path, monkeypatch, point_
                 algo.calc_farm(outputs=output)
     assert plt.get_fignums() == before
     assert not algo.running and not output.running
+    text = capsys.readouterr().out
+    assert ("Writing " in text) is (verbosity > 1)
+    assert "Finished writing" not in text
 
 
 def test_missing_target_fields_are_contextual(tmp_path):
@@ -892,11 +925,14 @@ def test_filename_transform_and_multiple_variables(
 
 @pytest.mark.skipif(which("ffmpeg") is None, reason="MP4 encoding requires ffmpeg")
 @pytest.mark.parametrize("transform_suffix", [False, True])
-def test_real_mp4_encoding(tmp_path, transform_suffix):
+@pytest.mark.parametrize("verbosity", [0, 1, 2, 3])
+def test_real_mp4_encoding(tmp_path, capsys, transform_suffix, verbosity):
     # Exercise the optional encoder, not just its selected writer name.
     output = FlowAnimation(
         out_dir=tmp_path,
         base_name="flow.gif" if transform_suffix else "flow.mp4",
+        verbosity=verbosity,
+        fps=10,
         figsize=(2.0, 2.0),
         grid_pars={"n_img_points": (2, 2)},
         out_fname_fun=(
@@ -908,3 +944,9 @@ def test_real_mp4_encoding(tmp_path, transform_suffix):
     encoded = (tmp_path / "flow_WS.mp4").read_bytes()
     assert encoded[4:8] == b"ftyp"
     assert len(encoded) > 1024
+    text = capsys.readouterr().out
+    assert (f"Creating animation {tmp_path / 'flow_WS.mp4'}" in text) is (verbosity > 0)
+    assert (f"Writing {tmp_path / 'flow_WS.mp4'}" in text) is (verbosity > 1)
+    assert (f"Finished writing {tmp_path / 'flow_WS.mp4'}" in text) is (verbosity > 1)
+    assert ("Encoding 4 frames at 10 fps with ffmpeg" in text) is (verbosity > 1)
+    assert text.count(": Encoding frame ") == (4 if verbosity > 2 else 0)

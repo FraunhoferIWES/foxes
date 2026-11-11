@@ -31,6 +31,9 @@ algorithm:
   algo_type: Downwind
   wake_models: [Bastankhah2014_linear_k004]
 
+calc_farm:
+  outputs: farm_results_all   # preserve ambient direction for the wind rose
+
 outputs:
   - output_type: FlowPlots2D
     plane: xy
@@ -40,24 +43,21 @@ outputs:
       resolution: 150
     plot_pars:
       figsize: [6, 6]
-  - output_type: plt
+    show: True
+  - output_type: plt            # YAML-only Matplotlib calls, not an output model
     functions:
-      - function: show            # show the created figure
-      - function: close           # close the figure to free memory
-  - output_type: plt
-    functions:
-      - function: figure      # create a new figure object
+      - function: figure
         figsize: [10, 5]
-        result_labels: $fig   # store the result of the function under $fig
-  - object: $fig              # now run functions of the object behind $fig
+        result_labels: $fig
+  - object: $fig
     functions:
       - function: add_subplot
         args: [1, 2, 1]
-        result_labels: $ax1   # store the pyplot.Axes object under $ax1
+        result_labels: $ax1
       - function: add_subplot
         args: [1, 2, 2]
-        polar: True           # this Axes object applies polar projection
-        result_labels: $ax2   # store the pyplot.Axes object under $ax2
+        polar: True
+        result_labels: $ax2
   - output_type: FarmLayoutOutput
     with_engine: False
     parameters:
@@ -73,9 +73,12 @@ outputs:
     plot_pars:
       title: Wind rose
       ax: $ax2
+  - object: $fig
+    functions:
+      - function: savefig
+        fname: result.png
   - output_type: plt
     functions:
-      - function: savefig     # save the created figure to file
-        fname: result.png     # file location will be relative to the yaml file
       - function: show
       - function: close
+        args: [$fig]

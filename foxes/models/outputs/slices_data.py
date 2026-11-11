@@ -117,5 +117,5 @@ class SlicesData(SliceData):
         )
         result.attrs.pop(self.label_map.get(normal, normal), None)
         if self.to_file is not None:
-            self._write_data(result)
+            self._write_data(result, algo.verbosity)
         return result

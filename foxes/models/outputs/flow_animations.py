@@ -96,8 +96,11 @@ class FlowAnimation(SliceData):
             disables annotations; do not supply ``fig`` or ``ax``. Vertical
             planes do not display farm-layout annotations.
         verbosity
-            Writing-message verbosity. ``None`` uses ``algo.verbosity``;
-            positive values announce each destination, and zero suppresses it.
+            Diagnostic verbosity; ``None`` uses ``algo.verbosity``. Level zero
+            is silent; one announces creation; two adds writing and successful
+            completion messages, frame counts and encoder settings; three
+            reports each frame's composition and encoding progress. Success is
+            announced only after the file has been written.
         show
             Play each completed animation after saving it, at ``fps`` frames per
             second. Display blocks until its window closes; the figure is then
@@ -622,22 +625,17 @@ class FlowTurbineAnimation(FlowAnimation):
             Figure-local compositor with the lower turbine-trace generator
             registered before the flow-field generator.
         """
-        from ._farm_evaluation import _gen_stdata
+        from ._flow_animation_render import turbine_frames
 
         # Attach traces to the figure, never to the running output instance.
         animator = super()._create_animator(algo, farm, fig, ax)
         animator.add_generator(
-            _gen_stdata(
+            turbine_frames(
                 farm,
-                algo,
-                self,
-                turbines=list(self._turbines),
+                turbines=self._turbines,
                 variable=self._turbine_variable,
                 fig=fig,
                 ax=fig.axes[1],
-                ret_im=True,
-                legloc="upper right",
-                animated=True,
             )
         )
 

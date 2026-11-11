@@ -7,7 +7,8 @@ import foxes
 import foxes.variables as FV
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-F",
@@ -114,12 +115,25 @@ if __name__ == "__main__":
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-o",
+        "--outputs",
+        help="The output models",
+        nargs="+",
+        default=["farm_results", "create_turbine_gif"],
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: timelines")
 
     mbook = foxes.models.ModelBook()
-    mbook.outputs["farm_results"].fdata_variables.append(FV.CT)
+    mbook.outputs["farm_results"].fdata_variables.extend([FV.EFF])
 
     # Preserve the two-panel animation through the named output models.
     for suffix in ("gif", "mp4"):
@@ -129,7 +143,6 @@ if __name__ == "__main__":
                 turbines=[1, 4, 7],
                 ref_xy=args.ref_xy,
                 fps=args.fps,
-                verbosity=1,
                 figsize=(5.2, 7),
                 grid_pars=dict(resolution=30, xmax=5000, ymax=5000),
                 plot_pars=dict(
@@ -144,6 +157,14 @@ if __name__ == "__main__":
                 ),
             )
         )
+
+    # Keep animation diagnostics at the script's verbosity level.
+    for name in args.outputs:
+        selected = mbook.outputs[name]
+        if isinstance(selected, foxes.models.outputs.FlowAnimation):
+            selected.verbosity = args.verbosity
+        if args.nofig and hasattr(selected, "show"):
+            selected.show = False
 
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -185,6 +206,7 @@ if __name__ == "__main__":
         step_vectors=np.array([[1000.0, 0], [0, 800.0]]),
         steps=(N, N),
         turbine_models=ymodels + args.tmodels + [ttype.name],
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     if not args.nofig and args.show_layout:
@@ -193,7 +215,7 @@ if __name__ == "__main__":
             foxes.input.states.SingleStateStates(ws=8, wd=270, ti=0.08, rho=1.225),
             wake_models=[],
             mbook=mbook,
-            verbosity=0,
+            verbosity=max(args.verbosity - 1, 0),
         ).calc_outputs(
             outputs=foxes.models.outputs.FarmLayoutOutput(
                 operation="get_figure", parameters=dict()
@@ -212,7 +234,7 @@ if __name__ == "__main__":
         partial_wakes=args.pwakes,
         max_wake_length_km=args.wake_length_km,
         mbook=mbook,
-        verbosity=1,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     engine = foxes.Engine.new(
@@ -220,83 +242,70 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     with engine:
         time0 = time.time()
+        # Request per-state metrics through output selection.
         farm_results = algo.calc_farm(outputs=args.outputs)
         time1 = time.time()
 
     # Evaluate collected farm data only; writer-only outputs are already complete.
     if isinstance(farm_results, dict):
         farm_results = farm_results.get("farm_results")
-    if farm_results is None:
-        raise SystemExit(0)
+    elif not any(
+        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+        for name in args.outputs
+    ):
+        farm_results = None
+    if farm_results is not None and args.verbosity > 1:
+        print("\nFarm results:\n", farm_results)
+    required = {
+        FV.AMB_P,
+        FV.AMB_REWS,
+        FV.AMB_TI,
+        FV.CT,
+        FV.EFF,
+        FV.P,
+        FV.REWS,
+        FV.TI,
+        FV.WD,
+        FV.X,
+        FV.Y,
+    }
+    if farm_results is None or not required.issubset(farm_results.data_vars):
+        print(
+            "Skipping farm reporting: selected outputs do not collect the required fields:",
+            sorted(required),
+        )
+        return
 
-    print("\nCalc time =", time1 - time0, "\n")
-
-    farm_results = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="add_capacity_factor", parameters=dict(ambient=False)
-        ),
-        farm_results=farm_results,
-    )
-    farm_results = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="add_capacity_factor", parameters=dict(ambient=True)
-        ),
-        farm_results=farm_results,
-    )
-    farm_results = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="add_efficiency", parameters=dict()
-        ),
-        farm_results=farm_results,
-    )
-
-    print("\nFarm results:\n")
-    print(farm_results)
+    if args.verbosity > 1:
+        print("\nCalc time =", time1 - time0, "\n")
 
     # state-turbine results
     farm_df = farm_results.to_dataframe()
-    print("\nFarm results data:\n")
-    print(
-        farm_df[
-            [
-                FV.X,
-                FV.Y,
-                FV.WD,
-                FV.AMB_REWS,
-                FV.REWS,
-                FV.AMB_TI,
-                FV.TI,
-                FV.AMB_P,
-                FV.P,
-                FV.EFF,
+    if args.verbosity > 1:
+        print("\nFarm results data:\n")
+        print(
+            farm_df[
+                [
+                    FV.X,
+                    FV.Y,
+                    FV.WD,
+                    FV.AMB_REWS,
+                    FV.REWS,
+                    FV.AMB_TI,
+                    FV.TI,
+                    FV.AMB_P,
+                    FV.P,
+                    FV.EFF,
+                ]
             ]
-        ]
-    )
-    print()
-    print(farm_df[[FV.AMB_REWS, FV.REWS, FV.CT, FV.EFF]].describe())
-
-    # power results
-    P0 = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="calc_mean_farm_power", parameters=dict(ambient=True)
-        ),
-        farm_results=farm_results,
-    )
-    P = algo.calc_outputs(
-        outputs=foxes.models.outputs.FarmResultsEval(
-            operation="calc_mean_farm_power", parameters=dict()
-        ),
-        farm_results=farm_results,
-    )
-    print(f"\nFarm power        : {P / 1000:.1f} MW")
-    print(f"Farm ambient power: {P0 / 1000:.1f} MW")
-    print(
-        f"Farm efficiency   : {algo.calc_outputs(outputs=foxes.models.outputs.FarmResultsEval(operation='calc_farm_efficiency', parameters=dict()), farm_results=farm_results) * 100:.2f} %"
-    )
+        )
+        print()
+        print(farm_df[[FV.AMB_REWS, FV.REWS, FV.CT, FV.EFF]].describe())
 
     if not args.nofig:
         sts = np.arange(farm_results.sizes["state"])
@@ -306,3 +315,7 @@ if __name__ == "__main__":
         plt.xlabel("State")
         plt.ylabel("REWS [m/s]")
         plt.show()
+
+
+if __name__ == "__main__":
+    main()

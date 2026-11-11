@@ -7,7 +7,8 @@ import foxes
 import foxes.variables as FV
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-l",
@@ -86,12 +87,29 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: binned_states")
+
+    mbook = foxes.ModelBook()
+    mbook.outputs["farm_results"].fdata_variables.extend([FV.AMB_WD])
+
+    if args.nofig:
+        for name in args.outputs:
+            mbook.outputs[name].show = False
 
     source_states = foxes.input.states.Timeseries(
         data_source=args.states,
-        output_vars=[FV.WS, FV.WD],
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "ws", FV.WD: "wd"},
+        fixed_vars={FV.RHO: 1.225, FV.TI: 0.07},
     )
 
     source_binned_data = foxes.input.states.BinnedFieldData(
@@ -117,6 +135,7 @@ if __name__ == "__main__":
         col_y="y",
         col_H="H",
         turbine_models=["NREL5MW"],
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     source_algo = None
@@ -128,30 +147,33 @@ if __name__ == "__main__":
             wake_frame=args.frame,
             partial_wakes=args.pwakes,
             rotor_model=args.rotor,
-            verbosity=1,
+            verbosity=max(args.verbosity - 1, 0),
         )
 
     engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     full_algo = None
     if args.compare_full_timeseries:
         full_states = foxes.input.states.Timeseries(
             data_source=args.states,
-            output_vars=[FV.WS, FV.WD],
+            output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
             var2col={FV.WS: "ws", FV.WD: "wd"},
+            fixed_vars={FV.RHO: 1.225, FV.TI: 0.07},
         )
         full_algo = foxes.algorithms.Downwind(
             farm,
             states=full_states,
+            mbook=mbook,
             wake_models=args.wakes,
             wake_frame=args.frame,
             partial_wakes=args.pwakes,
             rotor_model=args.rotor,
-            verbosity=1,
+            verbosity=max(args.verbosity - 1, 0),
         )
 
     with engine:
@@ -170,11 +192,12 @@ if __name__ == "__main__":
         algo = foxes.algorithms.Downwind(
             farm,
             states=binned_data,
+            mbook=mbook,
             wake_models=args.wakes,
             wake_frame=args.frame,
             partial_wakes=args.pwakes,
             rotor_model=args.rotor,
-            verbosity=1,
+            verbosity=max(args.verbosity - 1, 0),
         )
         if args.read_nc is None:
             algo.initialize()
@@ -183,17 +206,37 @@ if __name__ == "__main__":
             )
         farm_results = algo.calc_farm(outputs=args.outputs)
         if full_algo is not None:
-            print("\nRunning full timeseries calculation for comparison")
+            if args.verbosity > 1:
+                print("\nRunning full timeseries calculation for comparison")
             full_farm_results = full_algo.calc_farm(outputs=args.outputs)
 
     # Evaluate collected farm data only; complete both runs for writer-only outputs.
     if isinstance(farm_results, dict):
         farm_results = farm_results.get("farm_results")
-    if farm_results is None:
-        raise SystemExit(0)
-    if full_algo is not None and isinstance(full_farm_results, dict):
-        full_farm_results = full_farm_results["farm_results"]
-
+    elif not any(
+        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+        for name in args.outputs
+    ):
+        farm_results = None
+    if farm_results is not None and args.verbosity > 1:
+        print("\nFarm results:\n", farm_results)
+    if full_algo is not None:
+        if isinstance(full_farm_results, dict):
+            full_farm_results = full_farm_results.get("farm_results")
+        elif not any(
+            isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+            for name in args.outputs
+        ):
+            full_farm_results = None
+        if full_farm_results is not None and args.verbosity > 1:
+            print("\nFull timeseries farm results:\n", full_farm_results)
+    required = {FV.AMB_REWS, FV.AMB_WD, FV.REWS, FV.WD, FV.WEIGHT}
+    if farm_results is None or not required.issubset(farm_results.data_vars):
+        print(
+            "Skipping farm reporting: selected outputs do not collect the required fields:",
+            sorted(required),
+        )
+        return
     if not args.nofig and support_rose_data is not None:
         fig = source_binned_data.get_support_wind_roses_figure(
             support_rose_data,
@@ -202,14 +245,15 @@ if __name__ == "__main__":
         plt.show()
         plt.close(fig)
 
-    print(f"Input states: {source_states.size()}")
-    print(f"Histogram states: {binned_data.size()}")
+    if args.verbosity > 1:
+        print(f"Input states: {source_states.size()}")
+        print(f"Histogram states: {binned_data.size()}")
     if args.write_nc is not None:
-        print(f"Written binned data file: {args.write_nc}")
+        if args.verbosity > 1:
+            print(f"Written binned data file: {args.write_nc}")
     if args.read_nc is not None:
-        print(f"Read binned data file: {args.read_nc}")
-    print("Binned farm results:")
-    print(farm_results[[FV.AMB_REWS, FV.REWS, FV.AMB_WD, FV.WD, FV.WEIGHT]])
+        if args.verbosity > 1:
+            print(f"Read binned data file: {args.read_nc}")
 
     if args.compare_full_timeseries:
         variables = [FV.AMB_REWS, FV.REWS, FV.AMB_WD, FV.WD]
@@ -242,7 +286,8 @@ if __name__ == "__main__":
                         where=denominator > 0.0,
                     )
 
-        print("\nComparison, binned minus full timeseries:")
+        if args.verbosity > 1:
+            print("\nComparison, binned minus full timeseries:")
         for var in variables:
             binned_data = binned_mean[var]
             full_data = full_mean[var]
@@ -252,8 +297,13 @@ if __name__ == "__main__":
             else:
                 delta = binned_data - full_data
                 diff_label = "difference"
-            print(
-                f"  {var}: max absolute {diff_label} = "
-                f"{np.nanmax(np.abs(delta)):.3f}, mean absolute {diff_label} = "
-                f"{np.nanmean(np.abs(delta)):.3f}"
-            )
+            if args.verbosity > 1:
+                print(
+                    f"  {var}: max absolute {diff_label} = "
+                    f"{np.nanmax(np.abs(delta)):.3f}, mean absolute {diff_label} = "
+                    f"{np.nanmean(np.abs(delta)):.3f}"
+                )
+
+
+if __name__ == "__main__":
+    main()

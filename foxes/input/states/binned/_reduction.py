@@ -1255,7 +1255,7 @@ class _BinnedStateReduction:
             rotor_model="centre",
             partial_wakes="centre",
             wake_models=[],
-            verbosity=verbosity - 1,
+            verbosity=max(verbosity - 1, 0),
         )
         source_algo.initialize(force=True)
 

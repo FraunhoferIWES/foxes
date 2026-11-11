@@ -27,19 +27,12 @@ algorithm:
 
 calc_farm:    # this section is optional; will run by default
   run: True   # this triggers algo.calc_farm
+  outputs: farm_results_analysis  # derived fields trigger TurbineEvaluation
 
 outputs:                          # this section is optional
-  - output_type: FarmResultsEval  # constructor-defined model output
-    operation: add_capacity
-  - output_type: FarmResultsEval
-    operation: add_efficiency
-  - output_type: StateTurbineMap  # class from foxes.output
-    functions:                    # list of functions from that class below
-      - function: plot_map        # name of the function
-        variable: "EFF"           # specify function parameters here
-        cmap: "inferno"
-        figsize: [6, 7]
-  - output_type: plt              # class from foxes.output
-    functions:                    # list of functions from that class below
-      - function: show            # runs plt.show(), triggering the display
-      - function: close           # runs plt.close(), optional
+  - output_type: StateTurbineMap  # class from foxes.models.outputs
+    variable: EFF                  # constructor-defined selection
+    plot_pars:
+      cmap: inferno
+      figsize: [6, 7]
+    show: True                     # omit or set False for figure-less display

@@ -9,7 +9,8 @@ import foxes
 import foxes.variables as FV
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-F",
@@ -122,18 +123,25 @@ if __name__ == "__main__":
         "--outputs",
         help="Farm collector and animation output models",
         nargs="+",
-        default=["farm_results"],
+        default=["farm_results", "create_turbine_gif"],
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: sequential_yawcontroller")
 
     mbook = foxes.models.ModelBook()
-
     # Preserve the yaw-controller flow field, rotor indicators and labels.
     for suffix in ("gif", "mp4"):
         mbook.outputs[f"create_{suffix}"] = foxes.models.outputs.FlowAnimation(
             base_name=f"ani.{suffix}",
             fps=args.fps,
-            verbosity=1,
             figsize=(6.4, 4.8),
             grid_pars=dict(resolution=10),
             plot_pars=dict(
@@ -148,6 +156,14 @@ if __name__ == "__main__":
                 title="", annotate=1, anno_delx=-120, anno_dely=-60, alpha=0, s=10
             ),
         )
+
+    # Keep animation diagnostics at the script's verbosity level.
+    for name in args.outputs:
+        selected = mbook.outputs[name]
+        if isinstance(selected, foxes.models.outputs.FlowAnimation):
+            selected.verbosity = args.verbosity
+        if args.nofig and hasattr(selected, "show"):
+            selected.show = False
 
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -176,7 +192,7 @@ if __name__ == "__main__":
         kwargs = {}
     else:
         States = foxes.input.states.OnePointFlowTimeseries
-        kwargs = {"ref_xy": [3000, 1280]}
+        kwargs = {"ref_xy": [3000, 1280], "dt_min": 1 / 6}
 
     states = States(
         data_source=sdata,
@@ -184,7 +200,6 @@ if __name__ == "__main__":
         var2col={FV.WS: "WS", FV.WD: "WD"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.07},
         states_sel=range(args.max_state) if args.max_state is not None else None,
-        dt_min=1 / 6,
         **kwargs,
     )
 
@@ -199,13 +214,15 @@ if __name__ == "__main__":
         foxes.Turbine(
             xy=np.array([3315.0, 1280.0]),
             turbine_models=tmodels,
-        )
+        ),
+        verbosity=max(args.verbosity - 1, 0),
     )
     farm.add_turbine(
         foxes.Turbine(
             xy=np.array([4170, 1280.0]),
             turbine_models=tmodels,
-        )
+        ),
+        verbosity=max(args.verbosity - 1, 0),
     )
     """
     farm.add_turbine(
@@ -222,7 +239,7 @@ if __name__ == "__main__":
             foxes.input.states.SingleStateStates(ws=8, wd=270, ti=0.08, rho=1.225),
             wake_models=[],
             mbook=mbook,
-            verbosity=0,
+            verbosity=max(args.verbosity - 1, 0),
         ).calc_outputs(
             outputs=foxes.models.outputs.FarmLayoutOutput(
                 operation="get_figure", parameters=dict()
@@ -248,7 +265,7 @@ if __name__ == "__main__":
         ],
         max_it=args.max_it,
         conv_crit="default" if args.max_it is None else None,
-        verbosity=0,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     engine = foxes.Engine.new(
@@ -256,16 +273,21 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     # run all states sequentially:
     with engine:
         for r in algo:
-            print(algo.index)
+            if args.verbosity > 1:
+                print(algo.index)
 
     if "farm_results" in args.outputs:
-        print("\nFarm results:\n")
-        print(algo.farm_results)
+        if args.verbosity > 1:
+            print("\nFarm results:\n")
+            print(algo.farm_results)
+    else:
+        print("Skipping farm reporting: -o farm_results was not selected.")
 
     if not args.nofig and "farm_results" in args.outputs:
         fres = algo.farm_results
@@ -292,3 +314,7 @@ if __name__ == "__main__":
         plt.xlabel("Time step")
         plt.ylabel("Degrees")
         plt.show()
+
+
+if __name__ == "__main__":
+    main()

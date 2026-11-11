@@ -41,6 +41,7 @@ class FarmResultsChunkWriter(FarmResultsOutput):
             File prefix; filenames append ``_<state chunk index:06d>.nc``.
         write_nc_pars
             Keyword arguments forwarded to ``foxes.utils.write_nc``.
+            Verbosity defaults to the executing algorithm's level.
         kwargs
             Farm selection, metadata and path options for ``FarmResultsOutput``.
         """
@@ -103,7 +104,8 @@ class FarmResultsChunkWriter(FarmResultsOutput):
         if mdata.chunki_states is None:
             raise ValueError(f"{self.name}: Missing state chunk index")
         fpath = self.get_fpath(f"{self.base_name}_{mdata.chunki_states:06d}.nc")
-        _data_to_nc(fpath, payload, *self._metadata(algo), self.write_nc_pars)
+        options = {"verbosity": algo.verbosity, **self.write_nc_pars}
+        _data_to_nc(fpath, payload, *self._metadata(algo), options)
         return Output.calculate(
             self, algo, mdata, fdata, tdata, model_results, chunk_results
         )
@@ -190,6 +192,7 @@ class FarmResultsPeriodWriter(FarmResultsCountWriter):
             values. Empty periods do not produce files.
         write_nc_pars
             Keyword arguments forwarded to ``foxes.utils.write_nc``.
+            Verbosity defaults to the executing algorithm's level.
         kwargs
             Farm selection, metadata and path options for ``FarmResultsOutput``.
 

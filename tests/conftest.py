@@ -1,8 +1,7 @@
-from pathlib import Path
-
 """Shared deterministic chunking and noninteractive output test configuration."""
 
 from functools import wraps
+from pathlib import Path
 import sys
 
 import pytest

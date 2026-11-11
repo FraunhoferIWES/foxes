@@ -10,7 +10,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 from foxes.input.yaml.dict import run_outputs
 from foxes.models.outputs import (
-    FarmResultsEval,
+    FarmResultsOutput,
     FlowAnimation,
     FlowPlots2D,
     PointResultsOutput,
@@ -123,15 +123,16 @@ def test_disagreeing_output_grids_raise(algorithm, entry):
 
 
 def test_output_selectors_remain_strings_and_lists(algorithm):
-    algorithm.mbook.outputs["mean_speed"] = FarmResultsEval(
-        operation="calc_farm_mean",
-        parameters={"vars": [FV.REWS]},
+    algorithm.mbook.outputs["mean_speed"] = SliceData(
+        variables=[FV.WS],
+        reduction="mean",
+        grid_pars={"n_img_points": (2, 3)},
         result_name="mean_speed",
     )
     with foxes.Engine.new("numpy", verbosity=0):
         result = algorithm.calc_farm(outputs=["farm_results_all", "mean_speed"])
     assert set(result) == {FC.FARM_RESULTS, "mean_speed"}
-    assert result["mean_speed"][FV.REWS] == pytest.approx(8.6)
+    np.testing.assert_allclose(result["mean_speed"][FV.WS], 8.6)
 
 
 def test_multiple_planes_write_once(algorithm, tmp_path, monkeypatch):
@@ -145,9 +146,10 @@ def test_multiple_planes_write_once(algorithm, tmp_path, monkeypatch):
     writes = []
     original = output._write_data
 
-    def write(data):
+    def write(data, verbosity):
         writes.append(dict(data.sizes))
-        original(data)
+        assert verbosity == algorithm.verbosity
+        original(data, verbosity)
 
     monkeypatch.setattr(output, "_write_data", write)
     with foxes.Engine.new("numpy", chunk_size_points=2, verbosity=0):
@@ -197,7 +199,6 @@ def test_configured_yaml_output(algorithm):
 def test_promoted_outputs_have_no_dataset_bound_aliases():
     names = (
         "FarmLayoutOutput",
-        "FarmResultsEval",
         "FlowPlots2D",
         "SliceData",
         "SlicesData",
@@ -207,7 +208,7 @@ def test_promoted_outputs_have_no_dataset_bound_aliases():
     )
     for name in names:
         assert issubclass(getattr(foxes.models.outputs, name), foxes.core.Output)
-        assert not hasattr(foxes.output, name)
+        assert not hasattr(foxes, "output")
     output = FlowPlots2D(plane="yz", grid_pars={"n_img_points": (2, 3)})
     assert not any(
         isinstance(value, (np.ndarray, xr.Dataset)) for value in vars(output).values()
@@ -378,7 +379,6 @@ def test_mean_slice_keeps_only_explicitly_requested_state_labels(algorithm):
     "name,class_name",
     [
         ("farm_layout", "FarmLayoutOutput"),
-        ("farm_results_eval", "FarmResultsEval"),
         ("rose_plot", "RosePlotOutput"),
         ("states_rose_plot", "StatesRosePlotOutput"),
         ("wind_rose_bin_plot", "WindRoseBinPlot"),
@@ -456,11 +456,7 @@ def test_model_book_adopted_outputs_run_by_name(algorithm):
         results = algorithm.calc_farm(
             outputs=["farm_results_all", "slice_data_xz_mean"]
         )
-        reduced = algorithm.calc_outputs(
-            outputs="farm_results_eval", farm_results=results[FC.FARM_RESULTS]
-        )
     np.testing.assert_allclose(results[output.result_name][FV.WS], 8.6)
-    np.testing.assert_allclose(reduced[FV.REWS], 8.6)
 
 
 def test_iterative_named_output_reuses_supplied_farm_results(algorithm, monkeypatch):
@@ -474,7 +470,7 @@ def test_iterative_named_output_reuses_supplied_farm_results(algorithm, monkeypa
         mod_cutin={"modify_ct": False},
         verbosity=0,
     )
-    algo.mbook.outputs["farm_results_eval"].parameters = {"vars_op": {FV.P: "mean"}}
+    algo.mbook.outputs["selected_power"] = FarmResultsOutput(variables=[FV.P])
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
         farm = algo.calc_farm(outputs="farm_results_all", finalize=False)
         farm[FV.P].values[:, 0] = [3.0, 7.0, 19.0]
@@ -484,6 +480,6 @@ def test_iterative_named_output_reuses_supplied_farm_results(algorithm, monkeypa
 
         monkeypatch.setattr(algo.states, "calculate", forbidden)
         result = algo.calc_outputs(
-            outputs="farm_results_eval", farm_results=farm, states_sel=[10, 30]
+            outputs="selected_power", farm_results=farm, states_sel=[10, 30]
         )
-    np.testing.assert_allclose(result[FV.P], 11.0)
+    np.testing.assert_allclose(result[FV.P].values[:, 0], [3.0, 19.0])

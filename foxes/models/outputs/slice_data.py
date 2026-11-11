@@ -75,6 +75,7 @@ class SliceData(PointDataOutput):
             Optional destination filename.
         write_pars
             Options for the selected file format.
+            NetCDF verbosity defaults to the executing algorithm's level.
         ret_grid
             Append static grid metadata to returned data.
         ret_states
@@ -436,7 +437,7 @@ class SliceData(PointDataOutput):
         """
         result = self._format_data(payload)
         if self.to_file is not None:
-            self._write_data(result)
+            self._write_data(result, algo.verbosity)
         returned = [result]
         if self.ret_states:
             returned.append(payload["states"])
@@ -520,7 +521,7 @@ class SliceData(PointDataOutput):
             variables = tuple(dict.fromkeys([*variables, FV.WEIGHT]))
         return variables
 
-    def _write_data(self, data: Any) -> None:
+    def _write_data(self, data: Any, verbosity: int) -> None:
         """Write the selected representation without retaining the result.
 
         Parameters
@@ -528,12 +529,15 @@ class SliceData(PointDataOutput):
         data
             Final NumPy, pandas or xarray result. The configured format selects
             its writer, destination and ``write_pars`` options.
+        verbosity
+            Algorithm verbosity, used unless overridden in NetCDF write options.
         """
         if self.to_file is None:
             raise ValueError(f"{self.name}: No output filename configured")
         path = self.get_fpath(self.to_file)
         if self.data_format == "xarray":
-            write_nc(data, path, **self.write_pars)
+            options = {"verbosity": verbosity, **self.write_pars}
+            write_nc(data, path, **options)
         elif self.data_format == "pandas":
             self.write(str(self.to_file), data, **self.write_pars)
         else:

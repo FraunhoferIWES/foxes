@@ -23,8 +23,8 @@ uv run run.py -nf -s my_states.csv -o create_gif create_mp4
 
 Supply a time-indexed CSV with `WS` and `WD` columns.
 These write `ani_WS.gif` or `ani_WS.mp4`; MP4 requires ffmpeg.
-Animation outputs print `Writing <path>` when encoding begins, independently
-of the example's quiet algorithm settings.
+At `-v 2` or higher, animation outputs print `Writing <path>` when encoding
+begins, independently of the example's quiet algorithm settings.
 `-F/--fps` controls playback and `--debug` retains wake point/vector overlays.
 Point fields are evaluated during state-wise iteration with engine point
 chunking, then encoded after completion. Output selection supports the farm
@@ -33,3 +33,22 @@ options are removed.
 Both names are configured on the local `mbook`, preserving the original flow
 grid, quiver arrows, red rotors and turbine labels without changing global
 model-book defaults.
+
+Animation diagnostics use the script verbosity directly: `-v 1` announces
+creation; the default `-v 2` adds writing and successful-completion messages,
+frame counts and encoder settings; `-v 3` adds per-frame progress. `-v 0` is quiet.
+
+## Output selection and automated runs
+
+The default output selection is `farm_results create_turbine_gif`. Use `-o NAME [NAME ...]` to choose the farm collector and animation models; `-o create_gif` writes an animation without farm reporting. Reporting that needs unselected fields is skipped with a message. `--nofig` suppresses display without disabling explicitly selected file outputs.
+
+```console
+python run.py --nofig
+```
+
+The runner executes this example once, in a temporary directory. Its quick mode uses bounded local inputs and a local engine; generated files are removed.
+
+<!-- run-all: python run.py -->
+<!-- run-all-quick: python run.py -e numpy -nt 4 -S 3 -b0 -o farm_results -->
+
+Verbosity (`-v`/`--verbosity`) defaults to `-v 2` for reports. Levels `2` and `3` print each collected `farm_results` dataset once, even when fields needed by later reports are absent. Levels `0` and `1` do not print datasets; writer-only selections do not invent farm results. Use `0` for quiet execution, `1` for a concise summary, or `3` for library progress. The aggregate runner passes `-v 0` by default, still announces each example, and accepts `-v N` (or `--verbosity N`); explicit example-command choices take precedence.

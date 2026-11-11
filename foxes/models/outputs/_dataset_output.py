@@ -145,7 +145,6 @@ class DatasetOutput(FarmResultsOutput):
     def __init__(
         self, result_name: str | None = None, use_points: bool = False, **kwargs: Any
     ) -> None:
-        # Retain only selection and naming configuration, never result buffers.
         """Configure private farm or point collection without retaining datasets.
 
         Parameters
@@ -157,6 +156,7 @@ class DatasetOutput(FarmResultsOutput):
         kwargs
             Farm-result selection and common output constructor options.
         """
+        # Retain only selection and naming configuration, never result buffers.
         super().__init__(**kwargs)
         if use_points:
             self._mdata_variables = None
@@ -246,7 +246,6 @@ class DatasetOutput(FarmResultsOutput):
         model_results: Any,
         chunk_results: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        # Farm fields repeat across point tiles; collect each state slab once.
         """Collect selected fields once per state slab or supplied target tile.
 
         Parameters
@@ -271,6 +270,7 @@ class DatasetOutput(FarmResultsOutput):
             Farm fields preserve original scalar, turbine-only and state dimensions;
             repeated farm fields in later point tiles are not transported again.
         """
+        # Farm fields repeat across point tiles; collect each state slab once.
         results = Dict() if chunk_results is None else chunk_results
         if self.use_points:
             results[self.var("data")] = self._collect_points(algo, mdata, fdata, tdata)
@@ -380,7 +380,6 @@ class DatasetOutput(FarmResultsOutput):
         new_chunk_results: Dict[str, Dict[tuple[int, int], Any]],
         output_results: Dict[str, Any],
     ) -> None:
-        # Keep buffers in the engine-owned mapping, separate from returned values.
         """Transfer private chunk payloads into engine-owned accumulation buffers.
 
         Parameters
@@ -397,6 +396,7 @@ class DatasetOutput(FarmResultsOutput):
             Run-local mapping that owns output buffers and final public results.
             Other outputs' entries must remain untouched.
         """
+        # Keep buffers in the engine-owned mapping, separate from returned values.
         key = self.var("data")
         output_results.setdefault(key, {}).update(new_chunk_results.pop(key, {}))
 
@@ -407,7 +407,6 @@ class DatasetOutput(FarmResultsOutput):
         n_chunks_targets: int,
         output_results: Dict[str, Any],
     ) -> None:
-        # Construct xarray only on the parent, after all scientific chunks finish.
         """Assemble a parent-side dataset and apply the configured final operation.
 
         Parameters
@@ -430,6 +429,7 @@ class DatasetOutput(FarmResultsOutput):
         """
         from xarray import Dataset
 
+        # Construct xarray only on the parent, after all scientific chunks finish.
         chunks = output_results.pop(self.var("data"), {})
         if self.use_points and chunks:
             if self._collector is None:

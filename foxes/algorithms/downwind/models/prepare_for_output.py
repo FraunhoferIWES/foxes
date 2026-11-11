@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 from typing import TYPE_CHECKING
 
-from foxes.core import DataCalcModel
+from foxes.core import DataCalcModel, OutputList
 from foxes.models.turbine_models.evaluation import TurbineEvaluation
 import foxes.variables as FV
 import foxes.constants as FC
@@ -17,24 +17,31 @@ if TYPE_CHECKING:
 
 
 class PrepareForOutput(DataCalcModel):
-    """
-    Filters mdata, fdata, tdata for output requirements
-    and re-orders variables from downwind to farm order.
+    """Evaluate requested metrics, filter chunk fields and restore farm order.
+
+    Evaluation uses the incoming calculation order before filtering or
+    permutation. ``FV.ORDER`` maps downwind columns to original turbine
+    indices; its inverse restores physical fields to original farm order.
+    The order array itself remains downwind-sequence metadata.
     """
 
     def __init__(self, output: Output | None, reorder: bool = True) -> None:
-        """
+        """Configure output filtering and final turbine reordering.
+
         Parameters
         ----------
         output
             The output object.
         reorder
-            Restore farm order. Disable only for intermediate iterative results,
-            which feed the next wake calculation in downwind order.
+            Restore physical state-turbine fields to original farm order after
+            evaluation. Intermediate Iterative results disable this so the
+            next wake pass receives downwind-ordered arrays. Final output
+            preparation enables it again; ``FV.ORDER`` itself is never permuted.
         """
         super().__init__()
         self.output = output
         self.reorder = reorder
+        self._eval: TurbineEvaluation | None = None
 
     def output_coords(self) -> tuple[str, ...]:
         """
@@ -72,8 +79,7 @@ class PrepareForOutput(DataCalcModel):
         force: bool = False,
         verbosity: int = 0,
     ) -> LoadedData:
-        """
-        Initialize the model.
+        """Initialize evaluation for explicitly requested missing farm metrics.
 
         Parameters
         ----------
@@ -95,19 +101,32 @@ class PrepareForOutput(DataCalcModel):
             The loaded data, containing the keys "coords", "data_vars", and
             "extra_data".
 
+        Raises
+        ------
+        ValueError
+            If requested probability yields lack a configured uncertainty.
+
+        Notes
+        -----
+        An unrestricted farm-variable selection retains available fields;
+        it does not request additional derived metrics.
         """
-        eval_vars = None
+        # Only explicit missing fields request additional metric calculations.
         self._eval = None
-        if self.output is not None:
-            if self.output.fdata_variables is None:
-                eval_vars = TurbineEvaluation.SUPPORTED_VARIABLES
-            else:
-                eval_vars = set(self.output.fdata_variables).intersection(
-                    TurbineEvaluation.SUPPORTED_VARIABLES
+        eval_vars: set[str] = set()
+        pending = [] if self.output is None else [self.output]
+        while pending:
+            output = pending.pop()
+            if isinstance(output, OutputList):
+                pending.extend(output.outputs)
+            elif output.fdata_variables is not None:
+                eval_vars.update(
+                    set(output.fdata_variables) & TurbineEvaluation.SUPPORTED_VARIABLES
                 )
-                eval_vars -= set(algo.farm_vars)
-            if len(eval_vars):
-                self._eval = TurbineEvaluation(variables=list(eval_vars))
+        if eval_vars:
+            eval_vars.difference_update(algo.farm_vars)
+            if eval_vars:
+                self._eval = TurbineEvaluation(variables=sorted(eval_vars))
 
         return super().initialize(
             algo=algo,
@@ -214,7 +233,7 @@ class PrepareForOutput(DataCalcModel):
                             f"{self.name}: Require dimensions of '{v}' to match ({FC.STATE}, {FC.TURBINE}, ...), got {dms}"
                         )
 
-                        # reoreder to farm order, if needed:
+                        # Reorder physical fields, retaining the downwind order metadata.
                         if (
                             v != FV.ORDER
                             and self.reorder
@@ -253,4 +272,4 @@ class PrepareForOutput(DataCalcModel):
 
         """
         super().finalize(algo=algo, verbosity=verbosity)
-        del self._eval
+        self._eval = None

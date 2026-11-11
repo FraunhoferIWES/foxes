@@ -3,6 +3,13 @@
 FOXES can run from [YAML](https://yaml.org/) parameter files through the
 `foxes_yaml` and `foxes_windio` command-line tools.
 
+Both entry points print collected farm-results datasets at `--verbosity 2`
+and higher, independently of fields needed by later output consumers.
+Levels `0` and `1` suppress these dataset reports; writer-only and non-farm
+outputs are not reported as farm datasets. The example runner forwards its
+selected level unchanged, and the readers reduce scientific component
+verbosity internally.
+
 ## foxes\_yaml
 
 ### Command and options
@@ -85,39 +92,45 @@ algorithm:
 
 calc_farm:    # this section is optional; will run by default
   run: True   # this triggers algo.calc_farm
+  outputs: farm_results_analysis  # derived fields trigger TurbineEvaluation
 
 outputs:                          # this section is optional
-  - output_type: FarmResultsEval  # class from foxes.output
-    functions:                    # list of functions from that class below
-      - function: add_capacity
-      - function: add_efficiency
-  - output_type: StateTurbineMap  # class from foxes.output
-    functions:                    # list of functions from that class below
-      - function: plot_map        # name of the function
-        variable: "EFF"           # specify function parameters here
-        cmap: "inferno"
-        figsize: [6, 7]
-  - output_type: plt              # class from foxes.output
-    functions:                    # list of functions from that class below
-      - function: show            # runs plt.show(), triggering the display
-      - function: close           # runs plt.close(), optional
+  - output_type: StateTurbineMap  # class from foxes.models.outputs
+    variable: EFF                  # constructor-defined selection
+    plot_pars:
+      cmap: inferno
+      figsize: [6, 7]
+    show: True                     # omit or set False to suppress display
 ```
 
 Any of the applicable *foxes* classes and functions can be added to the respective section of the input yaml file, together with the specific parameter choices.
 
-### Output evaluation
+### Derived turbine fields
 
-The `outputs` section can call FOXES output classes, including
-`FarmResultsEval` for reductions, efficiency, capacity, and yield. See the
-[output API](api_output.rst) for available methods and arguments. Calculations
-that need Python objects such as the algorithm are usually clearer in a script
-or notebook.
+Select derived fields through the farm collector. The
+`farm_results_analysis` model-book selector requests nominal capacity,
+capacity factors, efficiency and weights; output preparation applies
+`TurbineEvaluation` automatically. No manual turbine-model registration or
+post-calculation evaluation output is needed. Fields keep their state/turbine
+dimensions. Farm and cluster aggregation are not currently provided.
+See the [output API](api_output.rst) for collector selections and plotting.
 
 ### Plot creation and variables
 
-Function results can be stored under names beginning with `$` and passed to
-later calls. Use `object: $name` to call methods on a stored object; array-like
-results also support index expressions such as `$data[0]`. See the
+Output results can be stored with `result_labels` under names beginning with
+`$` and used in later constructor options, including nested dictionaries.
+Array-like results support index expressions such as `$data[0]`.
+The YAML-only `output_type: plt` exception forwards a `functions` list directly
+to `matplotlib.pyplot`: use `function: figure` with `result_labels: $fig`,
+then `object: $fig` and `function: add_subplot` to create shared axes.
+Pass those axes into layout/rose constructors, save with the figure's
+`savefig` method, and show/close with `plt` functions. These calls default to
+outside the engine and are skipped entirely with `--nofig`; stored labels
+then resolve to `None`. There is no pyplot output model or registration.
+Scientific outputs do not accept imperative method lists.
+Matplotlib `savefig` filenames resolve relative to the configured output
+directory, including when called on a stored figure.
+See the
 [combined-plot example](https://github.com/FraunhoferIWES/foxes/blob/main/examples/yaml_input/inputs2.yaml)
 for a complete workflow.
 
@@ -140,6 +153,25 @@ foxes_windio path/to/windio_input.yaml
 Use the example under `examples/windio` as the supported input reference. An
 explicit FOXES `wake_averaging` setting takes precedence over inferred WindIO
 rotor-averaging choices.
+
+WindIO `model_outputs_specification` entries execute through the ordinary
+constructor-defined output lifecycle:
+
+- `turbine_outputs.output_variables` selects `power` and/or
+  `rotor_effective_velocity`. `StateTurbineTable` writes only these fields with
+  `(turbine, time)` dimensions to `turbine_nc_filename`.
+- `flow_field.output_variables` selects `wind_speed` and/or `wind_direction`.
+  `SlicesData` writes only these fields with `(z, time, y, x)` dimensions to
+  `flow_nc_filename`. The `z` coordinates retain the requested plane order.
+- `run_configuration.times_run.subset` supplies unique nonnegative state
+  positions when `all_occurences` is false. Both reports retain the subset's
+  order; empty, repeated and noninteger positions are rejected.
+- `output_folder` selects the output directory; `--output_dir` overrides it.
+  `report: false` disables an individual report. Default filenames are
+  `turbine_outputs.nc` and `flow_field.nc`.
+
+`--nofig` suppresses figures without disabling these numerical reports.
+`--verbosity 0` silences adapter progress and NetCDF-writing messages.
 
 Enabled WindIO blockage models automatically select the iterative algorithm and
 `ground_mirror` for their induction wakes. This applies to `RankineHalfBody`,

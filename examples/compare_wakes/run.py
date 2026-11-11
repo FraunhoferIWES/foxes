@@ -15,7 +15,7 @@ def calc(mbook, farm, states, wakes, points, args):
         wake_frame="rotor_wd",
         partial_wakes=args.pwakes,
         mbook=mbook,
-        verbosity=0,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     farm_results = algo.calc_farm(outputs=args.outputs)
@@ -23,18 +23,30 @@ def calc(mbook, farm, states, wakes, points, args):
     # Finish each farm output even when no data is collected for point evaluation.
     if isinstance(farm_results, dict):
         farm_results = farm_results.get("farm_results")
-    if farm_results is None:
-        mbook.finalize(algo, verbosity=0)
+    elif not any(
+        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+        for name in args.outputs
+    ):
+        farm_results = None
+    if farm_results is not None and args.verbosity > 1:
+        print("\nFarm results:\n", farm_results)
+    required = set(mbook.outputs["farm_results"].fdata_variables)
+    if farm_results is None or not required.issubset(farm_results.data_vars):
+        print(
+            "Skipping point comparison: selected outputs lack the required farm fields."
+        )
+        mbook.finalize(algo, verbosity=max(args.verbosity - 1, 0))
         return None
 
     point_results = algo.calc_points(farm_results, points[None, :])
 
-    mbook.finalize(algo, verbosity=0)
+    mbook.finalize(algo, verbosity=max(args.verbosity - 1, 0))
 
     return point_results[args.var].to_numpy()
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-d",
@@ -60,7 +72,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-hg", "--height", help="The point height", type=float, default=None
     )
-    parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
+    parser.add_argument("--var", help="The plot variable", default=FV.WS)
     parser.add_argument(
         "-fs", "--figsize_scale", help="Scale for single D plot", type=int, default=4
     )
@@ -132,9 +144,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: compare_wakes")
 
     mbook = foxes.models.ModelBook()
+    if args.nofig:
+        for name in args.outputs:
+            output = mbook.outputs[name]
+            if hasattr(output, "show"):
+                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
     D = ttype.D
@@ -155,12 +181,14 @@ if __name__ == "__main__":
         foxes.Turbine(
             xy=np.array([0.0, 0.0]),
             turbine_models=models,
-        )
+        ),
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     #  y lines:
 
-    print("\nCalculating y lines\n")
+    if args.verbosity > 1:
+        print("\nCalculating y lines\n")
 
     xlist = np.array(args.dists_D) * D
     ylist = np.arange(-args.span_y, args.span_y + args.step, args.step) * D
@@ -183,6 +211,7 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     # x line:
@@ -197,7 +226,8 @@ if __name__ == "__main__":
         line_results = []
         for wake in args.wakes:
             wakes = [wake] + args.ewakes
-            print(f"Calculating: {wakes} \n")
+            if args.verbosity > 1:
+                print(f"Calculating: {wakes} \n")
 
             results = calc(mbook, farm, states, wakes, points, args)
             if results is not None:
@@ -209,19 +239,19 @@ if __name__ == "__main__":
 
     # Writer-only selections complete all comparisons without producing plots.
     if not wake_results:
-        raise SystemExit(0)
+        print("Skipping wake plots: no compatible farm-results output was selected.")
+        return
 
     figsize = (ncols * args.figsize_scale, nrows * args.figsize_scale)
-    fig, axs = plt.subplots(nrows, ncols, figsize=figsize, sharex=True, sharey=True)
+    fig, axs = plt.subplots(
+        nrows, ncols, figsize=figsize, sharex=True, sharey=True, squeeze=False
+    )
 
     for wake, results in wake_results:
         for di, d in enumerate(args.dists_D):
-            if nrows == 1 or ncols == 1:
-                ax = axs[di]
-            else:
-                xi = int(di / ncols)
-                yi = di % ncols
-                ax = axs[xi, yi]
+            xi = int(di / ncols)
+            yi = di % ncols
+            ax = axs[xi, yi]
 
             if args.deficit:
                 dfz = (args.ws - results[di]) / args.ws
@@ -261,3 +291,7 @@ if __name__ == "__main__":
 
     if not args.nofig:
         plt.show()
+
+
+if __name__ == "__main__":
+    main()

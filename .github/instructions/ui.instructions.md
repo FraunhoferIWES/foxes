@@ -14,7 +14,7 @@ authoritative tokens through `docs/source/_static/iwes-tokens.css` and applies
 them through `docs/source/_static/iwes.css`; review token parity outside pytest
 under `docs/adr/0008-documentation-independent-tests.md`. Do not
 introduce an application stack or another token copy as part of an unrelated
-scientific plot change. For Python plotting code under `foxes/output/`,
+scientific plot change. For Python plotting code under `foxes/models/outputs/`,
 examples, or notebooks, read the chart and FOXES-specific guidance in
 `docs/fraunhofer-design/ui-guidelines.md`; Python is intentionally not included
 in this file's broad `applyTo` glob because most package changes are non-visual.

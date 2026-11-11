@@ -27,12 +27,16 @@ all of them.
 | [0013](0013-full-shaped-broadcast-data.md) | Accepted; supersedes [0003](0003-compact-static-target-coordinates.md) | Represent repeated dimensioned data as full-shaped read-only broadcast views and broadcast mismatched `Model.get_data()` results automatically. |
 | [0014](0014-sequential-animation-outputs.md) | Accepted | Adapt flow-animation outputs to Sequential with step-local point evaluation and completion-only shared rendering. |
 | [0015](0015-animation-helper-ownership.md) | Accepted | Keep animation composition in adopted outputs and all Sequential plugins in `foxes.models.seq_plugins`. |
-| [0016](0016-state-turbine-performance-evaluation.md) | Accepted | Keep turbine performance metrics in state-turbine data, annualize unweighted power and require explicit uncertainty for P75/P90. |
-| [0017](0017-constructor-defined-output-contract.md) | Accepted | Promote animation dependencies to constructor-defined output models, keep scientific data run-local and preserve algorithm string/list selectors. |
+| [0016](0016-state-turbine-performance-evaluation.md) | Accepted; registration entry point superseded by [0022](0022-output-selected-turbine-evaluation.md), zero-division semantics by [0025](0025-turbine-evaluation-zero-division.md) | Keep turbine performance metrics in state-turbine data, annualize unweighted power and require explicit uncertainty for P75/P90. |
+| [0017](0017-constructor-defined-output-contract.md) | Accepted; evaluation scope superseded by [0022](0022-output-selected-turbine-evaluation.md), remaining adoption/YAML scope by [0024](0024-complete-output-adoption.md) | Promote animation dependencies to constructor-defined output models, keep scientific data run-local and preserve algorithm string/list selectors. |
 | [0018](0018-slice-first-output-hierarchy.md) | Accepted | Derive flow animations and static plots from numerical slice data, with neutral point-grid collection and shared-data keys. |
-| [0019](0019-reduced-output-payloads.md) | Accepted | Eliminate unnecessary output dimensions on workers and merge sufficient statistics, histograms and selected layout data without reconstructing state frames. |
+| [0019](0019-reduced-output-payloads.md) | Accepted; evaluation scope superseded by [0022](0022-output-selected-turbine-evaluation.md) | Eliminate unnecessary output dimensions on workers and merge sufficient statistics, histograms and selected layout data without reconstructing state frames. |
 | [0020](0020-output-display-control.md) | Accepted; animation defaults and test policy superseded by [0021](0021-noninteractive-animation-and-tests.md) | Default plotting constructors to no display, enable model-book plotting display and keep blocking animation playback parent-owned and run-local. |
 | [0021](0021-noninteractive-animation-and-tests.md) | Accepted | Keep animation presets noninteractive and prohibit enabled display in tests, including mocked checks; static plotting presets remain interactive. |
+| [0022](0022-output-selected-turbine-evaluation.md) | Accepted | Apply turbine metrics through output selection; remove competing evaluation/aggregation outputs and keep unrestricted collectors limited to available fields. |
+| [0023](0023-in-process-example-runs.md) | Accepted | Run every example once through callable mains/Python APIs, with isolated cleanup and independent bounded-input/headless choices. |
+| [0024](0024-complete-output-adoption.md) | Accepted | Complete output adoption, reduce arbitrary-point means on workers, require explicit curve scans and retain direct YAML-only Matplotlib calls as an explicit exception. |
+| [0025](0025-turbine-evaluation-zero-division.md) | Accepted | Return zero for zero-power efficiency, including zero ambient power, and positive infinity for nonzero power over zero ambient power, without division warnings. |
 
 ## When To Add An ADR
 

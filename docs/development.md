@@ -84,10 +84,20 @@ For turbine performance evaluation, run
 `uv run pytest tests/2_models/turbine_models/test_evaluation.py tests/0_consistency/core/test_farm_controller_tmodel_sels.py -q`.
 Synthetic cases verify exact annualized yields, P75/P90 factors, mixed turbine
 power units, changing turbine order, full-shaped selections, explicit failures
-and read-only running model state. Real Downwind/Iterative calculations cover
+and read-only running model state. Ratio regressions cover
+zero-power ratios without division warnings (`0 / 0` becomes zero; nonzero
+power over zero ambient power becomes positive infinity), while preserving
+NaNs and rejecting invalid nominal capacities. Coverage includes integer power
+inputs, signed zeros and empty/scalar selections.
+Real Downwind/Iterative calculations cover
 NumPy, single-chunk, thread and process engines, model-specific turbine
 selections, no-wake farms and ambient-only metrics. Model-name filtering checks
 ensure the final evaluation pass does not rerun other turbine models.
+Output-selection regressions request derived fields without registering any
+turbine evaluation model, covering Downwind/Iterative, original turbine order,
+ambient runs and NumPy/thread/process chunks. Unrestricted collectors retain
+available fields only. Farm/cluster aggregation tests are removed with their
+superseded evaluation APIs; no replacement aggregation is implemented.
 Iterative cases include final power under-relaxation and original-order model
 selection masks.
 
@@ -98,6 +108,13 @@ process scheduling and resolves bounded batches concurrently.
 
 For adopted animations, run
 `uv run pytest tests/2_models/test_flow_animations.py -q`.
+For the remaining adopted writers, tables, maps, points and metadata plots, run
+`uv run pytest tests/2_models/test_remaining_outputs.py -q`.
+These cases verify all algorithm entry points, uneven NumPy/thread/process
+chunks, state-free weighted point payloads, dynamic coordinates, original-order
+renaming/CSV tables and parent-only plotting. YAML-only Matplotlib calls are
+tested separately from model execution, including shared figures and entirely
+figure-less execution. They do not require a pyplot output class.
 For constructor-defined evaluation, layout, rose and slice outputs, also run
 `uv run pytest tests/2_models/test_output_contract.py tests/0_consistency/test_output_grids.py tests/2_models/model_smoke/test_output_nc_writers.py -q`.
 These tests exercise all three algorithm entry points, unchanged string/list
@@ -112,9 +129,9 @@ animation-labelled shared data. Exact precomputed values, target reordering and
 weighted means are checked in every plane in both NumPy and xarray formats.
 Run `uv run pytest tests/2_models/test_output_payloads.py -q` for compact worker
 payloads. Synthetic cases assert eliminated dimensions, fixed-size rose bins,
-scalar farm summaries, selected layout geometry and singleton static coordinates,
+selected layout geometry and singleton static coordinates,
 not just final numerical parity. They cover uneven chunks, zero-weight NaNs,
-stable population deviations, turbine-dependent weights, mixed power units,
+turbine-dependent weights,
 negative point/state positions, global denominator thresholds, optional flow
 vectors/overlays and NumPy/thread/process parity. Full datasets, animation frames
 and interval writers deliberately retain their required state-resolved fields.
@@ -160,6 +177,31 @@ Timeline state-chunk parity is covered by
 guesses converge to full-state results on NumPy and process engines. The
 timelines notebook exercises state chunks and bounded point evaluation together.
 
+Run all examples quietly with
+`uv run python examples/run_all.py --quick --nofig`.
+Every example accepts `-v`/`--verbosity`. The runner passes `-v 0` by default,
+prints one entry per example and an aggregate completion summary, and propagates
+diagnostics without global output redirection. Standalone scripts default to
+level `2` (reports); level `1` selects a concise summary and `3` enables library
+progress. Explicit verbosity in a
+documented example command takes precedence over the runner default.
+Plot-variable selection uses `--var`, leaving `-v` reserved for verbosity.
+Levels `2` and `3` print each collected farm-results dataset once, independently
+of fields required by later reports. This includes every comparison and optional
+benchmark run; levels `0` and `1` suppress datasets. Writer-only and non-farm
+selections never fabricate farm data. YAML/WindIO receive the same unreduced
+example level, with scientific verbosity reduced inside their readers.
+Animation examples forward this level directly to their selected animation
+outputs. Level `1` announces creation; level `2` adds writing and successful
+completion messages, frame counts and encoder settings; level `3` also reports
+individual frame composition and encoding. Level `0` stays quiet, and failed
+writes never announce completion.
+Tests execute every example once and assert quiet algorithm/engine instances,
+no displayed figures, restored configuration and no remaining artifacts.
+Mocked reporting tests cover every Python script at levels `0` through `3`,
+direct/composed results, partial fields, missing collectors and non-farm outputs
+without repeating their numerical example calculations.
+
 Engine `progress_bar=True` automatically uses tqdm for terminals/notebooks and
 newline-only snapshots for logs. Unicode terminal bars are selected when the
 stream supports them. Use `False` for explicit snapshots, `None` for no progress,
@@ -180,8 +222,9 @@ options. Engine output tests cover worker-local chunk files and count-limited
 buffered files, including file completion before the engine returns.
 
 The engine migration's focused checks do not certify unrelated unfinished branch
-migrations. The full-suite gate currently exposes removed state-provider exports;
-do not hide these failures with aliases or claim full-suite success.
+migrations. The full-suite gate still exposes mismatched default-field
+expectations and unsupported calculation options; do not hide these failures
+with aliases or claim full-suite success.
 
 Put a new dependency in the narrowest justified extra. A dependency required by
 an import of base `foxes` belongs in the main dependencies; an optional adapter
@@ -222,7 +265,7 @@ and the nearest tests.
 | Chunking or parallel execution | `foxes/engines/` | Engine contract and engine consistency tests |
 | State or file ingestion | `foxes/input/` | Input docs, examples, and boundary/error tests |
 | Chunk-based output collection or writing | `foxes/models/outputs/` | `foxes/core/output.py`, Downwind, pool engine and farm-output tests |
-| Existing consumers awaiting output adoption | `foxes/output/` | Result schema and current migration boundaries |
+| Constructor-defined outputs | `foxes/models/outputs/` | Selected fields, private chunk payloads and parent-owned finalization |
 | Factory, geometry, or shared infrastructure | `foxes/utils/` | All owning call sites and `tests/4_utils/` |
 | Public import | Owning package `__init__.py` | Root exports, API docs, and import tests |
 
@@ -242,6 +285,10 @@ These rules elaborate [AGENTS.md](../AGENTS.md#code-quality):
 	purposeful explanations.
 - Start every logical code block with a brief, one-line comment explaining its
 	purpose, and always separate logical blocks with a blank line.
+- Put docstrings first in module, class and function bodies. Implementation
+	comments belong below the complete docstring, never directly above it.
+	`tests/4_utils/test_source_style.py` checks package code, tests, examples and
+	notebook code cells for this placement rule.
 - Keep each module focused on one concern. Keep functions under 40 lines and
 	files under 700 lines where practical; justify exceptions in the completion
 	report.
@@ -318,9 +365,10 @@ The tests use synthetic inputs and temporary output directories.
 
 Those farm-output tests validate their NumPy/thread paths. Broader engine,
 algorithm and animation coverage is described above; do not treat one focused
-suite as certification of every runtime. Full-suite collection remains blocked
-by removed state-provider exports, while older consistency tests also expose
-default-field expectations that differ from the committed model-book selection.
+suite as certification of every runtime. The full suite collects successfully;
+older tests still expose unsupported calculation options and default-field
+expectations that differ from the committed model-book selection. Report exact
+failing test IDs separately from regressions in the current change.
 
 Before closure, broaden to the repository gates:
 
@@ -343,6 +391,13 @@ uv run pre-commit run --all-files
 
 Pre-commit owns the configured Ruff and mypy invocations. A hook can modify a
 file and still exit non-zero; inspect the diff and rerun it.
+
+Run notebooks with `MPLBACKEND=Agg` in an isolated copy of `notebooks/` and
+`examples/` when checking generated files and animations. Do not overwrite
+notebook outputs during validation. Keep notebook process counts explicit and
+bounded; this changes execution resources, not the scientific inputs. Compare
+each plotted case using that case's algorithm/results, rather than the last
+algorithm left in a loop.
 
 ## Development Closure
 
@@ -402,17 +457,19 @@ The numbered test directories encode intent:
 | `tests/3_examples/` | Execution of commands represented by example READMEs |
 | `tests/4_utils/` | Utility contracts |
 
-The aggregate example test excludes `examples/windio`. Changes to that example
-or its CLI flow need a separate focused check with the required integration
-available; do not infer coverage from `tests/3_examples/` alone.
+Run `uv run pytest tests/3_examples -q` for every example, once each, with
+bounded local inputs and no figure display. Scripts expose `main(argv=None)`;
+the runner imports them directly and calls YAML/WindIO Python APIs without
+shell commands. ICON-DREAM uses synthetic ICON/EWW inputs, Slurm uses a local
+engine, and WindIO uses the bundled public document with local includes inlined.
+This tests WindIO translation/execution, not its optional external YAML loader.
+Normal runs retain real-input and scheduler defaults.
 
-Run `uv run pytest tests/3_examples/test_output_selection.py -q` for the common
-Downwind/Iterative example `-o/--outputs` option. Parser checks cover every
-supported script; small real runs verify direct datasets, composed mappings,
-writer-only files, invalid names and completion of multi-case comparisons.
-Sequential iterator scripts are covered separately in the same test module,
-with selections limited to the farm collector and animation models. YAML-only
-workflows and the wake-field exporter are outside this option's scope.
+`test_output_selection.py` checks all script parsers, one-command README
+selection, deduplication, and cleanup/restoration on success and failure without
+repeating the numerical examples. Collector/writer/animation numerical and
+encoding contracts remain covered by their model tests. Sequential selections
+are limited to the farm collector and animation models.
 
 `tests/conftest.py` fixes default engine chunk sizes to 64 states and 500 points
 for deterministic behavior across machines. Do not make a test depend on a
@@ -485,32 +542,38 @@ resource cleanup, ordering, and shared/cache state when those paths change.
 Keep worker entry points importable and serializable, and keep runtime imports
 outside `TYPE_CHECKING` when workers execute them.
 
-Subprocesses have two established, narrow exceptions:
-
-- Example tests load `examples/run_all.py` in-process, while that harness runs
-	the documented example commands. These tests are skipped when `CONDA_BUILD` is
-	set.
-- The real MPI subprocess smoke test is disabled by default. It runs only when
+The real MPI subprocess smoke test is an established, narrow exception,
+disabled by default. It runs only when
 	`FOXES_RUN_MPI_TESTS=1`, `mpi4py.futures` is importable, and `mpiexec` or
 	`mpirun` is available.
 
-Do not copy either exception into ordinary unit tests.
+Do not copy this exception into ordinary unit tests. Example tests no longer
+spawn CLI/shell processes or skip under `CONDA_BUILD`.
 
 ## Running Examples
 
-Each example directory owns a `README.md` with runnable commands. The aggregate
-runner discovers those commands and can list or filter cases. Run it from the
-examples directory:
+Every example directory owns exactly one `run-all` and one `run-all-quick`
+command marker in its README. Additional tutorial commands are not aggregate
+runner entries. Every Python script remains a monolithic tutorial, with a
+callable `main(argv=None)` and normal CLI launch. This is an explicit exception
+to the usual function-size guideline.
 
 ```console
-cd examples
-uv run python run_all.py --dry
-uv run python run_all.py --include compare_wakes --nofig
+uv run python examples/run_all.py --dry
+uv run python examples/run_all.py --quick --nofig
+uv run python examples/run_all.py --include compare_wakes --nofig
 ```
 
-Use `--nofig` in automation. Use `--exclude` for unavailable optional
-integrations and `--step` only for resuming a manual aggregate run. New examples
-must clean up their generated artifacts and keep their README command current.
+The runner copies each example into a temporary directory, restores the working
+directory, FOXES configuration (including UTM state), backend/interactive mode,
+and removes its figures and generated files even on failure. Normal aggregate
+runs also discard files; run an individual script to retain its outputs.
+`--quick` selects bounded local fixtures independently of `--nofig`.
+`--nofig` suppresses display, not explicitly selected file writers/animations.
+All scripts accept `-o/--outputs` with intention-specific defaults and skip
+reporting when required collected fields are absent. Use `--exclude` for
+unavailable integrations in normal mode, and `--step` only to resume manual
+runs. See [ADR-0023](adr/0023-in-process-example-runs.md).
 
 ## Documentation
 

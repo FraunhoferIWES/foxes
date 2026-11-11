@@ -10,8 +10,7 @@ import numpy as np
 import foxes.constants as FC
 import foxes.variables as FV
 
-from ._rose import _rose_get_figure
-from ._rose_bins import _bins_get_figure
+from ._rose import _bins_get_figure, _rose_get_figure
 from ._rose_output import RoseOutput
 from ._variable_info import get_data_info
 

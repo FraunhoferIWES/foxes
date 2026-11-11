@@ -89,11 +89,18 @@ chain, not a list of physical variables. Adopted concrete classes belong in
 factories to these instances.
 
 Newly adopted consumers use the snake-case names `farm_layout`,
-`farm_results_eval`, `rose_plot`, `states_rose_plot`, `wind_rose_bin_plot`,
+`rose_plot`, `states_rose_plot`, `wind_rose_bin_plot`,
 `slice_data`, `slices_data` and `flow_plot`. Slice-family factories append
 `_<plane>_<reduction>`, where plane is `xy`, `xz` or `yz` and reduction is
 `states` or `mean`. Names are selectors, not physical variable lists; constructor
 configuration remains on the selected output model.
+
+The final adoption adds `state_turbine_map`, `state_turbine_table`,
+`results_writer`, `point_calculator`, `rotor_point_plot` and `turbine_type_curves`.
+These names follow the same constructor-defined lifecycle. YAML `plt` is an
+exception handled directly by the reader, not a model-book output.
+Arbitrary-point results include metre coordinates
+`x`, `y`, `z`; mean fields have `(FC.POINT,)` dimensions.
 
 For plotting outputs, `show` controls blocking display, `plot` selects figures
 instead of numerical results, and `nofig` suppresses figure generation.
@@ -278,7 +285,10 @@ both represent unwaked values; their names do not imply wake effects were run.
 `PowerMask.P_lim` is the boost-transition width in the same power units as
 `FV.P` and `FV.MAX_P`, not an absolute power cap. `SectorManagement` turbine
 indices refer to original farm order; `FV.ORDER` maps calculation columns to
-those original indices.
+those original indices while scientific fields are in downwind order.
+Output preparation restores physical fields through the inverse permutation
+but retains `FV.ORDER` itself as downwind-sequence metadata. Do not interpret
+it as the column identity of already farm-ordered public physical fields.
 
 - Coordinates: `FV.X`, `FV.Y`, `FV.H`, `FV.D`, and `FV.TXYH`.
 - Wind: `FV.WS`, `FV.WD`, `FV.UV`, `FV.U`, and `FV.V`.
@@ -295,6 +305,13 @@ rounding. In `TurbineEvaluation`, `FV.YLD` and these probability yields are
 annualized per-state values, not weighted contributions. `power_uncert` is
 relative uncertainty (`0.1` means 10 percent), not a percent-valued input.
 `FV.CAP` remains nominal power in the turbine type's power unit.
+
+Select derived farm fields through output variables, for example
+`FarmResultsOutput(variables=[FV.CAPF, FV.EFF, FV.YLD])` or the
+`farm_results_analysis` model-book collector. `PrepareForOutput` applies
+`TurbineEvaluation` automatically for missing selected metrics; no manual
+turbine-model registration is needed. An unrestricted selection collects only
+available fields. Farm/cluster aggregation is not an output evaluation API.
 
 Create temporary model-specific keys with `model.var(variable)` and recover the
 base name with `model.unvar(name)`. Do not reproduce its prefixing logic by

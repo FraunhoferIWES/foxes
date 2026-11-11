@@ -36,7 +36,4 @@ outputs:
       figsize: [6, 7]
       s: 150
       annotate: 0
-  - output_type: plt
-    functions:
-      - function: show
-      - function: close
+    show: True

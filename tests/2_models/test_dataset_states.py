@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import xarray as xr
 
 import foxes.constants as FC
@@ -9,7 +10,8 @@ from foxes.core import FData, MData
 from foxes.input.states import DatasetStates
 
 
-def test_reorder_farm_output_derives_inverse_order():
+@pytest.mark.parametrize("reorder", [False, True])
+def test_reorder_farm_output_derives_inverse_order(reorder):
     order = np.array([[2, 0, 1], [1, 2, 0]])
     fdata = FData(
         data={
@@ -21,13 +23,17 @@ def test_reorder_farm_output_derives_inverse_order():
             FV.WS: (FC.STATE, FC.TURBINE),
         },
     )
-    model = PrepareForOutput(output=FarmResultsOutput(variables=[FV.WS]))
+    model = PrepareForOutput(
+        output=FarmResultsOutput(variables=[FV.WS]), reorder=reorder
+    )
 
     model.calculate(algo=None, mdata=MData(), fdata=fdata)
 
     np.testing.assert_allclose(
         fdata[FV.WS],
-        [[10.0, 20.0, 30.0], [40.0, 50.0, 60.0]],
+        [[10.0, 20.0, 30.0], [40.0, 50.0, 60.0]]
+        if reorder
+        else [[30.0, 10.0, 20.0], [50.0, 60.0, 40.0]],
     )
 
 

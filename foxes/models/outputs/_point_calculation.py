@@ -134,8 +134,9 @@ def point_blocks(
     fdata
         Farm-ordered scientific inputs, copied before downstream reordering.
     points
-        Static ``(point, 3)`` or full-input ``(state, point, 3)`` coordinates.
-        State-dependent points are selected using the chunk's global offset.
+        Static ``(point, 3)`` or state-dependent ``(state, point, 3)``
+        coordinates. A matching state axis is already chunk-local; full-input
+        arrays are selected using the chunk's global offset.
     models
         Initialized point models, treated as read-only throughout calculation.
     parameters
@@ -167,13 +168,15 @@ def point_blocks(
                     data[variable] = values[np.arange(len(order))[:, None], order]
 
     # Select only the active states when coordinates depend on the input state.
-    if points.ndim == 3:
+    if points.ndim == 3 and points.shape[0] != md.n_states:
         start = mdata.states_i0(counter=True)
         if start is None or md.n_states is None:
             raise ValueError(
                 "State-dependent output points require state chunk offsets"
             )
         points = points[start : start + md.n_states]
+        if points.shape[0] != md.n_states:
+            raise ValueError("Output point coordinates do not match the state chunk")
     n_points = points.shape[-2]
     if n_points == 0:
         raise ValueError("Output calculation points must not be empty")

@@ -6,7 +6,9 @@ import foxes
 import foxes.variables as FV
 from foxes.models.outputs import FarmResultsOutput
 
-if __name__ == "__main__":
+
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-l",
@@ -72,9 +74,25 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: sector_management")
 
     mbook = foxes.models.ModelBook()
+    mbook.outputs["farm_results"].fdata_variables.extend([FV.MAX_P])
+
+    if args.nofig:
+        for name in args.outputs:
+            output = mbook.outputs[name]
+            if hasattr(output, "show"):
+                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -100,6 +118,7 @@ if __name__ == "__main__":
         xy_step=[600.0, 0.0],
         n_turbines=2,
         turbine_models=args.tmodels + [ttype.name, "sector_rules", "PMask"],
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     algo = foxes.algorithms.Downwind(
@@ -110,6 +129,7 @@ if __name__ == "__main__":
         wake_frame="rotor_wd",
         partial_wakes=args.pwakes,
         mbook=mbook,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     outputs = [
@@ -134,6 +154,7 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     with engine:
@@ -144,44 +165,62 @@ if __name__ == "__main__":
     # Evaluate collected farm data only; writer-only outputs are already complete.
     if isinstance(farm_results, dict):
         farm_results = farm_results.get("farm_results")
-    if farm_results is None:
-        raise SystemExit(0)
+    elif not any(
+        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+        for name in args.outputs
+    ):
+        farm_results = None
+    if farm_results is not None and args.verbosity > 1:
+        print("\nFarm results:\n", farm_results)
+    required = {FV.MAX_P}
+    if farm_results is None or not required.issubset(farm_results.data_vars):
+        print(
+            "Skipping farm reporting: selected outputs do not collect the required fields:",
+            sorted(required),
+        )
+        return
 
-    print("\nCalc time =", time1 - time0, "\n")
-
-    print(farm_results)
+    if args.verbosity > 1:
+        print("\nCalc time =", time1 - time0, "\n")
 
     fr = farm_results.to_dataframe()
     sel = fr[FV.MAX_P].dropna().index
     fr = fr.loc[sel]
-    print(fr)
+    if args.verbosity > 1:
+        print(fr)
 
     if not args.nofig:
         fig = plt.figure(figsize=(12, 4))
         ax1 = fig.add_subplot(121, polar=True)
         ax2 = fig.add_subplot(122, polar=True)
 
-        algo.calc_outputs(
-            outputs=foxes.models.outputs.RosePlotOutput(
-                wd_sectors=16,
-                ws_var=FV.P,
-                ws_bins=[0, 100, 1000, 2000, 4000, 5001, 7000],
-                turbine=0,
-                plot=True,
-                plot_pars=dict(title="Power turbine 0", fig=fig, ax=ax1),
-            ),
-            farm_results=farm_results,
-        )[0]
+        with engine:
+            algo.calc_outputs(
+                outputs=foxes.models.outputs.RosePlotOutput(
+                    wd_sectors=16,
+                    ws_var=FV.P,
+                    ws_bins=[0, 100, 1000, 2000, 4000, 5001, 7000],
+                    turbine=0,
+                    plot=True,
+                    plot_pars=dict(title="Power turbine 0", fig=fig, ax=ax1),
+                ),
+                farm_results=farm_results,
+            )[0]
 
-        algo.calc_outputs(
-            outputs=foxes.models.outputs.RosePlotOutput(
-                wd_sectors=16,
-                ws_var=FV.P,
-                ws_bins=[0, 100, 1000, 2000, 4000, 5001, 7000],
-                turbine=1,
-                plot=True,
-                plot_pars=dict(title="Power turbine 1", fig=fig, ax=ax2),
-            ),
-            farm_results=farm_results,
-        )[0]
+        with engine:
+            algo.calc_outputs(
+                outputs=foxes.models.outputs.RosePlotOutput(
+                    wd_sectors=16,
+                    ws_var=FV.P,
+                    ws_bins=[0, 100, 1000, 2000, 4000, 5001, 7000],
+                    turbine=1,
+                    plot=True,
+                    plot_pars=dict(title="Power turbine 1", fig=fig, ax=ax2),
+                ),
+                farm_results=farm_results,
+            )[0]
         plt.show()
+
+
+if __name__ == "__main__":
+    main()

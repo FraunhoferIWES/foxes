@@ -29,7 +29,7 @@ def output_algo():
         wind_farm_list=["north", "south"],
         cluster_list=["A", "B"],
     )
-    return SimpleNamespace(farm=farm)
+    return SimpleNamespace(farm=farm, verbosity=0)
 
 
 def _chunk(output, algo, labels, start, index, n_chunks, weights=None, point_index=0):

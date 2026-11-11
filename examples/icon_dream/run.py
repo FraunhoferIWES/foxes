@@ -3,8 +3,12 @@ import argparse
 import foxes
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-nf", "--nofig", action="store_true", help="Do not show figures"
+    )
     parser.add_argument(
         "files_nc",
         help="The input files pattern in the nc folder from iconDream2foxes",
@@ -57,9 +61,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: icon_dream")
 
     mbook = foxes.ModelBook()
+    if args.nofig:
+        for name in args.outputs:
+            output = mbook.outputs[name]
+            if hasattr(output, "show"):
+                output.show = False
 
     farm = foxes.WindFarm(
         input_is_lonlat=True,
@@ -71,7 +89,7 @@ if __name__ == "__main__":
         csv_dir=args.eww_pc,
         filter=[("wind_farm", args.farms)],
         mbook=mbook,
-        verbosity=1,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     states = foxes.input.states.ICONStates(args.files_nc)
@@ -82,7 +100,7 @@ if __name__ == "__main__":
         wake_models=["Bastankhah2014_linear_k004"],
         rotor_model="centre",
         mbook=mbook,
-        verbosity=1,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     engine = foxes.Engine.new(
@@ -90,8 +108,8 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-        progress_bar=True,
-        verbosity=1,
+        progress_bar=args.verbosity > 2,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     with engine:
@@ -102,8 +120,20 @@ if __name__ == "__main__":
     # Evaluate collected farm data only; writer-only outputs are already complete.
     if isinstance(farm_results, dict):
         farm_results = farm_results.get("farm_results")
+    elif not any(
+        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+        for name in args.outputs
+    ):
+        farm_results = None
+    if farm_results is not None and args.verbosity > 1:
+        print("\nFarm results:\n", farm_results)
     if farm_results is None:
-        raise SystemExit(0)
+        print("Skipping farm reporting: no farm-results output was selected.")
+        return
 
-    print("\nCalc time =", time1 - time0, "\n")
-    print(farm_results)
+    if args.verbosity > 1:
+        print("\nCalc time =", time1 - time0, "\n")
+
+
+if __name__ == "__main__":
+    main()

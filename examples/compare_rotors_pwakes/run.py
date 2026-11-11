@@ -9,6 +9,12 @@ import foxes.variables as FV
 
 def calc(args, rotor, sdata, pwake):
     mbook = foxes.models.ModelBook()
+
+    if args.nofig:
+        for name in args.outputs:
+            output = mbook.outputs[name]
+            if hasattr(output, "show"):
+                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
     D = ttype.D
@@ -18,14 +24,14 @@ def calc(args, rotor, sdata, pwake):
         foxes.Turbine(
             xy=np.array([0.0, 0.0]), turbine_models=args.tmodels + [ttype.name]
         ),
-        verbosity=0,
+        verbosity=max(args.verbosity - 1, 0),
     )
     farm.add_turbine(
         foxes.Turbine(
             xy=np.array([args.dist_x, 0.0]),
             turbine_models=["sety"] + args.tmodels + [ttype.name],
         ),
-        verbosity=0,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     states = foxes.input.states.StatesTable(
@@ -47,20 +53,29 @@ def calc(args, rotor, sdata, pwake):
         wake_frame="rotor_wd",
         partial_wakes=pwake,
         mbook=mbook,
-        verbosity=0,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
-    print(f"\nCalculating rotor = {rotor}, pwake = {pwake}")
+    if args.verbosity > 1:
+        print(f"\nCalculating rotor = {rotor}, pwake = {pwake}")
     farm_results = algo.calc_farm(outputs=args.outputs)
 
     # Leave numerical comparison to callers only when farm data was collected.
     if isinstance(farm_results, dict):
         farm_results = farm_results.get("farm_results")
+    elif not any(
+        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+        for name in args.outputs
+    ):
+        farm_results = None
+    if farm_results is not None and args.verbosity > 1:
+        print("\nFarm results:\n", farm_results)
 
     return farm_results, D
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
@@ -72,7 +87,7 @@ if __name__ == "__main__":
         help="The P-ct-curve csv file (path or static)",
         default="NREL-5MW-D126-H90.csv",
     )
-    parser.add_argument("-v", "--var", help="The variable selection", default=FV.REWS)
+    parser.add_argument("--var", help="The variable selection", default=FV.REWS)
     parser.add_argument(
         "-d", "--dist_x", help="The turbine distance in x", type=float, default=500.0
     )
@@ -137,7 +152,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: compare_rotors_pwakes")
 
     ws = args.ws
     var = args.var
@@ -165,6 +189,7 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     # Collect every case before plotting the available farm datasets.
@@ -177,7 +202,12 @@ if __name__ == "__main__":
                 pwake_results.append((pwake, farm_results))
 
         for pwake, farm_results in pwake_results:
-            if farm_results is None:
+            required = {FV.Y, var}
+            if farm_results is None or not required.issubset(farm_results.data_vars):
+                print(
+                    "Skipping comparison: selected outputs do not collect",
+                    sorted(required),
+                )
                 continue
 
             ax.plot(
@@ -198,7 +228,12 @@ if __name__ == "__main__":
                 rotor_results.append((rotor, farm_results))
 
         for rotor, farm_results in rotor_results:
-            if farm_results is None:
+            required = {FV.Y, var}
+            if farm_results is None or not required.issubset(farm_results.data_vars):
+                print(
+                    "Skipping comparison: selected outputs do not collect",
+                    sorted(required),
+                )
                 continue
 
             ax.plot(
@@ -219,7 +254,12 @@ if __name__ == "__main__":
                 all_results.append((rotor, pwake, farm_results))
 
         for rotor, pwake, farm_results in all_results:
-            if farm_results is None:
+            required = {FV.Y, var}
+            if farm_results is None or not required.issubset(farm_results.data_vars):
+                print(
+                    "Skipping comparison: selected outputs do not collect",
+                    sorted(required),
+                )
                 continue
 
             ax.plot(
@@ -242,7 +282,10 @@ if __name__ == "__main__":
     # Writer-only selections complete every case without leaving a figure open.
     if title is None:
         plt.close(fig)
-        raise SystemExit(0)
+        print(
+            "Skipping comparison plots: no compatible farm-results output was selected."
+        )
+        return
 
     if args.title is not None:
         title = args.title
@@ -253,3 +296,7 @@ if __name__ == "__main__":
     ax.legend()
     if not args.nofig:
         plt.show()
+
+
+if __name__ == "__main__":
+    main()

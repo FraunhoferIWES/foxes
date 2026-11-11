@@ -238,7 +238,7 @@ class StatesTable(States):
                 self._data = fpath
                 if verbosity > 0:
                     print(f"Path: {fpath}")
-            elif verbosity:
+            elif verbosity > 0:
                 print(f"States '{self.name}': Reading file {fpath}")
             rpars = dict(self.RDICT, **self.rpars)
             data = PandasFileHelper().read_file(fpath, **rpars)
@@ -576,7 +576,7 @@ class TabStates(StatesTable):
                     self.__tab_source = fpath
                     if verbosity > 0:
                         print(f"Path: {self.__tab_source}")
-                elif verbosity:
+                elif verbosity > 0:
                     print(f"States '{self.name}': Reading file {self.__tab_source}")
                 self.__tab_data = read_tab_file(self.__tab_source, self._normalize)
 

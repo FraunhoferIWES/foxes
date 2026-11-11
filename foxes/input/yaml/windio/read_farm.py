@@ -196,7 +196,7 @@ def read_layout(
                 turbine_models=[tt],
                 wind_farm_name=fname,
             ),
-            verbosity=verbosity - 3,
+            verbosity=max(verbosity - 3, 0),
         )
     if verbosity > 2:
         print(f"          Total number of turbines: {farm.n_turbines}")

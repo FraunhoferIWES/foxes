@@ -7,8 +7,12 @@ import foxes
 import foxes.variables as FV
 import foxes.constants as FC
 
-if __name__ == "__main__":
+
+def main(argv=None):
+    """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
+    parser.add_argument("--grid-size", type=int, default=5)
+    parser.add_argument("--population-size", type=int, default=10)
     parser.add_argument(
         "-l",
         "--layout",
@@ -55,7 +59,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=2,
+        help="0 quiet, 1 summary, 2 reports, 3 library progress",
+    )
+    args = parser.parse_args(argv)
+    if args.verbosity > 0:
+        print("Running example: parameter_study")
+
+    mbook = foxes.ModelBook()
+    mbook.outputs["farm_results"].fdata_variables.extend([FV.K])
+
+    if args.nofig:
+        for name in args.outputs:
+            mbook.outputs[name].show = False
 
     states = foxes.input.states.Timeseries(
         data_source="timeseries_3000.csv.gz",
@@ -67,11 +87,12 @@ if __name__ == "__main__":
         farm,
         xy_base=np.array([500.0, 500.0]),
         step_vectors=np.array([[500.0, 0], [0, 700.0]]),
-        steps=(5, 5),
+        steps=(args.grid_size, args.grid_size),
         turbine_models=args.tmodels + ["NREL5MW"],
+        verbosity=max(args.verbosity - 1, 0),
     )
 
-    k_values = np.linspace(0.01, 0.1, 10)
+    k_values = np.linspace(0.01, 0.1, args.population_size)
     n_pop = len(k_values)
     pop_data = np.zeros((n_pop, farm.n_turbines))
     pop_data[:] = k_values[:, None]
@@ -80,12 +101,14 @@ if __name__ == "__main__":
             FV.K: (("i", FC.TURBINE), pop_data),
         }
     )
-    print("\nInput population data:\n\n", pop_data)
-    print(f"\n{FV.K} values: {pop_data[FV.K].values[:, 0]}\n")
+    if args.verbosity > 1:
+        print("\nInput population data:\n\n", pop_data)
+        print(f"\n{FV.K} values: {pop_data[FV.K].values[:, 0]}\n")
 
     algo = foxes.algorithms.Downwind(
         farm,
         states,
+        mbook=mbook,
         wake_models=args.wakes,
         rotor_model=args.rotor,
         wake_frame="rotor_wd",
@@ -94,7 +117,9 @@ if __name__ == "__main__":
             data_source=pop_data,
             index_coord="i",
             turbine_coord=FC.TURBINE,
+            verbosity=max(args.verbosity - 1, 0),
         ),
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     engine = foxes.Engine.new(
@@ -102,7 +127,7 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-        verbosity=2,
+        verbosity=max(args.verbosity - 1, 0),
     )
 
     with engine:
@@ -113,18 +138,37 @@ if __name__ == "__main__":
     # Evaluate collected farm data only; writer-only outputs are already complete.
     if isinstance(farm_results, dict):
         farm_results = farm_results.get("farm_results")
-    if farm_results is None:
-        raise SystemExit(0)
+    elif not any(
+        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
+        for name in args.outputs
+    ):
+        farm_results = None
+    if farm_results is not None and args.verbosity > 1:
+        print("\nFarm results:\n", farm_results)
+    required = {FV.K, FV.P, FV.WEIGHT}
+    if farm_results is None or not required.issubset(farm_results.data_vars):
+        print(
+            "Skipping farm reporting: selected outputs do not collect the required fields:",
+            sorted(required),
+        )
+        return
 
-    print("Calc time =", time1 - time0, "\n")
+    if args.verbosity > 1:
+        print("Calc time =", time1 - time0, "\n")
 
     pop_results = algo.population_model.farm2pop_results(algo, farm_results)
-    print("\nPopulation results:\n\n", pop_results)
-    print(f"\n{FV.K} values: {pop_results[FV.K].values[:, 0, 0]}")
+    if args.verbosity > 1:
+        print("\nPopulation results:\n\n", pop_results)
+        print(f"\n{FV.K} values: {pop_results[FV.K].values[:, 0, 0]}")
 
     P_mean = (
         (pop_results[FV.P] * pop_results[FV.WEIGHT])
         .sum(dim=FC.STATE)
         .sum(dim=FC.TURBINE)
     )
-    print("\nFarm P_mean:", P_mean.values)
+    if args.verbosity > 1:
+        print("\nFarm P_mean:", P_mean.values)
+
+
+if __name__ == "__main__":
+    main()

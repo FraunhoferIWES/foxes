@@ -10,14 +10,11 @@ import foxes.constants as FC
 import foxes.variables as FV
 from foxes.models.outputs import (
     FarmLayoutOutput,
-    FarmResultsEval,
     FlowPlots2D,
     PointResultsOutput,
     RosePlotOutput,
     WindRoseBinPlot,
 )
-from foxes.models.outputs import _farm_evaluation, _rose, _rose_bins
-from foxes.models.outputs._array_reduction import merge_stats, reduce_array, stats_value
 
 
 @pytest.fixture
@@ -66,95 +63,6 @@ def algorithm(farm_data):
     return algo
 
 
-EVALUATIONS = [
-    ("reduce_states", {}),
-    ("reduce_states", {"vars_op": {FV.P: "weights", FV.REWS: "mean", FV.CAP: None}}),
-    ("reduce_states", {"vars_op": {FV.P: "sum", FV.REWS: "std"}}),
-    ("reduce_states", {"vars_op": {FV.P: "min", FV.REWS: "max"}}),
-    (
-        "reduce_all",
-        {
-            "states_op": {FV.P: "weights", FV.REWS: "mean"},
-            "turbines_op": {FV.P: "sum", FV.REWS: "max"},
-        },
-    ),
-    (
-        "reduce_all",
-        {
-            "states_op": {FV.P: "weights", FV.REWS: "mean"},
-            "turbines_op": {FV.P: "sum"},
-        },
-    ),
-    ("calc_states_mean", {"vars": FV.P}),
-    ("calc_states_mean", {"vars": [FV.P, FV.REWS], "use_weights": False}),
-    ("calc_states_sum", {"vars": [FV.P]}),
-    ("calc_states_std", {"vars": [FV.P]}),
-    ("calc_turbine_mean", {"vars": [FV.P, FV.REWS]}),
-    ("calc_turbine_sum", {"vars": [FV.P]}),
-    ("reduce_turbines", {"vars_op": {FV.P: "weights", FV.REWS: "weights_sum"}}),
-    ("reduce_turbines", {"vars_op": {FV.P: "min", FV.REWS: "max"}}),
-    ("calc_farm_mean", {"vars": [FV.P, FV.REWS]}),
-    ("calc_farm_sum", {"vars": [FV.P]}),
-    ("calc_mean_farm_power", {}),
-    ("calc_mean_farm_power", {"ambient": True}),
-    ("calc_yield", {"annual": True}),
-    ("calc_yield", {}),
-    ("calc_farm_yield", {"power_uncert": 0.12}),
-    ("calc_farm_capacity_factor", {}),
-    ("calc_farm_efficiency", {}),
-]
-
-
-@pytest.mark.parametrize("operation,parameters", EVALUATIONS)
-@pytest.mark.parametrize("chunk_size", [1, 3, 7])
-def test_farm_evaluation_payload_statistics_match_dataset_operations(
-    algorithm, farm_data, monkeypatch, operation, parameters, chunk_size
-):
-    output = FarmResultsEval(operation=operation, parameters=parameters)
-    expected = getattr(_farm_evaluation, "_" + operation)(
-        farm_data.copy(deep=True), algorithm, output, **parameters
-    )
-    calculate = FarmResultsEval.calculate
-    inspected = []
-
-    def capture(self, *args, **kwargs):
-        result = calculate(self, *args, **kwargs)
-        payload = result[self.var("data")]
-        assert "data_vars" not in payload
-        assert "coords" not in payload
-        assert all(stat["value"].ndim <= 1 for stat in payload["stats"].values())
-        if operation == "reduce_all":
-            assert set(payload["stats"]) == set(parameters["turbines_op"])
-        if operation in (
-            "calc_mean_farm_power",
-            "calc_farm_capacity_factor",
-            "calc_farm_efficiency",
-            "calc_farm_mean",
-            "calc_farm_sum",
-            "calc_farm_yield",
-        ):
-            assert all(stat["value"].shape == () for stat in payload["stats"].values())
-        inspected.append(payload)
-        return result
-
-    monkeypatch.setattr(FarmResultsEval, "calculate", capture)
-    with foxes.Engine.new("numpy", chunk_size_states=chunk_size, verbosity=0):
-        result = algorithm.calc_outputs(outputs=output, farm_results=farm_data)
-    assert inspected
-    if isinstance(expected, pd.DataFrame):
-        pd.testing.assert_frame_equal(
-            result, expected, check_exact=False, rtol=1e-12, atol=1e-12
-        )
-    elif isinstance(expected, dict):
-        assert result.keys() == expected.keys()
-        for key in expected:
-            np.testing.assert_allclose(
-                result[key], expected[key], rtol=1e-12, atol=1e-12
-            )
-    else:
-        np.testing.assert_allclose(result, expected, rtol=1e-12, atol=1e-12)
-
-
 @pytest.mark.parametrize(
     "contraction", ["frequency", "weights", "mean_no_weights", "sum_no_weights"]
 )
@@ -165,23 +73,17 @@ def test_rose_payloads_contain_bins_not_state_samples(
     parameters = dict(ws_bins=[0, 2, 4, 6, 8], wd_sectors=8, plot=False)
     if contraction == "frequency":
         output = RosePlotOutput(**parameters)
-        expected = _rose._rose_get_data(
-            farm_data,
-            output,
-            wd_sectors=8,
-            ws_var=FV.AMB_REWS,
-            ws_bins=parameters["ws_bins"],
-        )
+        north = [5.0, 45.0, 50.0, 0.0]
     else:
         output = WindRoseBinPlot(variable=FV.P, contraction=contraction, **parameters)
-        expected = _rose_bins._bins_get_data(
-            farm_data,
-            output,
-            variable=FV.P,
-            contraction=contraction,
-            ws_bins=parameters["ws_bins"],
-            wd_sectors=8,
-        )
+        north = {
+            "weights": [1.0, 2.45 / 0.45, 11.6, np.nan],
+            "mean_no_weights": [1.0, 5.0, 11.0, np.nan],
+            "sum_no_weights": [1.0, 15.0, 33.0, 0.0],
+        }[contraction]
+    empty = np.nan if contraction in {"weights", "mean_no_weights"} else 0.0
+    expected = np.full((8, 4), empty)
+    expected[0] = north
     calculate = type(output).calculate
     inspected = []
 
@@ -198,7 +100,17 @@ def test_rose_payloads_contain_bins_not_state_samples(
     with foxes.Engine.new("numpy", chunk_size_states=chunk_size, verbosity=0):
         result = algorithm.calc_outputs(outputs=output, farm_results=farm_data)
     assert inspected
-    xr.testing.assert_allclose(result, expected)
+    variable = "frequency" if contraction == "frequency" else FV.P
+    np.testing.assert_allclose(result[variable], expected)
+    assert result[variable].dims == (FV.AMB_WD, FV.AMB_REWS)
+    np.testing.assert_array_equal(result[FV.AMB_WD], np.arange(0, 360, 45))
+    np.testing.assert_array_equal(result[FV.AMB_REWS], [1, 3, 5, 7])
+    np.testing.assert_array_equal(
+        result.attrs[f"{FV.AMB_WD}_bounds"], np.arange(-22.5, 360, 45)
+    )
+    np.testing.assert_array_equal(
+        result.attrs[f"{FV.AMB_REWS}_bounds"], [0, 2, 4, 6, 8]
+    )
 
 
 @pytest.mark.parametrize("position", [0, 4, -1, -5])
@@ -249,93 +161,6 @@ def test_algorithm_layout_output_sends_no_scientific_arrays(algorithm, monkeypat
     assert inspected
 
 
-@pytest.mark.parametrize("operation", ["weights", "sum", "min", "max", "mean", "std"])
-def test_statistics_merge_uneven_nan_chunks_without_state_arrays(operation):
-    values = np.array(
-        [[np.nan, 2.0], [1.0, 4.0], [5.0, np.nan], [3.0, 6.0], [7.0, 8.0]]
-    )
-    weights = np.array([[0.0, 0.1], [0.2, 0.3], [0.3, 0.0], [0.1, 0.3], [0.4, 0.3]])
-    with np.errstate(invalid="ignore"):
-        parts = [
-            reduce_array(values[selection], operation, weights=weights[selection])
-            for selection in (slice(0, 2), slice(2, 5))
-        ]
-    assert all(value.shape == (2,) for part in parts for value in part.values())
-    actual = stats_value(merge_stats(parts, operation), operation)
-    if operation == "weights":
-        expected = np.sum(np.nan_to_num(values) * weights, axis=0)
-    else:
-        expected = getattr(np, "nan" + operation)(values, axis=0)
-    np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
-
-
-def test_parallel_standard_deviation_is_stable_at_large_offsets():
-    values = 1e12 + np.arange(60, dtype=float).reshape(20, 3) * 0.25
-    parts = [
-        reduce_array(values[s], "std")
-        for s in (slice(0, 3), slice(3, 11), slice(11, 20))
-    ]
-    np.testing.assert_allclose(
-        stats_value(merge_stats(parts, "std"), "std"),
-        np.std(values, axis=0),
-        rtol=1e-12,
-    )
-
-
-@pytest.mark.parametrize("operation", ["mean", "std"])
-@pytest.mark.parametrize(
-    "values", [[np.inf, 2.0, 4.0], [1.0, np.inf, 2.0], [-np.inf, np.inf, 2.0]]
-)
-def test_statistics_preserve_numpy_infinity_behavior(operation, values):
-    values = np.asarray(values)[:, None]
-    with np.errstate(invalid="ignore"):
-        expected = getattr(np, "nan" + operation)(values, axis=0)
-        parts = [reduce_array(values[s], operation) for s in (slice(0, 1), slice(1, 3))]
-        actual = stats_value(merge_stats(parts, operation), operation)
-    np.testing.assert_allclose(actual, expected)
-
-
-def test_statistics_report_invalid_requests_and_empty_inputs():
-    with pytest.raises(ValueError, match="empty"):
-        merge_stats([], "mean")
-    with pytest.raises(ValueError, match="requires state weights"):
-        reduce_array(np.ones((2, 3)), "weights")
-    with pytest.raises(KeyError, match="Unknown output reduction"):
-        reduce_array(np.ones((2, 3)), "unsupported")
-    parts = [
-        reduce_array(np.empty((0, 2)), "mean"),
-        reduce_array(np.empty((0, 2)), "mean"),
-    ]
-    assert np.isnan(stats_value(merge_stats(parts, "mean"), "mean")).all()
-
-
-@pytest.mark.parametrize("choice", ["weights", "mean", "std", "sum", "min", "max"])
-def test_farm_evaluation_allows_nan_only_at_zero_weight(algorithm, farm_data, choice):
-    data = farm_data.copy(deep=True)
-    data[FV.P].values[0] = np.nan
-    data[FV.WEIGHT].values[0] = 0.0
-    parameters = {"vars_op": {FV.P: choice}}
-    output = FarmResultsEval(operation="reduce_states", parameters=parameters)
-    expected = _farm_evaluation._reduce_states(data, algorithm, output, **parameters)
-    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
-        actual = algorithm.calc_outputs(
-            outputs=output, farm_results=data, finalize=False
-        )
-        pd.testing.assert_frame_equal(actual, expected, check_exact=False)
-        data[FV.WEIGHT].values[0] = 0.1
-        with pytest.raises(AssertionError, match="nonzero weights"):
-            algorithm.calc_outputs(outputs=output, farm_results=data)
-
-
-def test_farm_evaluation_reports_nan_weights(algorithm, farm_data):
-    data = farm_data.copy(deep=True)
-    data[FV.WEIGHT].values[0] = np.nan
-    output = FarmResultsEval(operation="calc_states_mean", parameters={"vars": [FV.P]})
-    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
-        with pytest.raises(AssertionError, match="variable 'weight'"):
-            algorithm.calc_outputs(outputs=output, farm_results=data)
-
-
 @pytest.mark.parametrize("point", [0, 3, 6, -1, -3, -7])
 def test_rose_selects_one_precomputed_point_across_tiles(algorithm, farm_data, point):
     count = farm_data.sizes[FC.STATE]
@@ -355,13 +180,14 @@ def test_rose_selects_one_precomputed_point_across_tiles(algorithm, farm_data, p
         },
     )
     output = RosePlotOutput(use_points=True, point=point, ws_var=FV.AMB_WS, plot=False)
-    expected = _rose._rose_get_data(
-        data,
-        output,
-        point=point,
-        ws_var=FV.AMB_WS,
-        ws_bins=output.ws_bins,
-        wd_sectors=output.wd_sectors,
+    expected = (
+        100
+        * np.histogram2d(
+            values[:, point] * 27,
+            values[:, point],
+            bins=[np.arange(-15, 360, 30), output.ws_bins],
+            weights=farm_data[FV.WEIGHT].values,
+        )[0]
     )
     with foxes.Engine.new(
         "numpy", chunk_size_states=2, chunk_size_points=3, verbosity=0
@@ -369,7 +195,8 @@ def test_rose_selects_one_precomputed_point_across_tiles(algorithm, farm_data, p
         actual = algorithm.calc_outputs(
             outputs=output, farm_results=farm_data.drop_vars(FV.CAP), point_results=data
         )
-    xr.testing.assert_allclose(actual, expected)
+    np.testing.assert_allclose(actual.frequency, expected)
+    assert actual.frequency.dims == (FV.AMB_WD, FV.AMB_WS)
 
 
 def test_binned_means_apply_small_weight_threshold_after_global_merge(
@@ -378,12 +205,9 @@ def test_binned_means_apply_small_weight_threshold_after_global_merge(
     data = farm_data.copy(deep=True)
     data[FV.WEIGHT].values[:] = 6e-14
     output = WindRoseBinPlot(variable=FV.P, ws_bins=[0, 50], wd_sectors=1, plot=False)
-    expected = _rose_bins._bins_get_data(
-        data, output, variable=FV.P, ws_bins=[0, 50], wd_sectors=1
-    )
     with foxes.Engine.new("numpy", chunk_size_states=1, verbosity=0):
         actual = algorithm.calc_outputs(outputs=output, farm_results=data)
-    xr.testing.assert_allclose(actual, expected)
+    np.testing.assert_allclose(actual[FV.P], [[7.0]])
     assert np.isfinite(actual[FV.P]).all()
 
 
@@ -491,10 +315,6 @@ def test_composed_compact_outputs_are_backend_independent(
     algorithm, farm_data, backend
 ):
     outputs = [
-        FarmResultsEval(
-            operation="calc_states_std", parameters={"vars": [FV.P]}, result_name="std"
-        ),
-        FarmResultsEval(operation="calc_farm_yield", result_name="yield"),
         RosePlotOutput(plot=False, result_name="rose"),
         FarmLayoutOutput(
             operation="get_layout_data",
@@ -505,64 +325,8 @@ def test_composed_compact_outputs_are_backend_independent(
     ]
     with foxes.Engine.new(backend, n_procs=2, chunk_size_states=2, verbosity=0):
         result = algorithm.calc_outputs(outputs=outputs, farm_results=farm_data)
-    np.testing.assert_allclose(result["std"][FV.P], farm_data[FV.P].std(FC.STATE))
-    expected = _farm_evaluation._calc_farm_yield(farm_data, algorithm, outputs[1])
-    np.testing.assert_allclose(result["yield"], expected)
     assert float(result["rose"]["frequency"].sum()) == pytest.approx(100.0)
     np.testing.assert_allclose(result["layout"][:, 0], farm_data[FV.X].values[-1])
-
-
-@pytest.mark.parametrize(
-    "operation", ["get_capacity", "get_power_units", "calc_farm_capacity"]
-)
-def test_metadata_evaluations_transport_no_arrays(
-    algorithm, farm_data, monkeypatch, operation
-):
-    output = FarmResultsEval(operation=operation)
-    calculate = FarmResultsEval.calculate
-
-    def capture(self, *args, **kwargs):
-        result = calculate(self, *args, **kwargs)
-        assert self.var("data") not in result
-        return result
-
-    monkeypatch.setattr(FarmResultsEval, "calculate", capture)
-    expected = getattr(_farm_evaluation, "_" + operation)(farm_data, algorithm, output)
-    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
-        actual = algorithm.calc_outputs(outputs=output, farm_results=farm_data)
-    np.testing.assert_allclose(actual, expected)
-
-
-@pytest.mark.parametrize(
-    "operation", ["calc_states_mean", "calc_farm_mean", "calc_farm_yield"]
-)
-def test_turbine_dependent_weights_and_power_units(algorithm, farm_data, operation):
-    data = farm_data.drop_vars(FV.WEIGHT)
-    data[FV.WEIGHT] = (
-        (FC.STATE, FC.TURBINE),
-        np.stack(
-            [farm_data[FV.WEIGHT].values, farm_data[FV.WEIGHT].values[::-1]], axis=1
-        ),
-    )
-    # Distinct type instances exercise unit conversion before scalar merging.
-    from copy import deepcopy
-
-    types = algorithm.farm_controller.turbine_types
-    types[1] = deepcopy(types[1])
-    types[1].P_unit = "W"
-    parameters = {} if operation == "calc_farm_yield" else {"vars": [FV.P]}
-    output = FarmResultsEval(operation=operation, parameters=parameters)
-    expected = getattr(_farm_evaluation, "_" + operation)(
-        data, algorithm, output, **parameters
-    )
-    with foxes.Engine.new("numpy", chunk_size_states=3, verbosity=0):
-        actual = algorithm.calc_outputs(outputs=output, farm_results=data)
-    if isinstance(expected, pd.DataFrame):
-        pd.testing.assert_frame_equal(actual, expected, check_exact=False)
-    elif isinstance(expected, dict):
-        np.testing.assert_allclose(actual[FV.P], expected[FV.P])
-    else:
-        np.testing.assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize(

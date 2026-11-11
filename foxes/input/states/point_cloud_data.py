@@ -1149,18 +1149,6 @@ class TurbinePointCloud(DatasetStates):
             points = np.asarray([turbine.xy for turbine in algo.farm.turbines])
             _write_point_cloud_plot(self, algo, points, verbosity)
 
-    def _update_dims(
-        self,
-        dims: tuple[str, ...],
-        coords: dict[str, np.ndarray],
-        vrs: list[str],
-        d: np.ndarray,
-        fdata: FData,
-    ) -> tuple[tuple[str, ...], dict[str, np.ndarray]]:
-        """Helper function for dimension adjustment, if needed"""
-        coords[FC.TURBINE] = fdata[FV.TXYH]
-        return dims, coords
-
     def get_grid_points(
         self,
         loaded_data: LoadedData | None = None,

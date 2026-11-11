@@ -293,6 +293,7 @@ class FarmResultsCountWriter(FarmResultsOutput):
             Positive integer limit. Every file except the last has this many states.
         write_nc_pars
             Keyword arguments forwarded to ``foxes.utils.write_nc`` for every file.
+            Verbosity defaults to the executing algorithm's level.
         kwargs
             Farm selection, metadata and path options for ``FarmResultsOutput``.
 
@@ -419,7 +420,7 @@ class FarmResultsCountWriter(FarmResultsOutput):
                 self._get_fpath(selected["attrs"]),
                 selected,
                 *self._metadata(algo),
-                self.write_nc_pars,
+                {"verbosity": algo.verbosity, **self.write_nc_pars},
             )
             results["futures"].append(future)
             results["index"] += 1

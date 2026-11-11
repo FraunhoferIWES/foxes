@@ -49,7 +49,8 @@ class Animator:
         Parameters
         ----------
         verbosity
-            Diagnostic verbosity; zero is silent.
+            Zero is silent. Level one announces creation and the completed
+            frame count; higher levels report each composed frame.
         kwargs
             Options for ``matplotlib.animation.ArtistAnimation``.
 
@@ -75,9 +76,6 @@ class Animator:
         frame_index = 0
         frames = []
         while True:
-            if verbosity > 1:
-                print(f"  Frame {frame_index}")
-
             frame_artists = []
             for generator in self.generators:
                 try:
@@ -102,13 +100,15 @@ class Animator:
                     pass
 
             if frame_artists:
+                if verbosity > 1:
+                    print(f"  Frame {frame_index}")
                 frames.append(frame_artists)
                 frame_index += 1
             else:
                 break
 
-        if verbosity > 1:
-            print("Done.")
+        if verbosity > 0:
+            print(f"Created {len(frames)} animation frames.")
 
         # Retain established playback defaults unless explicitly overridden.
         options = dict(interval=200, blit=True, repeat_delay=2000)

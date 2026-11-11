@@ -29,7 +29,7 @@ def _populate_outputs(book: ModelBook) -> None:
 
 
 def _populate_plot_outputs(book: ModelBook) -> None:
-    """Populate interactive layout, evaluation and rose presets.
+    """Populate interactive layout and rose presets.
 
     Parameters
     ----------
@@ -37,7 +37,6 @@ def _populate_plot_outputs(book: ModelBook) -> None:
         Model book whose output registry is extended in place.
     """
     book.outputs["farm_layout"] = fm.outputs.FarmLayoutOutput(show=True)
-    book.outputs["farm_results_eval"] = fm.outputs.FarmResultsEval()
     book.outputs["rose_plot"] = fm.outputs.RosePlotOutput(show=True)
     book.outputs["states_rose_plot"] = fm.outputs.StatesRosePlotOutput(
         point=(0.0, 0.0, 100.0), show=True
@@ -45,6 +44,12 @@ def _populate_plot_outputs(book: ModelBook) -> None:
     book.outputs["wind_rose_bin_plot"] = fm.outputs.WindRoseBinPlot(
         variable=FV.P, ws_bins=(0, 5, 10, 15, 20, 25), show=True
     )
+    book.outputs["state_turbine_map"] = fm.outputs.StateTurbineMap(show=True)
+    book.outputs["state_turbine_table"] = fm.outputs.StateTurbineTable()
+    book.outputs["results_writer"] = fm.outputs.ResultsWriter()
+    book.outputs["point_calculator"] = fm.outputs.PointCalculator()
+    book.outputs["rotor_point_plot"] = fm.outputs.RotorPointPlot(show=True)
+    book.outputs["turbine_type_curves"] = fm.outputs.TurbineTypeCurves(show=True)
 
 
 def _populate_slice_outputs(book: ModelBook) -> None:
@@ -173,7 +178,7 @@ def _farm_variable_sets() -> dict[str, list[str] | None]:
             FV.CAPF,
             FV.EFF,
             FV.WEIGHT,
-        ]
+        ],
     }
 
 

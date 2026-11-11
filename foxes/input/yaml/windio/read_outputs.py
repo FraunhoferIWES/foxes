@@ -1,3 +1,5 @@
+"""Translate WindIO reporting requests to constructor-defined output models."""
+
 import numpy as np
 from typing import Any
 
@@ -16,7 +18,7 @@ def _read_turbine_outputs(
     states_isel: Any,
     verbosity: int,
 ) -> None:
-    """Reads the turbine outputs request"""
+    """Append a selected, externally named state/turbine NetCDF table."""
     if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get_item(
         "report", True
     ):
@@ -50,20 +52,15 @@ def _read_turbine_outputs(
         olist.append(
             Dict(
                 output_type="StateTurbineTable",
-                functions=[
-                    dict(
-                        function="get_dataset",
-                        variables=[vmap[v] for v in output_variables],
-                        name_map=ivmap,
-                        to_file=turbine_nc_filename,
-                        round={
-                            vw: FV.get_default_digits(vf) for vw, vf in vmap.items()
-                        },
-                        isel=isel,
-                        transpose=True,
-                        verbosity=verbosity,
-                    )
-                ],
+                variables=[vmap[v] for v in output_variables],
+                name_map=ivmap,
+                to_file=turbine_nc_filename,
+                write_pars=dict(
+                    round={vw: FV.get_default_digits(vf) for vw, vf in vmap.items()},
+                    verbosity=verbosity,
+                ),
+                isel=isel,
+                transpose=True,
                 _name=f"outputs.{len(olist)}.StateTurbineTable",
             )
         )
@@ -92,8 +89,8 @@ def _read_flow_field(
     states_isel
         Positional state selection forwarded unchanged to the slice output.
     verbosity
-        Print parsed sampling details above level two and forward this level to
-        the output definition.
+        Print parsed sampling details above level two and use this level for
+        NetCDF writing.
 
     Raises
     ------
@@ -203,9 +200,9 @@ def _read_flow_field(
                     ),
                     variables=[vmap[v] for v in output_variables],
                     to_file=flow_nc_filename,
-                    label_map=foxes2wio,
-                    verbosity=verbosity,
-                    _name=f"outputs.output{len(olist)}.SliceData",
+                    label_map={**foxes2wio, FC.STATE: "time"},
+                    write_pars=dict(verbosity=verbosity),
+                    _name=f"outputs.{len(olist)}.SlicesData",
                 )
             )
         else:
@@ -220,26 +217,40 @@ def read_outputs(
     algo: Algorithm,
     verbosity: int = 1,
 ) -> str:
-    """
-    Reads the windio outputs
+    """Translate WindIO reporting requests into FOXES output definitions.
 
     Parameters
     ----------
     wio_outs
-        The windio output data dict
+        WindIO output specification, consumed while reading reporting options.
     idict
-        The foxes input data dictionary
+        FOXES input dictionary, extended in place with constructor-defined
+        ``StateTurbineTable`` and ``SlicesData`` entries for enabled reports.
     algo
-        The algorithm
+        Algorithm supplying farm geometry for hub-height sampling.
     verbosity
-        The verbosity level, 0=silent
+        Parsing and NetCDF-writing verbosity; zero is silent.
 
     Returns
     -------
     odir
-        The output directory
+        Requested output folder, or ``"."`` when unspecified.
 
+    Raises
+    ------
+    KeyError
+        If requested fields are unknown or required report options are absent.
+    ValueError
+        If a time subset is empty or contains repeated, negative or noninteger
+        positions.
+    NotImplementedError
+        If wind-speed/direction subsets or sampling modes are unsupported.
 
+    Notes
+    -----
+    Time subsets retain their specified positional order in both output
+    families. Turbine fields have dimensions ``(turbine, time)``; flow fields
+    have dimensions ``(z, time, y, x)`` with heights in requested order.
     """
     odir = wio_outs.pop_item("output_folder", ".")
     olist: list[Any] = []
@@ -255,6 +266,19 @@ def read_outputs(
         times_run = run_configuration.pop_item("times_run")
         if not times_run.get_item("all_occurences"):
             states_isel = times_run.get_item("subset")
+            if (
+                not isinstance(states_isel, list)
+                or not states_isel
+                or any(
+                    isinstance(i, bool) or not isinstance(i, int) or i < 0
+                    for i in states_isel
+                )
+                or len(set(states_isel)) != len(states_isel)
+            ):
+                raise ValueError(
+                    "WindIO: state subset must contain unique nonnegative "
+                    "integer positions and must not be empty"
+                )
     elif "wind_speeds_run" in run_configuration:
         wind_speeds_run = run_configuration.get_item("wind_speeds_run")
         directions_run = run_configuration.get_item("directions_run")
