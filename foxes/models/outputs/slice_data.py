@@ -13,6 +13,14 @@ from foxes.utils import write_nc
 
 from . import grids
 from ._point_data_output import PointDataOutput
+from ._aggregation import (
+    _finish,
+    _finish_states,
+    _merge_statistics,
+    _requirements,
+    _state_statistics,
+)
+from ._result_data import _combine_chunks as _combine_result_chunks
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, FData, MData, TData
@@ -44,6 +52,7 @@ class SliceData(PointDataOutput):
         ret_grid: bool = False,
         ret_states: bool = False,
         result_name: str | None = None,
+        aggregate_states: bool = False,
         **kwargs: Any,
     ) -> None:
         """Configure all slice decisions without creating grids or result arrays.
@@ -82,8 +91,18 @@ class SliceData(PointDataOutput):
             Append retained state labels to returned data.
         result_name
             Mapping key for composed outputs; ``None`` uses this model's name.
+        aggregate_states
+            Select normalized state means independently per point, including
+            partial state selections. This selects ``reduction="mean"`` and
+            uses circular means for directions. Dataset attributes retain the
+            number of contributing states.
         kwargs
             Common output paths, state/chunk selections and ambient mode.
+
+        Raises
+        ------
+        ValueError
+            If ``aggregate_states`` is not a boolean.
         """
         # Scientific dependencies and grids are deferred to normal initialization.
         fields = [FV.WS] if variables is None else list(variables)
@@ -94,7 +113,10 @@ class SliceData(PointDataOutput):
             **kwargs,
         )
         self.fields = tuple(fields)
-        self.reduction = reduction
+        if not isinstance(aggregate_states, bool):
+            raise ValueError(f"{self.name}: aggregate_states must be a boolean")
+        self.aggregate_states = aggregate_states
+        self.reduction = "mean" if aggregate_states else reduction
         self.data_format = data_format
         self.normalize = {} if normalize is None else dict(normalize)
         self.normalize_v = {} if normalize_v is None else dict(normalize_v)
@@ -253,11 +275,27 @@ class SliceData(PointDataOutput):
         points = payload["points"]
         if not np.allclose(points, points[:1], rtol=0, atol=1e-10):
             raise ValueError(f"{self.name}: Slice targets must be static across states")
-        weights = payload["values"][FV.WEIGHT]
-        payload["values"] = {
-            v: np.sum(payload["values"][v] * weights, axis=0, keepdims=True)
-            for v in self.fields
-        }
+        if self.aggregate_states:
+            payload["statistics"] = _state_statistics(
+                dict(
+                    coords={
+                        FC.STATE: payload["states"],
+                        FC.POINT: np.arange(points.shape[1]),
+                    },
+                    data_vars={
+                        v: ((FC.STATE, FC.POINT), d)
+                        for v, d in payload["values"].items()
+                    },
+                    attrs={},
+                )
+            )
+            payload["values"] = {}
+        else:
+            weights = payload["values"][FV.WEIGHT]
+            payload["values"] = {
+                v: np.sum(payload["values"][v] * weights, axis=0, keepdims=True)
+                for v in self.fields
+            }
         first = int(np.argmin(ranks))
         payload["farm"] = {
             v: d[first : first + 1].copy() for v, d in payload["farm"].items()
@@ -313,6 +351,31 @@ class SliceData(PointDataOutput):
         }
         output_results[self.result_name] = self.format_payload(algo, payload)
 
+    def _join_mean_tiles(self, tiles: list[dict[str, Any]]) -> dict[str, Any]:
+        """Join target tiles for one state slab, retaining reduced statistics."""
+        if any(
+            not np.array_equal(tile["states"], tiles[0]["states"]) for tile in tiles
+        ):
+            raise ValueError(f"{self.name}: Target tiles have inconsistent states")
+        slab = {
+            **tiles[0],
+            "points": np.concatenate([tile["points"] for tile in tiles], axis=1),
+            "values": {},
+        }
+        if self.aggregate_states:
+            slab["statistics"] = _combine_result_chunks(
+                [tile["statistics"] for tile in tiles],
+                FC.POINT,
+            )
+        else:
+            slab["values"] = {
+                variable: np.concatenate(
+                    [tile["values"][variable] for tile in tiles], axis=1
+                )
+                for variable in self.fields
+            }
+        return slab
+
     def _combine_chunks(
         self, chunks: dict[tuple[int, int], dict[str, Any]]
     ) -> dict[str, Any]:
@@ -341,18 +404,7 @@ class SliceData(PointDataOutput):
         slabs = []
         for state in sorted({key[0] for key in chunks}):
             tiles = [chunks[key] for key in sorted(chunks) if key[0] == state]
-            if any(not np.array_equal(t["states"], tiles[0]["states"]) for t in tiles):
-                raise ValueError(f"{self.name}: Target tiles have inconsistent states")
-            slabs.append(
-                {
-                    **tiles[0],
-                    "points": np.concatenate([t["points"] for t in tiles], axis=1),
-                    "values": {
-                        v: np.concatenate([t["values"][v] for t in tiles], axis=1)
-                        for v in self.fields
-                    },
-                }
-            )
+            slabs.append(self._join_mean_tiles(tiles))
         points = slabs[0]["points"]
         if any(
             s["points"].shape != points.shape
@@ -365,13 +417,25 @@ class SliceData(PointDataOutput):
         if self.ret_states:
             order = np.concatenate([s["order"] for s in slabs])
             states = np.concatenate([s["states"] for s in slabs])[np.argsort(order)]
+        attributes = {}
+        if self.aggregate_states:
+            reduced = _finish(
+                _finish_states(_merge_statistics([s["statistics"] for s in slabs])),
+                list(self.fields),
+                True,
+            )
+            values = {v: d[None] for v, (_, d) in reduced["data_vars"].items()}
+            attributes = reduced["attrs"]
+        else:
+            values = {
+                v: np.sum([s["values"][v] for s in slabs], axis=0) for v in self.fields
+            }
         return {
             "states": states,
             "farm": first["farm"],
             "points": points,
-            "values": {
-                v: np.sum([s["values"][v] for s in slabs], axis=0) for v in self.fields
-            },
+            "values": values,
+            "attrs": attributes,
         }
 
     def _grid_data(self, payload: dict[str, Any]) -> tuple[Any, Any, Any, np.ndarray]:
@@ -479,7 +543,9 @@ class SliceData(PointDataOutput):
             return getattr(grids, f"np2np_{suffix}")(*args)
         if self.data_format == "pandas":
             return getattr(grids, f"np2pd_{suffix}")(*args, self.plane, self.label_map)
-        return getattr(grids, f"np2xr_{suffix}")(*args, c, self.plane, self.label_map)
+        result = getattr(grids, f"np2xr_{suffix}")(*args, c, self.plane, self.label_map)
+        result.attrs.update(payload.get("attrs", {}))
+        return result
 
     def _field_data(self, payload: dict[str, Any]) -> dict[str, np.ndarray]:
         """Order supplied targets and apply configured field transforms.
@@ -517,6 +583,10 @@ class SliceData(PointDataOutput):
     def _required_variables(self) -> tuple[str, ...]:
         """Request state weights only for weighted mean reductions."""
         variables = super()._required_variables()
+        if self.aggregate_states:
+            required = _requirements(list(variables), None, True)
+            assert required is not None
+            return tuple(required)
         if self.reduction == "mean":
             variables = tuple(dict.fromkeys([*variables, FV.WEIGHT]))
         return variables

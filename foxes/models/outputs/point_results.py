@@ -12,11 +12,10 @@ import foxes.variables as FV
 from foxes.core import Output
 from foxes.utils import Dict
 
-from ._result_data import _Results
+from ._result_data import _Results, _combine_chunks
 from ._aggregation import (
     _finish,
     _finish_states,
-    _join,
     _merge_statistics,
     _point_spatial_statistics,
     _requirements,
@@ -56,9 +55,11 @@ class PointResultsOutput(Output):
             ``all`` averages all targets, retaining each target-point position.
             ``None`` retains targets. Point farm/cluster membership is not
             inferred from coordinates and is not supported.
+            Dataset attribute ``n_points`` records the input target count.
         aggregate_states
             Use normalized state weights independently per target and target
             point. Workers retain only sufficient statistics for this reduction.
+            Dataset attribute ``n_states`` records the selected input count.
         result_name
             Public dataset key, or ``None`` for the aggregation-specific name.
         kwargs
@@ -67,12 +68,15 @@ class PointResultsOutput(Output):
         Raises
         ------
         ValueError
-            If ``aggregate_points`` is neither ``None`` nor ``all``.
+            If ``aggregate_points`` is neither ``None`` nor ``all``, or
+            ``aggregate_states`` is not a boolean.
         """
         if aggregate_points not in (None, "all"):
             raise ValueError(
                 f"Invalid point aggregation: {aggregate_points!r}; expected None or 'all'"
             )
+        if not isinstance(aggregate_states, bool):
+            raise ValueError("Point aggregation: aggregate_states must be a boolean")
         self.aggregate_points = aggregate_points
         self.aggregate_states = aggregate_states
         self.result_name = result_name
@@ -98,8 +102,10 @@ class PointResultsOutput(Output):
             Selected fields and weights for independent normalized state means;
             ``None`` retains all available fields.
         """
+        if not self.aggregate_points and not self.aggregate_states:
+            return self.variables
         return _requirements(
-            super().tdata_variables,
+            self.variables,
             self.aggregate_points,
             self.aggregate_states,
             self.ambient_vars,
@@ -258,8 +264,14 @@ class PointResultsOutput(Output):
                 self.ambient_vars,
                 self.waked_vars,
             )
-            if self.tdata_variables is None
-            else self.tdata_variables
+            if self.variables is None
+            else _requirements(
+                self.variables,
+                self.aggregate_points,
+                self.aggregate_states,
+                self.ambient_vars,
+                self.waked_vars,
+            )
         )
         assert variables is not None
         for variable in variables:
@@ -332,7 +344,7 @@ class PointResultsOutput(Output):
                 )
                 for t in range(n_chunks_targets)
             ]
-            payload = _join(tiles, FC.TARGET)
+            payload = _combine_chunks(tiles, FC.TARGET)
             if self.aggregate_points:
                 payload = _spatial(
                     payload,
@@ -348,7 +360,7 @@ class PointResultsOutput(Output):
                 )
                 for s in range(n_chunks_states)
             ]
-            payload = self._finish_payload(_join(slabs, FC.STATE))
+            payload = self._finish_payload(_combine_chunks(slabs))
         else:
             payload = self._as_result_data(chunks, n_chunks_states, n_chunks_targets)
         dataset = Dataset(

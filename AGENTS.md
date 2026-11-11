@@ -15,7 +15,7 @@ rules without overriding them.
 | Vocabulary, symbols, dimensions and types | [Naming conventions](docs/naming-conventions.md) |
 | Public Python documentation | [Docstrings](docs/docstrings.md) |
 | Setup, code quality, tests, decisions and closure | [Development](docs/development.md) |
-| UI, visual design or brand assets | [UI policy](#ui-design-policy) and `docs/fraunhofer-design/` when present |
+| UI, visual design or brand assets | [UI policy](#ui-design-policy) and [project visualization conventions](.github/instructions/visualization.instructions.md) |
 
 ## Working Protocol
 

@@ -94,13 +94,10 @@ autodoc_class_signature = "separated"
 # -- HTML output -------------------------------------------------------------
 
 html_theme = "sphinx_immaterial"
-html_static_path = ["_static"]
-html_css_files = ["iwes-tokens.css", "iwes.css"]
 html_theme_options = {
     "site_url": "https://fraunhoferiwes.github.io/foxes/",
     "repo_url": "https://github.com/FraunhoferIWES/foxes",
     "icon": {"repo": "fontawesome/brands/github", "edit": "material/file-edit-outline"},
-    "palette": {"scheme": "default", "primary": "white", "accent": "teal"},
     "toc_title_is_page_title": True,
 }
 htmlhelp_basename = "foxesdoc"

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import FDict
+from foxes.utils.factory import _parse_coefficient
 
 if TYPE_CHECKING:
     from .model_book import ModelBook
@@ -69,14 +70,6 @@ def _populate_rotor_models(book: ModelBook) -> None:
 
     book.rotor_models.add_factory(
         fm.rotor_models.GridRotor,
-        "grid<n2>",
-        kwargs=dict(reduce=True),
-        var2arg={"n2": "n"},
-        n2=_grid_side,
-        hints={"n2": "(Number of points in square grid)"},
-    )
-    book.rotor_models.add_factory(
-        fm.rotor_models.GridRotor,
         "grid<n2>_raw",
         kwargs=dict(reduce=False),
         var2arg={"n2": "n"},
@@ -84,16 +77,24 @@ def _populate_rotor_models(book: ModelBook) -> None:
         hints={"n2": "(Number of points in square grid)"},
     )
     book.rotor_models.add_factory(
-        fm.rotor_models.LevelRotor,
-        "level<n>",
+        fm.rotor_models.GridRotor,
+        "grid<n2>",
         kwargs=dict(reduce=True),
-        n=lambda x: int(x),
-        hints={"n": "(Number of vertical levels)"},
+        var2arg={"n2": "n"},
+        n2=_grid_side,
+        hints={"n2": "(Number of points in square grid)"},
     )
     book.rotor_models.add_factory(
         fm.rotor_models.LevelRotor,
         "level<n>_raw",
         kwargs=dict(reduce=False),
+        n=lambda x: int(x),
+        hints={"n": "(Number of vertical levels)"},
+    )
+    book.rotor_models.add_factory(
+        fm.rotor_models.LevelRotor,
+        "level<n>",
+        kwargs=dict(reduce=True),
         n=lambda x: int(x),
         hints={"n": "(Number of vertical levels)"},
     )
@@ -148,22 +149,27 @@ def _populate_turbine_models(book: ModelBook) -> None:
     )
     book.turbine_models.add_factory(
         fm.turbine_models.kTI,
-        "kTI_<kTI>",
-        kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-        hints={"kTI": "(Value, e.g. 02 for 0.2)"},
+        "kTI_amb_<kTI>_<kb>",
+        kwargs=dict(ti_var=FV.AMB_TI),
+        kTI=_parse_coefficient,
+        kb=_parse_coefficient,
+        hints={
+            "kTI": "(Value, e.g. 04 for 0.4)",
+            "kb": "(Value, e.g. 004 for 0.04)",
+        },
     )
     book.turbine_models.add_factory(
         fm.turbine_models.kTI,
         "kTI_amb_<kTI>",
         kwargs=dict(ti_var=FV.AMB_TI),
-        kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+        kTI=_parse_coefficient,
         hints={"kTI": "(Value, e.g. 04 for 0.4)"},
     )
     book.turbine_models.add_factory(
         fm.turbine_models.kTI,
         "kTI_<kTI>_<kb>",
-        kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-        kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+        kTI=_parse_coefficient,
+        kb=_parse_coefficient,
         hints={
             "kTI": "(Value, e.g. 04 for 0.4)",
             "kb": "(Value, e.g. 004 for 0.04)",
@@ -171,14 +177,9 @@ def _populate_turbine_models(book: ModelBook) -> None:
     )
     book.turbine_models.add_factory(
         fm.turbine_models.kTI,
-        "kTI_amb_<kTI>_<kb>",
-        kwargs=dict(ti_var=FV.AMB_TI),
-        kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-        kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-        hints={
-            "kTI": "(Value, e.g. 04 for 0.4)",
-            "kb": "(Value, e.g. 004 for 0.04)",
-        },
+        "kTI_<kTI>",
+        kTI=_parse_coefficient,
+        hints={"kTI": "(Value, e.g. 02 for 0.2)"},
     )
 
     book.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc(

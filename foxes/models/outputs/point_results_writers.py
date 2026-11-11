@@ -13,8 +13,8 @@ from foxes.core import Output
 from foxes.utils import Dict, write_nc
 
 from ._result_writers import _ResultsCountWriter, _ResultsPeriodWriter
-from ._result_data import _Results
-from ._aggregation import _join, _merge_statistics, _point_spatial_statistics
+from ._result_data import _Results, _combine_chunks
+from ._aggregation import _merge_statistics, _point_spatial_statistics
 from .point_results import PointResultsOutput
 
 if TYPE_CHECKING:
@@ -125,6 +125,29 @@ class PointResultsCountWriter(_ResultsCountWriter, PointResultsOutput):
             results[self._result_key] = raw
         return results
 
+    def _join_target_blocks(
+        self, blocks: list[Any]
+    ) -> _Results | dict[str, list[_Results]]:
+        """Assemble a complete point slab without losing interval statistics."""
+        if self.aggregate_states:
+            return dict(
+                intervals=[
+                    _combine_chunks(
+                        [block["intervals"][i] for block in blocks], FC.TARGET
+                    )
+                    for i in range(len(blocks[0]["intervals"]))
+                ]
+            )
+        if self.aggregate_points:
+            return _merge_statistics(blocks)
+        payload = self._as_result_data(
+            {(0, target): block for target, block in enumerate(blocks)},
+            1,
+            len(blocks),
+        )
+        payload["attrs"]["base_name"] = str(self.base_name)
+        return payload
+
     def update_results(
         self,
         algo: Algorithm,
@@ -170,23 +193,7 @@ class PointResultsCountWriter(_ResultsCountWriter, PointResultsOutput):
             (state, target) in tiles for target in range(n_chunks_targets)
         ):
             blocks = [tiles.pop((state, target)) for target in range(n_chunks_targets)]
-            if self.aggregate_states:
-                payload = dict(
-                    intervals=[
-                        _join([block["intervals"][i] for block in blocks], FC.TARGET)
-                        for i in range(len(blocks[0]["intervals"]))
-                    ]
-                )
-            elif self.aggregate_points:
-                payload = _merge_statistics(blocks)
-            else:
-                payload = self._as_result_data(
-                    {(0, target): block for target, block in enumerate(blocks)},
-                    1,
-                    n_chunks_targets,
-                )
-                payload["attrs"]["base_name"] = str(self.base_name)
-            slabs[(state, 0)] = payload
+            slabs[(state, 0)] = self._join_target_blocks(blocks)
             state += 1
         super().update_results(
             algo,

@@ -13,13 +13,13 @@ all of them.
 | ADR | Status | Decision |
 |---|---|---|
 | [0001](0001-forward-only-development.md) | Accepted | Development is forward-only by default; code changes require tests, and every change requires pre-commit, current docstrings, a current-version changelog entry, and synchronized FOXES documentation. |
-| [0002](0002-corporate-design.md) | Accepted | Apply Fraunhofer corporate design to FOXES plots, animations, documentation, notebooks, and brand assets. |
+| [0002](0002-corporate-design.md) | Superseded by [0030](0030-free-design.md) | Apply Fraunhofer corporate design to FOXES plots, animations, documentation, notebooks, and brand assets. |
 | [0003](0003-compact-static-target-coordinates.md) | Accepted; superseded by [0013](0013-full-shaped-broadcast-data.md) | Keep static target coordinates compact with a singleton state axis and broadcast them inside engine runners. |
-| [0004](0004-sphinx-design-token-adapter.md) | Accepted; pytest requirement superseded by [0008](0008-documentation-independent-tests.md) | Adapt authoritative IWES design tokens to Sphinx CSS. |
+| [0004](0004-sphinx-design-token-adapter.md) | Superseded by [0030](0030-free-design.md); pytest requirement previously superseded by [0008](0008-documentation-independent-tests.md) | Adapt authoritative IWES design tokens to Sphinx CSS. |
 | [0005](0005-static-output-grid-coordinates.md) | Accepted; internal target storage superseded by [0013](0013-full-shaped-broadcast-data.md) | Store output slice grids without a state axis and pass them through the static-point calculation contract. |
 | [0006](0006-micro-reference-disk-averages.md) | Accepted | Average micro reference disks during loading with native support points and vector wind means. |
 | [0007](0007-smooth-power-mask-boosts.md) | Accepted | Smooth near-rated power-mask boosts and saturate low-induction thrust at the Betz optimum while retaining requested power. |
-| [0008](0008-documentation-independent-tests.md) | Accepted | Keep pytest independent of documentation files and review documentation separately. |
+| [0008](0008-documentation-independent-tests.md) | Accepted; corporate-design retention superseded by [0030](0030-free-design.md) | Keep pytest independent of documentation files and review documentation separately. |
 | [0009](0009-test-file-dependency-boundary.md) | Accepted; supersedes the test-input boundary in 0008 | Limit pytest repository-file inputs to package code, examples, notebooks, and tests. |
 | [0010](0010-chunk-based-farm-outputs.md) | Accepted | Adopt outputs through the core chunk lifecycle; isolate farm writer payloads and split files by exact counts or calendar periods, including ISO weeks. |
 | [0011](0011-engine-output-execution-and-progress.md) | Accepted; supersedes the engine/algorithm scope restriction in 0010 | Unify engine output execution, ordered batches, point collection and parent-owned adaptive progress without changing default farm fields. |
@@ -38,7 +38,11 @@ all of them.
 | [0024](0024-complete-output-adoption.md) | Accepted | Complete output adoption, reduce arbitrary-point means on workers, require explicit curve scans and retain direct YAML-only Matplotlib calls as an explicit exception. |
 | [0025](0025-turbine-evaluation-zero-division.md) | Accepted | Return zero for zero-power efficiency, including zero ambient power, and positive infinity for nonzero power over zero ambient power, without division warnings. |
 | [0026](0026-analogous-point-result-outputs.md) | Accepted; module ownership superseded by [0027](0027-domain-result-aggregation.md) | Mirror farm collectors and count/chunk/calendar writers for point results, with independent default/all wind-field sets and engine-owned target chunking. |
-| [0027](0027-domain-result-aggregation.md) | Accepted | Separate domain collectors from all domain writers; aggregate physical fields using worker/file-interval statistics and independently normalized entity weights. |
+| [0027](0027-domain-result-aggregation.md) | Accepted; grouped model-book naming superseded by [0029](0029-grouped-output-preset-families.md) | Separate domain collectors from all domain writers; aggregate physical fields using worker/file-interval statistics and independently normalized entity weights. |
+| [0028](0028-aggregation-presets-and-provenance.md) | Accepted; grouped selector grammar superseded by [0029](0029-grouped-output-preset-families.md) | Register every aggregation/filter/field/writer combination, retain scalar pre-reduction counts, and share reductions with YAML/WindIO while keeping flow files gridded. |
+| [0029](0029-grouped-output-preset-families.md) | Accepted; all-turbine naming superseded by [0031](0031-total-output-preset-family.md) | Imply named turbine aggregation through farms_results/cluster_results preset families without changing constructor options or dataset keys. |
+| [0030](0030-free-design.md) | Accepted | Use free design, remove corporate guidance and Sphinx token adapters, and require separate design/accessibility review before external publication. |
+| [0031](0031-total-output-preset-family.md) | Accepted | Use total_results for all-turbine aggregation presets, including every filter/field/mean/writer variant, without changing constructor options or dataset keys. |
 
 ## When To Add An ADR
 

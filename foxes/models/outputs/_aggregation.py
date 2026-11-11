@@ -101,7 +101,11 @@ def _state_statistics(payload: _Results) -> _Results:
     return dict(
         coords={d: v for d, v in payload["coords"].items() if d != FC.STATE},
         data_vars=stats,
-        attrs={**payload["attrs"], "__aggregation_fields": list(fields)},
+        attrs={
+            **payload["attrs"],
+            "n_states": len(payload["coords"][FC.STATE]),
+            "__aggregation_fields": list(fields),
+        },
     )
 
 
@@ -128,7 +132,20 @@ def _merge_statistics(chunks: list[_Results]) -> _Results:
             name: (dims, np.sum([c["data_vars"][name][1] for c in chunks], axis=0))
             for name, (dims, _) in first["data_vars"].items()
         },
-        attrs=first["attrs"].copy(),
+        attrs={
+            **first["attrs"],
+            **{
+                name: sum(c["attrs"][name] for c in chunks)
+                for name in ("n_points", "n_states")
+                if name in first["attrs"]
+                and (
+                    name == "n_points"
+                    and FC.STATE in first["coords"]
+                    or name == "n_states"
+                    and FC.STATE not in first["coords"]
+                )
+            },
+        },
     )
 
 
@@ -158,50 +175,19 @@ def _finish_states(payload: _Results) -> _Results:
     )
 
 
-def _join(chunks: list[_Results], dimension: str) -> _Results:
-    """Concatenate one retained engine axis while preserving static coordinates."""
-    first = chunks[0]
-    for chunk in chunks[1:]:
-        if (
-            chunk["data_vars"].keys() != first["data_vars"].keys()
-            or chunk["coords"].keys() != first["coords"].keys()
-        ):
-            raise ValueError("Aggregation: chunk schemas differ")
-        for name, values in first["coords"].items():
-            if name != dimension and not np.array_equal(
-                values, chunk["coords"][name], equal_nan=values.dtype.kind in "fcMm"
-            ):
-                raise ValueError(f"Aggregation: coordinate '{name}' differs")
-        for name, (dims, values) in first["data_vars"].items():
-            dimensions, array = chunk["data_vars"][name]
-            if dims != dimensions or any(
-                values.shape[i] != array.shape[i]
-                for i, d in enumerate(dims)
-                if d != dimension
-            ):
-                raise ValueError(f"Aggregation: dimensions differ for '{name}'")
-            if dimension not in dims and not np.array_equal(
-                values, array, equal_nan=True
-            ):
-                raise ValueError(f"Aggregation: static field '{name}' differs")
-    coords = first["coords"].copy()
-    coords[dimension] = np.concatenate([c["coords"][dimension] for c in chunks])
-    return dict(
-        coords=coords,
-        data_vars={
-            name: (
-                dims,
-                np.concatenate(
-                    [c["data_vars"][name][1] for c in chunks],
-                    axis=dims.index(dimension),
-                )
-                if dimension in dims
-                else array,
-            )
-            for name, (dims, array) in first["data_vars"].items()
-        },
-        attrs=first["attrs"].copy(),
-    )
+def _reduce_group(
+    name: str, values: np.ndarray, axis: int, farm: bool
+) -> np.ndarray | np.generic:
+    """Reduce one group's physical field without changing other dimensions."""
+    base = FV.amb2var.get(name, name)
+    if base in _DIRECTIONS:
+        radians = np.deg2rad(values)
+        return _angle(
+            np.mean(np.sin(radians), axis=axis), np.mean(np.cos(radians), axis=axis)
+        )
+    if farm and base in _EXTENSIVE:
+        return np.sum(values, axis=axis)
+    return np.mean(values, axis=axis)
 
 
 def _spatial(
@@ -221,21 +207,10 @@ def _spatial(
             fields[name] = (dims, values)
             continue
         axis = dims.index(dimension)
-        reduced = []
-        for indices in groups:
-            selected = np.take(values, indices, axis=axis)
-            base = FV.amb2var.get(name, name)
-            if base in _DIRECTIONS:
-                radians = np.deg2rad(selected)
-                result = _angle(
-                    np.mean(np.sin(radians), axis=axis),
-                    np.mean(np.cos(radians), axis=axis),
-                )
-            elif farm and base in _EXTENSIVE:
-                result = np.sum(selected, axis=axis)
-            else:
-                result = np.mean(selected, axis=axis)
-            reduced.append(result)
+        reduced = [
+            _reduce_group(name, np.take(values, indices, axis=axis), axis, farm)
+            for indices in groups
+        ]
         dimensions = (
             tuple(group_dimension if d == dimension else d for d in dims)
             if group_dimension
@@ -251,7 +226,11 @@ def _spatial(
     return dict(
         coords=coords,
         data_vars=fields,
-        attrs={"__aggregation_fields": list(payload["data_vars"]), **payload["attrs"]},
+        attrs={
+            "__aggregation_fields": list(payload["data_vars"]),
+            **payload["attrs"],
+            "n_turbines" if farm else "n_points": len(payload["coords"][dimension]),
+        },
     )
 
 
@@ -354,5 +333,9 @@ def _point_spatial_statistics(payload: _Results) -> _Results:
     return dict(
         coords={d: v for d, v in payload["coords"].items() if d != FC.TARGET},
         data_vars=fields,
-        attrs={**payload["attrs"], "__aggregation_fields": list(payload["data_vars"])},
+        attrs={
+            **payload["attrs"],
+            "n_points": len(payload["coords"][FC.TARGET]),
+            "__aggregation_fields": list(payload["data_vars"]),
+        },
     )

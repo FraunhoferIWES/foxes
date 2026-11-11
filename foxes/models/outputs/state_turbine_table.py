@@ -43,14 +43,17 @@ class StateTurbineTable(DatasetOutput):
         sel
             Label selection after ``isel``, using external names.
         transpose
-            Put turbine before state in fields containing both dimensions.
+            Put retained turbine/farm/cluster axes before the state axis.
         to_file
             Optional NetCDF filename, written once after assembly.
         write_pars
             NetCDF verbosity defaults to the executing algorithm's level.
             Options for ``foxes.utils.write_nc``.
         kwargs
-            Private result naming and common output options.
+            Private result naming, ``aggregate_turbines``, ``aggregate_states``
+            and common output options. Reductions run on workers before table
+            formatting. Select input states through ``calc_outputs(states_sel=...)``
+            before reducing their dimension.
         """
         fields = [FV.P, FV.REWS] if variables is None else list(variables)
         if not fields or any(not isinstance(v, str) or not v for v in fields):
@@ -83,8 +86,11 @@ class StateTurbineTable(DatasetOutput):
         )
         if self.transpose:
             table = table.transpose(
-                self.name_map.get(FC.TURBINE, FC.TURBINE),
-                self.name_map.get(FC.STATE, FC.STATE),
+                *(
+                    self.name_map.get(dim, dim)
+                    for dim in (FC.TURBINE, FC.FARM, FC.CLUSTER, FC.STATE)
+                    if self.name_map.get(dim, dim) in table.dims
+                ),
                 ...,
             )
         return table.isel(self.isel).sel(self.sel)

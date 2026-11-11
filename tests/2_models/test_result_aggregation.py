@@ -298,6 +298,31 @@ def _algorithm(algorithm="Downwind", index=None):
 
 
 @pytest.mark.parametrize("backend", ["numpy", "threads", "process"])
+def test_collected_group_memberships_support_output_and_point_reuse(backend):
+    algo = _algorithm()
+    for turbine in algo.farm.turbines:
+        turbine.cluster_name = "coastal"
+    with foxes.Engine.new(backend, n_procs=2, chunk_size_states=2, verbosity=0):
+        raw = algo.calc_farm(outputs="farm_results_all")
+        original = raw.copy(deep=True)
+        summary = algo.calc_outputs(
+            farm_results=raw,
+            outputs=FarmResultsOutput(
+                variables=[FV.P], aggregate_turbines="wind_farm", aggregate_states=True
+            ),
+        )
+        points = algo.calc_points(raw, points=np.array([[1500.0, 0.0, 90.0]]))
+
+    assert raw[FC.FARM].dims == (FC.TURBINE,)
+    assert raw[FC.CLUSTER].dims == (FC.TURBINE,)
+    expected = raw[FV.P].mean(FC.STATE).values
+    np.testing.assert_allclose(summary[FV.P], [expected[:2].sum(), expected[2]])
+    assert points[FV.WS].shape == (4, 1)
+    assert np.isfinite(points[FV.WS]).all()
+    xr.testing.assert_identical(raw, original)
+
+
+@pytest.mark.parametrize("backend", ["numpy", "threads", "process"])
 @pytest.mark.parametrize("algorithm", ["Downwind", "Iterative"])
 def test_real_aggregated_metrics_use_selected_output_evaluation(
     tmp_path, backend, algorithm
@@ -517,9 +542,9 @@ def test_registry_replaces_generic_writer_with_collection_aggregation():
     assert "results_writer" not in book.outputs
     assert not hasattr(foxes.models.outputs, "ResultsWriter")
     for name in (
-        "farm_results_aggregate_wind_farm",
-        "farm_results_aggregate_cluster_mean",
-        "farm_results_aggregate_all_mean",
+        "farms_results",
+        "cluster_results_mean",
+        "total_results_mean",
         "farm_results_mean",
         "point_results_aggregate_all",
         "point_results_mean",
@@ -657,3 +682,25 @@ def test_point_public_dimensions_do_not_depend_on_result_name(name, aggregate, s
     assert FC.TPOINT not in result.dims
     assert (FC.POINT in result.dims) is (aggregate is None)
     assert (FC.STATE in result.dims) is (not states)
+
+
+def test_farm_selected_field_list_stays_editable_before_grouping():
+    output = FarmResultsOutput(variables=[FV.P])
+    output.fdata_variables.append(FV.EFF)
+    with foxes.Engine.new("numpy", verbosity=0):
+        raw = _algorithm().calc_farm(outputs=output)
+        assert FV.EFF in raw
+    output.aggregate_turbines = "all"
+    output.aggregate_states = True
+    with foxes.Engine.new("numpy", verbosity=0):
+        result = _algorithm().calc_farm(outputs=output)
+    assert set(result.data_vars) == {FV.P, FV.EFF}
+    assert not result.dims
+
+
+def test_point_variable_edits_update_reduction_requirements():
+    output = PointResultsOutput(variables=[FV.WS])
+    output.tdata_variables.append(FV.WD)
+    output.aggregate_points = "all"
+    output.aggregate_states = True
+    assert output.tdata_variables == [FV.WS, FV.WD, FV.WEIGHT]

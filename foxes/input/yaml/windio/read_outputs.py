@@ -11,6 +11,14 @@ import foxes.constants as FC
 from .read_fields import foxes2wio
 
 
+def _read_state_aggregation(parameters: Dict[Any, Any]) -> bool:
+    """Consume the shared boolean state-reduction option."""
+    aggregate = parameters.pop_item("aggregate_states", False)
+    if not isinstance(aggregate, bool):
+        raise ValueError("WindIO: aggregate_states must be a boolean")
+    return aggregate
+
+
 def _read_turbine_outputs(
     wio_outs: Dict[Any, Any],
     olist: list[Any],
@@ -27,6 +35,10 @@ def _read_turbine_outputs(
             "turbine_nc_filename", "turbine_outputs.nc"
         )
         output_variables = turbine_outputs["output_variables"]
+        aggregate = turbine_outputs.pop_item("aggregate_turbines", None)
+        aggregate_states = _read_state_aggregation(turbine_outputs)
+        if aggregate not in (None, "wind_farm", "cluster", "all"):
+            raise ValueError(f"WindIO: Invalid aggregate_turbines {aggregate!r}")
         if verbosity > 2:
             print("      Reading turbine_outputs")
             print("        File name:", turbine_nc_filename)
@@ -37,17 +49,13 @@ def _read_turbine_outputs(
             rotor_effective_velocity=FV.REWS,
             _name="vmap",
         )
-        ivmap = {d: k for k, d in vmap.items()}
-        ivmap.update(
-            {
-                FC.STATE: "time",
-                FC.TURBINE: "turbine",
-            }
-        )
-
-        isel = None
-        if states_isel is not None and len(states_isel):
-            isel = {"time": states_isel}
+        ivmap = {
+            **{d: k for k, d in vmap.items()},
+            FC.STATE: "time",
+            FC.TURBINE: "turbine",
+            FC.FARM: "wind_farm",
+            FC.CLUSTER: "cluster",
+        }
 
         olist.append(
             Dict(
@@ -59,11 +67,73 @@ def _read_turbine_outputs(
                     round={vw: FV.get_default_digits(vf) for vw, vf in vmap.items()},
                     verbosity=verbosity,
                 ),
-                isel=isel,
+                states_isel=states_isel,
+                aggregate_turbines=aggregate,
+                aggregate_states=aggregate_states,
                 transpose=True,
                 _name=f"outputs.{len(olist)}.StateTurbineTable",
             )
         )
+
+
+def _flow_heights(planes: Dict[Any, Any], algo: Algorithm) -> np.ndarray:
+    """Consume requested plane heights while preserving their supplied order."""
+    sampling = planes["z_sampling"]
+    if sampling == "plane_list":
+        heights = planes.pop_item("z_list")
+    elif sampling == "hub_heights":
+        heights = np.unique(algo.farm.get_hub_heights(algo))
+    elif sampling == "grid":
+        bounds = planes.pop_item("z_bounds")
+        assert len(bounds) == 2, f"Expecting two entries for z_bounds, got {bounds}"
+        heights = np.linspace(bounds[0], bounds[1], planes.pop_item("z_number"))
+    elif isinstance(sampling, (int, float)):
+        heights = np.atleast_1d(sampling)
+    else:
+        raise NotImplementedError(
+            f"z_sampling '{sampling}' is not supported. Choices: plane_list, hub_heights, grid."
+        )
+    return np.asarray(heights)
+
+
+def _grid_count(bounds: list[float], spacing: float) -> int:
+    """Include both bounds without exceeding the requested grid spacing."""
+    count = max(int((bounds[1] - bounds[0]) / spacing), 1) + 1
+    return count + int((bounds[1] - bounds[0]) / (count - 1) > spacing)
+
+
+def _flow_grid(planes: Dict[Any, Any], verbosity: int) -> dict[str, Any]:
+    """Consume horizontal grid sampling and return slice-grid parameters."""
+    sampling = planes["xy_sampling"]
+    if sampling != "grid":
+        raise NotImplementedError(
+            f"xy_sampling '{sampling}' is not supported. Choices: 'grid'."
+        )
+    xb, yb = planes.pop_item("x_bounds"), planes.pop_item("y_bounds")
+    assert len(xb) == 2, f"Expecting two entries for x_bounds, got {xb}"
+    assert len(yb) == 2, f"Expecting two entries for y_bounds, got {yb}"
+    if "dx" in planes or "dy" in planes:
+        assert "dx" in planes and "dy" in planes, (
+            f"Expecting both 'dx' and 'dy' in z_planes, got {list(planes.keys())}"
+        )
+        nx = _grid_count(xb, planes.pop_item("dx"))
+        ny = _grid_count(yb, planes.pop_item("dy"))
+    elif "Nx" in planes or "Ny" in planes:
+        assert "Nx" in planes and "Ny" in planes, (
+            f"Expecting both 'Nx' and 'Ny' in z_planes, got {list(planes.keys())}"
+        )
+        nx, ny = planes.pop_item("Nx"), planes.pop_item("Ny")
+    else:
+        raise KeyError(
+            f"Expecting either 'dx' and 'dy' or 'Nx' and 'Ny' in z_planes, got {list(planes.keys())}"
+        )
+    if verbosity > 2:
+        print("          x_bounds      :", xb)
+        print("          y_bounds      :", yb)
+        print("          nx, ny        :", (nx, ny))
+        print("          true dx       :", (xb[1] - xb[0]) / (nx - 1))
+        print("          true dy       :", (yb[1] - yb[0]) / (ny - 1))
+    return dict(xmin=xb[0], xmax=xb[1], ymin=yb[0], ymax=yb[1], n_img_points=(nx, ny))
 
 
 def _read_flow_field(
@@ -112,18 +182,21 @@ def _read_flow_field(
         flow_field = wio_outs["flow_field"]
         flow_nc_filename = flow_field.pop_item("flow_nc_filename", "flow_field.nc")
         output_variables = flow_field.pop_item("output_variables")
+        aggregate_states = _read_state_aggregation(flow_field)
+        if flow_field.pop_item("aggregate_points", None) is not None:
+            raise ValueError(
+                "WindIO: Flow fields remain gridded; aggregate_points is unsupported"
+            )
 
         z_planes = flow_field.pop_item("z_planes")
-        z_sampling = z_planes["z_sampling"]
-        xy_sampling = z_planes["xy_sampling"]
 
         if verbosity > 2:
             print("      Reading flow_field")
             print("        File name       :", flow_nc_filename)
             print("        output_variables:", output_variables)
             print("        states subset   :", states_isel)
-            print("        z_sampling      :", z_sampling)
-            print("        xy_sampling     :", xy_sampling)
+            print("        z_sampling      :", z_planes["z_sampling"])
+            print("        xy_sampling     :", z_planes["xy_sampling"])
 
         vmap: dict[str, str] = Dict(
             wind_speed=FV.WS,
@@ -131,84 +204,44 @@ def _read_flow_field(
             _name="vmap",
         )
 
-        z_list: list[Any] | np.ndarray = []
-        if z_sampling == "plane_list":
-            z_list = z_planes.pop_item("z_list")
-        elif z_sampling == "hub_heights":
-            z_list = np.unique(algo.farm.get_hub_heights(algo))
-        elif z_sampling == "grid":
-            zb = z_planes.pop_item("z_bounds")
-            assert len(zb) == 2, f"Expecting two entries for z_bounds, got {zb}"
-            zn = z_planes.pop_item("z_number")
-            z_list = np.linspace(zb[0], zb[1], zn)
-        elif isinstance(z_sampling, (int, float)):
-            z_list = np.atleast_1d(z_sampling)
-        else:
-            raise NotImplementedError(
-                f"z_sampling '{z_sampling}' is not supported. Choices: plane_list, hub_heights, grid."
-            )
-        z_list = np.asarray(z_list)
+        z_list = _flow_heights(z_planes, algo)
         if verbosity > 2:
             print("          z_list        :", z_list)
 
-        if xy_sampling == "grid":
-            xb = z_planes.pop_item("x_bounds")
-            assert len(xb) == 2, f"Expecting two entries for x_bounds, got {xb}"
-            yb = z_planes.pop_item("y_bounds")
-            assert len(yb) == 2, f"Expecting two entries for y_bounds, got {yb}"
-            if "dx" in z_planes or "dy" in z_planes:
-                assert "dx" in z_planes and "dy" in z_planes, (
-                    f"Expecting both 'dx' and 'dy' in z_planes, got {list(z_planes.keys())}"
-                )
-                dx = z_planes.pop_item("dx")
-                dy = z_planes.pop_item("dy")
-                nx = max(int((xb[1] - xb[0]) / dx), 1) + 1
-                if (xb[1] - xb[0]) / (nx - 1) > dx:
-                    nx += 1
-                ny = max(int((yb[1] - yb[0]) / dy), 1) + 1
-                if (yb[1] - yb[0]) / (ny - 1) > dy:
-                    ny += 1
-            elif "Nx" in z_planes or "Ny" in z_planes:
-                assert "Nx" in z_planes and "Ny" in z_planes, (
-                    f"Expecting both 'Nx' and 'Ny' in z_planes, got {list(z_planes.keys())}"
-                )
-                nx = z_planes.pop_item("Nx")
-                ny = z_planes.pop_item("Ny")
-            else:
-                raise KeyError(
-                    f"Expecting either 'dx' and 'dy' or 'Nx' and 'Ny' in z_planes, got {list(z_planes.keys())}"
-                )
-            z_list = np.asarray(z_list)
-            if verbosity > 2:
-                print("          x_bounds      :", xb)
-                print("          y_bounds      :", yb)
-                print("          nx, ny        :", (nx, ny))
-                print("          true dx       :", (xb[1] - xb[0]) / (nx - 1))
-                print("          true dy       :", (yb[1] - yb[0]) / (ny - 1))
-            olist.append(
-                Dict(
-                    output_type="SlicesData",
-                    positions=z_list.tolist(),
-                    plane="xy",
-                    states_isel=states_isel,
-                    grid_pars=dict(
-                        xmin=xb[0],
-                        xmax=xb[1],
-                        ymin=yb[0],
-                        ymax=yb[1],
-                        n_img_points=(nx, ny),
-                    ),
-                    variables=[vmap[v] for v in output_variables],
-                    to_file=flow_nc_filename,
-                    label_map={**foxes2wio, FC.STATE: "time"},
-                    write_pars=dict(verbosity=verbosity),
-                    _name=f"outputs.{len(olist)}.SlicesData",
-                )
+        grid = _flow_grid(z_planes, verbosity)
+        olist.append(
+            Dict(
+                output_type="SlicesData",
+                positions=z_list.tolist(),
+                plane="xy",
+                states_isel=states_isel,
+                aggregate_states=aggregate_states,
+                grid_pars=grid,
+                variables=[vmap[v] for v in output_variables],
+                to_file=flow_nc_filename,
+                label_map={**foxes2wio, FC.STATE: "time"},
+                write_pars=dict(verbosity=verbosity),
+                _name=f"outputs.{len(olist)}.SlicesData",
             )
-        else:
-            raise NotImplementedError(
-                f"xy_sampling '{xy_sampling}' is not supported. Choices: 'grid'."
-            )
+        )
+
+
+def _read_state_subset(times: Dict[Any, Any]) -> list[int] | None:
+    """Consume time-subset configuration and reject invalid positional selections."""
+    if times.get_item("all_occurences"):
+        return None
+    selected = times.get_item("subset")
+    if (
+        not isinstance(selected, list)
+        or not selected
+        or any(isinstance(i, bool) or not isinstance(i, int) or i < 0 for i in selected)
+        or len(set(selected)) != len(selected)
+    ):
+        raise ValueError(
+            "WindIO: state subset must contain unique nonnegative "
+            "integer positions and must not be empty"
+        )
+    return selected
 
 
 def read_outputs(
@@ -242,7 +275,8 @@ def read_outputs(
         If requested fields are unknown or required report options are absent.
     ValueError
         If a time subset is empty or contains repeated, negative or noninteger
-        positions.
+        positions, an aggregation option is invalid, or flow-field spatial
+        aggregation is requested.
     NotImplementedError
         If wind-speed/direction subsets or sampling modes are unsupported.
 
@@ -251,6 +285,11 @@ def read_outputs(
     Time subsets retain their specified positional order in both output
     families. Turbine fields have dimensions ``(turbine, time)``; flow fields
     have dimensions ``(z, time, y, x)`` with heights in requested order.
+    Turbine ``aggregate_turbines`` selects wind-farm/cluster/all grouping and
+    either family accepts boolean ``aggregate_states``. Subsets are selected
+    before normalized state reduction. Eliminated dimensions are omitted;
+    dataset attributes record their original counts. Flow files stay gridded
+    and reject ``aggregate_points``.
     """
     odir = wio_outs.pop_item("output_folder", ".")
     olist: list[Any] = []
@@ -263,22 +302,7 @@ def read_outputs(
     run_configuration = wio_outs.pop_item("run_configuration", {})
     states_isel = None
     if "times_run" in run_configuration:
-        times_run = run_configuration.pop_item("times_run")
-        if not times_run.get_item("all_occurences"):
-            states_isel = times_run.get_item("subset")
-            if (
-                not isinstance(states_isel, list)
-                or not states_isel
-                or any(
-                    isinstance(i, bool) or not isinstance(i, int) or i < 0
-                    for i in states_isel
-                )
-                or len(set(states_isel)) != len(states_isel)
-            ):
-                raise ValueError(
-                    "WindIO: state subset must contain unique nonnegative "
-                    "integer positions and must not be empty"
-                )
+        states_isel = _read_state_subset(run_configuration.pop_item("times_run"))
     elif "wind_speeds_run" in run_configuration:
         wind_speeds_run = run_configuration.get_item("wind_speeds_run")
         directions_run = run_configuration.get_item("directions_run")

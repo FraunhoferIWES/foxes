@@ -851,11 +851,12 @@ class MData(Data):
 
 
 class FData(Data):
-    """
-    Container for foxes farm data.
+    """Container for state/turbine farm data.
 
-    Each farm data entry has (n_states, n_turbines) shape,
-    except the dimensions.
+    Physical fields have leading dimensions ``(state, turbine)``. Dimension
+    coordinates, turbine names and weights have their own declared dimensions.
+    Wind-farm and cluster membership labels may retain ``(turbine,)`` dimensions
+    when collected results are reused.
     """
 
     def __init__(self, *args: Any, name: str = "fdata", **kwargs: Any) -> None:
@@ -881,7 +882,12 @@ class FData(Data):
         super()._run_entry_checks(name, data, dims)
         data = self[name]
         dims = self.dims[name]
-        if name not in self.sizes and name not in [FC.TNAME, FV.WEIGHT]:
+        static_membership = name in (FC.FARM, FC.CLUSTER) and dims == (FC.TURBINE,)
+        if (
+            name not in self.sizes
+            and name not in [FC.TNAME, FV.WEIGHT]
+            and not static_membership
+        ):
             dms = (FC.STATE, FC.TURBINE)
             shp = (self.n_states, self.n_turbines)
             if len(data.shape) < 2:

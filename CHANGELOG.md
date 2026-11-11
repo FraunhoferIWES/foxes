@@ -1188,12 +1188,32 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Output presets:
+  - Use `farms_results`, `cluster_results` and `total_results` for wind-farm,
+    cluster and all-turbine aggregation across every filter/field/state/writer
+    combination. Remove superseded selectors without aliases; keep constructor
+    options and public result keys unchanged.
+  - Demonstrate quick model-book outputs, selector composition, field/filter/
+    mean/writer suffixes and preset discovery in the output tutorial.
+- Tutorials and visual policy:
+  - Add a runnable output notebook covering collectors, automatic metrics,
+    aggregation, point probes, plots, NetCDF writers and GIF animation.
+  - Adopt user-selected free design, remove corporate guidance and Sphinx token
+    adapters, and record project visualization conventions and publication review.
+  - Preserve static farm/cluster membership coordinates when reusing collected
+    farm results for outputs and point calculations.
+  - Correct wind-rose compass orientation by avoiding a second rotation of
+    already converted meteorological bearings.
 - Turbine evaluation:
   - Return zero efficiency for zero power, including zero ambient power, and
     positive infinity for nonzero power over either signed zero without
     division warnings. Preserve unclipped ratios, NaNs otherwise, selections
     and nominal-capacity validation, including output-selected evaluation.
 - Maintenance:
+  - Audit model-book factory precedence and all output preset combinations.
+    Order specialized rotor and ambient-TI variants before catchalls, remove
+    duplicate wake registrations and unsupported vector-limit/TurbOParkIX
+    growth variants, and parse decimal coefficients without corrupting them.
   - Keep collectors in `farm_results.py` and `point_results.py`; put every
     domain writer in the corresponding plural `*_results_writers.py` module.
     Remove the generic `ResultsWriter`, its module and model-book preset.
@@ -1225,6 +1245,18 @@ This major version introduces the concept of `Engines` which handle the chunking
     loading messages without hiding errors. Numerical NetCDF outputs inherit algorithm
     verbosity unless explicitly configured otherwise.
 - Outputs:
+  - Register every collector/count/chunk/calendar combination of named fields,
+    ambient/waked filters, spatial aggregation and state means. Retain scalar
+    pre-aggregation state/turbine/point counts in datasets and files without
+    per-variable weight metadata.
+  - Execute aggregation presets through YAML and apply input state selections
+    before reduction. Support WindIO turbine summaries and normalized gridded
+    flow means, including circular directions and external field names.
+    Reuse shared chunk assembly and reductions; remove duplicate join/table
+    assembly and writer count bookkeeping.
+  - Apply consistent style to the changed files, extracting YAML component
+    construction, state selection, physical group reduction, payload validation
+    and tile assembly without changing their numerical/lifecycle contracts.
   - Add independent `aggregate_turbines` (wind farm, cluster, all),
     `aggregate_points` (all) and `aggregate_states` controls to collectors and
     their writers. Reduce worker payloads to physical sufficient statistics,

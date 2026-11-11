@@ -23,18 +23,51 @@ class _Results(TypedDict):
     attrs: dict[str, Any]
 
 
-def _combine_chunks(chunks: list[_Results]) -> _Results:
+def _validate_chunk_pair(first: _Results, chunk: _Results, dimension: str) -> None:
+    """Require matching schemas and identical fields outside the concatenated axis."""
+    if chunk["data_vars"].keys() != first["data_vars"].keys():
+        raise ValueError("Results: Variable selections differ between chunks")
+    if chunk["coords"].keys() != first["coords"].keys():
+        raise ValueError("Results: Coordinates differ between chunks")
+    for coordinate, values in chunk["coords"].items():
+        if coordinate != dimension and not np.array_equal(
+            values,
+            first["coords"][coordinate],
+            equal_nan=values.dtype.kind in "fcMm",
+        ):
+            raise ValueError(
+                f"Results: Coordinate '{coordinate}' differs between chunks"
+            )
+    for variable, (dims, values) in chunk["data_vars"].items():
+        if dims != first["data_vars"][variable][0]:
+            raise ValueError(
+                f"Results: Dimensions differ between chunks for '{variable}'"
+            )
+        if dimension not in dims and not np.array_equal(
+            values,
+            first["data_vars"][variable][1],
+            equal_nan=values.dtype.kind in "fcMm",
+        ):
+            raise ValueError(
+                f"Results: Static field '{variable}' differs between chunks"
+            )
+
+
+def _combine_chunks(chunks: list[_Results], dimension: str = FC.STATE) -> _Results:
     """Join ordered result payloads without mutating source chunks.
 
     Parameters
     ----------
     chunks
-        Nonempty state-ordered payloads with matching variable names and dimensions.
+        Nonempty ordered payloads with matching variable names and dimensions.
+    dimension
+        Retained axis to concatenate. Other coordinates and static fields must
+        agree across chunks.
 
     Returns
     -------
     payload
-        Newly concatenated state coordinates and state-dependent arrays,
+        Newly concatenated retained-axis coordinates and dependent arrays,
         with copied static coordinates and attributes.
 
     Raises
@@ -42,45 +75,22 @@ def _combine_chunks(chunks: list[_Results]) -> _Results:
     ValueError
         If variable selections or dimensions differ between chunks.
     """
-    # Validate variable schemas before concatenating state arrays.
+    # Validate schemas and static fields before joining the retained axis.
     first = chunks[0]
     for chunk in chunks[1:]:
-        if chunk["data_vars"].keys() != first["data_vars"].keys():
-            raise ValueError("Results: Variable selections differ between chunks")
-        if chunk["coords"].keys() != first["coords"].keys():
-            raise ValueError("Results: Coordinates differ between chunks")
-        for coordinate in first["coords"]:
-            if coordinate != FC.STATE and not np.array_equal(
-                chunk["coords"][coordinate], first["coords"][coordinate]
-            ):
-                raise ValueError(
-                    f"Results: Coordinate '{coordinate}' differs between chunks"
-                )
-        for variable, (dims, _) in chunk["data_vars"].items():
-            if dims != first["data_vars"][variable][0]:
-                raise ValueError(
-                    f"Results: Dimensions differ between chunks for '{variable}'"
-                )
-            if FC.STATE not in dims and not np.array_equal(
-                chunk["data_vars"][variable][1],
-                first["data_vars"][variable][1],
-                equal_nan=True,
-            ):
-                raise ValueError(
-                    f"Results: Static field '{variable}' differs between chunks"
-                )
+        _validate_chunk_pair(first, chunk, dimension)
 
-    # Preserve static coordinates and concatenate along the state axis.
+    # Preserve static coordinates and concatenate along the requested axis.
     coords = first["coords"].copy()
-    coords[FC.STATE] = np.concatenate([chunk["coords"][FC.STATE] for chunk in chunks])
+    coords[dimension] = np.concatenate([chunk["coords"][dimension] for chunk in chunks])
     data_vars = {
         variable: (
             dims,
             np.concatenate(
                 [chunk["data_vars"][variable][1] for chunk in chunks],
-                axis=dims.index(FC.STATE),
+                axis=dims.index(dimension),
             )
-            if FC.STATE in dims
+            if dimension in dims
             else values,
         )
         for variable, (dims, values) in first["data_vars"].items()

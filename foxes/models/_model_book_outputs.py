@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import foxes.models as fm
@@ -241,82 +242,105 @@ def _populate_result_outputs(
     book
         Model book whose output registry is extended in place.
     prefix
-        ``farm_results`` or ``point_results`` selector and filename prefix.
+        Ungrouped ``farm_results`` or ``point_results`` family. Turbine
+        aggregation selects ``farms_results``, ``cluster_results`` or
+        ``total_results``.
     variable_sets
         Independent named variable selections including ``default`` and ``all``.
     classes
         Collector, count writer, chunk writer and calendar-period writer classes.
     """
-    collector, count_writer, chunk_writer, period_writer = classes
-    hints = {"variables": f"(Variable set: {', '.join(variable_sets)})"}
-    book.outputs[prefix] = collector(
-        ambient_vars=True,
-        waked_vars=True,
-        variables=variable_sets["default"],
-    )
-    book.outputs[f"{prefix}_amb"] = collector(
-        ambient_vars=True,
-        waked_vars=False,
-        variables=variable_sets["default"],
-    )
-    book.outputs.add_factory(
-        collector,
-        f"{prefix}_amb_<variables>",
-        variables=lambda v: variable_sets[v],
-        hints=hints,
-        kwargs=dict(ambient_vars=True, waked_vars=False),
-    )
-    book.outputs.add_factory(
-        collector,
-        f"{prefix}_waked_<variables>",
-        variables=lambda v: variable_sets[v],
-        hints=hints,
-        kwargs=dict(ambient_vars=False, waked_vars=True),
-    )
-    book.outputs.add_factory(
-        count_writer,
-        f"{prefix}_write_n<n_states_per_file>",
-        n_states_per_file=lambda n: int(n),
-        hints={"states_per_file": "(Number of states per file)"},
-        kwargs=dict(base_name=prefix, ambient_vars=True, waked_vars=True),
-    )
-    book.outputs.add_factory(
-        collector,
-        f"{prefix}_<variables>",
-        variables=lambda v: variable_sets[v],
-        hints=hints,
-        kwargs=dict(ambient_vars=True, waked_vars=True),
-    )
-    book.outputs[f"{prefix}_write_chunks"] = chunk_writer(
-        base_name=prefix,
-        ambient_vars=True,
-        waked_vars=True,
-        variables=variable_sets["default"],
-    )
-    for period in ("day", "week", "month", "year"):
-        book.outputs[f"{prefix}_write_{period}"] = period_writer(
-            base_name=prefix,
-            period=period,
-            ambient_vars=True,
-            waked_vars=True,
-            variables=variable_sets["default"],
-        )
-    book.outputs[f"{prefix}_mean"] = collector(
-        variables=variable_sets["default"], aggregate_states=True
+    spatial_parameter = (
+        "aggregate_turbines" if prefix == "farm_results" else "aggregate_points"
     )
     aggregates = (
-        ("wind_farm", "cluster", "all") if prefix == "farm_results" else ("all",)
+        ("wind_farm", "cluster", "all", None)
+        if prefix == "farm_results"
+        else ("all", None)
     )
-    for aggregate in aggregates:
-        options: dict[str, Any] = {
-            "aggregate_turbines"
-            if prefix == "farm_results"
-            else "aggregate_points": aggregate
-        }
-        for states in (False, True):
-            name = f"{prefix}_aggregate_{aggregate}" + ("_mean" if states else "")
-            book.outputs[name] = collector(
-                variables=variable_sets["default"],
-                **options,
-                aggregate_states=states,
+    for filtering, ambient, waked in (
+        ("_amb", True, False),
+        ("_waked", False, True),
+        ("", True, True),
+    ):
+        for aggregate in aggregates:
+            if aggregate == "wind_farm":
+                variant_prefix = "farms_results"
+            elif aggregate == "cluster":
+                variant_prefix = "cluster_results"
+            elif aggregate == "all" and prefix == "farm_results":
+                variant_prefix = "total_results"
+            else:
+                variant_prefix = prefix
+            for states in (True, False):
+                configuration = {
+                    spatial_parameter: aggregate,
+                    "aggregate_states": states,
+                    "ambient_vars": ambient,
+                    "waked_vars": waked,
+                }
+                for fields in (False, True):
+                    stem = (
+                        variant_prefix + filtering + ("_<variables>" if fields else "")
+                    )
+                    if aggregate == "all" and prefix == "point_results":
+                        stem += "_aggregate_all"
+                    if states:
+                        stem += "_mean"
+                    _populate_result_variant(
+                        book, stem, variable_sets, classes, configuration
+                    )
+
+
+def _writer_fields(
+    variable_sets: dict[str, list[str] | None], stem: str, selection: str
+) -> dict[str, Any]:
+    """Select fields and keep different named writer configurations in distinct files."""
+    return {
+        "variables": variable_sets[selection],
+        "base_name": stem.replace("<variables>", selection),
+    }
+
+
+def _populate_result_variant(
+    book: ModelBook,
+    stem: str,
+    variable_sets: dict[str, list[str] | None],
+    classes: tuple[type[Output], type[Output], type[Output], type[Output]],
+    configuration: dict[str, Any],
+) -> None:
+    """Register every writer policy and collector for one spatial/state/filter variant."""
+    collector, count, chunks, period = classes
+    for output_type, suffix in (
+        (count, "_write_n<n_states_per_file>"),
+        (chunks, "_write_chunks"),
+        (period, "_write_<period>"),
+        (collector, ""),
+    ):
+        options: dict[str, Any] = {}
+        arguments: dict[str, str | None] = {}
+        kwargs = dict(configuration)
+        if "<variables>" in stem:
+            options["variables"] = (
+                variable_sets
+                if output_type is collector
+                else partial(_writer_fields, variable_sets, stem)
             )
+            arguments["variables"] = "variables" if output_type is collector else None
+        else:
+            kwargs["variables"] = (
+                None if output_type is count else variable_sets["default"]
+            )
+            if output_type is not collector:
+                kwargs["base_name"] = stem
+        if output_type is count:
+            options["n_states_per_file"] = int
+        elif output_type is period:
+            options["period"] = ("day", "week", "month", "year")
+        name = stem + suffix
+        if "<" in name:
+            book.outputs.add_factory(
+                output_type, name, kwargs=kwargs, var2arg=arguments, **options
+            )
+        else:
+            book.outputs[name] = output_type(**kwargs)

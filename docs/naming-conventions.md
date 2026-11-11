@@ -136,13 +136,38 @@ remains. Unaggregated point files retain internal `state`, `target` and
 removes the state dimension after per-turbine/point weight normalization.
 Grouping replaces `turbine` with `farm`/`cluster` or removes the spatial axis
 for `all`. Missing memberships use the reserved `<unassigned>` group label.
-Reduced public keys and model-book selectors use
+Reduced public dataset keys use
 `farm_results_aggregate_<group>` or `point_results_aggregate_all`, with `_mean`
 appended for state reduction; state-only keys are `farm_results_mean` and
 `point_results_mean`. `result_name` overrides the public key. These are distinct
 from `*_results_all`, which selects available fields without grouping.
 Writers inherit the domain-specific options. See
 [ADR-0027](adr/0027-domain-result-aggregation.md).
+
+Model-book families imply named turbine grouping: `farms_results` selects
+`aggregate_turbines="wind_farm"` and `cluster_results` selects
+`aggregate_turbines="cluster"`. `total_results` selects `aggregate_turbines="all"`
+and combines every turbine; `farm_results` retains individual turbines. Public
+dataset keys and constructor parameters are independent of these preset names.
+
+Every collector and count/chunk/calendar writer supports the ordered components
+`<family>[_amb|_waked][_<variables>][_aggregate_all][_mean]`, followed for writers
+by `_write_n<count>`, `_write_chunks` or `_write_<period>`. Families are
+`farm_results`, `farms_results`, `cluster_results`, `total_results` and
+`point_results`; `_aggregate_all` applies only to `point_results`. Named fields
+include domain `default`/`all` sets and farm sets such as `analysis`. For example,
+`cluster_results_amb_analysis_mean_write_month` writes monthly cluster summaries.
+Writer stems follow the selected family/filter/fields/reduction. See
+[ADR-0029](adr/0029-grouped-output-preset-families.md).
+The all-turbine family is defined in
+[ADR-0031](adr/0031-total-output-preset-family.md).
+
+Aggregated dataset attributes use `n_states`, `n_turbines` and `n_points` for
+the number of selected input entities before their respective axes were
+eliminated. These are scalar counts, not counts per variable/group or weight
+arrays. Retained axes do not gain aggregation-count attributes; existing
+count/calendar file metadata is unchanged. See
+[ADR-0028](adr/0028-aggregation-presets-and-provenance.md).
 
 The independent point variable-set dictionary defines `default` (WS, WD, TI,
 RHO, ambient counterparts and weights) and `all` (every available point field).
@@ -378,6 +403,9 @@ in `extra_data` merely to avoid declaring its dimensions.
 	do not normalize existing mixed-case turbine names or underscored model names.
 - Factory templates use angle-bracket placeholders, for example `grid<n2>`.
 	Placeholder names match converted constructor concepts and include validation.
+- Coefficient tokens accept standard floating-point notation and compact
+	leading-zero notation: `0.04` and `004` both represent `0.04`. Use the shared
+	factory coefficient parser for wake growth, `kTI` and deflection coefficients.
 - `new()` means family-specific subclass lookup by class name. Do not document or
 	call a general `Model.new()` because none exists.
 - A variable ending in `_model` is an instance unless its annotation explicitly

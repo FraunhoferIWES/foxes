@@ -142,6 +142,25 @@ errors, unassigned groups and per-entity normalization over partial selections.
 Inspect worker payloads for eliminated dimensions, including file-interval
 statistics before parent assembly. Compare uneven state/target tiles and exact
 count/calendar files, not averages of chunk means.
+Run `uv run pytest tests/2_models/test_aggregation_configuration.py tests/2_models/test_windio_outputs.py -q`
+for the complete aggregation preset matrix and YAML/WindIO integration.
+Resolve every selector to its actual class/options, including named field sets,
+filters and all writer policies. Verify scalar pre-reduction counts over partial
+selections and uneven worker tiles, exact per-file provenance and NetCDF
+serialization. Raw collectors must not gain aggregation counts. Check preset
+copy isolation, selection references, invalid flags and normalized/circular
+WindIO flow means without changing existing slice weighted-sum semantics.
+Grouped model-book checks use `farms_results`, `cluster_results` and
+`total_results`, verify
+matching writer stems, and reject superseded or redundant grouped spellings.
+Run `uv run pytest tests/2_models/test_model_book.py -q` for model-book precedence:
+check unique factory templates, every closed option, advertised examples and
+representative numeric tokens against actual lookup and constructor parameters.
+Disable factory caching during precedence tests. Membership alone does not prove
+that a finite-option factory will construct the requested name.
+Style cleanup of changed files separates component construction, state
+selection, payload validation and tile assembly from their lifecycle coordinators;
+keep declarative field tables intact rather than splitting them for line counts.
 Run `MPLBACKEND=Agg uv run pytest tests/2_models/test_output_show.py -q` for
 noninteractive rendering. Tests never use `show=True`, including mocked checks.
 The shared pytest configuration disables display on test-owned model-book
@@ -599,6 +618,13 @@ runs. See [ADR-0023](adr/0023-in-process-example-runs.md).
 
 ## Documentation
 
+Execute the user-oriented output notebook with
+`uv run pytest --nbmake notebooks/outputs.ipynb --nbmake-timeout=300 -q`.
+It uses six synthetic states, six public-curve turbines, a bounded NumPy engine
+and temporary writer/animation directories. It covers composed result keys,
+automatic metrics, physical aggregation, selected-state counts, point results,
+layout/rose/flow plots, count/calendar files and GIF output.
+
 Public Python APIs follow [docstring conventions](docstrings.md). Types remain in
 annotations; NumPy-style docstrings describe the scientific and runtime
 contract. Sphinx uses numpydoc and AutoAPI for package references and MyST-NB
@@ -703,5 +729,7 @@ task explicitly changes that expected contract.
 - Keep optional imports isolated to the adapter.
 - Test a valid sample, malformed input, and a relevant edge case in-process.
 - Document the format and provide a runnable public example when appropriate.
-- For plots or other visual output, follow the applicable corporate design and
-	accessibility guidance under `docs/fraunhofer-design/`.
+- For plots or other visual output, follow the
+	[project visualization conventions](../.github/instructions/visualization.instructions.md).
+	FOXES uses free design; external publication requires a separate design and
+	accessibility review.

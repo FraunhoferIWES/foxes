@@ -17,7 +17,9 @@ def plot_wind_rose_bars(
     Parameters
     ----------
     ax
-        A Matplotlib polar axes object.
+        A Matplotlib polar axes object. Its orientation is set to standard
+        counterclockwise polar angles from east, after converting the
+        meteorological bearings so north is up and east is right.
     frequency
         Frequencies with shape ``(n_wd_bins, n_ws_bins)``.
     wd_edges
@@ -27,7 +29,7 @@ def plot_wind_rose_bars(
 
     Returns
     -------
-    numpy.ndarray
+    colors
         RGBA colors assigned to the wind-speed bins.
 
     Raises
@@ -60,6 +62,6 @@ def plot_wind_rose_bars(
         )
         bottom += frequency[:, ws_i]
 
-    ax.set_theta_zero_location("N")
-    ax.set_theta_direction(-1)
+    ax.set_theta_zero_location("E")
+    ax.set_theta_direction(1)
     return colors

@@ -170,6 +170,12 @@ enforcing the requested result ownership.
 
 ### Data Containers
 
+Collected farm datasets may carry wind-farm and cluster membership coordinates
+on the turbine axis. `FData` preserves these static labels when results are
+reused for point calculations or output reduction; they are not state/turbine
+physical fields. Their declared turbine dimensions still undergo ordinary
+shape validation.
+
 - `MData` stores model and chunk metadata.
 - `FData` stores farm data and enforces leading state/turbine dimensions.
 - `TData` stores targets, target-point weights, and point variables.
@@ -358,8 +364,10 @@ statistics; finalization merges those statistics and handles formatting,
 rendering and whole-result writing with explicit run-local data. Private stateless
 helpers preserve the established numerical and plotting implementations.
 
-Tables, maps, curve plots and single-file writers transport selected fields,
-then assemble their required state history once on the parent. Arbitrary-point
+Unaggregated tables, maps, curve plots and single-file writers transport selected
+fields, then assemble their required state history once on the parent. Aggregated
+tables reuse the farm collector's physical reductions and worker statistics.
+Arbitrary-point
 means eliminate the state axis on workers, transporting weighted sums and mass;
 dynamic coordinates follow the same reduction. Rotor plots need only initialized
 rotor metadata and require no scientific fields.
@@ -436,9 +444,22 @@ Output-only runs with supplied farm data bypass Iterative convergence dispatch
 and honor their own state selection. They do not reuse cached convergence
 arrays or recalculate scientific farm models.
 
-YAML/WindIO entries for promoted outputs specify constructor options and execute
-through `calc_outputs`, without a `functions` list. Nested `$name` references
-resolve before construction; `result_labels` stores the resulting value.
+YAML entries for promoted outputs specify class constructors or model-book
+presets and execute through `calc_outputs`, without a `functions` list. Presets
+are copied before figure flags change; constructor overrides require a class
+name or configuration in `model_book.outputs`. Nested `$name` references resolve
+before construction; `result_labels` stores the resulting value. `states_sel`
+and `states_isel` are mutually exclusive label/position selections applied before
+reduction, including for supplied results. Grid consumers retain requested state
+ordering as well as limiting execution.
+Private `_dict_components` helpers own configuration-time component construction;
+the public dictionary runner owns calculation phases and result references.
+WindIO turbine tables accept spatial/state aggregation. Flow files stay gridded,
+reject point grouping, and accept normalized `aggregate_states`. Both apply
+time subsets before reduction and retain external variable/dimension names.
+Explicit normalized slice aggregation shares domain sufficient statistics and
+directional means; `reduction="mean"` without that flag retains its global
+weighted-sum semantics.
 Derived fields are selected on the farm collector before calculation, not added
 by a post-processing evaluation step. See
 [ADR-0017](adr/0017-constructor-defined-output-contract.md).
@@ -602,6 +623,12 @@ cache the resulting model. There is no universal `Model.new()` constructor;
 only families that implement subclass discovery support `new()`. Preserve that
 distinction between a Python class name, a registered model-book key, and a
 parameterized factory name.
+
+Explicit registry entries take precedence over factories. Factories are tried in
+registration order; only `ValueError` permits the next factory to be tried.
+Register specialized variants before catchalls, keep templates unique, and
+advertise only constructor-supported options. The output preset matrix and
+model-book reachability tests verify actual construction without lookup caching.
 
 When adding a reusable model:
 
@@ -857,23 +884,31 @@ subprocess.
 	subclasses, with independent `aggregate_turbines`/`aggregate_points` and
 	`aggregate_states` controls, per-entity weight normalization and worker-side
 	sufficient statistics. See [ADR-0027](adr/0027-domain-result-aggregation.md).
+- All result presets combine named fields, ambient/waked filters, grouping,
+	state means and writer policies. Dataset provenance retains only scalar
+	pre-reduction counts for eliminated axes. YAML presets and WindIO reports
+	use the same reductions; flow files retain grids. See
+	[ADR-0028](adr/0028-aggregation-presets-and-provenance.md).
+- Named farm/cluster aggregation presets use the implicit `farms_results` and
+	`cluster_results` families across collectors and all writer policies.
+	Constructor parameters and dataset keys remain unchanged; superseded
+	selectors have no aliases. See
+	[ADR-0029](adr/0029-grouped-output-preset-families.md).
+- All-turbine model-book aggregation uses the implicit `total_results` family
+	across filters, named fields, state means and writer policies. Constructor
+	options and dataset keys remain unchanged. See
+	[ADR-0031](adr/0031-total-output-preset-family.md).
 - Output slice grids have no state axis and use the existing static-point
 	calculation contract. See
 	[ADR-0005](adr/0005-static-output-grid-coordinates.md).
 - Ruff formatting/linting and mypy run through pre-commit. Pytest is the test
 	runner; Sphinx with AutoAPI, numpydoc, and MyST-NB builds the documentation.
-- FOXES follows the Fraunhofer corporate design. Corporate requirements apply
-	to scientific plots, animations, examples, notebooks, documentation, and
-	brand assets. Sphinx HTML uses `iwes-tokens.css` as the adapter for the
-	authoritative `design-tokens.json` values and `iwes.css` as its
-	Sphinx-Immaterial theme layer; token parity is reviewed outside pytest. The
-	documentation remains white-dominant with a primary-green header, black
-	header text and focus indicators, and a light search surface. Its 20px rem
-	basis preserves theme control sizing; body and sidebar text explicitly use
-	16px type with 24px line spacing. FOXES still has no browser application
-	frontend. See
-	[ADR-0002](adr/0002-corporate-design.md) and
-	[ADR-0004](adr/0004-sphinx-design-token-adapter.md).
+- FOXES uses free design for plots, animations, notebooks, documentation and
+	visual assets. Corporate guidance, tokens and the Sphinx token adapter are
+	removed; Sphinx-Immaterial supplies its ordinary theme. Project conventions
+	live in the [visualization instructions](../.github/instructions/visualization.instructions.md).
+	External publication requires a design and accessibility review and may
+	require extensive restyling. See [ADR-0030](adr/0030-free-design.md).
 
 ## ADR Triggers
 

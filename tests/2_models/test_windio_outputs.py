@@ -69,6 +69,123 @@ def _request(family, fields, subset=(2, 0), **sampling):
     return Dict(outputs)
 
 
+@pytest.mark.parametrize("aggregate", [None, "wind_farm", "cluster", "all"])
+@pytest.mark.parametrize("mean", [False, True])
+def test_turbine_aggregation_preselects_states_and_preserves_windio_names(
+    algorithm, tmp_path, monkeypatch, aggregate, mean
+):
+    monkeypatch.setitem(config, FC.OUTPUT_DIR, tmp_path)
+    request = _request("turbine", ["power", "rotor_effective_velocity"])
+    request["turbine_outputs"].update(
+        aggregate_turbines=aggregate, aggregate_states=mean
+    )
+    definition = Dict()
+    read_outputs(request, definition, algorithm, verbosity=0)
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        farm = algorithm.calc_farm(outputs="farm_results_all")
+        result, _ = run_outputs(
+            definition, algorithm, farm, with_engine=True, verbosity=0
+        )
+    data = result[0][1][0]
+    for external, variable in [("power", FV.P), ("rotor_effective_velocity", FV.REWS)]:
+        expected = farm[variable].isel({FC.STATE: [2, 0]})
+        if mean:
+            expected = expected.mean(FC.STATE)
+        if aggregate:
+            expected = (
+                expected.sum(FC.TURBINE)
+                if variable == FV.P
+                else expected.mean(FC.TURBINE)
+            )
+        np.testing.assert_allclose(data[external].squeeze(), expected.T.squeeze())
+    assert ("time" in data.dims) is (not mean)
+    assert data.attrs.get("n_states") == (2 if mean else None)
+    assert data.attrs.get("n_turbines") == (2 if aggregate else None)
+    if aggregate in ("wind_farm", "cluster"):
+        assert aggregate in data.dims
+    with xr.open_dataset(tmp_path / "selected-turbines.nc") as written:
+        xr.testing.assert_allclose(data, written)
+        assert data.attrs == written.attrs
+
+
+def test_flow_state_aggregation_normalizes_partial_selection_and_directions(
+    algorithm, tmp_path, monkeypatch
+):
+    monkeypatch.setitem(config, FC.OUTPUT_DIR, tmp_path)
+    algorithm.states = foxes.input.states.StatesTable(
+        pd.DataFrame(
+            {FV.WS: [6.0, 8.0, 10.0], FV.WD: [350.0, 90.0, 10.0]},
+            index=pd.date_range("2020", periods=3),
+        ),
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        fixed_vars={FV.TI: 0.08, FV.RHO: 1.225},
+    )
+    request = _request("flow", ["wind_speed", "wind_direction"])
+    request["flow_field"]["aggregate_states"] = True
+    definition = Dict()
+    read_outputs(request, definition, algorithm, verbosity=0)
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=3, verbosity=0
+    ):
+        farm = algorithm.calc_farm(outputs="farm_results_all")
+        result, _ = run_outputs(
+            definition, algorithm, farm, with_engine=True, verbosity=0
+        )
+    data = result[0][1][0]
+    assert set(data.dims) == {"x", "y", "z"}
+    assert data.attrs["n_states"] == 2
+    assert data.attrs["aggregate_states"] == 1
+    np.testing.assert_allclose(data.wind_speed, 8.0)
+    np.testing.assert_allclose(
+        np.exp(1j * np.deg2rad(data.wind_direction)), 1.0, atol=1e-12
+    )
+    with xr.open_dataset(tmp_path / "selected-flow.nc") as written:
+        xr.testing.assert_identical(data, written)
+
+
+@pytest.mark.parametrize(
+    "family,options,message",
+    [
+        ("flow", {"aggregate_points": "all"}, "remain gridded"),
+        ("flow", {"aggregate_states": "true"}, "boolean"),
+        ("turbine", {"aggregate_states": 1}, "boolean"),
+        ("turbine", {"aggregate_turbines": "unknown"}, "aggregate_turbines"),
+    ],
+)
+def test_windio_rejects_invalid_aggregation(algorithm, family, options, message):
+    request = _request(family, ["power"] if family == "turbine" else ["wind_speed"])
+    request["turbine_outputs" if family == "turbine" else "flow_field"].update(options)
+    with pytest.raises(ValueError, match=message):
+        read_outputs(request, Dict(), algorithm, verbosity=0)
+
+
+def _assert_selected_windio_fields(
+    dataset, farm, family, fields, foxes_fields, positions
+):
+    """Verify physical values, external axes and requested ordering for either family."""
+    np.testing.assert_array_equal(
+        dataset.time, farm[FC.STATE].isel({FC.STATE: positions})
+    )
+    if family == "turbine":
+        assert all(dataset[field].dims == ("turbine", "time") for field in fields)
+        for field, foxes_field in zip(fields, foxes_fields):
+            np.testing.assert_allclose(
+                dataset[field], farm[foxes_field].isel({FC.STATE: positions}).T
+            )
+    else:
+        assert all(dataset[field].dims == ("z", "time", "y", "x") for field in fields)
+        np.testing.assert_array_equal(dataset.z, [110.0, 90.0])
+        np.testing.assert_allclose(dataset.x, [-10.0, 50.0, 110.0])
+        np.testing.assert_allclose(dataset.y, [-20.0, 20.0])
+        for field in fields:
+            expected = (
+                np.asarray([6.0, 8.0, 10.0])[positions]
+                if field == "wind_speed"
+                else np.full(len(positions), 270.0)
+            )
+            np.testing.assert_allclose(dataset[field].isel(z=0, y=0, x=0), expected)
+
+
 @pytest.mark.parametrize(
     "family,fields,foxes_fields",
     [
@@ -134,27 +251,9 @@ def test_selected_fields_execute_and_write(
     assert executed == [(output_type, nofig)]
     assert set(dataset.data_vars) == set(fields)
     positions = [0, 1, 2] if subset is None else list(subset)
-    np.testing.assert_array_equal(
-        dataset.time, farm[FC.STATE].isel({FC.STATE: positions})
+    _assert_selected_windio_fields(
+        dataset, farm, family, fields, foxes_fields, positions
     )
-    if family == "turbine":
-        assert all(dataset[field].dims == ("turbine", "time") for field in fields)
-        for field, foxes_field in zip(fields, foxes_fields):
-            np.testing.assert_allclose(
-                dataset[field], farm[foxes_field].isel({FC.STATE: positions}).T
-            )
-    else:
-        assert all(dataset[field].dims == ("z", "time", "y", "x") for field in fields)
-        np.testing.assert_array_equal(dataset.z, [110.0, 90.0])
-        np.testing.assert_allclose(dataset.x, [-10.0, 50.0, 110.0])
-        np.testing.assert_allclose(dataset.y, [-20.0, 20.0])
-        for field in fields:
-            expected = (
-                np.asarray([6.0, 8.0, 10.0])[positions]
-                if field == "wind_speed"
-                else np.full(len(positions), 270.0)
-            )
-            np.testing.assert_allclose(dataset[field].isel(z=0, y=0, x=0), expected)
 
     filename = "selected-turbines.nc" if family == "turbine" else "selected-flow.nc"
     assert [path.name for path in tmp_path.glob("*.nc")] == [filename]

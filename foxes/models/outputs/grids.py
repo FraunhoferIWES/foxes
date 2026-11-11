@@ -596,7 +596,7 @@ def np2xr_p(
     ori
         The orientation, 'xy' or 'xz' or 'yz'
     label_map
-        Coordinate-name mapping. Field names are retained in this conversion.
+        Coordinate and field-name mapping, matching state-resolved datasets.
 
     Returns
     -------
@@ -615,7 +615,8 @@ def np2xr_p(
     return Dataset(
         coords={b: b_pos, a: a_pos},
         data_vars={
-            v: ((b, a), np.swapaxes(d.reshape(n_a, n_b), 0, 1)) for v, d in data.items()
+            label_map.get(v, v): ((b, a), np.swapaxes(d.reshape(n_a, n_b), 0, 1))
+            for v, d in data.items()
         },
         attrs={c: float(c_pos)},
     )

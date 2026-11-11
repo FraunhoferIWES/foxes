@@ -1,5 +1,9 @@
 Output models
 =============
+For a runnable introduction, see :doc:`the practical output guide <notebooks/outputs>`.
+It demonstrates common collectors, automatic turbine evaluation, aggregation,
+point probes, plots, writers and animation with small synthetic inputs.
+
 Adopted outputs derive from ``foxes.core.Output`` and are exported from
 ``foxes.models.outputs``. Engine workers calculate chunk-local NumPy payloads;
 the output's ``update_results()`` and ``finalize_results()`` hooks unify them.
@@ -56,6 +60,7 @@ Layout outputs select an operation such as ``get_figure`` or ``write_csv``
 and pass its options in ``parameters``.
 Rose outputs configure bins, location and rendering; ``plot=False`` returns a
 frequency dataset and ``plot=True`` returns ``(axes, dataset)``.
+Wind-rose sectors retain meteorological bearings: north is up and east is right.
 ``StatesRosePlotOutput(point=(x, y, z))`` evaluates the executing algorithm's
 states at that location without constructor-time calculations.
 
@@ -121,6 +126,9 @@ model key. Means are reduced on workers, not collected as full state histories:
   shape ``(1, n_points)`` per variable and point tile. Global weights are not
   renormalized per chunk or selected subset. Raw weights and state frames are
   not transported. ``ret_states=True`` additionally retains selected labels.
+  Explicit ``aggregate_states=True`` instead returns per-point sufficient
+  statistics, normalizes selected-state weights after merging and circularly
+  averages directions; it does not change ordinary ``reduction="mean"`` sums.
 * Wind roses return bin accumulators rather than samples. Weighted means combine
   numerators and denominators globally before division and thresholding.
 * Layouts return only the selected state geometry and reduced colour values.
@@ -140,11 +148,24 @@ These payload reductions do not alter the full-shaped scientific data containers
 
 YAML execution
 ~~~~~~~~~~~~~~
-Configured YAML entries specify ``output_type`` and constructor options without
-``functions``. They run through ``calc_outputs``; ``with_engine`` selects the
+Configured YAML entries specify a class name or model-book preset in
+``output_type``, without ``functions``. Class entries accept constructor options;
+presets are copied and accept no constructor overrides. Customize a preset in
+``model_book.outputs`` or use its class name instead. They run through
+``calc_outputs``; ``with_engine`` selects the
 execution phase and defaults to true. ``result_labels`` stores the result, and
 nested ``$name`` references can supply previously created axes.
+Mutually exclusive ``states_sel`` (labels) and ``states_isel`` (integer positions,
+including negative positions) select inputs before aggregation. Both support
+stored ``$name`` references.
 YAML-only ``plt`` calls are handled directly by the YAML reader, not output models.
+
+.. code-block:: yaml
+
+    outputs:
+      - output_type: farms_results_all_mean
+        states_isel: [0, 2]
+        result_labels: $summary
 
 Model-book consumer presets
 ---------------------------
@@ -251,6 +272,12 @@ ratios, nonzero power over zero gives positive infinity, and NaNs propagate
 otherwise. Zero-weight NaN samples are ignored; negative/nonfinite weights
 and zero total weight raise ``ValueError``.
 
+Dataset attributes ``n_states``, ``n_turbines`` and ``n_points`` record scalar
+input counts only when the corresponding dimension is aggregated. Counts cover
+the entire selected result or file interval; chunk files describe their own
+engine tile. No per-variable counts or weight-sum arrays are added. Existing
+count/calendar file attributes remain available even without aggregation.
+
 Workers retain per-entity sufficient statistics without a state dimension.
 Exact count/calendar file boundaries can split or span engine chunks without
 transporting individual samples. Chunk writers reduce only their supplied
@@ -258,15 +285,46 @@ engine tile, not targets/states belonging to other chunk files.
 Raw and grouped collectors can be composed: their buffers and public result
 keys are distinct. ``result_name`` overrides a collector's public key.
 
-Model-book names and default public keys are ``farm_results_mean``,
+Default public dataset keys are ``farm_results_mean``,
 ``farm_results_aggregate_wind_farm``, ``farm_results_aggregate_cluster``,
 ``farm_results_aggregate_all``, ``point_results_mean`` and
 ``point_results_aggregate_all``. Spatial names also accept a trailing ``_mean``.
-These presets select each family's default fields; set ``variables`` on an
-explicit collector to request derived metrics. ``farm_results_all`` and
+Model-book families instead encode named turbine groups directly:
+``farms_results`` selects ``aggregate_turbines="wind_farm"`` and
+``cluster_results`` selects ``aggregate_turbines="cluster"``.
+``total_results`` selects ``aggregate_turbines="all"``; ``farm_results`` retains
+individual turbines. These grouped families do not append aggregation suffixes.
+Constructor parameters and public dataset keys are independent of preset names.
+
+These presets select each family's default fields. Every collector and writer
+also combines optional ambient/waked filters and named fields with aggregation:
+
+.. code-block:: text
+
+    <family>[_amb|_waked][_<variables>][_aggregate_all][_mean]
+        [_write_n<count>|_write_chunks|_write_<period>]
+
+Families are ``farm_results``, ``farms_results``, ``cluster_results``,
+``total_results`` and ``point_results``; ``_aggregate_all`` is available only for
+``point_results``. For example, ``total_results_analysis_mean``,
+``cluster_results_amb_analysis_mean_write_month`` and
+``point_results_waked_all_aggregate_all_mean_write_n10`` select independent
+field/filter/group/mean/file policies. All day/week/month/year periods are
+available. Filename stems distinguish field/filter/aggregation configurations.
+Set ``variables`` on an explicit collector for a custom selection.
+``farm_results_all`` and
 ``point_results_all`` remain unrestricted field selectors, not aggregation.
-Writer presets inherit their domain-specific aggregation options when
-configured before initialization.
+``total_results_all`` combines every turbine and retains every available field;
+use ``total_results_analysis`` to request derived performance metrics automatically.
+
+WindIO ``turbine_outputs`` accepts ``aggregate_turbines`` and boolean
+``aggregate_states``. State subsets are applied before reduction and fields
+retain WindIO names (``power``, ``rotor_effective_velocity``); grouped axes use
+``wind_farm`` or ``cluster``. WindIO ``flow_field`` accepts ``aggregate_states``
+only: files retain their spatial grid and reject ``aggregate_points``.
+Normalized flow means preserve ``wind_speed``/``wind_direction`` names and
+remove ``time``. ``SliceData`` and ``SlicesData`` expose the same explicit flag;
+plain ``reduction="mean"`` retains global weighted-sum semantics.
 
 .. code-block:: python
 

@@ -66,6 +66,11 @@ The following examples are jupyter notebooks,
 available in the `notebooks <https://github.com/FraunhoferIWES/foxes/tree/main/notebooks>`_
 folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github repository.
 
+Start with :doc:`the practical output guide <notebooks/outputs>` for collecting
+turbine metrics, weighted farm/cluster summaries, point results, layout/rose/flow
+plots, NetCDF writer policies and a small GIF. It uses synthetic conditions and
+a packaged turbine curve, reuses calculated results and cleans temporary files.
+
 The dynamic-wake, timelines and sequential notebooks configure the same
 model-book animation outputs and display their saved GIF files. Temporary output
 directories are cleaned after display. The sequential notebook preserves its
@@ -75,6 +80,7 @@ and point chunking, like the script.
     .. toctree::
         :titlesonly:
 
+        notebooks/outputs
         notebooks/model_book
         notebooks/rotor_models
         notebooks/single_row

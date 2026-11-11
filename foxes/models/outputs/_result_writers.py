@@ -113,7 +113,6 @@ class _ResultsCountWriter(Output):
             self._file_attrs(selected)
             stats = _state_statistics(selected)
             stats["attrs"].update(
-                n_states=size,
                 __interval_key=self._interval_key(states[start], offset + start),
                 __interval_first=states[start],
                 __interval_last=states[start + size - 1],
@@ -133,10 +132,7 @@ class _ResultsCountWriter(Output):
             for name, value in payload["attrs"].items()
             if not name.startswith("__interval_")
         }
-        payload["attrs"].update(
-            index=results["index"],
-            n_states=sum(part["attrs"]["n_states"] for part in results["chunks"]),
-        )
+        payload["attrs"]["index"] = results["index"]
         results["futures"].append(
             self._submit_file(engine, algo, self._get_fpath(payload["attrs"]), payload)
         )
@@ -168,10 +164,7 @@ class _ResultsCountWriter(Output):
                 self._flush_statistics(algo, results)
             results["chunks"].append(interval)
             if len(results["chunks"]) > 1:
-                total = sum(part["attrs"]["n_states"] for part in results["chunks"])
-                merged = _merge_statistics(results["chunks"])
-                merged["attrs"]["n_states"] = total
-                results["chunks"] = [merged]
+                results["chunks"] = [_merge_statistics(results["chunks"])]
         if results["last"] and results["chunks"]:
             self._flush_statistics(algo, results)
 

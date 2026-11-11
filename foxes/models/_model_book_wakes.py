@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import FDict
+from foxes.utils.factory import _parse_coefficient
 
 from ._model_book_basics import _grid_side
 
@@ -48,6 +49,7 @@ def _add_ws_variants(
     superposition: type[WakeSuperposition | fm.wake_superpositions.WindVectorLinear],
     kwargs: dict[str, Any] | None = None,
     prefix: str = "ws",
+    limits: bool = True,
 ) -> None:
     """Register source/target scaling and lower-limit factory variants.
 
@@ -63,28 +65,24 @@ def _add_ws_variants(
         Shared constructor parameters; ``None`` supplies no extra parameters.
     prefix
         Physical-field prefix, such as ``"ws"`` or ``"vector"``.
+    limits
+        Register lower-limit variants for classes accepting ``lim_low``.
     """
     base_kwargs = {} if kwargs is None else kwargs
-    variants = {
+    variants: dict[str, dict[str, bool | float]] = {
         "": {},
         "_amb": {"scale_amb": True},
         "_target": {"scale_target": True},
         "_amb_target": {"scale_amb": True, "scale_target": True},
         "_loc": {"scale_amb": True, "scale_target": True},
-        "_lim": {"lim_low": 1e-4},
-        "_amb_lim": {"scale_amb": True, "lim_low": 1e-4},
-        "_target_lim": {"scale_target": True, "lim_low": 1e-4},
-        "_amb_target_lim": {
-            "scale_amb": True,
-            "scale_target": True,
-            "lim_low": 1e-4,
-        },
-        "_loc_lim": {
-            "scale_amb": True,
-            "scale_target": True,
-            "lim_low": 1e-4,
-        },
     }
+    if limits:
+        variants.update(
+            {
+                f"{suffix}_lim": {**options, "lim_low": 1e-4}
+                for suffix, options in variants.items()
+            }
+        )
     book.wake_superpositions.add_factory(
         superposition,
         f"{prefix}{'_' if name else ''}{name}<suffix>",
@@ -147,14 +145,14 @@ def _populate_wake_deflections(book: ModelBook) -> None:
     book.wake_deflections.add_factory(
         fm.wake_deflections.JimenezDeflection,
         "Jimenez_b<beta>",
-        beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+        beta=_parse_coefficient,
         hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
         kwargs=dict(rotate=True),
     )
     book.wake_deflections.add_factory(
         fm.wake_deflections.JimenezDeflection,
         "Jimenez_b<beta>_dx<dx>",
-        beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+        beta=_parse_coefficient,
         dx=lambda dx: float(dx),
         var2arg={"dx": "step_x"},
         hints={
@@ -166,14 +164,14 @@ def _populate_wake_deflections(book: ModelBook) -> None:
     book.wake_deflections.add_factory(
         fm.wake_deflections.JimenezDeflection,
         "JimenezProj_b<beta>",
-        beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+        beta=_parse_coefficient,
         hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
         kwargs=dict(rotate=False),
     )
     book.wake_deflections.add_factory(
         fm.wake_deflections.JimenezDeflection,
         "JimenezProj_b<beta>_dx<dx>",
-        beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+        beta=_parse_coefficient,
         dx=lambda dx: float(dx),
         var2arg={"dx": "step_x"},
         hints={
@@ -185,14 +183,14 @@ def _populate_wake_deflections(book: ModelBook) -> None:
     book.wake_deflections.add_factory(
         fm.wake_deflections.JimenezDeflection,
         "JimenezPath_b<beta>",
-        beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+        beta=_parse_coefficient,
         hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
         kwargs=dict(rotate=None),
     )
     book.wake_deflections.add_factory(
         fm.wake_deflections.JimenezDeflection,
         "JimenezPath_b<beta>_dx<dx>",
-        beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+        beta=_parse_coefficient,
         dx=lambda dx: float(dx),
         var2arg={"dx": "step_x"},
         hints={
@@ -280,7 +278,13 @@ def _populate_superpositions(book: ModelBook) -> None:
     _add_ws_variants(book, "cubic", fm.wake_superpositions.WSPow, {"pow": 3})
     _add_ws_variants(book, "quartic", fm.wake_superpositions.WSPow, {"pow": 4})
     _add_ws_variants(book, "max", fm.wake_superpositions.WSMax)
-    _add_ws_variants(book, "", fm.wake_superpositions.WindVectorLinear, prefix="vector")
+    _add_ws_variants(
+        book,
+        "",
+        fm.wake_superpositions.WindVectorLinear,
+        prefix="vector",
+        limits=False,
+    )
 
 
 def _populate_axial_induction(book: ModelBook) -> None:
@@ -322,7 +326,12 @@ def _add_wind_factory(
     variables
         Converters for tokens other than the shared superposition token.
     """
-    book.wake_models.add_k_factory(
+    register = (
+        book.wake_models.add_k_factory
+        if "_[wake_k]" in template
+        else book.wake_models.add_factory
+    )
+    register(
         model_type,
         template,
         kwargs=kwargs,
@@ -366,13 +375,6 @@ def _populate_reference_wakes(book: ModelBook) -> None:
         book,
         fm.wake_models.wind.JensenWake,
         "Jensen_<superposition>_[wake_k]",
-        kwargs=dict(induction="Betz"),
-    )
-
-    _add_wind_factory(
-        book,
-        fm.wake_models.wind.JensenTurbOParkWake,
-        "JensenTurbOPark_<superposition>_[wake_k]",
         kwargs=dict(induction="Betz"),
     )
 
@@ -461,13 +463,6 @@ def _populate_park_wakes(book: ModelBook) -> None:
         induction="Betz",
     )
 
-    book.wake_models["TurbOPark"] = fm.wake_models.wind.TurbOParkWake(
-        superposition="ws_quadratic_amb_target",
-        ka=0.04,
-        ti_var=FV.AMB_TI,
-        induction="Betz",
-    )
-
     book.wake_models["TurbOPark0045"] = fm.wake_models.wind.TurbOParkWake(
         superposition="ws_quadratic_amb_target",
         ka=0.045,
@@ -498,7 +493,18 @@ def _populate_park_wakes(book: ModelBook) -> None:
     _add_wind_factory(
         book,
         fm.wake_models.wind.TurbOParkWakeIX,
-        "TurbOParkIX_<superposition>_[wake_k]_dx<dx>",
+        "TurbOParkIX_<superposition>_k<k>_dx<dx>",
+        k=_parse_coefficient,
+        dx=float,
+        hints={
+            "k": "(Value, e.g. 004 for 0.04)",
+            "dx": "(Integration step in m)",
+        },
+    )
+    _add_wind_factory(
+        book,
+        fm.wake_models.wind.TurbOParkWakeIX,
+        "TurbOParkIX_<superposition>_dx<dx>",
         dx=lambda x: float(x),
         hints={"dx": "(Integration step in m)"},
     )

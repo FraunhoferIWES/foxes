@@ -76,10 +76,12 @@ class FarmResultsOutput(Output):
             ``<unassigned>`` group. Extensive fields are summed, intensive
             fields averaged and directions circularly averaged. Ratios are
             recomputed from reduced power; mixed native power units are rejected.
+            Dataset attribute ``n_turbines`` records the input turbine count.
         aggregate_states
             Reduce states using weights normalized independently per turbine,
             before grouping turbines. Workers return sufficient statistics,
             not full state histories. Zero-weight samples do not propagate NaNs.
+            Dataset attribute ``n_states`` records the selected input count.
         result_name
             Public dataset key, or ``None`` for the grouping-specific name.
         kwargs
@@ -88,14 +90,16 @@ class FarmResultsOutput(Output):
         Raises
         ------
         ValueError
-            If ``aggregate_turbines`` is not a supported grouping.
+            If ``aggregate_turbines`` is not a supported grouping or
+            ``aggregate_states`` is not a boolean.
         """
         if aggregate_turbines not in (None, "wind_farm", "cluster", "all"):
             raise ValueError(f"Invalid farm aggregation: {aggregate_turbines!r}")
+        if not isinstance(aggregate_states, bool):
+            raise ValueError("Farm aggregation: aggregate_states must be a boolean")
         self.aggregate_turbines = aggregate_turbines
         self.aggregate_states = aggregate_states
         self.result_name = result_name
-        self._variables = None if variables is None else list(variables)
 
         # Declare the chunk input requirements and retain selection flags.
         super().__init__(
@@ -119,7 +123,11 @@ class FarmResultsOutput(Output):
         variables
             Selected fields, required power inputs and per-turbine state weights;
             ``None`` retains all available fields.
+            Without aggregation, the configured list remains directly editable
+            before initialization.
         """
+        if not self.aggregate_turbines and not self.aggregate_states:
+            return super().fdata_variables
         return _requirements(
             super().fdata_variables,
             self.aggregate_turbines,
@@ -184,16 +192,13 @@ class FarmResultsOutput(Output):
             FC.TURBINE: fdata[FC.TURBINE],
         }
         data_vars: dict[str, tuple[tuple[str, ...], np.ndarray]] = {}
-        variables = (
-            _requirements(
-                list(fdata),
-                self.aggregate_turbines,
-                self.aggregate_states,
-                self.ambient_vars,
-                self.waked_vars,
-            )
-            if self.fdata_variables is None
-            else self.fdata_variables
+        selection = super().fdata_variables
+        variables = _requirements(
+            list(fdata) if selection is None else selection,
+            self.aggregate_turbines,
+            self.aggregate_states,
+            self.ambient_vars,
+            self.waked_vars,
         )
         assert variables is not None
         # Filter physical variables without changing chunk-local weight dimensions.
@@ -237,15 +242,8 @@ class FarmResultsOutput(Output):
             )
             payload = _spatial(payload, FC.TURBINE, groups, dimension, labels)
             payload["attrs"]["aggregate_turbines"] = self.aggregate_turbines
-        variables = (
-            None
-            if self._variables is None
-            else [
-                v
-                for v in self._variables
-                if (self.ambient_vars or v not in FV.amb2var)
-                and (self.waked_vars or v not in FV.var2amb)
-            ]
+        variables = _requirements(
+            super().fdata_variables, None, False, self.ambient_vars, self.waked_vars
         )
         return _finish(payload, variables, self.aggregate_states)
 

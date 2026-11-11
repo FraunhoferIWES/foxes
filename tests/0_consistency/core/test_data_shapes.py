@@ -112,6 +112,47 @@ def test_dataset_copy_keeps_broadcast_storage_independent_and_bounded():
     np.testing.assert_array_equal(data["value"], np.tile(source, (4, 1)))
 
 
+@pytest.mark.parametrize("coordinate", [FC.FARM, FC.CLUSTER])
+@pytest.mark.parametrize("n_turbines", [1, 3])
+def test_farm_dataset_keeps_static_memberships_when_slicing_states(
+    coordinate, n_turbines
+):
+    import xarray as xr
+
+    memberships = np.array(["north", None, "south"], dtype=object)[:n_turbines]
+    dataset = xr.Dataset(
+        {"value": ((FC.STATE, FC.TURBINE), np.ones((4, n_turbines)))},
+        coords={
+            FC.STATE: np.arange(4),
+            FC.TURBINE: np.arange(n_turbines),
+            coordinate: (FC.TURBINE, memberships),
+        },
+    )
+    data = FData.from_dataset(dataset, s_states=slice(1, 3))
+
+    assert data["value"].shape == (2, n_turbines)
+    assert data.dims[coordinate] == (FC.TURBINE,)
+    np.testing.assert_array_equal(data[coordinate], memberships)
+    assert not np.shares_memory(data[coordinate], memberships)
+
+
+@pytest.mark.parametrize("coordinate", [FC.FARM, FC.CLUSTER])
+def test_farm_memberships_do_not_accept_state_only_fields(coordinate):
+    with pytest.raises(ValueError, match=f"Invalid shape for '{coordinate}'"):
+        FData(
+            data={
+                FC.STATE: np.arange(2),
+                FC.TURBINE: np.arange(3),
+                coordinate: np.array(["north", "south"]),
+            },
+            dims={
+                FC.STATE: (FC.STATE,),
+                FC.TURBINE: (FC.TURBINE,),
+                coordinate: (FC.STATE,),
+            },
+        )
+
+
 def test_target_constructor_expands_coordinates_and_fields():
     points = np.zeros((1, 3, 2, 3))
     data = TData.from_tpoints(

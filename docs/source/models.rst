@@ -119,6 +119,10 @@ waked wind speed, while the `_amb` suffix selects the source ambient wind speed.
 selects its ambient wind speed. The same choices are available through the
 `scale_amb` and `scale_target` constructor parameters.
 
+The vector superpositions ``vector``, ``vector_amb``, ``vector_target``,
+``vector_amb_target`` and ``vector_loc`` support the same scaling choices.
+They do not support the ``_lim`` variants of the scalar wind-speed superpositions.
+
 `ws_product` is different: it combines dimensionless deficits and applies the
 result to the target ambient wind speed, so a separate `_amb_target` variant
 would be identical.
@@ -147,6 +151,12 @@ The `[wake_k]` part of the model name can be replaced by one of the following pa
 * `ka<ka>_kb<kb>`, where `<ka>` and `<kb>` are to be replaced by the values for `ka` and `kb` in `k = ka * TI + kb`, both with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
 * `ambka<ka>_kb<kb>`, where `<ka>` and `<kb>` are to be replaced by the values for `ka` and `kb` in `k = ka * AMB_TI + kb`, both with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
 * nothing, e.g. `Bastankhah2014_linear`, which searches the value for `k` in the list of available farm data. This is intended to be used whenever a turbine model computes the `k` values, typically the the :class:`kTI<foxes.models.turbine_models.kTI_model.kTI>` turbine model, or an optimizer.
+
+Coefficient tokens also accept standard floating-point notation, for example
+``Jensen_linear_k0.04`` and ``Jensen_linear_k004`` select the same growth factor.
+The integrated model ``TurbOParkIX_<superposition>_k<k>_dx<dx>`` accepts a
+constant growth factor, while ``TurbOParkIX_<superposition>_dx<dx>`` reads it
+from farm data. It does not support ``ka`` or ``ambka`` growth modes.
 
 Examples for valid wake model choices are:
 

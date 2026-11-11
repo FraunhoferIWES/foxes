@@ -1,3 +1,6 @@
+"""Read and execute constructor-defined FOXES YAML parameter dictionaries."""
+
+import numpy as np
 import pandas as pd
 from xarray import Dataset
 from copy import deepcopy
@@ -7,14 +10,22 @@ from typing import Any
 import matplotlib.pyplot as plt
 from matplotlib.artist import Artist
 
-import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
 from foxes.models import ModelBook
 from foxes.core import Output, OutputList
 from foxes.models.outputs import FarmResultsOutput
+from foxes.models.outputs._point_data_output import PointDataOutput
 from foxes.utils import Dict
-from foxes.config import config, get_output_path
+from foxes.config import get_output_path
 import foxes.constants as FC
+
+from ._dict_components import (
+    _configure_paths,
+    _print,
+    _read_engine,
+    _read_farm,
+    _read_model_book,
+)
 
 
 def read_dict(
@@ -31,163 +42,90 @@ def read_dict(
     output_dir: Path | str | None = None,
     **algo_pars: Any,
 ) -> tuple[Algorithm, Engine | None]:
-    """
-    Read dictionary input into foxes objects
+    """Read dictionary input into FOXES objects.
 
     Parameters
     ----------
     idict
-        The input parameter dictionary
+        Input parameter dictionary, consumed when constructing components.
     farm
-        The wind farm, overrules settings from idict
+        Wind farm overriding settings from ``idict``.
     states
-        The ambient states, overrules settings from idict
+        Ambient states overriding settings from ``idict``.
     mbook
-        The model book, overrules settings from idict
+        Model book overriding settings from ``idict``.
     algo
-        The algorithm, overrules settings from idict
+        Existing algorithm overriding settings from ``idict``. Do not combine
+        this with explicit ``farm``, ``states`` or ``mbook`` arguments.
     engine_pars
-        Parameters for engine creation, overrules
-        settings from idict
+        Engine constructor parameters overriding settings from ``idict``.
     iterative
-        Force iterative calculations, overrules
-        settings from idict
+        Force Iterative calculations, overriding settings from ``idict``.
     verbosity
-        Force a verbosity level, 0 = silent, overrules
-        settings from idict
+        Force a verbosity level, where zero is silent, overriding settings
+        from ``idict``.
     work_dir
-        Path to the working directory
+        Path to the working directory.
     input_dir
-        The default input directory
+        Default input directory.
     output_dir
-        The default output directory
+        Default output directory.
     algo_pars
-        Additional parameters for the algorithm, overrules
-        settings from idict
+        Additional algorithm parameters overriding settings from ``idict``.
 
     Returns
     -------
     algo
-        The algorithm
+        Existing or newly constructed algorithm.
     engine
-        The engine, or None if not set
-
-
+        The configured engine, or the default engine when none is specified.
     """
 
-    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
-        if verbosity is None or verbosity >= level:
-            print(*args, **kwargs)
+    _configure_paths(work_dir, input_dir, output_dir, verbosity)
 
-    # set working directory:
-    ld = 0
-    for c, d in zip(
-        [FC.WORK_DIR, FC.INPUT_DIR, FC.OUTPUT_DIR], [work_dir, input_dir, output_dir]
-    ):
-        if d is not None:
-            config[c] = d
-            ld = max(ld, len(str(d)))
-    _print("\n--------------------- Reading foxes parameter dict ---------------------")
-    _print("Working directory  :", config.work_dir)
-    _print("Input directory    :", config.input_dir)
-    _print("Output directory   :", config.output_dir)
-
-    # create states:
-    if states is None:
-        if algo is None:
-            _print("Creating states")
+    # Explicit components must not compete with an existing algorithm's ownership.
+    if algo is not None:
+        for label, component in (("states", states), ("mbook", mbook), ("farm", farm)):
+            assert component is None, (
+                f"Cannot handle both the algo and the {label} argument, please drop one"
+            )
+        states, mbook, farm = algo.states, algo.mbook, algo.farm
+    else:
+        if states is None:
+            _print(verbosity, "Creating states")
             states = States.new(**idict["states"])
-        else:
-            states = algo.states
-    else:
-        assert algo is None, (
-            "Cannot handle both the algo and the states argument, please drop one"
-        )
-
-    # create model book:
-    if mbook is None:
-        if algo is None:
-            mbook = ModelBook()
-            if "model_book" in idict:
-                _print("Creating model book")
-                mdict = idict.get_item("model_book")
-                for s, mlst in mdict.items():
-                    t = mbook.sources.get_item(s)
-                    c = mbook.base_classes.get_item(s)
-                    ms: list[Dict[Any, Any]] = [
-                        Dict(m, _name=f"{mdict.name}.s.{i}") for i, m in enumerate(mlst)
-                    ]
-                    for m in ms:
-                        mname = m.pop_item("name")
-                        _print(f"  Adding {s}.{mname}")
-                        t[mname] = c.new(**m)
-        else:
-            mbook = algo.mbook
-    else:
-        assert algo is None, (
-            "Cannot handle both the algo and the mbook argument, please drop one"
-        )
-
-    # create farm:
-    if farm is None:
-        if algo is None:
-            _print("Creating wind farm")
-            fdict = idict.get_item("wind_farm")
-            lyts = fdict.pop_item("layouts")
-            farm = WindFarm(**fdict)
-            for lyt in lyts:
-                add_fun = getattr(farm_layout, lyt.pop_item("function"))
-                if verbosity is not None:
-                    lyt["verbosity"] = max(verbosity - 1, 0)
-                add_fun(farm, **lyt)
-        else:
-            farm = algo.farm
-    else:
-        assert algo is None, (
-            "Cannot handle both the algo and the farm argument, please drop one"
-        )
+        if mbook is None:
+            mbook = _read_model_book(idict, verbosity)
+        if farm is None:
+            farm = _read_farm(idict, verbosity)
 
     # create engine:
-    engine = None
-    if engine_pars is not None:
-        options = dict(engine_pars)
-        if verbosity is not None:
-            options.setdefault("verbosity", max(verbosity - 1, 0))
-        engine = Engine.new(**options)
-        _print(f"Using engine: {engine}")
-    elif "engine" in idict:
-        options = dict(idict["engine"])
-        if verbosity is not None:
-            options.setdefault("verbosity", max(verbosity - 1, 0))
-        engine = Engine.new(**options)
-        _print(f"Using engine: {engine}")
-    else:
-        _print("Using default engine")
-        engine = Engine.new(
-            engine_type="default",
-            verbosity=1 if verbosity is None else max(verbosity - 1, 0),
-        )
+    engine = _read_engine(
+        engine_pars if engine_pars is not None else idict.get("engine"), verbosity
+    )
 
     # create algorithm:
     if algo is None:
         adict = idict.get_item("algorithm")
         if iterative is not None and iterative:
             adict["algo_type"] = "Iterative"
-        _print("Creating algorithm :", adict["algo_type"])
+        _print(verbosity, "Creating algorithm :", adict["algo_type"])
         adict.update(dict(farm=farm, states=states, mbook=mbook))
         if verbosity is not None:
             adict["verbosity"] = max(verbosity - 1, 0)
-        if algo_pars is not None:
-            adict.update({v: d for v, d in algo_pars.items() if d is not None})
+        adict.update({v: d for v, d in algo_pars.items() if d is not None})
         algo = Algorithm.new(**adict)
 
-    _print("------------------------------------------------------------------------\n")
+    _print(
+        verbosity,
+        "------------------------------------------------------------------------\n",
+    )
 
     return algo, engine
 
 
 def _get_object(results_storage: dict[Any, Any], d: str) -> Any:
-    """Helper function for object extraction"""
+    """Extract a stored result with optional tuple-of-integer indexing."""
     d = d.replace("]", "")
     i0 = d.find("[")
     if i0 > 0:
@@ -266,6 +204,39 @@ def _store_labels(
         storage[label] = item
 
 
+def _output_states(
+    index: int,
+    definition: Dict[Any, Any],
+    algo: Algorithm,
+    results_storage: dict[Any, Any],
+) -> list[Any] | None:
+    """Consume state references and resolve positions before output reduction."""
+    positions = _resolve_labels(definition.pop("states_isel", None), results_storage)
+    labels = _resolve_labels(definition.pop("states_sel", None), results_storage)
+    if positions is not None and labels is not None:
+        raise ValueError(
+            f"Output {index}: Select states by positions or labels, not both"
+        )
+    if positions is None:
+        return labels
+    if not algo.initialized:
+        algo.initialize()
+    indices = np.asarray(positions)
+    if (
+        indices.ndim != 1
+        or indices.dtype.kind not in "iu"
+        or not len(indices)
+        or any(isinstance(i, (bool, np.bool_)) for i in positions)
+    ):
+        raise ValueError(
+            f"Output {index}: states_isel requires nonempty integer positions"
+        )
+    states = np.asarray(algo.states.index())
+    if np.any(indices < -len(states)) or np.any(indices >= len(states)):
+        raise ValueError(f"Output {index}: State position outside the input states")
+    return list(states[indices])
+
+
 def _run_output_model(
     index: int,
     definition: Dict[Any, Any],
@@ -321,9 +292,22 @@ def _run_output_model(
     # Resolve nested references before constructing the output model.
     output_type = definition.pop_item("output_type")
     labels = definition.pop("result_labels", None)
+    state_labels = _output_states(index, definition, algo, results_storage)
     for key, value in definition.items():
         definition[key] = _resolve_labels(value, results_storage)
-    output = Output.new(output_type=output_type, **definition)
+    if hasattr(algo, "mbook") and output_type in algo.mbook.outputs:
+        if definition:
+            raise ValueError(
+                f"Output {index}: Named preset '{output_type}' does not accept "
+                "constructor overrides; configure model_book.outputs or use the class name"
+            )
+        output = deepcopy(algo.mbook.outputs[output_type])
+    else:
+        output = Output.new(output_type=output_type, **definition)
+    if state_labels is not None and isinstance(output, PointDataOutput):
+        # Grid consumers also use this selection to restore requested state order.
+        output.states_sel = state_labels
+        output.states_isel = None
     if not type(output).__module__.startswith("foxes.models.outputs."):
         raise ValueError(
             f"Output {index}: Constructor-defined outputs must belong "
@@ -335,7 +319,10 @@ def _run_output_model(
     if output.nofig:
         output.show = False
     result = algo.calc_outputs(
-        outputs=output, farm_results=farm_results, point_results=point_results
+        outputs=output,
+        farm_results=farm_results,
+        point_results=point_results,
+        **({"states_sel": state_labels} if state_labels is not None else {}),
     )
     if labels is not None:
         _store_labels(results_storage, labels, result)
@@ -408,8 +395,12 @@ def run_outputs(
     Parameters
     ----------
     idict
-        Constructor-defined outputs, or ``output_type: plt``/Matplotlib
-        ``object: $name`` entries with a ``functions`` list.
+        Outputs with a class name or model-book preset in ``output_type``.
+        Presets are copied and accept no constructor overrides; customize the
+        model book or use a class name. ``states_sel`` selects state labels and
+        ``states_isel`` selects integer positions before reductions. They are
+        mutually exclusive. ``output_type: plt``/Matplotlib ``object: $name``
+        entries instead have a ``functions`` list.
     algo
         Algorithm exposing the ordinary ``calc_outputs`` lifecycle.
     farm_results
@@ -441,7 +432,8 @@ def run_outputs(
     ------
     ValueError
         If a model entry uses imperative methods, lacks an algorithm, or has
-        invalid constructor options, plotting functions or result labels.
+        invalid constructor options, state selections, preset overrides,
+        plotting functions or result labels.
     KeyError
         If an output type or referenced result is unavailable.
     TypeError
@@ -478,6 +470,54 @@ def run_outputs(
         )
         outputs.append((dict(entry), [result]))
     return outputs, results_storage
+
+
+def _collected_farm_results(algo: Algorithm, result: Any, selectors: Any) -> Any:
+    """Find a collected farm dataset without treating other outputs as farm data."""
+    if isinstance(result, dict):
+        return result.get(FC.FARM_RESULTS)
+    pending = list(selectors) if isinstance(selectors, list) else [selectors]
+    while pending:
+        selected = pending.pop()
+        if isinstance(selected, str):
+            selected = algo.mbook.outputs[selected]
+        if isinstance(selected, FarmResultsOutput):
+            return result
+        if isinstance(selected, OutputList):
+            pending.extend(selected.outputs)
+    return None
+
+
+def _run_calculations(
+    idict: Dict[Any, Any],
+    algo: Algorithm,
+    verbosity: int | None,
+) -> tuple[Any, Any, tuple[Any, ...]]:
+    """Consume calculation switches and return raw farm/point results in order."""
+    parameters = idict.get_item("calc_farm", Dict(_name=idict.name + ".calc_farm"))
+    farm_results = None
+    if parameters.pop_item("run", True):
+        _print(verbosity, "Running calc_farm")
+        farm_results = algo.calc_farm(**parameters)
+    out: tuple[Any, ...] = (farm_results,)
+    if farm_results is not None and (verbosity is None or verbosity > 1):
+        collected = _collected_farm_results(
+            algo, farm_results, parameters.get("outputs", "farm_results")
+        )
+        if collected is not None:
+            _print(verbosity, "\nFarm results:\n", collected, level=2)
+    point_results = None
+    if "calc_points" in idict:
+        parameters = idict.get_item("calc_points")
+        if parameters.pop_item("run"):
+            _print(verbosity, "Running calc_points")
+            points = parameters.pop_item("points")
+            if isinstance(points, str):
+                _print(verbosity, "Reading file", points)
+                points = pd.read_csv(points).to_numpy()
+            point_results = algo.calc_points(farm_results, points=points, **parameters)
+        out += (point_results,)
+    return farm_results, point_results, out
 
 
 def run_dict(
@@ -546,10 +586,6 @@ def run_dict(
     farm datasets. Scientific component verbosity is reduced inside the reader.
     """
 
-    def _print(*args: Any, level: int = 1, **kwargs: Any) -> None:
-        if verbosity is None or verbosity >= level:
-            print(*args, **kwargs)
-
     # read components:
     algo_pars.pop("verbosity", None)
     algo, engine = read_dict(
@@ -569,52 +605,7 @@ def run_dict(
     results_storage = None
     assert engine is not None
     with engine:
-        # run farm calculation:
-        rdict = idict.get_item("calc_farm", Dict(_name=idict.name + ".calc_farm"))
-        if rdict.pop_item("run", True):
-            _print("Running calc_farm")
-            farm_results = algo.calc_farm(**rdict)
-        else:
-            farm_results = None
-        out: tuple[Any, ...] = (farm_results,)
-
-        # Report collected farm data independently of later output requirements.
-        if farm_results is not None and (verbosity is None or verbosity > 1):
-            collected = farm_results
-            if isinstance(collected, dict):
-                collected = collected.get(FC.FARM_RESULTS)
-            else:
-                selectors = rdict.get("outputs", "farm_results")
-                pending = (
-                    list(selectors) if isinstance(selectors, list) else [selectors]
-                )
-                while pending:
-                    selected = pending.pop()
-                    if isinstance(selected, str):
-                        selected = algo.mbook.outputs[selected]
-                    if isinstance(selected, FarmResultsOutput):
-                        break
-                    if isinstance(selected, OutputList):
-                        pending.extend(selected.outputs)
-                else:
-                    collected = None
-            if collected is not None:
-                _print("\nFarm results:\n", collected, level=2)
-
-        # run points calculation:
-        point_results = None
-        if "calc_points" in idict:
-            rdict = idict.get_item("calc_points")
-            if rdict.pop_item("run"):
-                _print("Running calc_points")
-                points = rdict.pop_item("points")
-                if isinstance(points, str):
-                    _print("Reading file", points)
-                    points = pd.read_csv(points).to_numpy()
-                point_results = algo.calc_points(farm_results, points=points, **rdict)
-            else:
-                point_results = None
-            out += (point_results,)
+        farm_results, point_results, out = _run_calculations(idict, algo, verbosity)
 
         # run outputs with engine:
         out_w, results_storage = run_outputs(

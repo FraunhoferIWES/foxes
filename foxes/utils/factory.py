@@ -7,6 +7,13 @@ from .dict import Dict
 import foxes.variables as FV
 
 
+def _parse_coefficient(token: str) -> float:
+    """Parse standard floats or compact coefficients such as ``004`` for 0.04."""
+    if token.startswith("0") and token.isdigit():
+        token = f"0.{token[1:]}"
+    return float(token)
+
+
 class Factory:
     """
     Constructs objects from a choice of allowed
@@ -420,8 +427,8 @@ class WakeKFactory:
         fpars.update(
             hints=h,
             kwargs=kw.copy(),
-            ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            ka=_parse_coefficient,
+            kb=_parse_coefficient,
             example_vars=exvars,
         )
         self.factories.append(Factory(base, t, *args, **fpars))
@@ -441,8 +448,8 @@ class WakeKFactory:
             hints=h,
             kwargs=kw.copy(),
             var2arg=hv2a,
-            ambka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            ambka=_parse_coefficient,
+            kb=_parse_coefficient,
             example_vars=exvars,
         )
         self.factories.append(Factory(base, t, *args, **fpars))
@@ -458,7 +465,7 @@ class WakeKFactory:
         fpars.update(
             hints=h,
             kwargs=kw.copy(),
-            ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            ka=_parse_coefficient,
             example_vars=exvars,
         )
         self.factories.append(Factory(base, t, *args, **fpars))
@@ -477,7 +484,7 @@ class WakeKFactory:
             hints=h,
             kwargs=kw.copy(),
             var2arg=hv2a,
-            ambka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            ambka=_parse_coefficient,
             example_vars=exvars,
         )
         self.factories.append(Factory(base, t, *args, **fpars))
@@ -493,7 +500,7 @@ class WakeKFactory:
         fpars.update(
             hints=h,
             kwargs=kw.copy(),
-            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            k=_parse_coefficient,
             example_vars=exvars,
         )
         self.factories.append(Factory(base, t, *args, **fpars))

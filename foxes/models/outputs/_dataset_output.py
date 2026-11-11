@@ -12,6 +12,8 @@ from foxes.utils import Dict
 
 from .farm_results import FarmResultsOutput
 from .point_results import PointResultsOutput
+from ._aggregation import _merge_statistics
+from ._result_data import _combine_chunks
 
 if TYPE_CHECKING:
     from xarray import Dataset
@@ -101,42 +103,6 @@ def _join_point_blocks(blocks: list[dict[str, Any]], n_points: int) -> dict[str,
         ),
         "targets": np.arange(n_points),
     }
-
-
-def _farm_dataset(slabs: list[dict[str, Any]]) -> Dataset:
-    """Assemble selected farm slabs on the parent without expanding static axes.
-
-    Parameters
-    ----------
-    slabs
-        Nonempty, state-ordered payloads with matching fields and turbine indices.
-
-    Returns
-    -------
-    data
-        Dataset concatenated only along declared state axes. Static arrays are
-        borrowed from the first slab, not duplicated across states.
-    """
-    from xarray import Dataset
-
-    first = slabs[0]
-    return Dataset(
-        {
-            v: (
-                dims,
-                np.concatenate(
-                    [c["data_vars"][v][1] for c in slabs], axis=dims.index(FC.STATE)
-                )
-                if FC.STATE in dims
-                else values,
-            )
-            for v, (dims, values) in first["data_vars"].items()
-        },
-        coords={
-            FC.STATE: np.concatenate([c["coords"][FC.STATE] for c in slabs]),
-            FC.TURBINE: first["coords"][FC.TURBINE],
-        },
-    )
 
 
 class DatasetOutput(FarmResultsOutput):
@@ -278,10 +244,14 @@ class DatasetOutput(FarmResultsOutput):
             requested = self._farm_variables()
             if requested == ():
                 return results
+            if self.aggregate_turbines or self.aggregate_states:
+                results[self.var("data")] = self._collect_chunk(algo, mdata, fdata)
+                return results
             previous = algo.prev_farm_results(mdata=mdata)
             results[self.var("data")] = {
                 "coords": {FC.STATE: mdata[FC.STATE], FC.TURBINE: fdata[FC.TURBINE]},
                 "data_vars": _farm_fields(fdata, requested, previous),
+                "attrs": {},
             }
         return results
 
@@ -444,7 +414,15 @@ class DatasetOutput(FarmResultsOutput):
                 .rename({FC.TARGET: FC.POINT})
             )
         elif chunks:
-            data = _farm_dataset([chunks[(s, 0)] for s in range(n_chunks_states)])
+            ordered = [chunks[(s, 0)] for s in range(n_chunks_states)]
+            payload = (
+                _merge_statistics(ordered)
+                if self.aggregate_states
+                else _combine_chunks(ordered)
+            )
+            if self.aggregate_states:
+                payload = self._file_payload(algo, payload)
+            data = Dataset(**payload)
         else:
             data = Dataset()
         output_results[self.result_name] = self.process(algo, data)
