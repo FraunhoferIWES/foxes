@@ -81,17 +81,24 @@ YAML parameter files mirror this object graph. The YAML reader constructs the
 states, model book, farm, engine, and algorithm, then invokes the same runtime
 contracts as Python callers.
 
-All Python example scripts expose `main(argv=None)` and `-o/--outputs` with
-intention-specific defaults: normally `farm_results`, with animation examples
-also selecting turbine traces, the field-data example selecting numerical slices,
-and the wake-field example selecting its NetCDF slice exporter. Dataset
-consumers require collected fields; writer-only selections still complete all
-requested comparison runs. Sequential selections remain limited to the farm
-collector and flow-animation models through their iterator adapter.
+All Python example workflows remain in monolithic `main(argv=None)` functions.
+`-R/--results` selects calculation outputs, defaulting to `farm_results`;
+`-r` remains the rotor shortcut and reference points use `--ref_xy`.
+Subsequent `-o/--outputs` models have script-specific defaults: tables, maps,
+roses, flow plots, animations or numerical exports. Each receives the
+`farm_results` key from the calculation mapping, or `None` when absent.
+Independent output calls permit different point grids. Both stages use
+`ret_dict=True` and print every returned key followed by its value on a new line.
+Sequential retains its iterator and step-local animation plugin; a Downwind
+output-only processor collects its accumulated data and runs selected farm
+outputs without repeating farm physics.
 
 `examples/run_all.py` executes one explicitly marked README command per example
 through Python APIs, in an isolated temporary copy. Its independent `--quick`
-and `--nofig` choices bound local inputs and suppress display, respectively.
+and `--nofig` choices bound local inputs and suppress images, respectively.
+Python examples skip image-only output grids before calculation, not just
+rendering. Explicit numerical point outputs, NetCDF writers and scientific
+input reductions still run.
 Configuration/UTM state, working directory and plotting state are restored;
 temporary files and example-owned figures are removed on success and failure.
 Quick ICON/EWW data is synthetic, Slurm runs locally, and public WindIO includes
@@ -100,10 +107,10 @@ Every example accepts `-v`/`--verbosity`, with `-v` reserved for verbosity and
 `--var` for plot-variable selection. The aggregate runner passes `-v 0` by
 default, while standalone Python examples default to level-two reports.
 Level one selects a concise summary and level three enables library progress.
-Levels two and three print every collected farm-results dataset once, before
-checking the fields needed by later tables or plots. Comparison runs each
-report their own collected dataset; writer-only and non-farm outputs do not
-become farm results. YAML/WindIO entry points receive the unreduced example
+Levels two and three print all returned results from both stages once, including
+non-farm and aggregated values. Comparison and benchmark cases each report
+their own mappings; empty mappings do not fabricate farm data. YAML/WindIO
+retain their own dataset-reporting behavior and receive the unreduced example
 level and reduce scientific component verbosity themselves.
 Explicit command verbosity takes precedence over the runner default. Quiet runs
 retain contextual errors and
@@ -195,7 +202,10 @@ shape validation.
 	`extra_data` during initialization.
 - `Downwind.calc_farm()` defaults to an xarray farm dataset. A single output
 	with exactly one returned result is unwrapped; multiple outputs return a
-	result-name keyed mapping. Writer-only or disabled collection returns an
+	result-name keyed mapping. `ret_dict=True` preserves that mapping for any
+	selection in `calc_farm`, `calc_points` and `calc_outputs`, including delegated
+	point calculations. Iterative keeps internal convergence datasets unchanged.
+	Writer-only or disabled collection returns an
 	empty mapping. `calc_points()` collects state/target tiles through
 	`PointResultsOutput`, retaining its dataset-facing contract. Point collectors
 	and writers select named default/all wind-field sets independently of farm
@@ -418,8 +428,16 @@ presets and factories enable it, while animation presets/factories keep it
 disabled. Display is parent-side and blocking, after any
 configured file is saved. Animation objects remain locally referenced while
 playing at their configured frame rate; their figures close even on failure.
-`plot=False` returns numerical data without display, and `nofig=True` suppresses
-plot/animation generation. Numerical outputs and frame generators do not force
+`plot=False` returns numerical data without display. `Output.nofig=True`
+omits image-producing modes before initialization, field preparation and point
+requests, returning no image result. Resolution propagates through nested
+output chains without mutating their configuration; Sequential animation
+plugins apply the same check before step-local point work. Numerical modes,
+data-only layout operations and writers remain enabled. Companion probes used
+only by script plots declare `image_only=True`. Examples merely configure
+`nofig`, rather than filtering output types. See
+[ADR-0037](adr/0037-keyed-example-outputs.md).
+Numerical outputs and frame generators do not force
 display. Caller-selected Matplotlib backends and figure-return schemas are
 preserved. Tests keep every output noninteractive, including mocked checks.
 See [ADR-0020](adr/0020-output-display-control.md) and
@@ -812,6 +830,11 @@ boundary and reusable logic in importable functions so tests need not spawn a
 subprocess.
 
 ## Cross-Cutting Decisions
+
+- Calculation entry points offer opt-in keyed returns with `ret_dict=True`.
+  Monolithic examples separate `-R/--results` from subsequent `-o/--outputs`;
+  `-nf` omits image-only scientific work while retaining numerical outputs.
+  See [ADR-0037](adr/0037-keyed-example-outputs.md).
 
 - Collector result keys are fixed by domain, spatial grouping and state
   reduction. Farm and point totals have distinct keys; duplicates are rejected.

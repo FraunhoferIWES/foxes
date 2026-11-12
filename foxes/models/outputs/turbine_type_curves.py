@@ -25,6 +25,10 @@ class TurbineTypeCurves(StateTurbineTable):
     comparison turbines on the executing no-wake algorithm.
     """
 
+    def _creates_figures(self) -> bool:
+        """Keep collected curve data available in numerical mode."""
+        return self.plot or super()._creates_figures()
+
     def __init__(
         self,
         variables: list[str] | None = None,

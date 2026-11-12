@@ -28,17 +28,25 @@ The `gaussian_lookup` case uses the bundled model-book lookup artifact. Create
 custom lookup NetCDF files with the standalone `foxes_create_gaussian_lookup`
 tool and pass them to `PartialGaussianLookup` in custom scripts.
 
-Select chunk output models for all three cases and any optional runtime benchmark
-with `-o/--outputs` (default: `farm_results`). Writer-only selections run every
-case but skip numerical comparisons and their figure. Registered writers reuse
-their configured filenames, so successive cases can overwrite earlier files.
+Select calculation results for all three cases and any optional runtime benchmark
+with `-R/--results` (default: `farm_results`). Subsequent `-o/--outputs` defaults
+to `comparison`, a downstream-REWS table used by the comparison plot and reports.
+Replacing it with a writer still runs every case but omits the comparison.
+Registered writers reuse their configured filenames, so successive cases can
+overwrite earlier files.
 
 Save the comparison figure with `--figure-file comparison.png`, independently
-of `-o/--outputs`. Use `farm_results_all` when a report requires extra fields.
+of `-o/--outputs`. `-nf` suppresses the PNG as well as display.
 
 ## Output selection and automated runs
 
-The default output selection is `farm_results`. Use `-o NAME [NAME ...]` to choose model-book outputs; `-o farm_results_write_n2` is a writer-only example. Reporting that needs unselected fields is skipped with a message. `--nofig` suppresses display without disabling explicitly selected file outputs.
+Use `-R/--results NAME [NAME ...]` for the calculation results (default:
+`farm_results`). `-r` remains the rotor shortcut. Use `-o/--outputs NAME [NAME ...]` for
+subsequent output models (default: `comparison`). Each output receives the collected
+`farm_results`, or `None` when that key is absent. Results from both stages are printed
+by key, followed by their value on a new line. `-nf/--nofig` skips plots, animations and
+their image-only point calculations, including image files. Explicit numerical slices,
+point data and NetCDF writers still run.
 
 ```console
 python run.py --nofig
@@ -49,4 +57,8 @@ The runner executes this example once, in a temporary directory. Its quick mode 
 <!-- run-all: python run.py -->
 <!-- run-all-quick: python run.py -e numpy -y 0.1 -s 0.1 -->
 
-Verbosity (`-v`/`--verbosity`) defaults to `-v 2` for reports. Levels `2` and `3` print each collected `farm_results` dataset once, even when fields needed by later reports are absent. Levels `0` and `1` do not print datasets; writer-only selections do not invent farm results. Use `0` for quiet execution, `1` for a concise summary, or `3` for library progress. The aggregate runner passes `-v 0` by default, still announces each example, and accepts `-v N` (or `--verbosity N`); explicit example-command choices take precedence.
+Verbosity (`-v`/`--verbosity`) defaults to `2`. Levels `2` and `3` print every returned
+result once, including non-farm and aggregated results; levels `0` and `1` suppress
+these values. Use `0` for quiet execution, `1` for a concise summary, or `3` for library
+progress. The aggregate runner defaults to `-v 0` and preserves explicit verbosity in an
+example command.

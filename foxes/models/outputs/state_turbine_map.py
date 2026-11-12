@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 class StateTurbineMap(StateTurbineTable):
     """Render a selected field after its state/turbine chunks are assembled."""
 
+    def _creates_figures(self) -> bool:
+        """Keep numerical tables enabled independently of figure suppression."""
+        return self.plot or super()._creates_figures()
+
     def __init__(
         self,
         variable: str = FV.P,

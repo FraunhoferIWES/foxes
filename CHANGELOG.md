@@ -1188,6 +1188,23 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Example results and outputs:
+  - Add `-R/--results` with default `farm_results`; retain `-r` for rotors and
+    use `--ref_xy` for reference points. Run script-specific `-o/--outputs`
+    afterward with the collected farm dataset or `None`.
+  - Print all returned keys and values at verbosity two and three, remove
+    dataset-specific dataframe reports, and keep every workflow in `main()`.
+  - Add opt-in `ret_dict=True` to farm, point and output calculations without
+    changing default returns or Iterative convergence data.
+  - Make `-nf` skip images, animations and image-only point calculations across
+    examples while retaining explicit numerical exports and input reductions.
+    Resolve `Output.nofig` before initialization, including nested output lists
+    and Sequential animation plugins, rather than filtering in tutorials.
+    Keep numerical modes active; mark image-only companion probes with
+    `image_only=True`. Suppressed image outputs return no numerical fallback.
+  - Align dynamic-wake and timelines notebooks with separate farm results and
+    animation processing. Explain keyed returns and early figure suppression
+    in the output tutorial, using natural results-oriented terminology.
 - Output dataset units:
   - Attach per-variable `units` attributes to scientific output datasets and
     NetCDF files, including point geometry, renamed tables/slices, roses and

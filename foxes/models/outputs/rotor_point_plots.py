@@ -17,6 +17,10 @@ if TYPE_CHECKING:
 class RotorPointPlot(DatasetOutput):
     """Render the executing algorithm's initialized rotor design and weights."""
 
+    def _creates_figures(self) -> bool:
+        """Keep quadrature metadata available in numerical mode."""
+        return self.plot or super()._creates_figures()
+
     def __init__(
         self,
         plot: bool = True,

@@ -1,4 +1,3 @@
-import time
 import argparse
 import foxes
 
@@ -59,7 +58,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["state_turbine_table"],
     )
     parser.add_argument(
         "-v",
@@ -73,11 +83,6 @@ def main(argv=None):
         print("Running example: icon_dream")
 
     mbook = foxes.ModelBook()
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
 
     farm = foxes.WindFarm(
         input_is_lonlat=True,
@@ -112,27 +117,26 @@ def main(argv=None):
         verbosity=max(args.verbosity - 1, 0),
     )
 
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
-        time0 = time.time()
-        farm_results = algo.calc_farm(outputs=args.outputs)
-        time1 = time.time()
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-    # Evaluate collected farm data only; writer-only outputs are already complete.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    if farm_results is None:
-        print("Skipping farm reporting: no farm-results output was selected.")
-        return
-
-    if args.verbosity > 1:
-        print("\nCalc time =", time1 - time0, "\n")
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
+            )
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

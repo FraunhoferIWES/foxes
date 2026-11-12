@@ -15,9 +15,14 @@ from foxes.models.outputs import (
     FlowAnimation,
     FlowPlots2D,
     FlowTurbineAnimation,
+    FarmResultsOutput,
+    PointCalculator,
     RosePlotOutput,
+    RotorPointPlot,
     SliceData,
+    StateTurbineMap,
     StatesRosePlotOutput,
+    TurbineTypeCurves,
     WindRoseBinPlot,
 )
 
@@ -58,6 +63,14 @@ def display(monkeypatch):
 
 
 def _output(kind, **kwargs):
+    if kind == "probe":
+        return PointCalculator(points=[[0.0, 0.0, 90.0]], image_only=True, **kwargs)
+    if kind == "map":
+        return StateTurbineMap(**kwargs)
+    if kind == "rotor":
+        return RotorPointPlot(**kwargs)
+    if kind == "curves":
+        return TurbineTypeCurves(**kwargs)
     if kind == "layout":
         return FarmLayoutOutput(**kwargs)
     if kind == "layout_writer":
@@ -81,6 +94,9 @@ def _output(kind, **kwargs):
 
 
 PLOTS = (
+    "map",
+    "rotor",
+    "curves",
     "layout",
     "layout_writer",
     "flow",
@@ -124,18 +140,59 @@ def test_threaded_plotting_never_displays(algorithm, tmp_path, display, kind):
         assert data.data_vars
 
 
-@pytest.mark.parametrize("kind", PLOTS)
-def test_nofig_prevents_plotting_and_file_creation(algorithm, tmp_path, display, kind):
+@pytest.mark.parametrize("kind", [*PLOTS, "probe"])
+@pytest.mark.parametrize("entry", ["calc_farm", "calc_points", "calc_outputs"])
+def test_nofig_skips_initialization_point_work_and_files(
+    algorithm, tmp_path, display, monkeypatch, kind, entry
+):
     output = _output(kind, show=False, nofig=True, out_dir=tmp_path)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("A disabled image output was initialized or evaluated points")
+
+    monkeypatch.setattr(output, "initialize", forbidden)
+    monkeypatch.setattr(algorithm, "_launch_parallel_points_calc", forbidden)
+    options = {"farm_results": None} if entry == "calc_points" else {}
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
-        algorithm.calc_farm(outputs=output)
+        result = getattr(algorithm, entry)(outputs=output, ret_dict=True, **options)
+    assert result == {}
     assert not display
     assert not list(tmp_path.iterdir())
 
 
+@pytest.mark.parametrize("inherited", [False, True])
+@pytest.mark.parametrize("entry", ["calc_farm", "calc_outputs"])
+def test_nested_nofig_outputs_keep_numerical_points_and_original_configuration(
+    algorithm, tmp_path, monkeypatch, inherited, entry
+):
+    image = FlowPlots2D(nofig=not inherited, out_dir=tmp_path)
+    numerical = PointCalculator(
+        points=[[0.0, 0.0, 90.0]],
+        variables=[FV.WS],
+        result_name="probe",
+        nofig=True,
+        out_dir=tmp_path,
+    )
+    nested = foxes.core.OutputList(outputs=[image, numerical], nofig=inherited)
+    chain = foxes.core.OutputList(outputs=[FarmResultsOutput(variables=[FV.P]), nested])
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("A disabled image's fields or grid were prepared")
+
+    monkeypatch.setattr(image, "initialize", forbidden)
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        result = getattr(algorithm, entry)(outputs=chain, ret_dict=True)
+    assert set(result) == {"farm_results", "probe"}
+    np.testing.assert_allclose(result["probe"][FV.WS].to_numpy()[:, 0], [6, 8, 10])
+    assert chain.outputs[1] is nested
+    assert nested.outputs == [image, numerical]
+    assert image.nofig is (not inherited)
+
+
 @pytest.mark.parametrize("kind", ["flow", "rose", "state_rose", "binned_rose"])
-def test_numerical_plot_mode_never_shows(algorithm, tmp_path, display, kind):
-    output = _output(kind, show=False, plot=False, out_dir=tmp_path)
+@pytest.mark.parametrize("nofig", [False, True])
+def test_numerical_plot_mode_never_shows(algorithm, tmp_path, display, kind, nofig):
+    output = _output(kind, show=False, plot=False, nofig=nofig, out_dir=tmp_path)
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
         result = algorithm.calc_farm(outputs=output)
     assert result is not None

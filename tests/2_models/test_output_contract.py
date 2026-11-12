@@ -135,6 +135,99 @@ def test_output_selectors_remain_strings_and_lists(algorithm):
     np.testing.assert_allclose(result["mean_speed"][FV.WS], 8.6)
 
 
+@pytest.mark.parametrize("algorithm_type", ["Downwind", "Iterative"])
+@pytest.mark.parametrize("selector", ["name", "list", "instance", "chain"])
+@pytest.mark.parametrize("ret_dict", [False, True])
+def test_farm_result_mapping_is_opt_in(algorithm, algorithm_type, selector, ret_dict):
+    # Keep ordinary returns unchanged and preserve the actual grouped key on request.
+    algorithm.farm.turbines[0].models = ["NREL5MW"]
+    algo = getattr(foxes.algorithms, algorithm_type)(
+        algorithm.farm, algorithm.states, wake_models=[], verbosity=0
+    )
+    output = algo.mbook.outputs["total_results_mean"]
+    outputs = {
+        "name": "total_results_mean",
+        "list": ["total_results_mean"],
+        "instance": output,
+        "chain": foxes.core.OutputList(outputs=[output]),
+    }[selector]
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        returned = algo.calc_farm(outputs=outputs, ret_dict=ret_dict)
+    if ret_dict:
+        assert set(returned) == {FC.MEAN_TOTAL_FARM_RESULTS}
+        returned = returned[FC.MEAN_TOTAL_FARM_RESULTS]
+    assert isinstance(returned, xr.Dataset)
+    np.testing.assert_allclose(returned[FV.REWS], 8.6)
+
+
+@pytest.mark.parametrize("entry", ["calc_points", "calc_outputs"])
+@pytest.mark.parametrize("precomputed", [False, True])
+@pytest.mark.parametrize("ret_dict", [False, True])
+def test_point_result_mapping_survives_delegation(
+    algorithm, entry, precomputed, ret_dict
+):
+    # Exercise both calc_outputs delegation branches and direct point execution.
+    output = SliceData(
+        variables=[FV.WS], result_name="speed", grid_pars={"n_img_points": (2, 3)}
+    )
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=2, verbosity=0
+    ):
+        algorithm.initialize()
+        algorithm.init_model(output)
+        points = output.get_calc_points(algorithm).copy()
+        options = {"outputs": output, "ret_dict": ret_dict, "ambient": True}
+        if precomputed:
+            data = algorithm.calc_points(None, points=points, ambient=True)
+            data[FV.WS] = xr.full_like(data[FV.WS], 17.0)
+            options["point_results"] = data
+        elif entry == "calc_points":
+            options["points"] = points
+        returned = getattr(algorithm, entry)(farm_results=None, **options)
+    if ret_dict:
+        assert set(returned) == {"speed"}
+        returned = returned["speed"]
+    np.testing.assert_allclose(
+        returned[FV.WS].values[:, 0, 0],
+        [17.0] * 3 if precomputed else [6.0, 8.0, 10.0],
+    )
+
+
+@pytest.mark.parametrize("outputs", [None, []])
+@pytest.mark.parametrize("entry", ["calc_farm", "calc_points", "calc_outputs"])
+def test_keyed_disabled_collection_stays_empty(algorithm, entry, outputs):
+    # Key preservation never fabricates a result when collection is disabled.
+    options = {"outputs": outputs, "ret_dict": True}
+    if entry == "calc_points":
+        options.update(farm_results=None, points=np.zeros((1, 3)), ambient=True)
+    with foxes.Engine.new("numpy", verbosity=0):
+        assert getattr(algorithm, entry)(**options) == {}
+
+
+def test_keyed_output_errors_remain_explicit(algorithm):
+    with foxes.Engine.new("numpy", verbosity=0):
+        with pytest.raises(KeyError, match="missing_output"):
+            algorithm.calc_farm(outputs="missing_output", ret_dict=True)
+
+
+def test_output_only_farm_mapping_and_iterative_solver_history(algorithm):
+    # Output-only collection and optional solver history have independent shapes.
+    algorithm.farm.turbines[0].models = ["NREL5MW"]
+    algo = foxes.algorithms.Iterative(
+        algorithm.farm, algorithm.states, wake_models=[], verbosity=0
+    )
+    with foxes.Engine.new("numpy", verbosity=0):
+        results, downwind = algo.calc_farm(ret_dict=True, ret_dwnd_order=True)
+        returned = algo.calc_outputs(
+            farm_results=results[FC.FARM_RESULTS],
+            outputs="farm_results",
+            ret_dict=True,
+        )
+    assert set(results) == set(returned) == {FC.FARM_RESULTS}
+    xr.testing.assert_identical(returned[FC.FARM_RESULTS], results[FC.FARM_RESULTS])
+    assert isinstance(downwind, xr.Dataset)
+
+
 def test_multiple_planes_write_once(algorithm, tmp_path, monkeypatch):
     output = SlicesData(
         positions=[80.0, 100.0],

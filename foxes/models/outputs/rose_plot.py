@@ -25,6 +25,10 @@ class RosePlotOutput(RoseOutput):
 
     get_data_info = staticmethod(get_data_info)
 
+    def _creates_figures(self) -> bool:
+        """Keep numerical roses enabled independently of figure suppression."""
+        return self.plot or super()._creates_figures()
+
     def __init__(
         self,
         wd_sectors: int = 12,
@@ -182,6 +186,10 @@ class StatesRosePlotOutput(RosePlotOutput):
 
 class WindRoseBinPlot(RoseOutput):
     """Reduce one field within configured wind-direction and wind-speed bins."""
+
+    def _creates_figures(self) -> bool:
+        """Keep numerical bins enabled independently of figure suppression."""
+        return self.plot or super()._creates_figures()
 
     def __init__(
         self,

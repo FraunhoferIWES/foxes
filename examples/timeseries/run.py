@@ -1,6 +1,4 @@
-import time
 import argparse
-import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
@@ -81,11 +79,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o",
-        "--outputs",
-        help="The outputs",
+        "-R",
+        "--results",
+        help="The calculation result models",
         nargs="+",
         default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["state_turbine_map"],
     )
     parser.add_argument(
         "-v",
@@ -101,11 +106,6 @@ def main(argv=None):
     mbook = foxes.models.ModelBook()
     mbook.outputs["farm_results"].fdata_variables.extend([FV.EFF])
 
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -125,21 +125,6 @@ def main(argv=None):
         turbine_models=args.tmodels + [ttype.name],
         verbosity=max(args.verbosity - 1, 0),
     )
-
-    if args.show_layout and not args.nofig:
-        ax = foxes.algorithms.Downwind(
-            farm,
-            foxes.input.states.SingleStateStates(ws=8, wd=270, ti=0.08, rho=1.225),
-            wake_models=[],
-            mbook=mbook,
-            verbosity=max(args.verbosity - 1, 0),
-        ).calc_outputs(
-            outputs=foxes.models.outputs.FarmLayoutOutput(
-                operation="get_figure", parameters=dict()
-            )
-        )
-        plt.show()
-        plt.close(ax.get_figure())
 
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo_kwargs = {"max_it": None} if args.iterative else {}
@@ -163,72 +148,31 @@ def main(argv=None):
         verbosity=max(args.verbosity - 1, 0),
     )
 
+    mbook.outputs["state_turbine_map"] = foxes.models.outputs.StateTurbineMap(
+        variable=FV.P, show=True, plot_pars=dict(cmap="inferno", figsize=(6, 7))
+    )
+    if args.show_layout:
+        args.outputs.insert(0, "farm_layout")
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
-        time0 = time.time()
-        farm_results = algo.calc_farm(outputs=args.outputs)
-        time1 = time.time()
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-    # Evaluate collected farm data only; writer-only outputs are already complete.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    required = {
-        FV.AMB_P,
-        FV.AMB_REWS,
-        FV.AMB_TI,
-        FV.EFF,
-        FV.P,
-        FV.REWS,
-        FV.TI,
-        FV.WD,
-        FV.X,
-    }
-    if farm_results is None or not required.issubset(farm_results.data_vars):
-        print(
-            "Skipping farm reporting: selected outputs do not collect the required fields:",
-            sorted(required),
-        )
-        return
-
-    if args.verbosity > 1:
-        print("\nCalc time =", time1 - time0, "\n")
-
-    # state-turbine results
-    farm_df = farm_results.to_dataframe()
-    if args.verbosity > 1:
-        print("\nFarm results data:\n")
-        print(
-            farm_df[
-                [
-                    FV.X,
-                    FV.WD,
-                    FV.AMB_REWS,
-                    FV.REWS,
-                    FV.AMB_TI,
-                    FV.TI,
-                    FV.AMB_P,
-                    FV.P,
-                    FV.EFF,
-                ]
-            ]
-        )
-        print()
-
-    if not args.nofig:
-        with engine:
-            algo.calc_outputs(
-                outputs=foxes.models.outputs.StateTurbineMap(
-                    variable=FV.P, plot_pars=dict(cmap="inferno", figsize=(6, 7))
-                ),
-                farm_results=farm_results,
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
             )
-        plt.show()
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

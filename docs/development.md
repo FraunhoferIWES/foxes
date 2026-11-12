@@ -218,10 +218,11 @@ level `2` (reports); level `1` selects a concise summary and `3` enables library
 progress. Explicit verbosity in a
 documented example command takes precedence over the runner default.
 Plot-variable selection uses `--var`, leaving `-v` reserved for verbosity.
-Levels `2` and `3` print each collected farm-results dataset once, independently
-of fields required by later reports. This includes every comparison and optional
-benchmark run; levels `0` and `1` suppress datasets. Writer-only and non-farm
-selections never fabricate farm data. YAML/WindIO receive the same unreduced
+Levels `2` and `3` print every returned result from both calculation and
+post-processing, with its key on a separate line before its value. This includes
+non-farm/aggregated values and every comparison or optional benchmark case;
+levels `0` and `1` suppress these values. Empty mappings never fabricate farm
+data. YAML/WindIO retain their own farm reporting and receive the same unreduced
 example level, with scientific verbosity reduced inside their readers.
 Animation examples forward this level directly to their selected animation
 outputs. Level `1` announces creation; level `2` adds writing and successful
@@ -229,9 +230,11 @@ completion messages, frame counts and encoder settings; level `3` also reports
 individual frame composition and encoding. Level `0` stays quiet, and failed
 writes never announce completion.
 Tests execute every example once and assert quiet algorithm/engine instances,
-no displayed figures, restored configuration and no remaining artifacts.
+no figure creation or image-only point calculations, restored configuration
+and no remaining artifacts. Necessary numerical slices, exports and binned-input
+reduction retain their point evaluation.
 Mocked reporting tests cover every Python script at levels `0` through `3`,
-direct/composed results, partial fields, missing collectors and non-farm outputs
+collected/grouped results, missing collectors and non-farm outputs
 without repeating their numerical example calculations.
 
 Engine `progress_bar=True` automatically uses tqdm for terminals/notebooks and
@@ -526,7 +529,10 @@ Normal runs retain real-input and scheduler defaults.
 selection, deduplication, and cleanup/restoration on success and failure without
 repeating the numerical examples. Collector/writer/animation numerical and
 encoding contracts remain covered by their model tests. Sequential selections
-are limited to the farm collector and animation models.
+support farm collectors, tables, maps and writers plus step-local animations;
+other point-dependent outputs are rejected explicitly. Figure suppression
+belongs to `Output` resolution, not script-side type filtering. Numerical modes
+remain active; image-only companion probes declare `image_only=True`.
 
 `tests/conftest.py` fixes default engine chunk sizes to 64 states and 500 points
 for deterministic behavior across machines. Do not make a test depend on a
@@ -626,9 +632,15 @@ directory, FOXES configuration (including UTM state), backend/interactive mode,
 and removes its figures and generated files even on failure. Normal aggregate
 runs also discard files; run an individual script to retain its outputs.
 `--quick` selects bounded local fixtures independently of `--nofig`.
-`--nofig` suppresses display, not explicitly selected file writers/animations.
-All scripts accept `-o/--outputs` with intention-specific defaults and skip
-reporting when required collected fields are absent. Use `--exclude` for
+`--nofig` suppresses images, including animation files and their point grids.
+Explicit numerical slices, point data, NetCDF writers and input reductions
+remain enabled. All Python scripts accept `-R/--results`, defaulting to
+`farm_results`, and subsequent `-o/--outputs` with intention-specific defaults.
+They use `ret_dict=True` to print actual result keys without dataset-specific
+reports or dataframe conversions. `-r` retains its rotor meaning; reference
+points use `--ref_xy`. Sequential keeps its iterator/plugin path and processes
+accumulated farm data through the output-only API.
+Use `--exclude` for
 unavailable integrations in normal mode, and `--step` only to resume manual
 runs. See [ADR-0023](adr/0023-in-process-example-runs.md).
 
@@ -640,6 +652,11 @@ It uses six synthetic states, six public-curve turbines, a bounded NumPy engine
 and temporary writer/animation directories. It covers composed result keys,
 automatic metrics, physical aggregation, selected-state counts, point results,
 layout/rose/flow plots, count/calendar files and GIF output.
+It also demonstrates `ret_dict=True` and image suppression before point requests.
+Use natural terms such as results, farm results and results classes in this
+user-facing tutorial, rather than collectors. Dynamic-wake and timelines
+notebooks calculate keyed farm results before creating animations through
+`calc_outputs`; other notebooks retain valid dataset-return workflows.
 
 Public Python APIs follow [docstring conventions](docstrings.md). Types remain in
 annotations; NumPy-style docstrings describe the scientific and runtime

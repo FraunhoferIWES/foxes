@@ -85,7 +85,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["rose_plot"],
     )
     parser.add_argument(
         "-v",
@@ -101,9 +112,11 @@ def main(argv=None):
     mbook = foxes.ModelBook()
     mbook.outputs["farm_results"].fdata_variables.extend([FV.AMB_WD])
 
-    if args.nofig:
-        for name in args.outputs:
-            mbook.outputs[name].show = False
+    mbook.outputs["rose_plot"].wd_var = FV.WD
+    # Suppress figure creation in both stages, not just display.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
 
     source_states = foxes.input.states.Timeseries(
         data_source=args.states,
@@ -199,44 +212,49 @@ def main(argv=None):
             rotor_model=args.rotor,
             verbosity=max(args.verbosity - 1, 0),
         )
-        if args.read_nc is None:
+        if args.read_nc is None and not args.nofig:
             algo.initialize()
             support_rose_data = source_binned_data.get_support_wind_rose_data(
                 algo._Algorithm__loaded_data
             )
-        farm_results = algo.calc_farm(outputs=args.outputs)
+        # Keep result keys even when only one model is selected.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
+
+        # Independent output calls allow different point grids.
+        output_results = {}
+        for name in args.outputs:
+            data = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
+            )
+            if args.verbosity > 1:
+                for key, value in data.items():
+                    print(f"\n{key}:\n{value}")
+            output_results.update(data)
         if full_algo is not None:
             if args.verbosity > 1:
-                print("\nRunning full timeseries calculation for comparison")
-            full_farm_results = full_algo.calc_farm(outputs=args.outputs)
+                print("\nFull timeseries:")
+            # Keep result keys even when only one model is selected.
+            results = full_algo.calc_farm(outputs=args.results, ret_dict=True)
+            if args.verbosity > 1:
+                for key, data in results.items():
+                    print(f"\n{key}:\n{data}")
 
-    # Evaluate collected farm data only; complete both runs for writer-only outputs.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    if full_algo is not None:
-        if isinstance(full_farm_results, dict):
-            full_farm_results = full_farm_results.get("farm_results")
-        elif not any(
-            isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-            for name in args.outputs
-        ):
-            full_farm_results = None
-        if full_farm_results is not None and args.verbosity > 1:
-            print("\nFull timeseries farm results:\n", full_farm_results)
-    required = {FV.AMB_REWS, FV.AMB_WD, FV.REWS, FV.WD, FV.WEIGHT}
-    if farm_results is None or not required.issubset(farm_results.data_vars):
-        print(
-            "Skipping farm reporting: selected outputs do not collect the required fields:",
-            sorted(required),
-        )
-        return
+            # Independent output calls allow different point grids.
+            output_results = {}
+            for name in args.outputs:
+                data = full_algo.calc_outputs(
+                    outputs=name,
+                    farm_results=results.get("farm_results"),
+                    ret_dict=True,
+                )
+                if args.verbosity > 1:
+                    for key, value in data.items():
+                        print(f"\n{key}:\n{value}")
+                output_results.update(data)
+
     if not args.nofig and support_rose_data is not None:
         fig = source_binned_data.get_support_wind_roses_figure(
             support_rose_data,
@@ -244,65 +262,6 @@ def main(argv=None):
         )
         plt.show()
         plt.close(fig)
-
-    if args.verbosity > 1:
-        print(f"Input states: {source_states.size()}")
-        print(f"Histogram states: {binned_data.size()}")
-    if args.write_nc is not None:
-        if args.verbosity > 1:
-            print(f"Written binned data file: {args.write_nc}")
-    if args.read_nc is not None:
-        if args.verbosity > 1:
-            print(f"Read binned data file: {args.read_nc}")
-
-    if args.compare_full_timeseries:
-        variables = [FV.AMB_REWS, FV.REWS, FV.AMB_WD, FV.WD]
-        binned_weight = farm_results[FV.WEIGHT].to_numpy()
-        full_weight = full_farm_results[FV.WEIGHT].to_numpy()
-        binned_mean = {}
-        full_mean = {}
-        for var in variables:
-            for results, weight, mean in [
-                (farm_results, binned_weight, binned_mean),
-                (full_farm_results, full_weight, full_mean),
-            ]:
-                data = results[var].to_numpy()
-                if weight.ndim == 1:
-                    weight = weight[:, None]
-                valid = np.isfinite(data) & np.isfinite(weight) & (weight > 0.0)
-                w = np.where(valid, weight, 0.0)
-                if var in {FV.AMB_WD, FV.WD}:
-                    angles = np.deg2rad(np.where(valid, data, 0.0))
-                    sine = np.sum(w * np.sin(angles), axis=0)
-                    cosine = np.sum(w * np.cos(angles), axis=0)
-                    mean[var] = np.mod(np.rad2deg(np.arctan2(sine, cosine)), 360.0)
-                else:
-                    numerator = np.sum(np.where(valid, weight * data, 0.0), axis=0)
-                    denominator = np.sum(w, axis=0)
-                    mean[var] = np.divide(
-                        numerator,
-                        denominator,
-                        out=np.full_like(numerator, np.nan),
-                        where=denominator > 0.0,
-                    )
-
-        if args.verbosity > 1:
-            print("\nComparison, binned minus full timeseries:")
-        for var in variables:
-            binned_data = binned_mean[var]
-            full_data = full_mean[var]
-            if var in {FV.AMB_WD, FV.WD}:
-                delta = np.mod(binned_data - full_data + 180.0, 360.0) - 180.0
-                diff_label = "angular difference"
-            else:
-                delta = binned_data - full_data
-                diff_label = "difference"
-            if args.verbosity > 1:
-                print(
-                    f"  {var}: max absolute {diff_label} = "
-                    f"{np.nanmax(np.abs(delta)):.3f}, mean absolute {diff_label} = "
-                    f"{np.nanmean(np.abs(delta)):.3f}"
-                )
 
 
 if __name__ == "__main__":

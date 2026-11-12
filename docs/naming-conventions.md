@@ -103,9 +103,14 @@ Arbitrary-point results include metre coordinates
 `x`, `y`, `z`; mean fields have `(FC.POINT,)` dimensions.
 
 For plotting outputs, `show` controls blocking display, `plot` selects figures
-instead of numerical results, and `nofig` suppresses figure generation.
+instead of numerical results, and `nofig=True` disables image-producing modes
+before initialization and point-grid requests. Numerical modes remain active;
+`image_only=True` marks numerical companion probes used only by downstream plots.
 Constructor `show` defaults are false; model-book plotting presets/factories
-enable it. These flags do not rename result keys or change scientific payloads.
+enable it. These flags do not rename result keys or alter retained payloads;
+disabled image outputs add no result.
+The calculation option `ret_dict=True` retains public result keys even for a
+single selected model with one result; it does not rename keys or change payloads.
 
 `FC.FARM_RESULTS` names the unaggregated in-memory farm dataset. Buffered writers
 use `model.var(FC.FARM_RESULTS)` as their private result key. A writer's file
@@ -441,6 +446,11 @@ available alternatives.
 	uppercase `FOXES_` prefix when a process-wide override is genuinely needed.
 - Console-script names declared in `pyproject.toml` are public. Keep reusable
 	logic importable below the argument parser.
+- Monolithic example scripts reserve `-R/--results` for calculation result
+	selectors and `-o/--outputs` for subsequent output models. `-r` selects rotor
+	models, `--ref_xy` selects the reference point, and `-v` selects verbosity.
+	`-nf/--nofig` omits images and image-only point evaluation, not numerical
+	writers or input reductions.
 - Filesystem parameters end in `_file`, `_path`, or `_dir` according to what the
 	caller may supply; do not use those suffixes interchangeably.
 - Error messages name the relevant model or container and the expected versus

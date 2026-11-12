@@ -6,45 +6,6 @@ import foxes
 import foxes.variables as FV
 
 
-def calc(mbook, farm, states, wakes, points, args):
-    algo = foxes.algorithms.Downwind(
-        farm,
-        states,
-        wake_models=wakes,
-        rotor_model=args.rotor,
-        wake_frame="rotor_wd",
-        partial_wakes=args.pwakes,
-        mbook=mbook,
-        verbosity=max(args.verbosity - 1, 0),
-    )
-
-    farm_results = algo.calc_farm(outputs=args.outputs)
-
-    # Finish each farm output even when no data is collected for point evaluation.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    required = set(mbook.outputs["farm_results"].fdata_variables)
-    if farm_results is None or not required.issubset(farm_results.data_vars):
-        print(
-            "Skipping point comparison: selected outputs lack the required farm fields."
-        )
-        mbook.finalize(algo, verbosity=max(args.verbosity - 1, 0))
-        return None
-
-    point_results = algo.calc_points(farm_results, points[None, :])
-
-    mbook.finalize(algo, verbosity=max(args.verbosity - 1, 0))
-
-    return point_results[args.var].to_numpy()
-
-
 def main(argv=None):
     """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
@@ -142,7 +103,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["cross_sections", "centreline"],
     )
     parser.add_argument(
         "-v",
@@ -157,11 +129,6 @@ def main(argv=None):
 
     mbook = foxes.models.ModelBook()
     mbook.outputs["farm_results"].fdata_variables.append(FV.CT)
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
     D = ttype.D
@@ -222,25 +189,74 @@ def main(argv=None):
     line_points[:, 2] = args.height if args.height is not None else H
     line_points[:, 0] = xlist
 
+    # Configure the two probe grids as independent output models.
+    mbook.outputs["cross_sections"] = foxes.models.outputs.PointCalculator(
+        points=points,
+        variables=[args.var],
+        result_name="cross_sections",
+        image_only=True,
+    )
+    mbook.outputs["centreline"] = foxes.models.outputs.PointCalculator(
+        points=line_points,
+        variables=[args.var],
+        result_name="centreline",
+        image_only=True,
+    )
+    # Suppress figure creation in both stages, not just display.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
         wake_results = []
         line_results = []
         for wake in args.wakes:
-            wakes = [wake] + args.ewakes
             if args.verbosity > 1:
-                print(f"Calculating: {wakes} \n")
+                print(f"Calculating: {[wake, *args.ewakes]}")
+            wakes = [wake, *args.ewakes]
+            algo = foxes.algorithms.Downwind(
+                farm,
+                states,
+                wake_models=wakes,
+                rotor_model=args.rotor,
+                wake_frame="rotor_wd",
+                partial_wakes=args.pwakes,
+                mbook=mbook,
+                verbosity=max(args.verbosity - 1, 0),
+            )
 
-            results = calc(mbook, farm, states, wakes, points, args)
-            if results is not None:
-                wake_results.append((wake, results.reshape(nd, ny)))
+            # Keep result keys even when only one model is selected.
+            results = algo.calc_farm(outputs=args.results, ret_dict=True)
+            if args.verbosity > 1:
+                for key, data in results.items():
+                    print(f"\n{key}:\n{data}")
 
-            results = calc(mbook, farm, states, wakes, line_points, args)
-            if results is not None:
-                line_results.append((wake, results))
+            # Independent output calls allow different point grids.
+            output_results = {}
+            for name in args.outputs:
+                data = algo.calc_outputs(
+                    outputs=name,
+                    farm_results=results.get("farm_results"),
+                    ret_dict=True,
+                )
+                if args.verbosity > 1:
+                    for key, value in data.items():
+                        print(f"\n{key}:\n{value}")
+                output_results.update(data)
 
-    # Writer-only selections complete all comparisons without producing plots.
-    if not wake_results:
-        print("Skipping wake plots: no compatible farm-results output was selected.")
+            mbook.finalize(algo, verbosity=max(args.verbosity - 1, 0))
+            selected = output_results
+            if "cross_sections" in selected:
+                wake_results.append(
+                    (
+                        wake,
+                        selected["cross_sections"][args.var].to_numpy().reshape(nd, ny),
+                    )
+                )
+            if "centreline" in selected:
+                line_results.append((wake, selected["centreline"][args.var].to_numpy()))
+
+    if args.nofig or not (wake_results or line_results):
         return
 
     figsize = (ncols * args.figsize_scale, nrows * args.figsize_scale)
@@ -292,6 +308,7 @@ def main(argv=None):
 
     if not args.nofig:
         plt.show()
+    plt.close(fig)
 
 
 if __name__ == "__main__":

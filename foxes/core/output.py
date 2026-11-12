@@ -37,6 +37,7 @@ class Output(DataCalcModel):
         fdata_variables: list[str] | None = None,
         tdata_variables: list[str] | None = None,
         show: bool = False,
+        image_only: bool = False,
         **kwargs: Any,
     ) -> None:
         """Configure input requirements, output paths and optional figure display.
@@ -49,8 +50,9 @@ class Output(DataCalcModel):
         out_fname_fun
             Transform each filename before joining it to the output directory.
         nofig
-            Suppress figure creation for plotting outputs; takes precedence over
-            ``show``.
+            Disable image-producing outputs before initialization, including
+            their point calculations and file creation. Numerical modes and
+            writers remain enabled. Takes precedence over ``show``.
         mdata_variables
             Required model variables during ``calculate``; ``None`` requests all,
             and an empty sequence requests none. The sequence is copied.
@@ -62,6 +64,9 @@ class Output(DataCalcModel):
             Display figures for plotting outputs during parent-side finalization.
             Display blocks until the windows close. Numerical results are
             unchanged, and figure creation does not itself enable display.
+        image_only
+            Mark numerical payloads used exclusively by downstream images.
+            Such companion outputs are also disabled by ``nofig``.
         kwargs
             Additional parameters for ``DataCalcModel``.
         """
@@ -72,6 +77,7 @@ class Output(DataCalcModel):
         )
         self.out_fname_fun = out_fname_fun
         self.nofig = nofig
+        self.image_only = image_only
         self.show = show
         self._mdata_variables = (
             None if mdata_variables is None else list(mdata_variables)
@@ -87,6 +93,28 @@ class Output(DataCalcModel):
         if not self.out_dir.is_dir():
             print(f"{type(self).__name__}: Creating output dir {self.out_dir}")
             self.out_dir.mkdir(parents=True)
+
+    def _creates_figures(self) -> bool:
+        """Identify image-only work from this output's current configuration."""
+        return self.image_only
+
+    def get_enabled_output(self, nofig: bool = False) -> Output | None:
+        """Resolve this output before initialization and scientific calculation.
+
+        Parameters
+        ----------
+        nofig
+            Inherited figure suppression, combined with this output's flag.
+
+        Returns
+        -------
+        output
+            This instance, or ``None`` when figure suppression disables it.
+            Numerical outputs remain enabled unless marked ``image_only``.
+            This method does not mutate configuration or initialize models.
+        """
+        # Omit image-only requirements before requesting fields or point grids.
+        return None if (nofig or self.nofig) and self._creates_figures() else self
 
     def _show_figures(self) -> None:
         """Display completed plots from finalization when explicitly enabled.
@@ -396,6 +424,35 @@ class OutputList(Output):
             if v is not None:
                 v = list(dict.fromkeys(v))
             setattr(self, vrs, v)
+
+    def get_enabled_output(self, nofig: bool = False) -> Output | None:
+        """Resolve enabled children without mutating the configured chain.
+
+        Parameters
+        ----------
+        nofig
+            Inherited figure suppression, combined with this chain's flag.
+
+        Returns
+        -------
+        output
+            This chain when unchanged, a new chain with only enabled children,
+            or ``None`` when no child remains. Suppression propagates through
+            nested chains while numerical outputs remain enabled.
+        """
+        # Resolve children independently so image grids cannot affect other outputs.
+        suppressed = nofig or self.nofig
+        if suppressed and self.image_only:
+            return None
+        if not self.outputs:
+            return self
+        children = [output.get_enabled_output(suppressed) for output in self.outputs]
+        enabled = [output for output in children if output is not None]
+        if not enabled:
+            return None
+        if all(a is b for a, b in zip(children, self.outputs)):
+            return self
+        return OutputList(outputs=enabled, out_dir=self.out_dir)
 
     @property
     def outputs(self) -> list[Output]:

@@ -23,6 +23,12 @@ if TYPE_CHECKING:
 class FarmLayoutOutput(DatasetOutput):
     """Render or export a layout supplied by the executing algorithm."""
 
+    def _creates_figures(self) -> bool:
+        """Suppress figure operations without disabling layout data exports."""
+        return (
+            self.operation in ("get_figure", "write_plot") or super()._creates_figures()
+        )
+
     def __init__(
         self,
         operation: str = "get_figure",

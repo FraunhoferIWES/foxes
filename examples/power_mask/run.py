@@ -79,7 +79,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["state_turbine_map"],
     )
     parser.add_argument(
         "-v",
@@ -98,11 +109,6 @@ def main(argv=None):
     Pmax_data = pd.read_csv(args.pmax_file, usecols=cols).to_numpy()
 
     mbook = foxes.models.ModelBook()
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
     mbook.turbine_models["set_Pmax"] = foxes.models.turbine_models.SetFarmVars()
@@ -161,21 +167,6 @@ def main(argv=None):
         verbosity=max(args.verbosity - 1, 0),
     )
 
-    if not args.nofig and args.show_layout:
-        ax = foxes.algorithms.Downwind(
-            farm,
-            foxes.input.states.SingleStateStates(ws=8, wd=270, ti=0.08, rho=1.225),
-            wake_models=[],
-            mbook=mbook,
-            verbosity=max(args.verbosity - 1, 0),
-        ).calc_outputs(
-            outputs=foxes.models.outputs.FarmLayoutOutput(
-                operation="get_figure", parameters=dict()
-            )
-        )
-        plt.show()
-        plt.close(ax.get_figure())
-
     algo = foxes.algorithms.Downwind(
         farm,
         states,
@@ -203,116 +194,55 @@ def main(argv=None):
     mbook.outputs["farm_results"] = FarmResultsOutput(variables=outputs)
 
     # run calculation with power mask:
-    masked_results = None
+    # Evaluate the masked and unmasked cases independently.
+    if args.show_layout:
+        args.outputs.insert(0, "farm_layout")
+    # Suppress figure creation in both stages, not just display.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
-        farm_results = algo.calc_farm(outputs=args.outputs)
+        # Keep result keys even when only one model is selected.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-        # Skip evaluation, but not the comparison run, for writer-only outputs.
-        if isinstance(farm_results, dict):
-            farm_results = farm_results.get("farm_results")
-        elif not any(
-            isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-            for name in args.outputs
-        ):
-            farm_results = None
-        if farm_results is not None and args.verbosity > 1:
-            print("\nFarm results:\n", farm_results)
-        if farm_results is not None and set(outputs).issubset(farm_results.data_vars):
-            fr = farm_results.to_dataframe()
-            if args.verbosity > 1:
-                print(
-                    fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.MAX_P]]
-                )
-
-            masked_results = farm_results
-        else:
-            print(
-                "Skipping masked farm reporting: selected outputs lack the required fields."
+        # Independent output calls allow different point grids.
+        output_results = {}
+        for name in args.outputs:
+            data = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
             )
+            if args.verbosity > 1:
+                for key, value in data.items():
+                    print(f"\n{key}:\n{value}")
+            output_results.update(data)
 
-        # run calculation without power mask:
-        for t in farm.turbines:
-            t.models.remove("set_Pmax")
-            t.models.remove("PMask")
-
-        # The unmasked run no longer produces a maximum-power field.
+        for turbine in farm.turbines:
+            turbine.models.remove("set_Pmax")
+            turbine.models.remove("PMask")
         mbook.outputs["farm_results"] = FarmResultsOutput(
-            variables=[variable for variable in outputs if variable != FV.MAX_P]
+            variables=[variable for variable in outputs if variable != FV.MAX_P],
+            nofig=args.nofig,
         )
+        # Keep result keys even when only one model is selected.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-        farm_results = algo.calc_farm(outputs=args.outputs)
-
-    # Evaluate collected farm data only; both output runs have finished.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    required = {FV.AMB_P, FV.AMB_REWS, FV.CT, FV.P, FV.REWS, FV.WD}
-    if farm_results is None or not required.issubset(farm_results.data_vars):
-        print(
-            "Skipping farm reporting: selected outputs do not collect the required fields:",
-            sorted(required),
-        )
-        return
-
-    fr = farm_results.to_dataframe()
-    if args.verbosity > 1:
-        print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT]])
-
-    if not args.nofig and masked_results is not None:
-        for variable, label, cmap, maximum in (
-            (FV.P, "Power", "YlOrRd", np.nanmax(Pmax_data)),
-            (FV.CT, "ct", "YlGn", 1.0),
-        ):
-            fig, axs = plt.subplots(1, 3, figsize=(11, 5))
-            for ax, data, field, title, colors, limit in (
-                (
-                    axs[0],
-                    farm_results,
-                    variable,
-                    f"{label}, no power mask",
-                    cmap,
-                    maximum,
-                ),
-                (
-                    axs[1],
-                    masked_results,
-                    FV.MAX_P,
-                    "Power mask",
-                    "YlOrRd",
-                    np.nanmax(Pmax_data),
-                ),
-                (
-                    axs[2],
-                    masked_results,
-                    variable,
-                    f"{label}, with power mask",
-                    cmap,
-                    maximum,
-                ),
-            ):
-                with engine:
-                    algo.calc_outputs(
-                        outputs=foxes.models.outputs.StateTurbineMap(
-                            variable=field,
-                            plot_pars=dict(
-                                ax=ax,
-                                title=title,
-                                cmap=colors,
-                                edgecolor="white",
-                                vmin=0,
-                                vmax=limit,
-                            ),
-                        ),
-                        farm_results=data,
-                    )
-            plt.show()
-            plt.close(fig)
+        # Independent output calls allow different point grids.
+        output_results = {}
+        for name in args.outputs:
+            data = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
+            )
+            if args.verbosity > 1:
+                for key, value in data.items():
+                    print(f"\n{key}:\n{value}")
+            output_results.update(data)
 
 
 if __name__ == "__main__":

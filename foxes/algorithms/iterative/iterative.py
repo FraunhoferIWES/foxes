@@ -407,6 +407,7 @@ class Iterative(Downwind):
         outputs: str | Output | list[str | Output] | None = "farm_results",
         finalize: bool = True,
         ret_dwnd_order: bool = False,
+        ret_dict: bool = False,
         **kwargs: Any,
     ) -> Any:
         """
@@ -424,15 +425,20 @@ class Iterative(Downwind):
             Flag for finalization after calculation
         ret_dwnd_order
             Also return the results in downwind order
+        ret_dict
+            Preserve the final output's result-name mapping, including a sole
+            result. Internal convergence data remains a dataset.
         kwargs
             Arguments for ``Downwind.calc_farm``, including ``ambient``.
             Intermediate iterations retain all ordinary and ambient fields.
 
         Returns
         -------
-        farm_results
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
+        results
+            Final output values following ``Downwind.calc_farm``. A sole output
+            result is unwrapped unless ``ret_dict`` is true. When
+            ``ret_dwnd_order`` is true, return this value followed by the
+            internal downwind-order dataset on ``(FC.STATE, FC.TURBINE)``.
 
         """
         # Isolate convergence data from requested outputs until the final pass.
@@ -513,7 +519,9 @@ class Iterative(Downwind):
         self.__prev_farm_results = fres
         if self.conv_crit is not None:
             self.conv_crit._conv_states = None
-        fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
+        fres = super().calc_farm(
+            outputs=outputs, finalize=False, ret_dict=ret_dict, **kwargs
+        )
 
         # finalize models:
         if finalize:

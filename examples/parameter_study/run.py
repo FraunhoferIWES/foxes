@@ -1,4 +1,3 @@
-import time
 import argparse
 import numpy as np
 from xarray import Dataset
@@ -57,7 +56,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["state_turbine_table"],
     )
     parser.add_argument(
         "-v",
@@ -72,10 +82,6 @@ def main(argv=None):
 
     mbook = foxes.ModelBook()
     mbook.outputs["farm_results"].fdata_variables.extend([FV.K])
-
-    if args.nofig:
-        for name in args.outputs:
-            mbook.outputs[name].show = False
 
     states = foxes.input.states.Timeseries(
         data_source="timeseries_3000.csv.gz",
@@ -130,44 +136,26 @@ def main(argv=None):
         verbosity=max(args.verbosity - 1, 0),
     )
 
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
-        time0 = time.time()
-        farm_results = algo.calc_farm(outputs=args.outputs)
-        time1 = time.time()
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-    # Evaluate collected farm data only; writer-only outputs are already complete.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    required = {FV.K, FV.P, FV.WEIGHT}
-    if farm_results is None or not required.issubset(farm_results.data_vars):
-        print(
-            "Skipping farm reporting: selected outputs do not collect the required fields:",
-            sorted(required),
-        )
-        return
-
-    if args.verbosity > 1:
-        print("Calc time =", time1 - time0, "\n")
-
-    pop_results = algo.population_model.farm2pop_results(algo, farm_results)
-    if args.verbosity > 1:
-        print("\nPopulation results:\n\n", pop_results)
-        print(f"\n{FV.K} values: {pop_results[FV.K].values[:, 0, 0]}")
-
-    P_mean = (
-        (pop_results[FV.P] * pop_results[FV.WEIGHT])
-        .sum(dim=FC.STATE)
-        .sum(dim=FC.TURBINE)
-    )
-    if args.verbosity > 1:
-        print("\nFarm P_mean:", P_mean.values)
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
+            )
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

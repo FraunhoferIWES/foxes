@@ -743,8 +743,8 @@ class Downwind(Algorithm):
         -------
         output
             The supplied or registered instance, an ordered ``OutputList`` for
-            zero or multiple list entries, or ``None``. Instances are reused,
-            not copied.
+            multiple list entries, or ``None``. Figure-suppressed outputs are
+            removed before initialization; retained child instances are reused.
         single_output
             Whether a scalar selector or one-entry list selected one model.
             This permits unwrapping a mapping only when it has one result.
@@ -758,18 +758,20 @@ class Downwind(Algorithm):
         """
         # Preserve instance identity and declaration order across selector forms.
         if isinstance(outputs, Output):
-            return outputs, True
-        if isinstance(outputs, str):
-            return self.mbook.outputs[outputs], True
-        if isinstance(outputs, list):
+            output, oneout = outputs, True
+        elif isinstance(outputs, str):
+            output, oneout = self.mbook.outputs[outputs], True
+        elif isinstance(outputs, list):
             models = [
                 self.mbook.outputs[o] if isinstance(o, str) else o for o in outputs
             ]
             oneout = len(models) == 1
-            return models[0] if oneout else OutputList(outputs=models), oneout
-        if outputs is None:
+            output = models[0] if oneout else OutputList(outputs=models)
+        elif outputs is None:
             return None, False
-        raise TypeError(f"{self.name}: Expected output models or model-book names")
+        else:
+            raise TypeError(f"{self.name}: Expected output models or model-book names")
+        return output.get_enabled_output(), oneout
 
     def calc_farm(
         self,
@@ -778,6 +780,7 @@ class Downwind(Algorithm):
         ambient: bool = False,
         finalize: bool = True,
         clear_mem: bool = False,
+        ret_dict: bool = False,
         **kwargs: Any,
     ) -> Dataset | dict[str, Any]:
         """
@@ -802,6 +805,9 @@ class Downwind(Algorithm):
         clear_mem
             Remove loaded model data when launching the run and finalize
             afterward, even if ``finalize`` is false.
+        ret_dict
+            Preserve the result-name mapping even for a single output with
+            exactly one result, instead of unwrapping its value.
         kwargs
             Additional engine calculation options passed through the base
             algorithm, including state selections.
@@ -809,8 +815,9 @@ class Downwind(Algorithm):
         Returns
         -------
         results
-            The sole result of a single selected output, otherwise a
-            result-name-to-value mapping. ``None`` or an empty output list gives
+            The sole result of a single selected output unless ``ret_dict`` is
+            true, otherwise a result-name-to-value mapping.
+            ``None`` or an empty output list gives
             an empty mapping. The default dataset preserves input state order
             and original farm turbine order, with physical fields on
             ``(FC.STATE, FC.TURBINE)`` and explicit coordinates.
@@ -878,7 +885,7 @@ class Downwind(Algorithm):
             clear_mem=clear_mem,
             **kwargs,
         )
-        if results is not None and oneout and len(results) == 1:
+        if not ret_dict and results is not None and oneout and len(results) == 1:
             results = next(iter(results.values()))
         del model_data
 
@@ -998,6 +1005,7 @@ class Downwind(Algorithm):
         states_sel: list[Any] | None = None,
         clear_mem: bool = False,
         point_results: Dataset | None = None,
+        ret_dict: bool = False,
         **kwargs: Any,
     ) -> Dataset | dict[str, Any]:
         """
@@ -1048,14 +1056,18 @@ class Downwind(Algorithm):
             calculation is skipped. Locations must be present as ``FC.TARGETS``
             or the metre-valued ``FV.X``, ``FV.Y`` and ``FV.H`` fields.
             Input arrays are read, not modified.
+        ret_dict
+            Preserve the result-name mapping even for a single output with
+            exactly one result, instead of unwrapping its value.
         kwargs
             Additional base-algorithm engine options.
 
         Returns
         -------
         results
-            The sole result of a single selected output, otherwise a
-            result-name-to-value mapping. Disabled collection gives an empty
+            The sole result of a single selected output unless ``ret_dict`` is
+            true, otherwise a result-name-to-value mapping.
+            Disabled collection gives an empty
             mapping. The default dataset has ``(FC.STATE, FC.POINT)`` physical
             fields and location coordinates in supplied point order.
 
@@ -1084,6 +1096,8 @@ class Downwind(Algorithm):
 
         # Resolve output names and preserve the single-versus-multiple return contract.
         output, oneout = self._resolve_outputs(outputs)
+        if output is None and outputs:
+            return {}
 
         # Initialize the resolved output chain before preparing model inputs.
         if output is not None:
@@ -1207,7 +1221,7 @@ class Downwind(Algorithm):
             sel=sel,
             **kwargs,
         )
-        if results is not None and oneout and len(results) == 1:
+        if not ret_dict and results is not None and oneout and len(results) == 1:
             results = next(iter(results.values()))
         del model_data, farm_results, point_data
 
@@ -1292,6 +1306,7 @@ class Downwind(Algorithm):
         finalize: bool = True,
         states_sel: list[Any] | None = None,
         clear_mem: bool = False,
+        ret_dict: bool = False,
         **kwargs: Any,
     ) -> Dataset | dict[str, Any]:
         """
@@ -1324,14 +1339,17 @@ class Downwind(Algorithm):
         clear_mem
             Remove loaded model data for execution and finalize afterward,
             even if ``finalize`` is false.
+        ret_dict
+            Preserve the result-name mapping even for a single output with
+            exactly one result, including delegated point calculations.
         kwargs
             Additional engine or point-calculation options.
 
         Returns
         -------
         results
-            The sole result of a single selected output, otherwise a
-            result-name-to-value mapping. ``None`` disables collection and
+            The sole result of a single selected output unless ``ret_dict`` is
+            true, otherwise a result-name-to-value mapping. ``None`` disables collection and
             returns an empty mapping. Without supplied data or requested points,
             only the output's parent-side ``finalize_results`` hook is run.
 
@@ -1379,6 +1397,7 @@ class Downwind(Algorithm):
                 finalize=finalize,
                 states_sel=states_sel,
                 clear_mem=clear_mem,
+                ret_dict=ret_dict,
                 **kwargs,
             )
         if farm_results is None and points is not None:
@@ -1412,6 +1431,7 @@ class Downwind(Algorithm):
                 finalize=finalize,
                 states_sel=states_sel,
                 clear_mem=clear_mem,
+                ret_dict=ret_dict,
                 **kwargs,
             )
             return results
@@ -1427,7 +1447,7 @@ class Downwind(Algorithm):
 
         if clear_mem or finalize:
             self.finalize(clear_mem=clear_mem)
-        if results is not None and oneout and len(results) == 1:
+        if not ret_dict and results is not None and oneout and len(results) == 1:
             results = next(iter(results.values()))
 
         return results

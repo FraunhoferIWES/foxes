@@ -1,7 +1,5 @@
 import numpy as np
-import time
 import argparse
-import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
@@ -70,7 +68,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["state_turbine_map"],
     )
     parser.add_argument(
         "-v",
@@ -92,11 +101,6 @@ def main(argv=None):
     mbook = foxes.models.ModelBook()
     mbook.outputs["farm_results"].fdata_variables.extend([FV.AMB_WD, FV.EFF])
 
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
     D = ttype.D
@@ -141,110 +145,48 @@ def main(argv=None):
         verbosity=max(args.verbosity - 1, 0),
     )
 
+    mbook.outputs["flow_plot_xy_mean"] = foxes.models.outputs.FlowPlots2D(
+        plane="xy",
+        reduction="mean",
+        var=FV.WS,
+        show=True,
+        grid_pars=dict(resolution=10),
+        plot_pars=dict(),
+    )
+    centreline = np.zeros((n_p, 3))
+    centreline[:, 0] = np.linspace(p0[0], p0[0] + n_t * stp[0] + 10 * D, n_p)
+    centreline[:, 1] = p0[1]
+    centreline[:, 2] = H
+    mbook.outputs["centreline"] = foxes.models.outputs.PointCalculator(
+        points=centreline, image_only=True
+    )
+    if args.calc_cline:
+        args.outputs.append("centreline")
+    if args.calc_mean:
+        args.outputs.append("flow_plot_xy_mean")
+    for variable in (FV.CT, FV.AMB_WD):
+        if variable not in mbook.outputs["farm_results"].fdata_variables:
+            mbook.outputs["farm_results"].fdata_variables.append(variable)
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
-        time0 = time.time()
-        # Request per-state metrics through output selection.
-        farm_results = algo.calc_farm(outputs=args.outputs)
-        time1 = time.time()
-
-    # Evaluate collected farm data only; writer-only outputs are already complete.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    required = {
-        FV.AMB_P,
-        FV.AMB_REWS,
-        FV.AMB_TI,
-        FV.EFF,
-        FV.P,
-        FV.REWS,
-        FV.TI,
-        FV.WD,
-        FV.X,
-    }
-    if farm_results is None or not required.issubset(farm_results.data_vars):
-        print(
-            "Skipping farm reporting: selected outputs do not collect the required fields:",
-            sorted(required),
-        )
-        return
-
-    if args.verbosity > 1:
-        print("\nCalc time =", time1 - time0, "\n")
-
-    # state-turbine results
-    farm_df = farm_results.to_dataframe()
-    if args.verbosity > 1:
-        print("\nFarm results data:\n")
-        print(
-            farm_df[
-                [
-                    FV.X,
-                    FV.WD,
-                    FV.AMB_REWS,
-                    FV.REWS,
-                    FV.AMB_TI,
-                    FV.TI,
-                    FV.AMB_P,
-                    FV.P,
-                    FV.EFF,
-                ]
-            ]
-        )
-        print()
-
-        print()
-
-    if not args.nofig and args.calc_cline:
-        points = np.zeros((n_s, n_p, 3))
-        points[:, :, 0] = np.linspace(p0[0], p0[0] + n_t * stp[0] + 10 * D, n_p)[
-            None, :
-        ]
-        points[:, :, 1] = p0[1]
-        points[:, :, 2] = H
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
         if args.verbosity > 1:
-            print("\nPOINTS:\n", points[0])
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-        with engine:
-            time0 = time.time()
-            point_results = algo.calc_points(farm_results, points)
-            time1 = time.time()
-
-        if args.verbosity > 1:
-            print("\nCalc time =", time1 - time0, "\n")
-
-            print(point_results)
-
-        fig, ax = plt.subplots()
-        for s in range(points.shape[0]):
-            ax.plot(points[s, :, 0], point_results[FV.WS][s, :])
-        ax.set_xlabel("x [m]")
-        ax.set_ylabel("Wind speed [m/s]")
-        ax.set_title("Centreline wind speed")
-        plt.show()
-        plt.close(fig)
-
-    if not args.nofig and args.calc_mean:
-        with engine:
-            fig = algo.calc_outputs(
-                outputs=foxes.models.outputs.FlowPlots2D(
-                    plane="xy",
-                    reduction="mean",
-                    plot=True,
-                    data_format="numpy",
-                    var=FV.WS,
-                    grid_pars=dict(resolution=10),
-                ),
-                farm_results=farm_results,
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
             )
-        plt.show()
-        plt.close(fig)
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

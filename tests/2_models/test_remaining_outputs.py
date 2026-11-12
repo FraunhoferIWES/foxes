@@ -213,6 +213,8 @@ def test_remaining_model_book_presets_execute(algorithm, name, tmp_path):
     output = algorithm.mbook.outputs[name]
     output.nofig = True
     output.show = False
+    if name in ("state_turbine_map", "rotor_point_plot", "turbine_type_curves"):
+        output.plot = False
     if name == "point_calculator":
         output.points = [[0.0, 0.0, 90.0]]
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):

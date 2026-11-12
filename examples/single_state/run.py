@@ -1,6 +1,5 @@
 import numpy as np
 import argparse
-import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
@@ -68,7 +67,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["flow_plot_xy_states", "flow_plot_xz_states"],
     )
     parser.add_argument(
         "-v",
@@ -87,11 +97,6 @@ def main(argv=None):
         [FV.AMB_WD, FV.CT, FV.EFF, FV.ORDER]
     )
 
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -139,100 +144,45 @@ def main(argv=None):
     )
 
     engine = foxes.Engine.new(args.engine, verbosity=max(args.verbosity - 1, 0))
+    mbook.outputs["flow_plot_xy_states"] = foxes.models.outputs.FlowPlots2D(
+        plane="xy",
+        reduction="states",
+        var=args.var,
+        show=True,
+        grid_pars=dict(resolution=10),
+        plot_pars=dict(rotor_color="red", figsize=(10, 3)),
+    )
+    mbook.outputs["flow_plot_xz_states"] = foxes.models.outputs.FlowPlots2D(
+        plane="xz",
+        reduction="states",
+        var=args.var,
+        show=True,
+        grid_pars=dict(x_direction=np.mod(args.wd, 360.0), resolution=20),
+        plot_pars=dict(rotor_color="red", figsize=(10, 3)),
+    )
+    for variable in (FV.CT, FV.AMB_WD):
+        if variable not in mbook.outputs["farm_results"].fdata_variables:
+            mbook.outputs["farm_results"].fdata_variables.append(variable)
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
-        farm_results = algo.calc_farm(outputs=args.outputs)
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-    # Evaluate collected farm data only; writer-only outputs are already complete.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    required = {
-        FV.AMB_P,
-        FV.AMB_REWS,
-        FV.AMB_TI,
-        FV.CT,
-        FV.EFF,
-        FV.ORDER,
-        FV.P,
-        FV.REWS,
-        FV.TI,
-        FV.WD,
-        FV.X,
-    }
-    if farm_results is None or not required.issubset(farm_results.data_vars):
-        print(
-            "Skipping farm reporting: selected outputs do not collect the required fields:",
-            sorted(required),
-        )
-        return
-
-    # state-turbine results
-    farm_df = farm_results.to_dataframe()
-    if args.verbosity > 1:
-        print("\nFarm results data:\n")
-        print(
-            farm_df[
-                [
-                    FV.X,
-                    FV.ORDER,
-                    FV.WD,
-                    FV.AMB_REWS,
-                    FV.REWS,
-                    FV.AMB_TI,
-                    FV.TI,
-                    FV.AMB_P,
-                    FV.P,
-                    FV.CT,
-                    FV.EFF,
-                ]
-            ]
-        )
-        print()
-
-    if not args.nofig:
-        # horizontal flow plot
-
-        with engine:
-            figures = algo.calc_outputs(
-                outputs=foxes.models.outputs.FlowPlots2D(
-                    plane="xy",
-                    reduction="states",
-                    plot=True,
-                    data_format="numpy",
-                    var=args.var,
-                    grid_pars=dict(resolution=10),
-                    plot_pars=dict(rotor_color="red", figsize=(10, 3)),
-                ),
-                farm_results=farm_results,
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
             )
-        plt.show()
-        for figure in figures:
-            plt.close(figure)
-
-        # vertical flow plot
-
-        with engine:
-            figures = algo.calc_outputs(
-                outputs=foxes.models.outputs.FlowPlots2D(
-                    plane="xz",
-                    reduction="states",
-                    plot=True,
-                    data_format="numpy",
-                    var=args.var,
-                    grid_pars=dict(x_direction=np.mod(args.wd, 360.0), resolution=20),
-                    plot_pars=dict(rotor_color="red", figsize=(10, 3)),
-                ),
-                farm_results=farm_results,
-            )
-        plt.show()
-        for figure in figures:
-            plt.close(figure)
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

@@ -34,6 +34,10 @@ class FlowAnimation(SliceData):
     return independent payloads; only finalization creates figures and files.
     """
 
+    def _creates_figures(self) -> bool:
+        """Identify animations as image-only, including their point grids."""
+        return True
+
     def __init__(
         self,
         chunk: int | tuple[int, int] | list[int | tuple[int, int]] | None = None,

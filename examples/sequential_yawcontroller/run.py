@@ -119,11 +119,18 @@ def main(argv=None):
         action="store_true",
     )
     parser.add_argument(
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
         "-o",
         "--outputs",
-        help="Farm collector and animation output models",
+        help="The post-processing output models",
         nargs="+",
-        default=["farm_results", "create_turbine_gif"],
+        default=["create_turbine_gif"],
     )
     parser.add_argument(
         "-v",
@@ -158,12 +165,17 @@ def main(argv=None):
         )
 
     # Keep animation diagnostics at the script's verbosity level.
-    for name in args.outputs:
+    animations = []
+    for name in dict.fromkeys([*args.results, *args.outputs]):
         selected = mbook.outputs[name]
+        selected.nofig = args.nofig
         if isinstance(selected, foxes.models.outputs.FlowAnimation):
             selected.verbosity = args.verbosity
-        if args.nofig and hasattr(selected, "show"):
-            selected.show = False
+            animations.append(name)
+        elif not isinstance(selected, foxes.models.outputs.FarmResultsOutput):
+            parser.error(
+                f"{name}: Sequential examples support farm outputs and animations"
+            )
 
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -259,7 +271,7 @@ def main(argv=None):
         mbook=mbook,
         plugins=[
             foxes.models.seq_plugins.SeqAnimationOutputPlugin(
-                [name for name in args.outputs if name != "farm_results"],
+                animations,
                 debug=args.debug,
             )
         ],
@@ -282,38 +294,36 @@ def main(argv=None):
             if args.verbosity > 1:
                 print(algo.index)
 
-    if "farm_results" in args.outputs:
+    # Reuse the accumulated iterator data for collector and farm-only outputs.
+    processor = foxes.algorithms.Downwind(
+        farm,
+        states,
+        wake_models=[],
+        mbook=mbook,
+        verbosity=max(args.verbosity - 1, 0),
+    )
+    with engine:
+        result_models = [
+            mbook.outputs[name]
+            for name in args.results
+            if not isinstance(mbook.outputs[name], foxes.models.outputs.FlowAnimation)
+        ]
+        results = processor.calc_outputs(
+            outputs=result_models, farm_results=algo.farm_results, ret_dict=True
+        )
         if args.verbosity > 1:
-            print("\nFarm results:\n")
-            print(algo.farm_results)
-    else:
-        print("Skipping farm reporting: -o farm_results was not selected.")
-
-    if not args.nofig and "farm_results" in args.outputs:
-        fres = algo.farm_results
-        plt.plot(fres["state"], fres["WD"].to_numpy()[:, 0], label="WD turbine 0")
-        plt.plot(fres["state"], fres["WD"].to_numpy()[:, 1], label="WD turbine 1")
-        plt.scatter(
-            fres["state"],
-            fres["YAW"].to_numpy()[:, 0],
-            label="YAW turbine 0",
-            marker="x",
-            s=15,
-        )
-        plt.scatter(
-            fres["state"],
-            fres["YAW"].to_numpy()[:, 1],
-            label="YAW turbine 1",
-            marker="x",
-            s=15,
-        )
-        plt.legend()
-        plt.title(
-            f"max_yawm = {args.max_yawm} deg, max_yaw_rate = {args.max_yaw_rate} deg/s"
-        )
-        plt.xlabel("Time step")
-        plt.ylabel("Degrees")
-        plt.show()
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
+        for name in args.outputs:
+            output = mbook.outputs[name]
+            if isinstance(output, foxes.models.outputs.FlowAnimation):
+                continue
+            output_results = processor.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
+            )
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

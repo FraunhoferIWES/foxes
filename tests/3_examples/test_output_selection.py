@@ -19,7 +19,31 @@ POSITIONALS = {
     "icon_dream": ["synthetic.nc", "farms.csv", "curves"],
     "random_timeseries": ["2", "3"],
 }
-ANIMATIONS = {"timelines", "sequential", "sequential_yawcontroller"}
+DEFAULT_OUTPUTS = {
+    "binned_states": ["rose_plot"],
+    "compare_gaussian_lookup_pwakes": ["comparison"],
+    "compare_rotors_pwakes": ["comparison"],
+    "compare_wakes": ["cross_sections", "centreline"],
+    "dyn_wakes": ["create_turbine_gif"],
+    "field_data_nc": ["slices", "flow_plot_xy_mean"],
+    "gaussian_lookup_partial_wakes": ["flow_plot_xy_states"],
+    "induction": ["flow_plot_xy_states"],
+    "power_mask": ["state_turbine_map"],
+    "random_timeseries": ["farm_layout", "rose_plot"],
+    "scan_row": ["state_turbine_map"],
+    "sector_management": ["power_rose_0", "power_rose_1"],
+    "sequential": ["create_turbine_gif"],
+    "sequential_yawcontroller": ["create_turbine_gif"],
+    "single_state": ["flow_plot_xy_states", "flow_plot_xz_states"],
+    "streamline_wakes": ["flow_plot_xy_states"],
+    "tab_file": ["rose_plot"],
+    "timelines": ["create_turbine_gif"],
+    "timeseries": ["state_turbine_map"],
+    "timeseries_slurm": ["state_turbine_map"],
+    "wake_fields": ["wake_field"],
+    "wind_rose": ["rose_plot"],
+    "yawed_wake": ["flow_plot_xy_states", "flow_plot_yz_states"],
+}
 
 
 class ParserCaptured(Exception):
@@ -44,15 +68,11 @@ def parse_example(monkeypatch, script, options):
 
 @pytest.mark.parametrize("script", SCRIPTS, ids=lambda path: path.parent.name)
 def test_default_outputs(monkeypatch, script):
-    expected = ["farm_results"]
-    if script.parent.name in ANIMATIONS:
-        expected.append("create_turbine_gif")
-    elif script.parent.name == "wake_fields":
-        expected = ["wake_field"]
-    elif script.parent.name == "field_data_nc":
-        expected = ["farm_results", "slices"]
     args = parse_example(monkeypatch, script, [])
-    assert args.outputs == expected
+    assert args.results == ["farm_results"]
+    assert args.outputs == DEFAULT_OUTPUTS.get(
+        script.parent.name, ["state_turbine_table"]
+    )
     assert args.verbosity == 2
 
 
@@ -63,6 +83,42 @@ def test_output_selection(monkeypatch, script, flag):
     args = parse_example(monkeypatch, script, [flag, *outputs, "--nofig"])
     assert args.outputs == outputs
     assert args.nofig is True
+
+
+@pytest.mark.parametrize("script", SCRIPTS, ids=lambda path: path.parent.name)
+@pytest.mark.parametrize("flag", ["-R", "--results"])
+def test_result_selection_is_independent(monkeypatch, script, flag):
+    results = ["farm_results_P", "total_results_mean"]
+    args = parse_example(
+        monkeypatch, script, [flag, *results, "-o", "farm_layout", "-nf"]
+    )
+    assert args.results == results
+    assert args.outputs == ["farm_layout"]
+    assert args.nofig
+
+
+@pytest.mark.parametrize("script", SCRIPTS, ids=lambda path: path.parent.name)
+def test_workflow_remains_monolithic(script):
+    import ast
+
+    functions = [
+        node.name
+        for node in ast.walk(ast.parse(script.read_text()))
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    assert functions == ["main"]
+
+
+@pytest.mark.parametrize("example", ["timeseries", "dyn_wakes", "timelines"])
+def test_rotor_and_reference_options_remain_independent(monkeypatch, example):
+    options = ["-r", "grid4", "-R", "farm_results_P"]
+    if example != "timeseries":
+        options.extend(["--ref_xy", "100", "200"])
+    args = parse_example(monkeypatch, EXAMPLES / example / "run.py", options)
+    assert args.rotor == "grid4"
+    assert args.results == ["farm_results_P"]
+    if example != "timeseries":
+        assert args.ref_xy == [100, 200]
 
 
 @pytest.mark.parametrize("script", SCRIPTS, ids=lambda path: path.parent.name)
@@ -145,6 +201,7 @@ def test_animation_diagnostics_use_script_verbosity(
     output = mbook.outputs[output_name]
     assert output.verbosity == (2 if verbosity is None else verbosity)
     assert not output.show
+    assert output.nofig
 
 
 @pytest.mark.parametrize("kind", ["yaml", "windio"])
@@ -177,9 +234,10 @@ def test_yaml_runner_preserves_explicit_verbosity(
 
 
 @pytest.mark.parametrize("script", SCRIPTS, ids=lambda path: path.parent.name)
-def test_empty_output_rejected(monkeypatch, script):
+@pytest.mark.parametrize("flag", ["-o", "-R"])
+def test_empty_output_rejected(monkeypatch, script, flag):
     with pytest.raises(SystemExit) as error:
-        parse_example(monkeypatch, script, ["-o"])
+        parse_example(monkeypatch, script, [flag])
     assert error.value.code == 2
 
 
@@ -263,59 +321,45 @@ def test_isolation_preserves_existing_figures(tmp_path):
         plt.close(figure)
 
 
-@pytest.mark.parametrize(
-    "example,calculations", [("quickstart", 1), ("timeseries", 1), ("power_mask", 2)]
-)
-@pytest.mark.parametrize("collect", [False, True])
-def test_missing_report_fields_do_not_skip_calculations(
-    monkeypatch, capsys, example, calculations, collect
-):
-    calls = []
-
-    def calculate(self, *, outputs):
-        calls.append(outputs)
-        return xr.Dataset({"P": (("state", "turbine"), [[100.0]])}) if collect else {}
-
-    monkeypatch.setattr(foxes.algorithms.Downwind, "calc_farm", calculate)
-    directory = EXAMPLES / example
-    with RUNNER.isolated_example(directory, nofig=True) as work:
-        RUNNER._load(EXAMPLES / "_quick_inputs.py").prepare_inputs(work, example)
-        options = RUNNER.command(directory, quick=True)[2:]
-        output = "farm_results_P" if collect else "farm_results_write_n2"
-        RUNNER._load(work / "run.py").main(
-            [*options, "-o", output, "--nofig", "-v", "1"]
-        )
-    assert len(calls) == calculations
-    text = capsys.readouterr().out
-    if example == "quickstart" and collect:
-        assert text == "Running example: quickstart\n"
-    if example != "quickstart" or not collect:
-        assert "Skipping" in text
-
-
 @pytest.mark.parametrize("script", SCRIPTS, ids=lambda path: path.parent.name)
 @pytest.mark.parametrize("verbosity", [0, 1, 2, 3])
-@pytest.mark.parametrize("delivery", ["direct", "mapping", "absent", "nonfarm"])
-def test_farm_dataset_reporting_does_not_depend_on_report_fields(
+@pytest.mark.parametrize("delivery", ["farm", "grouped", "absent", "nonfarm"])
+def test_result_reporting_and_postprocessing_are_independent(
     monkeypatch, capsys, script, verbosity, delivery
 ):
-    # Stub science, but execute each script's real selection and reporting paths.
+    # Execute every script's real CLI and both stages without repeating science.
     data = xr.Dataset({"P": (("state", "turbine"), [[100.0]])})
-    calls = []
-    original_calculate = foxes.algorithms.Downwind.calc_farm
+    result_mapping = {
+        "farm": {"farm_results": data, "other": "calculation finished"},
+        "grouped": {"mean_total_farm_results": data},
+        "absent": {},
+        "nonfarm": {"probe": data},
+    }[delivery]
+    calculations, processed = [], []
 
-    def calculate(self, *args, **kwargs):
-        if not isinstance(kwargs.get("outputs"), list):
-            return original_calculate(self, *args, **kwargs)
-        calls.append(kwargs["outputs"])
-        if delivery == "absent":
-            return {}
-        if delivery == "mapping":
-            return {"farm_results": data, "other": "finished"}
-        return data
+    def calculate(self, *, outputs, ret_dict):
+        assert ret_dict
+        assert outputs == ["farm_results_P"]
+        calculations.append(outputs)
+        return result_mapping
+
+    def process(self, *, outputs, farm_results, ret_dict):
+        assert ret_dict
+        if isinstance(outputs, list):
+            # Sequential collects its accumulated iterator data through this API.
+            calculations.append(outputs)
+            return result_mapping
+        assert outputs == "state_turbine_table"
+        assert farm_results is result_mapping.get("farm_results")
+        assert self.mbook.outputs[outputs].nofig
+        assert calculations
+        outputs_marker = f"post-processing result {len(calculations)}"
+        processed.append(outputs_marker)
+        return {"post": outputs_marker}
 
     monkeypatch.setattr(foxes.algorithms.Downwind, "calc_farm", calculate)
     monkeypatch.setattr(foxes.algorithms.Iterative, "calc_farm", calculate)
+    monkeypatch.setattr(foxes.algorithms.Downwind, "calc_outputs", process)
     sequential = script.parent.name in {"sequential", "sequential_yawcontroller"}
     if sequential:
         monkeypatch.setattr(
@@ -324,29 +368,33 @@ def test_farm_dataset_reporting_does_not_depend_on_report_fields(
         monkeypatch.setattr(
             foxes.algorithms.Sequential, "farm_results", property(lambda self: data)
         )
-    selected = delivery in {"direct", "mapping"}
-    outputs = ["farm_results" if sequential else "farm_results_P"]
-    if delivery == "mapping":
-        outputs.append("create_gif" if sequential else "farm_results_write_n2")
-    elif delivery == "absent":
-        outputs = ["create_gif" if sequential else "farm_results_write_n2"]
-    elif delivery == "nonfarm":
-        outputs = ["create_gif" if sequential else "slice_data_xy_states"]
     with RUNNER.isolated_example(script.parent, nofig=True) as work:
         RUNNER._load(EXAMPLES / "_quick_inputs.py").prepare_inputs(
             work, script.parent.name
         )
         options = RUNNER.command(script.parent, quick=True)[2:]
         RUNNER._load(work / "run.py").main(
-            [*options, "-o", *outputs, "--nofig", "-v", str(verbosity)]
+            [
+                *options,
+                "-R",
+                "farm_results_P",
+                "-o",
+                "state_turbine_table",
+                "-nf",
+                "-v",
+                str(verbosity),
+            ]
         )
     text = capsys.readouterr().out
-    reports = text.lower().count("farm results:\n")
-    count = 1 if sequential else len(calls)
-    assert count > 0
-    assert reports == (count if selected and verbosity > 1 else 0)
-    if selected and verbosity > 1:
-        assert text.count(str(data)) == count
+    assert calculations
+    assert len(processed) == len(calculations)
+    for key, value in result_mapping.items():
+        assert text.count(f"\n{key}:\n{value}") == (
+            len(calculations) if verbosity > 1 else 0
+        )
+    for value in processed:
+        assert (f"\npost:\n{value}" in text) == (verbosity > 1)
+    assert "Skipping" not in text
 
 
 @pytest.mark.parametrize("verbosity", [0, 1, 2, 3])
@@ -354,20 +402,91 @@ def test_optional_benchmark_reports_each_collected_farm(monkeypatch, capsys, ver
     data = xr.Dataset({"P": (("state", "turbine"), [[100.0]])})
     calls = []
 
-    def calculate(self, *, outputs):
+    def calculate(self, *, outputs, ret_dict):
         calls.append(outputs)
+        assert ret_dict
         assert self.verbosity == max(verbosity - 1, 0)
-        return data
+        return {"farm_results": data}
 
     monkeypatch.setattr(foxes.algorithms.Downwind, "calc_farm", calculate)
+    monkeypatch.setattr(
+        foxes.algorithms.Downwind, "calc_outputs", lambda *args, **kwargs: {}
+    )
     module = RUNNER._load(EXAMPLES / "compare_gaussian_lookup_pwakes" / "run.py")
-    with foxes.Engine.new("numpy", verbosity=0) as engine:
-        module.benchmark_large_case(
-            engine, 1, ["farm_results_P"], nofig=True, verbosity=verbosity
+    with RUNNER.isolated_example(
+        EXAMPLES / "compare_gaussian_lookup_pwakes", nofig=True
+    ):
+        module.main(
+            [
+                "-e",
+                "numpy",
+                "-y",
+                "0.1",
+                "-s",
+                "0.1",
+                "--runtime-benchmark",
+                "--benchmark-turbines",
+                "1",
+                "-R",
+                "farm_results_P",
+                "-nf",
+                "-v",
+                str(verbosity),
+            ]
         )
     text = capsys.readouterr().out
-    assert calls == [["farm_results_P"]] * 3
-    assert text.count(str(data)) == (3 if verbosity > 1 else 0)
+    assert calls == [["farm_results_P"]] * 6
+    assert text.count(str(data)) == (6 if verbosity > 1 else 0)
+
+
+@pytest.mark.parametrize(
+    "script",
+    [path for path in SCRIPTS if not path.parent.name.startswith("sequential")],
+    ids=lambda path: path.parent.name,
+)
+def test_nofig_is_forwarded_without_filtering_either_selection(monkeypatch, script):
+    calls = []
+    selected_results = ["farm_results", "create_gif", "flow_plot_xy_states"]
+    selected_outputs = ["create_gif", "flow_plot_xy_states"]
+
+    def calculate(self, *, outputs, ret_dict):
+        assert outputs == selected_results
+        assert all(self.mbook.outputs[name].nofig for name in outputs)
+        assert ret_dict
+        calls.append(outputs)
+        return {"farm_results": xr.Dataset()}
+
+    def process(self, *, outputs, farm_results, ret_dict):
+        assert outputs in selected_outputs
+        assert self.mbook.outputs[outputs].nofig
+        assert ret_dict
+        assert isinstance(farm_results, xr.Dataset)
+        return {}
+
+    monkeypatch.setattr(foxes.algorithms.Downwind, "calc_farm", calculate)
+    monkeypatch.setattr(foxes.algorithms.Iterative, "calc_farm", calculate)
+    monkeypatch.setattr(foxes.algorithms.Downwind, "calc_outputs", process)
+    with RUNNER.isolated_example(script.parent, nofig=True) as work:
+        RUNNER._load(EXAMPLES / "_quick_inputs.py").prepare_inputs(
+            work, script.parent.name
+        )
+        options = RUNNER.command(script.parent, quick=True)[2:]
+        RUNNER._load(work / "run.py").main(
+            [
+                *options,
+                "-R",
+                "farm_results",
+                "create_gif",
+                "flow_plot_xy_states",
+                "-o",
+                "create_gif",
+                "flow_plot_xy_states",
+                "-nf",
+                "-v",
+                "0",
+            ]
+        )
+    assert calls
 
 
 @pytest.mark.parametrize("verbosity", [None, 0, 1, 2, 3])

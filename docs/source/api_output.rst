@@ -1,7 +1,7 @@
 Output models
 =============
 For a runnable introduction, see :doc:`the practical output guide <notebooks/outputs>`.
-It demonstrates common collectors, automatic turbine evaluation, aggregation,
+It demonstrates farm and point results, automatic turbine evaluation, aggregation,
 point probes, plots, writers and animation with small synthetic inputs.
 
 Adopted outputs derive from ``foxes.core.Output`` and are exported from
@@ -35,6 +35,23 @@ and lists of either are supported by ``calc_farm``, ``calc_points`` and
         farm_results = algo.calc_farm(outputs=FarmResultsOutput(
             variables=[FV.P, FV.AMB_P, FV.CAP, FV.CAPF, FV.EFF, FV.YLD],
         ))
+
+All three entry points accept ``ret_dict=True`` to retain the result-name mapping
+even when one selected output returns exactly one value. The default remains
+the unwrapped value; composed outputs, writers and disabled collection retain
+their existing schemas. ``Iterative.calc_farm`` preserves only its final output
+mapping, leaving convergence datasets and optional downwind-order history intact.
+
+.. code-block:: python
+
+    results = algo.calc_farm(outputs=["farm_results"], ret_dict=True)
+    for key, data in results.items():
+        print(f"{key}:\n{data}")
+    outputs = algo.calc_outputs(
+        outputs="state_turbine_table",
+        farm_results=results.get("farm_results"),
+        ret_dict=True,
+    )
 
 Derived farm fields are evaluated automatically by ``TurbineEvaluation``
 through output preparation. No turbine-model registration is needed.
@@ -92,8 +109,15 @@ presets in scripts and headless workflows:
     algo.mbook.outputs["flow_plot_xy_mean"].show = False
     result = algo.calc_farm(outputs="flow_plot_xy_mean")
 
-``plot=False`` selects numerical results without display. ``nofig=True`` also
-suppresses figure generation, including layout plot files and animations.
+``plot=False`` selects numerical results without display. ``nofig=True`` disables
+image-producing modes before initialization, field preparation and point-grid
+requests, including layout plot files and animations. Disabled outputs add no
+result; selecting only disabled outputs returns ``{}``, not numerical plot data.
+Nested ``OutputList`` instances propagate suppression without mutating children.
+Numerical modes, data-only layout operations and writers remain enabled.
+Mark numerical probes consumed exclusively by downstream plots with
+``image_only=True`` to disable their calculations with ``nofig`` too.
+Sequential animation plugins apply the same check before evaluating step points.
 Data-only layout operations, numerical outputs and returned frame generators
 do not force display. Showing windows or playing animations requires an
 interactive Matplotlib backend; FOXES does not select a backend or silence
@@ -114,8 +138,9 @@ inherit the executing algorithm's level, or an explicit level:
 
 Animation examples use their ``-v``/``--verbosity`` level directly, independently
 of reduced library verbosity. Their default is ``2``; ``run_all.py`` explicitly
-passes ``-v 0`` unless configured otherwise. Figure-less example execution still
-writes explicitly selected animations.
+passes ``-v 0`` unless configured otherwise. Figure-less Python examples configure ``nofig`` on selected outputs; the
+framework skips animation writers and image-only point calculations.
+Explicit numerical outputs remain enabled.
 
 Compact calculation payloads
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -4,22 +4,29 @@ Examples
 Python scripts
 --------------
 
-The Downwind and Iterative scripts in the repository's ``examples`` directory
-accept ``-o/--outputs`` followed by one or more names from ``ModelBook.outputs``.
-The default is ``farm_results``. For example, from ``examples/timeseries``:
+Every Python script in ``examples`` keeps its workflow in ``main(argv=None)``.
+Use ``-R/--results`` for calculation result models (default: ``farm_results``)
+and ``-o/--outputs`` for subsequent script-specific output models. Both accept
+one or more names from ``ModelBook.outputs``. ``-r`` retains its rotor meaning;
+reference points use ``--ref_xy``. For example, from ``examples/timeseries``:
 
 .. code-block:: console
 
-    uv run run.py -nf -o farm_results farm_results_write_n1000
-    uv run run.py -nf -o create_gif
-    uv run run.py -nf -o create_turbine_gif
+    uv run run.py -nf -R farm_results farm_results_write_n1000
+    uv run run.py -R farm_results_all -o create_gif
+    uv run run.py -R farm_results_all -o create_turbine_gif
 
-Writer-only selections complete the calculation and write files without
-requiring an in-memory farm dataset for subsequent reporting or plots.
-Composed selections retain reporting when a collector returns ``farm_results``.
-Use ``farm_results_all`` instead of ``farm_results`` when later point evaluation
-or custom reports need fields outside the default set. ``-nf`` suppresses
-interactive figures, not explicitly requested output files.
+The scripts use ``ret_dict=True`` and print every returned key followed by its
+value on a new line at verbosity two and three. Levels zero and one suppress
+these values. Subsequent outputs receive the calculation mapping's
+``farm_results`` entry, or ``None`` if absent, without special dataframe reports.
+Outputs with different grids run independently. Use ``farm_results_all`` when
+subsequent numerical consumers need fields outside the configured default set.
+``-nf`` skips plots, animations, image files and image-only point calculations.
+Scripts configure ``Output.nofig``; the output framework handles suppression
+before requesting grids, without script-side type filtering.
+Explicit numerical slices, point data, NetCDF writers and scientific input
+reductions remain enabled.
 
 ``create_turbine_gif`` and ``create_turbine_mp4`` add a synchronized
 turbine-REWS panel to the flow animation. They write ``ani_WS.gif`` and
@@ -44,20 +51,23 @@ and turbine-REWS animation, including layout annotations and the reference
 marker. Use ``-o create_turbine_gif`` or ``-o create_turbine_mp4`` to write
 ``ani_WS.gif`` or ``ani_WS.mp4``; MP4 requires ffmpeg.
 ``-F/--fps`` sets the frame rate.
-Include ``farm_results`` in the selection when result reporting is also wanted.
+Select calculation results independently through ``-R/--results``.
 
 ``timelines`` uses the same turbine-animation selections and retains its
 original synchronized flow/REWS panels.
 The ``sequential`` and ``sequential_yawcontroller`` scripts accept
 ``-o create_gif`` or ``-o create_mp4`` for their original flow-only animations,
-and optionally ``farm_results`` for reporting. They use
+and ``-R/--results`` for collection and reporting. They use
 ``SeqAnimationOutputPlugin`` to evaluate points during each state step and render
-only at iterator completion. Other output writer types are not supported by
-these two scripts. ``--debug`` retains wake point/vector overlays; ``-F`` sets
-the frame rate. Animation selection replaces their old animation flags.
+only at iterator completion. Farm collectors, tables, maps and writers process
+the accumulated iterator data through an output-only Downwind processor.
+Other point-dependent outputs are not supported by these two scripts.
+``--debug`` retains wake point/vector overlays; ``-F`` sets the frame rate.
+Animation plugins skip disabled outputs before requesting points under ``-nf``.
 
-YAML-only examples and the standalone wake-field exporter do not use this
-script option. YAML output configuration remains in its parameter file.
+The standalone wake-field exporter defaults to the numerical ``wake_field``
+output after farm collection. YAML output configuration remains in its parameter
+file rather than using these script selectors.
 
 Notebooks
 ---------
@@ -76,6 +86,10 @@ model-book animation outputs and display their saved GIF files. Temporary output
 directories are cleaned after display. The sequential notebook preserves its
 600 ms frame interval using ``fps=5 / 3``. The timelines notebook uses state
 and point chunking, like the script.
+Dynamic-wake and timelines calculations retain keyed ``farm_results_all`` first,
+then create animations through ``calc_outputs`` with those farm results.
+The output guide demonstrates stable keyed returns and ``nofig=True`` suppression
+before point-grid requests, using results-oriented terminology.
 
     .. toctree::
         :titlesonly:

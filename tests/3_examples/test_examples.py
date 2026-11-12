@@ -25,6 +25,17 @@ def test_example(example, monkeypatch, capsys):
         pytest.fail("A figure-less example attempted to show a figure")
 
     monkeypatch.setattr(plt, "show", forbidden_show)
+    monkeypatch.setattr(plt, "figure", forbidden_show)
+    if (example / "run.py").is_file() and example.name not in {
+        "binned_states",
+        "field_data_nc",
+        "wake_fields",
+    }:
+
+        def forbidden_points(*args, **kwargs):
+            pytest.fail("A figure-less example evaluated an image-only point grid")
+
+        monkeypatch.setattr(foxes.algorithms.Downwind, "calc_points", forbidden_points)
     original_algorithm = foxes.core.Algorithm.__init__
     original_engine = foxes.core.Engine.__init__
 

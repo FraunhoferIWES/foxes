@@ -200,3 +200,24 @@ def test_no_animation_does_not_collect_debug():
     with foxes.Engine.new("single", verbosity=0):
         list(_algorithm(plugin))
     assert plugin._debug is None
+
+
+@pytest.mark.parametrize("named", [False, True])
+def test_nofig_animation_skips_step_points_and_debug(tmp_path, monkeypatch, named):
+    output = FlowAnimation(nofig=True, out_dir=tmp_path)
+    plugin = foxes.models.seq_plugins.SeqAnimationOutputPlugin(
+        ["create_gif"] if named else [output], debug=True
+    )
+    algo = _algorithm(plugin)
+    if named:
+        algo.mbook.outputs["create_gif"] = output
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("A nofig Sequential animation initialized or evaluated points")
+
+    monkeypatch.setattr(output, "initialize", forbidden)
+    monkeypatch.setattr(algo, "calc_points", forbidden)
+    with foxes.Engine.new("single", verbosity=0):
+        list(algo)
+    assert plugin._debug is None
+    assert not list(tmp_path.iterdir())

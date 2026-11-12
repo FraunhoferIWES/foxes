@@ -7,73 +7,6 @@ import foxes
 import foxes.variables as FV
 
 
-def calc(args, rotor, sdata, pwake):
-    mbook = foxes.models.ModelBook()
-
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
-    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
-    mbook.turbine_types[ttype.name] = ttype
-    D = ttype.D
-
-    farm = foxes.WindFarm()
-    farm.add_turbine(
-        foxes.Turbine(
-            xy=np.array([0.0, 0.0]), turbine_models=args.tmodels + [ttype.name]
-        ),
-        verbosity=max(args.verbosity - 1, 0),
-    )
-    farm.add_turbine(
-        foxes.Turbine(
-            xy=np.array([args.dist_x, 0.0]),
-            turbine_models=["sety"] + args.tmodels + [ttype.name],
-        ),
-        verbosity=max(args.verbosity - 1, 0),
-    )
-
-    states = foxes.input.states.StatesTable(
-        sdata,
-        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.RHO: "rho"},
-    )
-
-    ydata = np.full((len(sdata.index), farm.n_turbines), np.nan)
-    ydata[:, 1] = sdata["y"].to_numpy()
-    mbook.turbine_models["sety"] = foxes.models.turbine_models.SetFarmVars()
-    mbook.turbine_models["sety"].add_var(FV.Y, ydata)
-
-    algo = foxes.algorithms.Downwind(
-        farm,
-        states,
-        wake_models=args.wakes,
-        rotor_model=rotor,
-        wake_frame="rotor_wd",
-        partial_wakes=pwake,
-        mbook=mbook,
-        verbosity=max(args.verbosity - 1, 0),
-    )
-
-    if args.verbosity > 1:
-        print(f"\nCalculating rotor = {rotor}, pwake = {pwake}")
-    farm_results = algo.calc_farm(outputs=args.outputs)
-
-    # Leave numerical comparison to callers only when farm data was collected.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-
-    return farm_results, D
-
-
 def main(argv=None):
     """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser()
@@ -150,7 +83,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["comparison"],
     )
     parser.add_argument(
         "-v",
@@ -183,7 +127,18 @@ def main(argv=None):
     sdata["rho"] = args.rho
     sdata["y"] = np.linspace(args.ymin, args.ymax, Ny + 1)
 
-    fig, ax = plt.subplots(figsize=(10, 4))
+    # Select every scientific case before evaluating its requested outputs.
+    if len(args.rotors) == 1:
+        cases = [(args.rotors[0], pwake) for pwake in args.pwakes]
+    elif len(args.pwakes) == 1:
+        cases = [(rotor, args.pwakes[0]) for rotor in args.rotors]
+    elif len(args.rotors) == len(args.pwakes):
+        cases = list(zip(args.rotors, args.pwakes))
+    else:
+        raise ValueError(
+            "Please either give one rotor, or one pwake, or same number of both"
+        )
+
     engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
@@ -191,111 +146,104 @@ def main(argv=None):
         chunk_size_points=args.chunksize_points,
         verbosity=max(args.verbosity - 1, 0),
     )
+    comparisons = []
+    with engine:
+        for rotor, pwake in cases:
+            mbook = foxes.models.ModelBook()
 
-    # Collect every case before plotting the available farm datasets.
-    title = None
-    if len(args.rotors) == 1:
-        pwake_results = []
-        with engine:
-            for pwake in args.pwakes:
-                farm_results, D = calc(args, args.rotors[0], sdata, pwake)
-                pwake_results.append((pwake, farm_results))
+            mbook.outputs["comparison"] = foxes.models.outputs.StateTurbineTable(
+                variables=[FV.Y, args.var],
+                result_name="comparison",
+            )
+            # Suppress figure creation in both stages, not just display.
+            for name in [*args.results, *args.outputs]:
+                output = mbook.outputs[name]
+                output.nofig = args.nofig
 
-        for pwake, farm_results in pwake_results:
-            required = {FV.Y, var}
-            if farm_results is None or not required.issubset(farm_results.data_vars):
-                print(
-                    "Skipping comparison: selected outputs do not collect",
-                    sorted(required),
+            ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
+            mbook.turbine_types[ttype.name] = ttype
+            D = ttype.D
+
+            farm = foxes.WindFarm()
+            farm.add_turbine(
+                foxes.Turbine(
+                    xy=np.array([0.0, 0.0]), turbine_models=args.tmodels + [ttype.name]
+                ),
+                verbosity=max(args.verbosity - 1, 0),
+            )
+            farm.add_turbine(
+                foxes.Turbine(
+                    xy=np.array([args.dist_x, 0.0]),
+                    turbine_models=["sety"] + args.tmodels + [ttype.name],
+                ),
+                verbosity=max(args.verbosity - 1, 0),
+            )
+
+            states = foxes.input.states.StatesTable(
+                sdata,
+                output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+                var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.RHO: "rho"},
+            )
+
+            ydata = np.full((len(sdata.index), farm.n_turbines), np.nan)
+            ydata[:, 1] = sdata["y"].to_numpy()
+            mbook.turbine_models["sety"] = foxes.models.turbine_models.SetFarmVars()
+            mbook.turbine_models["sety"].add_var(FV.Y, ydata)
+
+            algo = foxes.algorithms.Downwind(
+                farm,
+                states,
+                wake_models=args.wakes,
+                rotor_model=rotor,
+                wake_frame="rotor_wd",
+                partial_wakes=pwake,
+                mbook=mbook,
+                verbosity=max(args.verbosity - 1, 0),
+            )
+
+            if args.verbosity > 1:
+                print(f"\nCalculating rotor = {rotor}, pwake = {pwake}")
+            # Keep result keys even when only one model is selected.
+            results = algo.calc_farm(outputs=args.results, ret_dict=True)
+            if args.verbosity > 1:
+                for key, data in results.items():
+                    print(f"\n{key}:\n{data}")
+
+            # Independent output calls allow different point grids.
+            output_results = {}
+            for name in args.outputs:
+                data = algo.calc_outputs(
+                    outputs=name,
+                    farm_results=results.get("farm_results"),
+                    ret_dict=True,
                 )
-                continue
+                if args.verbosity > 1:
+                    for key, value in data.items():
+                        print(f"\n{key}:\n{value}")
+                output_results.update(data)
+            data = output_results.get("comparison")
+            if data is not None:
+                comparisons.append((f"{rotor}, {pwake}", data, D))
 
-            ax.plot(
-                farm_results[FV.Y][:, 1] / D,
-                farm_results[var][:, 1] / varn,
-                linewidth=2,
-                alpha=0.6,
-                label=pwake,
-            )
-
-            title = f"{swks}, variable {var}\nVarying partial wake models, {ttl0}, rotor = {args.rotors[0]}"
-
-    elif len(args.pwakes) == 1:
-        rotor_results = []
-        with engine:
-            for rotor in args.rotors:
-                farm_results, D = calc(args, rotor, sdata, args.pwakes[0])
-                rotor_results.append((rotor, farm_results))
-
-        for rotor, farm_results in rotor_results:
-            required = {FV.Y, var}
-            if farm_results is None or not required.issubset(farm_results.data_vars):
-                print(
-                    "Skipping comparison: selected outputs do not collect",
-                    sorted(required),
-                )
-                continue
-
-            ax.plot(
-                farm_results[FV.Y][:, 1] / D,
-                farm_results[var][:, 1] / varn,
-                linewidth=2,
-                alpha=0.6,
-                label=rotor,
-            )
-
-            title = f"{swks}, variable {var}\nVarying rotor models, {ttl0}, pwake = {args.pwakes[0]}"
-
-    elif len(args.rotors) == len(args.pwakes):
-        all_results = []
-        with engine:
-            for rotor, pwake in zip(args.rotors, args.pwakes):
-                farm_results, D = calc(args, rotor, sdata, pwake)
-                all_results.append((rotor, pwake, farm_results))
-
-        for rotor, pwake, farm_results in all_results:
-            required = {FV.Y, var}
-            if farm_results is None or not required.issubset(farm_results.data_vars):
-                print(
-                    "Skipping comparison: selected outputs do not collect",
-                    sorted(required),
-                )
-                continue
-
-            ax.plot(
-                farm_results[FV.Y][:, 1] / D,
-                farm_results[var][:, 1] / varn,
-                linewidth=2,
-                alpha=0.6,
-                label=f"{rotor}, {pwake}",
-            )
-
-            title = (
-                "{swks}, variable {var}\nVarying rotor and partial wake models, {ttl0}"
-            )
-
-    else:
-        raise ValueError(
-            "Please either give one rotor, or one pwake, or same number of both"
-        )
-
-    # Writer-only selections complete every case without leaving a figure open.
-    if title is None:
-        plt.close(fig)
-        print(
-            "Skipping comparison plots: no compatible farm-results output was selected."
-        )
+    if args.nofig or not comparisons:
         return
 
-    if args.title is not None:
-        title = args.title
-
-    ax.set_title(title)
+    # Plot only the explicitly selected comparison table.
+    fig, ax = plt.subplots(figsize=(10, 4))
+    for label, data, diameter in comparisons:
+        ax.plot(
+            data[FV.Y][:, 1] / diameter,
+            data[var][:, 1] / varn,
+            linewidth=2,
+            alpha=0.6,
+            label=label,
+        )
+    ax.set_title(args.title or f"{swks}, variable {var}\n{ttl0}")
     ax.set_xlabel("y/D")
     ax.set_ylabel(vlab)
     ax.legend()
-    if not args.nofig:
-        plt.show()
+    plt.show()
+    plt.close(fig)
 
 
 if __name__ == "__main__":

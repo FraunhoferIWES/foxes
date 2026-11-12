@@ -85,6 +85,8 @@ class SeqAnimationOutputPlugin(SequentialPlugin):
                 raise TypeError(
                     f"Sequential animation requires FlowAnimation, got {type(output).__name__}"
                 )
+            if output.get_enabled_output() is None:
+                continue
             algo.init_model(output)
             loaded = algo.loaded_data
             selection = (

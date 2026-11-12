@@ -1,6 +1,4 @@
-import numpy as np
 import argparse
-import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
@@ -61,7 +59,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["flow_plot_xy_states"],
     )
     parser.add_argument(
         "-v",
@@ -78,11 +87,6 @@ def main(argv=None):
     mbook = foxes.ModelBook()
     mbook.outputs["farm_results"].fdata_variables.extend([FV.AMB_WD, FV.CT, FV.EFF])
 
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -120,112 +124,42 @@ def main(argv=None):
     )
 
     engine = foxes.Engine.new(args.engine, verbosity=max(args.verbosity - 1, 0))
+    mbook.outputs["flow_plot_xy_states"] = foxes.models.outputs.FlowPlots2D(
+        plane="xy",
+        reduction="states",
+        var=args.var,
+        show=True,
+        grid_pars=dict(
+            resolution=20,
+            xmin=-2000,
+            xmax=(args.nx - 1) * args.dx + 2000,
+            yspace=1000.0,
+        ),
+        plot_pars=dict(figsize=(7, 5), levels=40, rotor_color="black"),
+    )
+    for variable in (FV.CT, FV.AMB_WD):
+        if variable not in mbook.outputs["farm_results"].fdata_variables:
+            mbook.outputs["farm_results"].fdata_variables.append(variable)
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
-        farm_results = algo.calc_farm(outputs=args.outputs)
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-    # Evaluate collected farm data only; writer-only outputs are already complete.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    required = {
-        FV.AMB_P,
-        FV.AMB_REWS,
-        FV.AMB_TI,
-        FV.CT,
-        FV.EFF,
-        FV.P,
-        FV.REWS,
-        FV.TI,
-        FV.WD,
-        FV.X,
-    }
-    if farm_results is None or not required.issubset(farm_results.data_vars):
-        print(
-            "Skipping farm reporting: selected outputs do not collect the required fields:",
-            sorted(required),
-        )
-        return
-
-    # state-turbine results
-    farm_df = farm_results.to_dataframe()
-    if args.verbosity > 1:
-        print("\nFarm results data:\n")
-        print(
-            farm_df[
-                [
-                    FV.X,
-                    FV.WD,
-                    FV.AMB_REWS,
-                    FV.REWS,
-                    FV.AMB_TI,
-                    FV.TI,
-                    FV.AMB_P,
-                    FV.P,
-                    FV.CT,
-                    FV.EFF,
-                ]
-            ]
-        )
-        print()
-
-    # horizontal flow plot
-    if not args.nofig:
-        xmin = -2000
-        xmax = (args.nx - 1) * args.dx + 2000
-
-        with engine:
-            g = algo.calc_outputs(
-                outputs=foxes.models.outputs.FlowPlots2D(
-                    plane="xy",
-                    reduction="states",
-                    plot=True,
-                    data_format="numpy",
-                    var=args.var,
-                    grid_pars=dict(resolution=20, xmin=xmin, xmax=xmax, yspace=1000.0),
-                    plot_pars=dict(figsize=(7, 5), levels=40, rotor_color="black"),
-                ),
-                farm_results=farm_results,
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
             )
-        fig = g[0]
-        plt.show()
-        plt.close(fig)
-
-        # center line plot:
-        H = mbook.turbine_types[ttype.name].H
-        n_points = 10000
-        points = np.zeros((1, n_points, 3))
-        points[:, :, 0] = np.linspace(xmin, xmax, n_points)[None, :]
-        points[:, :, 2] = H
-        with engine:
-            point_results = algo.calc_points(farm_results, points)
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.plot(points[0, :, 0], point_results[FV.WS][0, :])
-        ax.set_xlabel("x [m]")
-        ax.set_ylabel("Wind speed [m/s]")
-        plt.show()
-        plt.close(fig)
-
-        # front line plot:
-        points = np.zeros((1, n_points, 3))
-        points[:, :, 0] = -200
-        points[:, :, 1] = np.linspace(-500.0, args.ny * args.dy + 500, n_points)[
-            None, :
-        ]
-        points[:, :, 2] = H
-        with engine:
-            point_results = algo.calc_points(farm_results, points)
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.plot(point_results[FV.WS][0, :], points[0, :, 1])
-        ax.set_ylabel("y [m]")
-        ax.set_xlabel("Wind speed [m/s]")
-        plt.show()
-        plt.close(fig)
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

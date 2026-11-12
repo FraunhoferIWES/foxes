@@ -11,7 +11,18 @@ def main(argv=None):
     parser.add_argument("-s", "--states", default="timeseries_3000.csv.gz")
     parser.add_argument("-l", "--layout", default="test_farm_67.csv")
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["state_turbine_table"],
     )
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
@@ -38,11 +49,6 @@ def main(argv=None):
     )
 
     mbook = foxes.ModelBook()
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
     algo = foxes.algorithms.Downwind(
         farm,
         states,
@@ -50,22 +56,26 @@ def main(argv=None):
         mbook=mbook,
         verbosity=max(args.verbosity - 1, 0),
     )
-    with foxes.Engine.new(args.engine, verbosity=max(args.verbosity - 1, 0)):
-        farm_results = algo.calc_farm(outputs=args.outputs)
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
 
-    # Evaluate collected farm data only; writer-only outputs are already complete.
-    if isinstance(farm_results, dict):
-        farm_results = farm_results.get("farm_results")
-    elif not any(
-        isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-        for name in args.outputs
-    ):
-        farm_results = None
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    if farm_results is None:
-        print("Skipping farm reporting: no farm-results output was selected.")
-        return
+    with foxes.Engine.new(args.engine, verbosity=max(args.verbosity - 1, 0)):
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
+
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
+            )
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

@@ -25,6 +25,10 @@ class FlowPlots2D(SliceData):
     inheriting animation configuration or file-writing behavior.
     """
 
+    def _creates_figures(self) -> bool:
+        """Keep numerical slices enabled independently of figure suppression."""
+        return self.plot or super()._creates_figures()
+
     def __init__(
         self,
         var: str = FV.WS,

@@ -1,6 +1,4 @@
-import time
 import argparse
-import matplotlib.pyplot as plt
 import numpy as np
 
 import foxes
@@ -92,7 +90,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["flow_plot_xy_states"],
     )
     parser.add_argument(
         "-v",
@@ -108,11 +117,6 @@ def main(argv=None):
     mbook = foxes.models.ModelBook()
     mbook.outputs["farm_results"].fdata_variables.append(FV.AMB_WD)
 
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -174,57 +178,42 @@ def main(argv=None):
         verbosity=max(args.verbosity - 1, 0),
     )
 
+    mbook.outputs["flow_plot_xy_states"] = foxes.models.outputs.FlowPlots2D(
+        plane="xy",
+        reduction="states",
+        var=FV.WS,
+        show=True,
+        grid_pars=dict(resolution=10, xmin=0, xmax=2500, ymin=0, ymax=2500),
+        plot_pars=dict(
+            figsize=(8, 8),
+            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
+            quiver_n=15,
+            rotor_color="red",
+        ),
+    )
+    for variable in (FV.CT, FV.AMB_WD):
+        if variable not in mbook.outputs["farm_results"].fdata_variables:
+            mbook.outputs["farm_results"].fdata_variables.append(variable)
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
-        time0 = time.time()
-        farm_results = algo.calc_farm(outputs=args.outputs)
-        time1 = time.time()
-
-        # Evaluate collected farm data only; writer-only outputs are already complete.
-        if isinstance(farm_results, dict):
-            farm_results = farm_results.get("farm_results")
-        elif not any(
-            isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-            for name in args.outputs
-        ):
-            farm_results = None
-        if farm_results is not None and args.verbosity > 1:
-            print("\nFarm results:\n", farm_results)
-        required = {FV.AMB_P, FV.AMB_REWS, FV.P, FV.REWS, FV.WD, FV.X, FV.Y}
-        if farm_results is None or not required.issubset(farm_results.data_vars):
-            print(
-                "Skipping farm reporting: selected outputs do not collect the required fields:",
-                sorted(required),
-            )
-            return
-
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
         if args.verbosity > 1:
-            print("\nCalc time =", time1 - time0, "\n")
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-    fr = farm_results.to_dataframe()
-    if args.verbosity > 1:
-        print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
-
-    if not args.nofig:
-        with engine:
-            for fig in algo.calc_outputs(
-                outputs=foxes.models.outputs.FlowPlots2D(
-                    plane="xy",
-                    reduction="states",
-                    plot=True,
-                    data_format="numpy",
-                    var=FV.WS,
-                    grid_pars=dict(resolution=10, xmin=0, xmax=2500, ymin=0, ymax=2500),
-                    plot_pars=dict(
-                        figsize=(8, 8),
-                        quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
-                        quiver_n=15,
-                        rotor_color="red",
-                    ),
-                ),
-                farm_results=farm_results,
-            ):
-                plt.show()
-                plt.close(fig)
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
+            )
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

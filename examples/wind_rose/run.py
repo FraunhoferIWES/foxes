@@ -1,6 +1,4 @@
-import time
 import argparse
-import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
@@ -74,7 +72,18 @@ def main(argv=None):
 
     # Select chunk outputs by their model-book names.
     parser.add_argument(
-        "-o", "--outputs", help="The output models", nargs="+", default=["farm_results"]
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["rose_plot"],
     )
     parser.add_argument(
         "-v",
@@ -90,11 +99,6 @@ def main(argv=None):
     mbook = foxes.models.ModelBook()
     mbook.outputs["farm_results"].fdata_variables.append(FV.AMB_WD)
 
-    if args.nofig:
-        for name in args.outputs:
-            output = mbook.outputs[name]
-            if hasattr(output, "show"):
-                output.show = False
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
@@ -116,21 +120,6 @@ def main(argv=None):
         verbosity=max(args.verbosity - 1, 0),
     )
 
-    if not args.nofig and args.show_layout:
-        ax = foxes.algorithms.Downwind(
-            farm,
-            foxes.input.states.SingleStateStates(ws=8, wd=270, ti=0.08, rho=1.225),
-            wake_models=[],
-            mbook=mbook,
-            verbosity=max(args.verbosity - 1, 0),
-        ).calc_outputs(
-            outputs=foxes.models.outputs.FarmLayoutOutput(
-                operation="get_figure", parameters=dict()
-            )
-        )
-        plt.show()
-        plt.close(ax.get_figure())
-
     algo = foxes.algorithms.Downwind(
         farm,
         states=states,
@@ -150,61 +139,42 @@ def main(argv=None):
         verbosity=max(args.verbosity - 1, 0),
     )
 
+    mbook.outputs["flow_plot_yz_mean"] = foxes.models.outputs.FlowPlots2D(
+        plane="yz",
+        reduction="mean",
+        var=FV.WS,
+        show=True,
+        grid_pars=dict(resolution=30),
+        plot_pars=dict(),
+    )
+    for variable in (FV.CT, FV.AMB_WD):
+        if variable not in mbook.outputs["farm_results"].fdata_variables:
+            mbook.outputs["farm_results"].fdata_variables.append(variable)
+    mbook.outputs["rose_plot"].wd_var = FV.WD
+    if args.calc_mean:
+        args.outputs.append("flow_plot_yz_mean")
+    if args.show_layout:
+        args.outputs.insert(0, "farm_layout")
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with engine:
-        time0 = time.time()
-        farm_results = algo.calc_farm(outputs=args.outputs)
-        time1 = time.time()
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
+        if args.verbosity > 1:
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
 
-        # Evaluate collected farm data only; writer-only outputs are already complete.
-        if isinstance(farm_results, dict):
-            farm_results = farm_results.get("farm_results")
-        elif not any(
-            isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-            for name in args.outputs
-        ):
-            farm_results = None
-        if farm_results is not None and args.verbosity > 1:
-            print("\nFarm results:\n", farm_results)
-        required = {FV.AMB_P, FV.AMB_REWS, FV.H, FV.P, FV.REWS, FV.WD, FV.WEIGHT}
-        if farm_results is None or not required.issubset(farm_results.data_vars):
-            print(
-                "Skipping farm reporting: selected outputs do not collect the required fields:",
-                sorted(required),
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
             )
-            return
-
-    if not args.nofig:
-        with engine:
-            algo.calc_outputs(
-                outputs=foxes.models.outputs.StatesRosePlotOutput(
-                    point=[0.0, 0.0, 100.0], add_inf=True
-                ),
-                farm_results=farm_results,
-            )
-        plt.show()
-
-    if args.verbosity > 1:
-        print("\nCalc time =", time1 - time0, "\n")
-
-    fr = farm_results.to_dataframe()
-    if args.verbosity > 1:
-        print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.WEIGHT]])
-
-    if not args.nofig and args.calc_mean:
-        with engine:
-            fig = algo.calc_outputs(
-                outputs=foxes.models.outputs.FlowPlots2D(
-                    plane="yz",
-                    reduction="mean",
-                    plot=True,
-                    data_format="numpy",
-                    var=FV.WS,
-                    grid_pars=dict(resolution=30),
-                ),
-                farm_results=farm_results,
-            )
-        plt.show()
-        plt.close(fig)
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":

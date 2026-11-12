@@ -13,7 +13,20 @@ import foxes.variables as FV
 def main(argv=None):
     """Run this tutorial with an explicit argument list or command-line options."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-o", "--outputs", nargs="+", default=["wake_field"])
+    parser.add_argument(
+        "-R",
+        "--results",
+        help="The calculation result models",
+        nargs="+",
+        default=["farm_results"],
+    )
+    parser.add_argument(
+        "-o",
+        "--outputs",
+        help="The post-processing output models",
+        nargs="+",
+        default=["wake_field"],
+    )
     parser.add_argument(
         "-nf", "--nofig", action="store_true", help="Do not show figures"
     )
@@ -39,6 +52,7 @@ def main(argv=None):
         fixed_vars={FV.WD: 270.0, FV.TI: 0.05, FV.RHO: 1.225},
     )
     mbook = foxes.ModelBook()
+    mbook.outputs["farm_results"].fdata_variables.append(FV.CT)
     thrust = foxes.models.turbine_models.SetFarmVars()
     thrust.add_var(FV.CT, cases[:, 1, None])
     mbook.turbine_models["scan_ct"] = thrust
@@ -53,9 +67,6 @@ def main(argv=None):
             "n_img_points": (args.points, args.points),
         },
     )
-    if args.nofig:
-        for name in args.outputs:
-            mbook.outputs[name].show = False
     farm = foxes.WindFarm()
     farm.add_turbine(
         foxes.Turbine([0.0, 0.0], turbine_models=["NREL5MW", "scan_ct"]),
@@ -69,37 +80,31 @@ def main(argv=None):
         wake_models=["Bastankhah2014_linear_k004"],
         verbosity=max(args.verbosity - 1, 0),
     )
+    # Apply figure suppression to both calculation stages.
+    for name in [*args.results, *args.outputs]:
+        output = mbook.outputs[name]
+        output.nofig = args.nofig
+
     with foxes.Engine.new(
         "numpy",
         chunk_size_states=2,
         chunk_size_points=500,
         verbosity=max(args.verbosity - 1, 0),
     ):
-        results = algo.calc_farm(outputs=args.outputs)
-    farm_results = (
-        results.get("farm_results")
-        if isinstance(results, dict)
-        else results
-        if any(
-            isinstance(mbook.outputs[name], foxes.models.outputs.FarmResultsOutput)
-            for name in args.outputs
-        )
-        else None
-    )
-    if farm_results is not None and args.verbosity > 1:
-        print("\nFarm results:\n", farm_results)
-    if "wake_field" in args.outputs:
+        # Preserve every result key, including single-output selections.
+        results = algo.calc_farm(outputs=args.results, ret_dict=True)
         if args.verbosity > 1:
-            print("Wake field written to wake_field.nc")
-    else:
-        print("Skipping wake-field export: select -o wake_field to write it.")
-    if args.verbosity > 1:
-        if isinstance(results, dict):
-            for name, result in results.items():
-                if name != "farm_results":
-                    print(f"\n{name}:\n", result)
-        elif farm_results is None:
-            print(results)
+            for key, data in results.items():
+                print(f"\n{key}:\n{data}")
+
+        # Process each output separately so different point grids remain independent.
+        for name in args.outputs:
+            output_results = algo.calc_outputs(
+                outputs=name, farm_results=results.get("farm_results"), ret_dict=True
+            )
+            if args.verbosity > 1:
+                for key, data in output_results.items():
+                    print(f"\n{key}:\n{data}")
 
 
 if __name__ == "__main__":
