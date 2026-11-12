@@ -510,8 +510,22 @@ original-order farm turbines; `aggregate_points=None | "all"` groups targets.
 Missing farm/cluster memberships form an explicit `<unassigned>` group.
 Spatial reduction sums power, capacity, maximum power and annualized yields,
 averages intensive fields and uses circular means for directions. Turbine
-power/capacity stay in native type units; mixed-unit sums within a group fail
-explicitly. Annualized yields remain GWh/a.
+power/capacity/maximum-power fields, including ambient power, are converted to
+the smallest power unit used by the farm's initialized turbine types before
+any output reduction. Each variable carries one `units` attribute; dataset
+attribute `power_unit` records the common power unit. Annualized yields remain
+GWh/a. Previously collected fields use their declared unit when processed
+again, avoiding repeated native-to-common conversion.
+
+All numerical output datasets and their NetCDF files attach `units` attributes
+to known scientific fields and coordinates, including renamed fields, points,
+slices, roses, tables and rotor metadata. Ratios and normalized rotor coordinates
+use `1`, rose frequencies use `%`, and unknown custom fields receive no invented
+unit. Slice quantities divided by non-unit normalization factors use `1`.
+Sequential accumulation preserves variable attributes. Private Iterative
+convergence history collects native power directly, preserving downwind turbine
+identities for the solver and under-relaxation; public outputs remain normalized.
+See [ADR-0032](adr/0032-output-dataset-units.md).
 
 `aggregate_states=True` normalizes weights independently for each turbine or
 target/target-point position over the selected states. Normalize per entity
@@ -790,6 +804,16 @@ boundary and reusable logic in importable functions so tests need not spawn a
 subprocess.
 
 ## Cross-Cutting Decisions
+
+- Development closure includes an explicit coding-style review of changed code,
+  separate from automated linting and formatting, with its result in the
+  completion report. See
+  [ADR-0033](adr/0033-coding-style-closure-review.md).
+
+- Numerical outputs carry per-variable unit metadata. Power fields use the
+  smallest turbine-type power unit before reduction, without splitting groups;
+  internal Iterative history stays solver-native. See
+  [ADR-0032](adr/0032-output-dataset-units.md).
 
 - Point collection and writers mirror farm outputs, with independent default/all
   wind-field selections and engine-owned target chunking. Files preserve all

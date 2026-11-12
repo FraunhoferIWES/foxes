@@ -12,7 +12,6 @@ import foxes.variables as FV
 from foxes.core import Output
 from foxes.utils import Dict
 
-from ._result_data import _Results, _combine_chunks
 from ._aggregation import (
     _finish,
     _finish_states,
@@ -22,6 +21,8 @@ from ._aggregation import (
     _spatial,
     _state_statistics,
 )
+from ._result_data import _Results, _combine_chunks
+from ._units import _set_units
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, FData, MData, TData
@@ -334,6 +335,8 @@ class PointResultsOutput(Output):
             collection under ``FC.POINT_RESULTS`` retains internal dimensions
             for algorithm-side public conversion. Other public keys select
             target point zero and rename retained targets to public points.
+            Known scientific variables have ``units`` attributes, including
+            metre units on ``FV.X``, ``FV.Y`` and ``FV.H``.
         """
         # Concatenate target tiles before joining state slabs in global order.
         chunks = output_results.pop(self._collection_key)
@@ -372,7 +375,7 @@ class PointResultsOutput(Output):
             dataset = dataset.sel({FC.TPOINT: 0}, drop=True)
             if FC.TARGET in dataset.dims:
                 dataset = dataset.rename({FC.TARGET: FC.POINT})
-        output_results[self._public_key] = dataset
+        output_results[self._public_key] = _set_units(dataset)
 
     def _finish_payload(self, payload: _Results) -> _Results:
         """Retain geometry while removing private aggregation dependencies."""

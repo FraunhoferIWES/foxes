@@ -15,6 +15,7 @@ from foxes.utils import wd2uv
 
 from ._grid_data import data2xr as data2xr
 from ._grid_geometry import _grid_axes, _report_grid, _vertical_grid
+from ._units import _set_units
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm
@@ -602,7 +603,8 @@ def np2xr_p(
     -------
     out
         New dataset with variable dimensions ``(b, a)`` and a fixed-coordinate
-        attribute. Arrays may share storage with inputs; no inputs are mutated.
+        attribute and known scientific ``units`` attributes after renaming.
+        Arrays may share storage with inputs; no inputs are mutated.
 
     """
     if label_map is None:
@@ -612,7 +614,7 @@ def np2xr_p(
     c = label_map.get(c, c)
     n_a = len(a_pos)
     n_b = len(b_pos)
-    return Dataset(
+    dataset = Dataset(
         coords={b: b_pos, a: a_pos},
         data_vars={
             label_map.get(v, v): ((b, a), np.swapaxes(d.reshape(n_a, n_b), 0, 1))
@@ -620,6 +622,8 @@ def np2xr_p(
         },
         attrs={c: float(c_pos)},
     )
+
+    return _set_units(dataset, label_map=label_map)
 
 
 def np2xr_sp(
@@ -655,8 +659,8 @@ def np2xr_sp(
     -------
     out
         New dataset with variable dimensions ``(FC.STATE, b, a)`` before
-        renaming, and a fixed-coordinate attribute. Arrays may share storage
-        with inputs; no inputs are mutated.
+        renaming, a fixed-coordinate attribute and known scientific ``units``
+        attributes. Arrays may share storage with inputs; no inputs are mutated.
 
     """
     if label_map is None:
@@ -668,7 +672,7 @@ def np2xr_sp(
     n_s = len(states)
     n_a = len(a_pos)
     n_b = len(b_pos)
-    return Dataset(
+    dataset = Dataset(
         coords={s: states, b: b_pos, a: a_pos},
         data_vars={
             label_map.get(v, v): (
@@ -679,3 +683,5 @@ def np2xr_sp(
         },
         attrs={c: float(c_pos)},
     )
+
+    return _set_units(dataset, label_map=label_map)

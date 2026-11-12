@@ -12,9 +12,10 @@ import foxes.variables as FV
 from foxes.core import Output
 from foxes.utils import Dict, write_nc
 
-from ._result_writers import _ResultsCountWriter, _ResultsPeriodWriter
-from ._result_data import _Results, _combine_chunks
 from ._aggregation import _merge_statistics, _point_spatial_statistics
+from ._result_data import _Results, _combine_chunks
+from ._result_writers import _ResultsCountWriter, _ResultsPeriodWriter
+from ._units import _set_units
 from .point_results import PointResultsOutput
 
 if TYPE_CHECKING:
@@ -28,6 +29,7 @@ def _point_data_to_nc(
     dataset = Dataset(
         data_vars=payload["data_vars"], coords=payload["coords"], attrs=payload["attrs"]
     ).set_coords([FV.X, FV.Y, FV.H])
+    _set_units(dataset)
     write_nc(ds=dataset, fpath=fpath, **write_nc_pars)
 
 

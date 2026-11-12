@@ -12,6 +12,7 @@ import foxes.variables as FV
 from foxes.utils import Dict, write_nc
 
 from ._dataset_output import DatasetOutput
+from ._units import _set_units
 from .point_results import PointResultsOutput
 
 if TYPE_CHECKING:
@@ -345,6 +346,8 @@ class PointCalculator(DatasetOutput):
         -------
         points
             Selected fields and ``x/y/z`` coordinates, preserving point order.
+            Known scientific fields have ``units`` attributes; coordinates use
+            metres, including in state-mean results and written NetCDF files.
         """
         if not self.states_mean:
             points = np.stack([data[v].to_numpy() for v in (FV.X, FV.Y, FV.H)], axis=-1)
@@ -357,7 +360,10 @@ class PointCalculator(DatasetOutput):
                 .drop_vars([v for v in (FV.X, FV.Y, FV.H) if v not in self.fields])
                 .assign({axis: (dims, points[..., i]) for i, axis in enumerate("xyz")})
             )
+
+        _set_units(data)
         if self.to_file is not None:
             options = {"verbosity": algo.verbosity, **self.write_pars}
             write_nc(data, self.get_fpath(self.to_file), **options)
+
         return data

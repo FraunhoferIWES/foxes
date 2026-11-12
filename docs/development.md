@@ -11,9 +11,9 @@ public Python documentation contract.
 
 Prefer a focused check that can disprove the current change before running a
 broad suite. When code files change, finish with the full test suite. Every
-development change finishes with repository-wide pre-commit, current docstrings
-and FOXES documentation, and an entry in the current-version final changelog
-section.
+development change finishes with an explicit coding-style review of changed
+code, repository-wide pre-commit, current docstrings and FOXES documentation,
+and an entry in the current-version final changelog section.
 
 ## Forward-Only Development
 
@@ -137,11 +137,17 @@ vectors/overlays and NumPy/thread/process parity. Full datasets, animation frame
 and unaggregated interval writers retain their required state-resolved fields.
 Run `uv run pytest tests/2_models/test_result_aggregation.py -q` for domain
 aggregation. Verify `aggregate_turbines`, `aggregate_points` and independent
-`aggregate_states`, physical sums/means, recomputed power ratios, native-unit
-errors, unassigned groups and per-entity normalization over partial selections.
+`aggregate_states`, physical sums/means, recomputed power ratios, mixed-unit
+conversion, unassigned groups and per-entity normalization over partial selections.
 Inspect worker payloads for eliminated dimensions, including file-interval
 statistics before parent assembly. Compare uneven state/target tiles and exact
 count/calendar files, not averages of chunk means.
+Run `uv run pytest tests/2_models/test_output_units.py tests/2_models/turbine_models/test_evaluation.py -q`
+for output unit metadata and power conversion. Check returned and written
+farm/point datasets, renamed tables/slices, rose frequencies, normalized rotor
+metadata, mixed-unit aggregation and repeated output processing. Cross-engine
+and Iterative cases must preserve native solver history while public power uses
+the smallest turbine-type unit; Sequential accumulation must preserve units.
 Run `uv run pytest tests/2_models/test_aggregation_configuration.py tests/2_models/test_windio_outputs.py -q`
 for the complete aggregation preset matrix and YAML/WindIO integration.
 Resolve every selector to its actual class/options, including named field sets,
@@ -448,16 +454,26 @@ tree:
 	discriminating focused tests first, then run `uv run pytest tests`
 	successfully. Documentation-only changes run their applicable link, render,
 	version, or structure checks instead.
-2. Run `uv run pre-commit run --all-files` after the last edit. If a hook changes
+2. Complete an explicit coding-style review of every changed code file, covering
+	changed blocks and their directly affected context against
+	[code quality](#code-quality),
+	[naming conventions](naming-conventions.md) and
+	[docstring conventions](docstrings.md). Check import grouping, descriptive
+	names, logical-block structure and spacing, purposeful comments, annotations,
+	docstrings, and function/module size and cohesion. Correct violations within
+	the change's scope and justify retained size exceptions. Linting and
+	formatting alone do not replace this review. Repeat the affected review
+	after subsequent edits, including hook-generated edits.
+3. Run `uv run pre-commit run --all-files` after the last edit. If a hook changes
 	a file, inspect it and rerun the entire command.
-3. Review every affected public Python API against
+4. Review every affected public Python API against
 	[docstring conventions](docstrings.md). Update parameters, units, dimensions,
 	behavior, side effects, returns, errors, and examples to match the final
 	implementation.
-4. Update `docs/architecture.md`, `docs/naming-conventions.md`, this guide,
+5. Update `docs/architecture.md`, `docs/naming-conventions.md`, this guide,
 	`docs/source/`, examples, ADRs, and any other FOXES information affected by the
 	change. Do not knowingly leave stale prose, diagrams, commands, or contracts.
-5. Read `project.version` from `pyproject.toml`. Confirm the last version section
+6. Read `project.version` from `pyproject.toml`. Confirm the last version section
 	in `CHANGELOG.md` is exactly `## v<version>` and add a style-consistent entry
 	for the change to that section.
 
@@ -476,8 +492,9 @@ When reporting an implementation, state:
 	its justification.
 3. **Tests**: coverage and results, or why tests were not needed.
 4. **Docs**: documentation changes, or `N/A`.
-5. **Self-review**: rule compliance, declared deviations and any named exception
-	recorded in `docs/data-classification-exceptions.md`.
+5. **Self-review**: explicit coding-style review result, rule compliance,
+	declared deviations and any named exception recorded in
+	`docs/data-classification-exceptions.md`.
 
 ## Test Structure
 

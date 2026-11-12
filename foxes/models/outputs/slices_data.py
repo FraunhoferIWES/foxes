@@ -108,14 +108,21 @@ class SlicesData(SliceData):
                 "values": {v: d[:, selection] for v, d in payload["values"].items()},
             }
             datasets.append(self._format_data(selected))
+
         normal = next(axis for axis in "xyz" if axis not in self.plane)
+        normal_name = self.label_map.get(normal, normal)
+        normal_scale = self.normalize.get(normal, 1)
         result = xr.concat(
             datasets,
             xr.IndexVariable(
-                self.label_map.get(normal, normal), np.asarray(self.positions)
+                normal_name,
+                np.asarray(self.positions) / normal_scale,
             ),
         )
-        result.attrs.pop(self.label_map.get(normal, normal), None)
+        result.attrs.pop(normal_name, None)
+        result[normal_name].attrs["units"] = "1" if normal_scale != 1 else "m"
+
         if self.to_file is not None:
             self._write_data(result, algo.verbosity)
+
         return result

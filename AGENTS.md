@@ -152,13 +152,14 @@ Follow [development closure](docs/development.md#development-closure):
 focused tests and `uv run pytest tests` pass for code changes, applicable checks
 pass for docs-only changes, and `uv run pre-commit run --all-files` passes after
 the final edit. Review all affected public docstrings and records; update the
-last changelog section headed exactly `## v<project.version>`. Execute changed
-notebooks; Sphinx is not a default gate. Do not defer required closure steps or
-report completion with stale records.
+last changelog section headed exactly `## v<project.version>`. Complete the
+explicit coding-style review of changed code; linting and formatting alone do
+not replace it. Execute changed notebooks; Sphinx is not a default gate. Do not
+defer required closure steps or report completion with stale records.
 
 ## Completion Report
 
 Report **Summary**, **Code** (including justified size exceptions), **Tests**,
-**Docs**, and **Self-review** (rule compliance, deviations and named
-data-classification exceptions). See the
+**Docs**, and **Self-review** (coding-style review result, rule compliance,
+deviations and named data-classification exceptions). See the
 [report checklist](docs/development.md#completion-report).

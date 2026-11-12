@@ -10,6 +10,8 @@ from xarray import Dataset
 import foxes.constants as FC
 from foxes.utils import write_nc
 
+from ._units import _set_units
+
 
 def _slice_fields(
     point_results: Dataset, variables: list[str], state_mean: bool | np.ndarray
@@ -152,6 +154,13 @@ def data2xr(
                 np.swapaxes(values.reshape(values.shape[0], *lengths), 1, 2),
             )
     dataset = Dataset(coords=coordinates, data_vars=data_vars, attrs=attributes)
+    _set_units(dataset)
+
+    # Preserve caller-supplied metadata over inferred unit defaults.
+    for variable in variables:
+        dataset[variable].attrs.update(point_results[variable].attrs)
+
     if to_file is not None:
         write_nc(dataset, to_file, **kwargs)
+
     return dataset

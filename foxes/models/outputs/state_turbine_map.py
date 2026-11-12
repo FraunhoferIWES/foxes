@@ -93,7 +93,9 @@ class StateTurbineMap(StateTurbineTable):
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
         title = options.pop("title", self.variable)
-        label = options.pop("cbar_label", get_data_info(self.variable)[1])
+        label = options.pop(
+            "cbar_label", get_data_info(self.variable, field.attrs.get("units"))[1]
+        )
         rotation = options.pop("rotate_xlabels", 0)
         options.setdefault("shading", "flat")
         values = field.transpose(FC.STATE, FC.TURBINE).to_numpy()

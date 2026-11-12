@@ -10,10 +10,11 @@ import foxes.constants as FC
 from foxes.core import get_engine
 from foxes.utils import Dict
 
-from .farm_results import FarmResultsOutput
-from .point_results import PointResultsOutput
 from ._aggregation import _merge_statistics
 from ._result_data import _combine_chunks
+from ._units import _normalize_farm_power, _set_units
+from .farm_results import FarmResultsOutput
+from .point_results import PointResultsOutput
 
 if TYPE_CHECKING:
     from xarray import Dataset
@@ -253,6 +254,7 @@ class DatasetOutput(FarmResultsOutput):
                 "data_vars": _farm_fields(fdata, requested, previous),
                 "attrs": {},
             }
+            _normalize_farm_power(results[self.var("data")], algo, previous)
         return results
 
     def _farm_variables(self) -> tuple[str, ...] | None:
@@ -425,6 +427,8 @@ class DatasetOutput(FarmResultsOutput):
             data = Dataset(**payload)
         else:
             data = Dataset()
+
+        _set_units(data)
         output_results[self.result_name] = self.process(algo, data)
 
     def process(self, algo: Algorithm, data: Dataset) -> Any:

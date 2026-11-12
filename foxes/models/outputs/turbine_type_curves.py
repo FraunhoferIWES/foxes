@@ -121,7 +121,10 @@ class TurbineTypeCurves(StateTurbineTable):
             ax.set(
                 title=titles.get(variable, variable),
                 xlabel=xlabel,
-                ylabel=labels.get(variable, get_data_info(variable)[1]),
+                ylabel=labels.get(
+                    variable,
+                    get_data_info(variable, table[variable].attrs.get("units"))[1],
+                ),
             )
             ax.grid(axis="y")
             ax.legend()

@@ -227,6 +227,7 @@ def mixed_unit_order_algorithm(request):
 def test_output_metrics_follow_original_identity_across_three_turbine_orders(
     mixed_unit_order_algorithm, engine, chunk_size
 ):
+    """Keep normalized public metrics aligned with native turbine identities."""
     variables = [
         FV.P,
         FV.AMB_P,
@@ -246,7 +247,15 @@ def test_output_metrics_follow_original_identity_across_three_turbine_orders(
         )
 
     np.testing.assert_array_equal(results[FV.ORDER], [[1, 2, 0], [0, 1, 2], [0, 2, 1]])
-    np.testing.assert_allclose(results[FV.CAP], np.tile([1000.0, 2.0, 3.0e6], (3, 1)))
+    if isinstance(mixed_unit_order_algorithm, foxes.algorithms.Iterative):
+        downwind_results = mixed_unit_order_algorithm.farm_results_downwind
+        native_ambient = np.array([500.0, 1.0, 1.5e6])[
+            downwind_results[FV.ORDER].to_numpy()
+        ]
+        np.testing.assert_allclose(downwind_results[FV.AMB_P], native_ambient)
+
+    np.testing.assert_allclose(results[FV.CAP], np.tile([1.0e6, 2.0e6, 3.0e6], (3, 1)))
+    assert results[FV.P].attrs["units"] == results[FV.CAP].attrs["units"] == "W"
     np.testing.assert_allclose(results[FV.X], np.tile([0.0, 800.0, 250.0], (3, 1)))
     np.testing.assert_allclose(results[FV.Y], np.tile([0.0, 200.0, 1100.0], (3, 1)))
     for power, factor, annual_yield in (
@@ -254,11 +263,11 @@ def test_output_metrics_follow_original_identity_across_three_turbine_orders(
         (FV.AMB_P, FV.AMB_CAPF, FV.AMB_YLD),
     ):
         np.testing.assert_allclose(
-            results[factor], results[power] / [1000.0, 2.0, 3.0e6]
+            results[factor], results[power] / [1.0e6, 2.0e6, 3.0e6]
         )
         np.testing.assert_allclose(
             results[annual_yield],
-            results[power] * np.array([1.0e3, 1.0e6, 1.0]) * 8760 / 1.0e9,
+            results[power] * 8760 / 1.0e9,
         )
 
 
@@ -269,6 +278,43 @@ def test_output_selected_probability_yields_require_uncertainty(
     with foxes.Engine.new("numpy", verbosity=0):
         with pytest.raises(ValueError, match="power_uncert is required"):
             output_algorithm.calc_farm(outputs=FarmResultsOutput(variables=[variable]))
+
+
+def test_mixed_unit_outputs_can_be_reprocessed_and_aggregated(
+    mixed_unit_order_algorithm, tmp_path
+):
+    """Reprocess normalized power without converting it again before grouping."""
+    algo = mixed_unit_order_algorithm
+    fields = [FV.P, FV.AMB_P, FV.CAP, FV.YLD, FV.EFF, FV.CAPF, FV.WEIGHT]
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        original = algo.calc_farm(outputs=FarmResultsOutput(variables=fields))
+        outputs = [
+            FarmResultsOutput(variables=fields),
+            FarmResultsOutput(
+                variables=fields, aggregate_turbines="all", aggregate_states=True
+            ),
+            FarmResultsChunkWriter(
+                variables=fields,
+                aggregate_turbines="all",
+                base_name="mixed",
+                out_dir=tmp_path,
+            ),
+        ]
+        results = algo.calc_outputs(farm_results=original, outputs=outputs)
+
+    xr.testing.assert_identical(results[FC.FARM_RESULTS], original)
+    grouped = results["farm_results_aggregate_all_mean"]
+    expected = original[FV.P].mean(FC.STATE).sum(FC.TURBINE)
+    np.testing.assert_allclose(grouped[FV.P], expected)
+    np.testing.assert_allclose(grouped[FV.CAP], 6e6)
+    np.testing.assert_allclose(grouped[FV.CAPF], expected / 6e6)
+    np.testing.assert_allclose(grouped[FV.YLD], expected * 8760 / 1e9)
+    assert grouped[FV.P].attrs["units"] == "W"
+
+    for path in tmp_path.glob("mixed_*.nc"):
+        with xr.open_dataset(path) as written:
+            assert written[FV.P].attrs["units"] == written[FV.CAP].attrs["units"] == "W"
+            np.testing.assert_allclose(written[FV.CAP], 6e6)
 
 
 @pytest.mark.parametrize("nested", [False, True])

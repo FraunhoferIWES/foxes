@@ -21,6 +21,7 @@ from ._aggregation import (
     _state_statistics,
 )
 from ._result_data import _combine_chunks as _combine_result_chunks
+from ._units import _set_units
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, FData, MData, TData
@@ -72,8 +73,10 @@ class SliceData(PointDataOutput):
             vertical planes, ``x_direction`` in degrees.
         normalize
             Coordinate divisors keyed by ``"x"``, ``"y"`` or ``"z"``.
+            Coordinates divided by a non-unit factor have units ``1``.
         normalize_v
-            Field divisors keyed by variable name.
+            Field divisors keyed by variable name. Fields divided by a non-unit
+            factor have units ``1``.
         label_map
             Names for returned coordinates and fields.
         vmin
@@ -545,6 +548,19 @@ class SliceData(PointDataOutput):
             return getattr(grids, f"np2pd_{suffix}")(*args, self.plane, self.label_map)
         result = getattr(grids, f"np2xr_{suffix}")(*args, c, self.plane, self.label_map)
         result.attrs.update(payload.get("attrs", {}))
+
+        # Divisors change the represented quantity, not just its display label.
+        _set_units(
+            result,
+            label_map=self.label_map,
+            dimensionless=[
+                key
+                for options in (self.normalize, self.normalize_v)
+                for key, value in options.items()
+                if value != 1
+            ],
+        )
+
         return result
 
     def _field_data(self, payload: dict[str, Any]) -> dict[str, np.ndarray]:

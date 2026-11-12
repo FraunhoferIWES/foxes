@@ -11,6 +11,7 @@ import foxes.variables as FV
 
 from . import _layout
 from ._dataset_output import DatasetOutput
+from ._units import _power_unit, _set_units
 
 if TYPE_CHECKING:
     from xarray import Dataset
@@ -291,6 +292,12 @@ class FarmLayoutOutput(DatasetOutput):
                 values = getattr(np, operation)(parts, axis=0)
             fields[color] = ((FC.TURBINE,), values)
         data = Dataset(fields)
+        power_unit = (
+            _power_unit(algo)
+            if any(FV.amb2var.get(v, v) in (FV.P, FV.CAP, FV.MAX_P) for v in fields)
+            else None
+        )
+        _set_units(data, power_unit)
         output_results[self.result_name] = self.process(algo, data)
 
     def process(self, algo: Algorithm, data: Dataset) -> Any:

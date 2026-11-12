@@ -1,24 +1,52 @@
 from __future__ import annotations
 # mypy: disable-error-code=override
 
+from copy import deepcopy
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 from xarray import Dataset
-from copy import deepcopy
-from typing import Any
-from typing import TYPE_CHECKING
 
+import foxes.constants as FC
 from foxes.algorithms.downwind.downwind import Downwind
 from foxes.algorithms.downwind.models.prepare_for_output import PrepareForOutput
 from foxes.core import FarmDataModelList, Output
 from foxes.models.outputs import FarmResultsOutput
 from foxes.utils import Dict
-import foxes.constants as FC
 
 from . import models as mdls
 
 if TYPE_CHECKING:
-    from foxes.core import MData
-    from xarray import Dataset
+    from foxes.core import Algorithm, FData, MData
+    from foxes.models.outputs._result_data import _Results
+
+
+class _ConvergenceOutput(FarmResultsOutput):
+    """Private native-unit history consumed by the iterative solver."""
+
+    def _collect_chunk(
+        self, algo: Algorithm, mdata: MData, fdata: FData, reduce_states: bool = True
+    ) -> _Results:
+        """Collect solver history without public output conversion or reduction.
+
+        Parameters
+        ----------
+        algo
+            Executing algorithm; unused by raw field collection.
+        mdata
+            Chunk metadata supplying state coordinates.
+        fdata
+            Native-unit farm fields in their incoming downwind turbine order.
+        reduce_states
+            Unused: convergence history always retains individual states.
+
+        Returns
+        -------
+        payload
+            Selected dimensioned fields and coordinates, with native power
+            values and no common power-unit attribute.
+        """
+        return self._collect_fields(mdata, fdata)
 
 
 class Iterative(Downwind):
@@ -408,7 +436,7 @@ class Iterative(Downwind):
 
         """
         # Isolate convergence data from requested outputs until the final pass.
-        convergence_output = FarmResultsOutput()
+        convergence_output = _ConvergenceOutput()
         fres = None
         self._it = -1
         self._final_run = False

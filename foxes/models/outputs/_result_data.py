@@ -14,6 +14,8 @@ import foxes.variables as FV
 from foxes.config import config
 from foxes.utils import write_nc
 
+from ._units import _set_units
+
 
 class _Results(TypedDict):
     """Chunk coordinates, dimensioned field arrays and dataset attributes."""
@@ -189,7 +191,7 @@ def _create_dataset(
             dataset[FV.WEIGHT] = ((FC.STATE,), weights[:, 0])
     if FV.ORDER in dataset:
         dataset[FV.ORDER] = dataset[FV.ORDER].astype(config.dtype_int)
-    return dataset
+    return _set_units(dataset)
 
 
 def _data_to_nc(

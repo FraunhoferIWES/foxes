@@ -11,6 +11,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 from foxes.core import Output
 from foxes.utils import Dict
+
 from ._aggregation import (
     _farm_groups,
     _finish,
@@ -20,12 +21,12 @@ from ._aggregation import (
     _spatial,
     _state_statistics,
 )
-
 from ._result_data import (
     _Results,
     _combine_chunks,
     _create_dataset,
 )
+from ._units import _normalize_farm_power
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm
@@ -75,7 +76,8 @@ class FarmResultsOutput(Output):
             retains individual turbines. Unassigned memberships form an explicit
             ``<unassigned>`` group. Extensive fields are summed, intensive
             fields averaged and directions circularly averaged. Ratios are
-            recomputed from reduced power; mixed native power units are rejected.
+            recomputed from reduced power. Power fields are converted to the
+            smallest unit used by the farm's turbine types before reduction.
             Dataset attribute ``n_turbines`` records the input turbine count.
         aggregate_states
             Reduce states using weights normalized independently per turbine,
@@ -186,6 +188,21 @@ class FarmResultsOutput(Output):
         ValueError
             If a selected field has dimensions other than state/turbine.
         """
+        payload = self._collect_fields(mdata, fdata)
+        _normalize_farm_power(payload, algo, mdata.extra_data.get(FC.PREV_FARM_RESULTS))
+
+        if self.aggregate_states and reduce_states:
+            return _state_statistics(payload)
+        if self.aggregate_turbines and not self.aggregate_states:
+            return self._file_payload(algo, payload)
+        return payload
+
+    def _collect_fields(self, mdata: MData, fdata: FData) -> _Results:
+        """Select dimensioned fields without converting or reducing their values.
+
+        Solver-owned iteration history reuses this raw collection boundary,
+        retaining native power and the incoming turbine order.
+        """
         # Retain dimensions even when all physical fields are filtered out.
         coords = {
             FC.STATE: mdata[FC.STATE] if FC.STATE in mdata else fdata[FC.STATE],
@@ -201,6 +218,7 @@ class FarmResultsOutput(Output):
             self.waked_vars,
         )
         assert variables is not None
+
         # Filter physical variables without changing chunk-local weight dimensions.
         for variable in variables:
             if variable in _FARM_COORDINATES:
@@ -218,12 +236,8 @@ class FarmResultsOutput(Output):
             # Expand broadcast farm fields before creating dimensioned output arrays.
             shape = (len(coords[FC.STATE]), len(coords[FC.TURBINE]))
             data_vars[variable] = (dims, np.broadcast_to(fdata[variable], shape))
-        payload: _Results = dict(coords=coords, data_vars=data_vars, attrs={})
-        if self.aggregate_states and reduce_states:
-            return _state_statistics(payload)
-        if self.aggregate_turbines and not self.aggregate_states:
-            return self._file_payload(algo, payload)
-        return payload
+
+        return dict(coords=coords, data_vars=data_vars, attrs={})
 
     def _file_payload(self, algo: Algorithm, payload: _Results) -> _Results:
         """Finish one collector or file interval using the same physical reductions."""
@@ -238,7 +252,6 @@ class FarmResultsOutput(Output):
                 algo,
                 self.aggregate_turbines,
                 payload["coords"][FC.TURBINE],
-                payload["data_vars"],
             )
             payload = _spatial(payload, FC.TURBINE, groups, dimension, labels)
             payload["attrs"]["aggregate_turbines"] = self.aggregate_turbines
@@ -379,6 +392,9 @@ class FarmResultsOutput(Output):
             and compress uniform weights to ``(FC.STATE,)``. State reduction
             removes states; spatial grouping replaces turbines with farm/cluster
             groups or removes that axis for ``all``.
+            Known scientific fields have ``units`` attributes; power, ambient
+            power, capacity and maximum power share the smallest turbine-type
+            power unit, also recorded in dataset attribute ``power_unit``.
 
         Raises
         ------

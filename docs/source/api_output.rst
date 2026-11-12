@@ -260,8 +260,36 @@ the spatial axis. Point grouping removes ``target``, retaining each
 Power, capacity, maximum power and annualized yield fields are summed over
 turbines. Intensive fields use arithmetic means; wind/yaw directions use
 circular means (NaN for cancelling vectors). Point fields are averaged.
-Power/capacity stay in turbine-native units; mixed-unit sums within a group
-raise ``ValueError``. Yields stay in GWh/a.
+Power, ambient power, capacity and maximum power are converted to the smallest
+power unit used by the farm's initialized turbine types before any reduction.
+For example, combining MW and kW types produces kW values, without splitting
+groups by unit. Uniform farms retain their model's ``P_unit``. Yields stay in
+GWh/a. Scientific model containers and private convergence history retain
+native units.
+
+Dataset units
+~~~~~~~~~~~~~
+Returned numerical datasets and written NetCDF files carry a ``units``
+attribute on known scientific variables and coordinates, including points,
+renamed tables and slices, roses and normalized rotor metadata:
+
+.. code-block:: python
+
+    results = algo.calc_farm(outputs="farm_results")
+    power_unit = results["P"].attrs["units"]
+    speed_unit = results["REWS"].attrs["units"]  # "m/s"
+
+Power fields share one unit per variable, also recorded in dataset attribute
+``power_unit``. Reprocessing collected farm fields uses their declared units
+instead of converting them again as native turbine values. Metre coordinates
+use ``m``; ratios, statistical weights and normalized rotor coordinates use
+``1``; annualized yields use ``GWh/a``; rose frequency uses ``%``.
+Slice coordinates/fields divided by non-unit normalization factors use ``1``.
+Renaming and Sequential accumulation preserve metadata. Unknown custom fields
+are not assigned speculative units.
+
+State aggregation
+~~~~~~~~~~~~~~~~~
 
 ``aggregate_states=True`` computes weighted means over selected states,
 normalizing weights independently for every turbine or target/target-point

@@ -12,6 +12,8 @@ import foxes.variables as FV
 from foxes.utils import Dict
 
 from ._dataset_output import DatasetOutput
+from ._result_data import _Results
+from ._units import _normalize_farm_power, _power_unit, _set_units
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm, FData, MData, TData
@@ -154,7 +156,24 @@ class RoseOutput(DatasetOutput):
         if not self.use_points:
             if mdata.chunki_points not in (None, 0):
                 return results
+
+            # Normalize the selected turbine before discarding sample identities.
             samples = self._samples(fdata, self.turbine, FC.TURBINE)
+            payload: _Results = {
+                "coords": {FC.TURBINE: np.asarray([fdata[FC.TURBINE][self.turbine]])},
+                "data_vars": {
+                    variable: ((FC.STATE, FC.TURBINE), values[:, None])
+                    for variable, values in samples.items()
+                },
+                "attrs": {},
+            }
+            _normalize_farm_power(
+                payload, algo, mdata.extra_data.get(FC.PREV_FARM_RESULTS)
+            )
+            samples = {
+                variable: values[:, 0]
+                for variable, (_, values) in payload["data_vars"].items()
+            }
             results[self.var("data")] = self._histogram(samples)
             return results
         if tdata is not None:
@@ -406,4 +425,11 @@ class RoseOutput(DatasetOutput):
             },
             attrs={f"{self.wd_var}_bounds": direction, f"{self.ws_var}_bounds": speed},
         )
+        power_unit = (
+            _power_unit(algo)
+            if not frequency
+            and FV.amb2var.get(self.variable, self.variable) in (FV.P, FV.CAP, FV.MAX_P)
+            else None
+        )
+        _set_units(data, power_unit)
         output_results[self.result_name] = self.process(algo, data)

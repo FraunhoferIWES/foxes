@@ -516,7 +516,8 @@ def test_points_reject_undefined_memberships(kind):
         PointResultsOutput(aggregate_points=kind)
 
 
-def test_native_mixed_units_are_rejected_within_a_group(tmp_path):
+def test_mixed_power_units_are_converted_before_grouping(tmp_path):
+    """Sum physically commensurate power after converting mixed turbine units."""
     algo, data = _farm_data()
     algo.farm_controller.turbine_types[1].P_unit = "MW"
     output = FarmResultsOutput(
@@ -533,8 +534,13 @@ def test_native_mixed_units_are_rejected_within_a_group(tmp_path):
             **{v: (FC.STATE, FC.TURBINE) for v in data},
         },
     )
-    with pytest.raises(ValueError, match="mixed turbine power units"):
-        output.calculate(algo, mdata, fdata, None, {})
+
+    payload = next(iter(output.calculate(algo, mdata, fdata, None, {}).values()))
+
+    np.testing.assert_allclose(
+        payload["data_vars"][FV.P][1], (_POWER * [1, 1000, 1]).sum(axis=1)
+    )
+    assert payload["attrs"]["power_unit"] == "kW"
 
 
 def test_registry_replaces_generic_writer_with_collection_aggregation():

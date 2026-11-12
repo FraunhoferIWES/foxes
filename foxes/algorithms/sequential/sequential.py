@@ -243,11 +243,13 @@ class Sequential(Iterative):
             assert self._farm_results is not None
             assert self._farm_results_dwnd is not None
             for v in self._farm_results.data_vars.keys():
+                self._farm_results[v].attrs.update(fres[v].attrs)
                 if FC.STATE in self._farm_results[v].dims:
                     self._farm_results[v].loc[{FC.STATE: [sstate._indx]}] = fres[v]
                     self._farm_results_dwnd[v].loc[{FC.STATE: [sstate._indx]}] = (
                         fres_dnwnd[v]
                     )
+            self._farm_results.attrs.update(fres.attrs)
 
             if self.points is None:
                 for p in self.plugins:
@@ -365,6 +367,12 @@ class Sequential(Iterative):
         for name, values in point_results.data_vars.items():
             if FC.STATE not in values.dims:
                 results[name] = values
+
+        # Array-based allocation does not carry xarray variable attributes.
+        for name in results.variables:
+            results[name].attrs.update(point_results[name].attrs)
+        results.attrs.update(point_results.attrs)
+
         return results
 
     @property

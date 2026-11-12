@@ -364,6 +364,18 @@ rounding. In `TurbineEvaluation`, `FV.YLD` and these probability yields are
 annualized per-state values, not weighted contributions. `power_uncert` is
 relative uncertainty (`0.1` means 10 percent), not a percent-valued input.
 `FV.CAP` remains nominal power in the turbine type's power unit.
+Scientific model containers retain native turbine units. Output datasets instead
+convert `FV.P`, `FV.AMB_P`, `FV.CAP` and `FV.MAX_P` to the smallest power unit
+among the farm's turbine types before aggregation, without introducing unit-based
+groups. The common unit is recorded in each field's `attrs["units"]` and dataset
+attribute `power_unit`. A uniform farm keeps its type's `P_unit`.
+
+Known output variables and coordinates use xarray `units` attributes: `m`,
+`m/s`, `deg`, `kg/m3`, `m2/s2`, `K`, `Pa`, `GWh/a` and `1` for dimensionless
+quantities. Rose frequencies use `%`; rotor-frame coordinates and quadrature
+weights use `1`. Renaming preserves unit metadata. Unknown custom fields are
+not assigned speculative units. See
+[ADR-0032](adr/0032-output-dataset-units.md).
 
 Select derived farm fields through output variables, for example
 `FarmResultsOutput(variables=[FV.CAPF, FV.EFF, FV.YLD])` or the

@@ -238,9 +238,8 @@ def _farm_groups(
     algo: Algorithm,
     aggregate: str,
     turbines: np.ndarray,
-    fields: dict[str, tuple[tuple[str, ...], np.ndarray]],
 ) -> tuple[list[np.ndarray], str | None, list[str] | None]:
-    """Resolve original-order memberships and validate native units within each group."""
+    """Resolve original-order memberships after output power normalization."""
     if aggregate == "all":
         groups, dimension, labels = [np.arange(len(turbines))], None, None
     else:
@@ -259,16 +258,6 @@ def _farm_groups(
         labels = list(dict.fromkeys(names))
         groups = [np.flatnonzero(np.asarray(names) == name) for name in labels]
         dimension = FC.FARM if aggregate == "wind_farm" else FC.CLUSTER
-    if any(FV.amb2var.get(v, v) in {FV.P, FV.CAP, FV.MAX_P} for v in fields):
-        types = algo.farm_controller.turbine_types
-        if types is None:
-            raise ValueError("Aggregation requires turbine-type power units")
-        for indices in groups:
-            units = {types[int(turbines[i])].P_unit for i in indices}
-            if len(units) > 1:
-                raise ValueError(
-                    f"Cannot aggregate mixed turbine power units: {sorted(units)}"
-                )
     return groups, dimension, labels
 
 

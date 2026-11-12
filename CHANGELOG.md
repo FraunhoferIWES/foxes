@@ -1188,6 +1188,17 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Output dataset units:
+  - Attach per-variable `units` attributes to scientific output datasets and
+    NetCDF files, including point geometry, renamed tables/slices, roses and
+    normalized rotor metadata; preserve metadata in Sequential buffers.
+  - Resolve power units from turbine types and convert mixed power/capacity
+    fields to the smallest unit before aggregation, without unit-based groups.
+    Keep Iterative solver history native and repeated output processing
+    idempotent.
+  - Align the changed output helpers, rotor rendering and unit regressions with
+    coding conventions for imports, descriptive names, block structure and
+    docstrings without changing numerical behavior.
 - Output presets:
   - Use `farms_results`, `cluster_results` and `total_results` for wind-farm,
     cluster and all-turbine aggregation across every filter/field/state/writer
@@ -1210,6 +1221,8 @@ This major version introduces the concept of `Engines` which handle the chunking
     division warnings. Preserve unclipped ratios, NaNs otherwise, selections
     and nominal-capacity validation, including output-selected evaluation.
 - Maintenance:
+  - Make coding-style review of changed code an explicit closing task, separate
+    from automated linting and formatting, and report its result.
   - Audit model-book factory precedence and all output preset combinations.
     Order specialized rotor and ambient-TI variants before catchalls, remove
     duplicate wake registrations and unsupported vector-limit/TurbOParkIX
@@ -1263,7 +1276,7 @@ This major version introduces the concept of `Engines` which handle the chunking
     including exact count/calendar intervals and uneven target tiles.
     Normalize state weights independently per turbine/point before grouping;
     recompute power ratios, sum extensive fields and average intensive fields.
-    Include unassigned memberships and reject mixed native-unit power sums.
+    Include unassigned memberships and normalize mixed-unit power before sums.
     Add distinct grouped/mean model-book presets and result keys.
   - Align point results with farm collection/count/chunk/calendar writers and
     model-book selectors. Add independent point `default`/`all` wind-field sets
@@ -1308,7 +1321,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Reduce worker payloads before transport: mean slices return weighted point
     sums, roses return bin accumulators, and layouts retain selected geometry and
     reduced colours. Merge bin denominators globally.
-    Preserve mixed power units, selections and public numerical results.
+    Preserve selections and physical results after output power normalization.
   - Transport static point coordinates once per tile. Collect flow-plot vector
     fields and farm geometry only for configured quivers and rotor overlays;
     keep required state frames for datasets, writers and animations. Assemble
