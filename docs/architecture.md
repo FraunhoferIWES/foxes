@@ -469,7 +469,8 @@ by a post-processing evaluation step. See
 The implemented farm family is:
 
 - `FarmResultsOutput`: retain ordered chunks and construct one dataset under
-	`FC.FARM_RESULTS`, preserving state/turbine coordinates and optional names.
+	the `FC` result key for its grouping and state reduction, preserving retained
+	coordinates and optional names.
 - `FarmResultsChunkWriter`: write one file in each state-chunk worker.
 - `FarmResultsCountWriter`: buffer ordered chunks and write fixed-size state
 	intervals, including multiple files from the final engine chunk.
@@ -507,6 +508,13 @@ as its internal farm collection does, independently of model-book defaults.
 Collectors and all corresponding writers accept independent spatial and state
 reductions. `aggregate_turbines=None | "wind_farm" | "cluster" | "all"` groups
 original-order farm turbines; `aggregate_points=None | "all"` groups targets.
+Farm collectors use `FC.FARM_RESULTS`, `FC.FARMS_RESULTS`,
+`FC.CLUSTER_RESULTS` or `FC.TOTAL_FARM_RESULTS` according to turbine grouping;
+their `FC.MEAN_*` counterparts indicate state reduction. Point collectors use
+`FC.POINT_RESULTS` or `FC.TOTAL_POINT_RESULTS`, and their mean counterparts.
+Farm and point totals can be collected together; duplicate keys raise
+`ValueError` rather than overwrite results.
+See [ADR-0036](adr/0036-domain-total-keys.md).
 Missing farm/cluster memberships form an explicit `<unassigned>` group.
 Spatial reduction sums power, capacity, maximum power and annualized yields,
 averages intensive fields and uses circular means for directions. Turbine
@@ -804,6 +812,10 @@ boundary and reusable logic in importable functions so tests need not spawn a
 subprocess.
 
 ## Cross-Cutting Decisions
+
+- Collector result keys are fixed by domain, spatial grouping and state
+  reduction. Farm and point totals have distinct keys; duplicates are rejected.
+  See [ADR-0036](adr/0036-domain-total-keys.md).
 
 - Development closure includes an explicit coding-style review of changed code,
   separate from automated linting and formatting, with its result in the

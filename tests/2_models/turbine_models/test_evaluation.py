@@ -303,7 +303,7 @@ def test_mixed_unit_outputs_can_be_reprocessed_and_aggregated(
         results = algo.calc_outputs(farm_results=original, outputs=outputs)
 
     xr.testing.assert_identical(results[FC.FARM_RESULTS], original)
-    grouped = results["farm_results_aggregate_all_mean"]
+    grouped = results[FC.MEAN_TOTAL_FARM_RESULTS]
     expected = original[FV.P].mean(FC.STATE).sum(FC.TURBINE)
     np.testing.assert_allclose(grouped[FV.P], expected)
     np.testing.assert_allclose(grouped[FV.CAP], 6e6)

@@ -310,19 +310,23 @@ Workers retain per-entity sufficient statistics without a state dimension.
 Exact count/calendar file boundaries can split or span engine chunks without
 transporting individual samples. Chunk writers reduce only their supplied
 engine tile, not targets/states belonging to other chunk files.
-Raw and grouped collectors can be composed: their buffers and public result
-keys are distinct. ``result_name`` overrides a collector's public key.
+Raw and grouped collectors can be composed when their fixed public result
+keys are distinct. Duplicate keys raise ``ValueError``.
 
-Default public dataset keys are ``farm_results_mean``,
-``farm_results_aggregate_wind_farm``, ``farm_results_aggregate_cluster``,
-``farm_results_aggregate_all``, ``point_results_mean`` and
-``point_results_aggregate_all``. Spatial names also accept a trailing ``_mean``.
+Farm dataset keys are ``FC.FARM_RESULTS``, ``FC.FARMS_RESULTS``,
+``FC.CLUSTER_RESULTS`` and ``FC.TOTAL_FARM_RESULTS`` for individual turbines,
+wind farms, clusters and all turbines, respectively. With state reduction,
+use ``FC.MEAN_FARM_RESULTS``, ``FC.MEAN_FARMS_RESULTS``,
+``FC.MEAN_CLUSTER_RESULTS`` and ``FC.MEAN_TOTAL_FARM_RESULTS``. Point datasets use
+``FC.POINT_RESULTS`` or ``FC.TOTAL_POINT_RESULTS`` for individual or aggregated
+points, and ``FC.MEAN_POINT_RESULTS`` or ``FC.MEAN_TOTAL_POINT_RESULTS`` with
+state reduction. Farm and point totals have distinct keys and can be composed.
 Model-book families instead encode named turbine groups directly:
 ``farms_results`` selects ``aggregate_turbines="wind_farm"`` and
 ``cluster_results`` selects ``aggregate_turbines="cluster"``.
 ``total_results`` selects ``aggregate_turbines="all"``; ``farm_results`` retains
 individual turbines. These grouped families do not append aggregation suffixes.
-Constructor parameters and public dataset keys are independent of preset names.
+Dataset keys reflect grouping and state reduction, not field or filter presets.
 
 These presets select each family's default fields. Every collector and writer
 also combines optional ambient/waked filters and named fields with aggregation:

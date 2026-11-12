@@ -165,7 +165,6 @@ def main(argv=None):
 
     with engine:
         time0 = time.time()
-        # Request per-state metrics through output selection.
         farm_results = algo.calc_farm(outputs=args.outputs)
         time1 = time.time()
 

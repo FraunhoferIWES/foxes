@@ -115,7 +115,14 @@ def test_farm_physical_reductions_and_independent_weights(
         out_dir=tmp_path,
     )
     results, _ = _farm_run(output, sizes)
-    result = next(iter(results.values()))
+    keys = {
+        None: (FC.FARM_RESULTS, FC.MEAN_FARM_RESULTS),
+        "wind_farm": (FC.FARMS_RESULTS, FC.MEAN_FARMS_RESULTS),
+        "cluster": (FC.CLUSTER_RESULTS, FC.MEAN_CLUSTER_RESULTS),
+        "all": (FC.TOTAL_FARM_RESULTS, FC.MEAN_TOTAL_FARM_RESULTS),
+    }
+    assert set(results) == {keys[aggregate][states]}
+    result = results[keys[aggregate][states]]
     groups = {
         "wind_farm": [[0, 1], [2]],
         "cluster": [[0, 2], [1]],
@@ -231,10 +238,42 @@ def test_aggregation_outputs_compose_without_consuming_each_other(tmp_path):
     results, _ = _farm_run(chain)
     assert set(results) == {
         FC.FARM_RESULTS,
-        "farm_results_aggregate_wind_farm",
-        "farm_results_aggregate_all_mean",
+        FC.FARMS_RESULTS,
+        FC.MEAN_TOTAL_FARM_RESULTS,
     }
     assert results[FC.FARM_RESULTS].sizes[FC.TURBINE] == 3
+
+
+@pytest.mark.parametrize(
+    "collector",
+    [
+        FarmResultsOutput,
+        PointResultsOutput,
+        FarmResultsCountWriter,
+        PointResultsCountWriter,
+    ],
+)
+def test_result_collectors_and_writers_reject_custom_names(collector):
+    kwargs = (
+        {"base_name": "results", "n_states_per_file": 2}
+        if issubclass(collector, (FarmResultsCountWriter, PointResultsCountWriter))
+        else {}
+    )
+    with pytest.raises(TypeError, match="result_name"):
+        collector(result_name="custom", **kwargs)
+
+
+@pytest.mark.parametrize("aggregate", [None, "all"])
+def test_duplicate_farm_result_keys_are_rejected(tmp_path, aggregate):
+    chain = OutputList(
+        outputs=[
+            FarmResultsOutput(variables=[FV.P], aggregate_turbines=aggregate)
+            for _ in range(2)
+        ],
+        out_dir=tmp_path,
+    )
+    with pytest.raises(ValueError, match="result.*(farm_results|total_farm_results)"):
+        _farm_run(chain)
 
 
 @pytest.mark.parametrize(
@@ -360,6 +399,105 @@ def _points():
             FV.H: (FC.POINT, [90.0] * 3),
         },
     )
+
+
+@pytest.mark.parametrize(
+    "aggregate,states,key",
+    [
+        (None, False, FC.POINT_RESULTS),
+        (None, True, FC.MEAN_POINT_RESULTS),
+        ("all", False, FC.TOTAL_POINT_RESULTS),
+        ("all", True, FC.MEAN_TOTAL_POINT_RESULTS),
+    ],
+)
+def test_point_aggregation_public_keys(aggregate, states, key):
+    output = PointResultsOutput(
+        variables=[FV.WS], aggregate_points=aggregate, aggregate_states=states
+    )
+    other = PointResultsOutput(
+        variables=[FV.WS], aggregate_points=aggregate, aggregate_states=not states
+    )
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=2, verbosity=0
+    ):
+        results = _algorithm().calc_outputs(
+            point_results=_points(),
+            outputs=[output, other],
+        )
+    assert set(results) == {key, other._public_key}
+    assert (FC.STATE in results[key].dims) is (not states)
+    assert (FC.POINT in results[key].dims) is (aggregate is None)
+
+
+def test_point_aggregation_results_compose():
+    outputs = [
+        PointResultsOutput(
+            variables=[FV.WS], aggregate_points=aggregate, aggregate_states=states
+        )
+        for aggregate in (None, "all")
+        for states in (False, True)
+    ]
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=2, verbosity=0
+    ):
+        results = _algorithm().calc_outputs(point_results=_points(), outputs=outputs)
+    assert set(results) == {
+        FC.POINT_RESULTS,
+        FC.MEAN_POINT_RESULTS,
+        FC.TOTAL_POINT_RESULTS,
+        FC.MEAN_TOTAL_POINT_RESULTS,
+    }
+
+
+@pytest.mark.parametrize("aggregate", [None, "all"])
+def test_duplicate_point_result_keys_are_rejected(aggregate):
+    outputs = [
+        PointResultsOutput(variables=[FV.WS], aggregate_points=aggregate)
+        for _ in range(2)
+    ]
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=2, verbosity=0
+    ):
+        with pytest.raises(
+            ValueError, match="result.*(point_results|total_point_results)"
+        ):
+            _algorithm().calc_outputs(point_results=_points(), outputs=outputs)
+
+
+@pytest.mark.parametrize("states", [False, True])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_farm_and_point_totals_compose(states, reverse):
+    algo = _algorithm()
+    outputs = [
+        FarmResultsOutput(
+            variables=[FV.P], aggregate_turbines="all", aggregate_states=states
+        ),
+        PointResultsOutput(
+            variables=[FV.WS], aggregate_points="all", aggregate_states=states
+        ),
+    ]
+    if reverse:
+        outputs.reverse()
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=2, verbosity=0
+    ):
+        farm = algo.calc_farm(outputs="farm_results_all")
+        results = algo.calc_outputs(
+            farm_results=farm,
+            point_results=_points(),
+            outputs=outputs,
+        )
+    farm_key = FC.MEAN_TOTAL_FARM_RESULTS if states else FC.TOTAL_FARM_RESULTS
+    point_key = FC.MEAN_TOTAL_POINT_RESULTS if states else FC.TOTAL_POINT_RESULTS
+    assert set(results) == {farm_key, point_key}
+    farm_power = farm[FV.P]
+    point_speed = _points()[FV.WS]
+    if states:
+        weights = farm[FV.WEIGHT].broadcast_like(farm_power)
+        farm_power = (farm_power * weights).sum(FC.STATE) / weights.sum(FC.STATE)
+        point_speed = (point_speed * _points()[FV.WEIGHT]).sum(FC.STATE)
+    np.testing.assert_allclose(results[farm_key][FV.P], farm_power.sum(FC.TURBINE))
+    np.testing.assert_allclose(results[point_key][FV.WS], point_speed.mean(FC.POINT))
 
 
 @pytest.mark.parametrize("backend", ["numpy", "threads", "process"])
@@ -658,9 +796,9 @@ def test_preset_mutation_updates_state_weight_requirements(prefix, parameter):
     setattr(output, parameter, "all")
     output.aggregate_states = True
     expected = (
-        "farm_results_aggregate_all_mean"
+        FC.MEAN_TOTAL_FARM_RESULTS
         if prefix == "farm_results"
-        else "point_results_aggregate_all_mean"
+        else FC.MEAN_TOTAL_POINT_RESULTS
     )
     assert output._public_key == expected
     assert FV.WEIGHT in (
@@ -668,10 +806,9 @@ def test_preset_mutation_updates_state_weight_requirements(prefix, parameter):
     )
 
 
-@pytest.mark.parametrize("name", [None, "custom_points", FC.POINT_RESULTS])
 @pytest.mark.parametrize("aggregate", [None, "all"])
 @pytest.mark.parametrize("states", [False, True])
-def test_point_public_dimensions_do_not_depend_on_result_name(name, aggregate, states):
+def test_point_public_dimensions_follow_aggregation(aggregate, states):
     with foxes.Engine.new(
         "numpy", chunk_size_states=2, chunk_size_points=2, verbosity=0
     ):
@@ -681,7 +818,6 @@ def test_point_public_dimensions_do_not_depend_on_result_name(name, aggregate, s
                 variables=[FV.WS],
                 aggregate_points=aggregate,
                 aggregate_states=states,
-                result_name=name,
             ),
         )
     assert FC.TARGET not in result.dims

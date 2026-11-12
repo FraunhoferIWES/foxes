@@ -293,7 +293,7 @@ def test_total_presets_keep_public_keys_and_compose_with_raw_results(algorithm, 
     suffix = "_mean" if mean else ""
     with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
         result = algorithm.calc_farm(outputs=["farm_results", f"total_results{suffix}"])
-    key = f"farm_results_aggregate_all{suffix}"
+    key = FC.MEAN_TOTAL_FARM_RESULTS if mean else FC.TOTAL_FARM_RESULTS
     assert set(result) == {FC.FARM_RESULTS, key}
     raw, total = result[FC.FARM_RESULTS], result[key]
     expected = raw[FV.P]

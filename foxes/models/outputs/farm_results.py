@@ -51,10 +51,13 @@ class FarmResultsOutput(Output):
         add_cluster_names: bool = True,
         aggregate_turbines: Literal["wind_farm", "cluster", "all"] | None = None,
         aggregate_states: bool = False,
-        result_name: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Configure the farm result selection and metadata.
+
+        Dataset keys are ``FC.FARM_RESULTS``, ``FC.FARMS_RESULTS``,
+        ``FC.CLUSTER_RESULTS`` or ``FC.TOTAL_FARM_RESULTS`` according to turbine
+        grouping. State reduction uses the corresponding ``FC.MEAN_*`` key.
 
         Parameters
         ----------
@@ -84,8 +87,6 @@ class FarmResultsOutput(Output):
             before grouping turbines. Workers return sufficient statistics,
             not full state histories. Zero-weight samples do not propagate NaNs.
             Dataset attribute ``n_states`` records the selected input count.
-        result_name
-            Public dataset key, or ``None`` for the grouping-specific name.
         kwargs
             Additional parameters for :class:`foxes.core.Output`.
 
@@ -101,7 +102,6 @@ class FarmResultsOutput(Output):
             raise ValueError("Farm aggregation: aggregate_states must be a boolean")
         self.aggregate_turbines = aggregate_turbines
         self.aggregate_states = aggregate_states
-        self.result_name = result_name
 
         # Declare the chunk input requirements and retain selection flags.
         super().__init__(
@@ -142,20 +142,19 @@ class FarmResultsOutput(Output):
     def _collection_key(self) -> str:
         return (
             self.var("farm_collection")
-            if self.aggregate_turbines or self.aggregate_states or self.result_name
+            if self.aggregate_turbines or self.aggregate_states
             else FC.FARM_RESULTS
         )
 
     @property
     def _public_key(self) -> str:
-        if self.result_name is not None:
-            return self.result_name
-        name = (
-            f"farm_results_aggregate_{self.aggregate_turbines}"
-            if self.aggregate_turbines
-            else FC.FARM_RESULTS
-        )
-        return name + "_mean" if self.aggregate_states else name
+        keys = {
+            None: (FC.FARM_RESULTS, FC.MEAN_FARM_RESULTS),
+            "wind_farm": (FC.FARMS_RESULTS, FC.MEAN_FARMS_RESULTS),
+            "cluster": (FC.CLUSTER_RESULTS, FC.MEAN_CLUSTER_RESULTS),
+            "all": (FC.TOTAL_FARM_RESULTS, FC.MEAN_TOTAL_FARM_RESULTS),
+        }
+        return keys[self.aggregate_turbines][self.aggregate_states]
 
     def _collect_chunk(
         self, algo: Algorithm, mdata: MData, fdata: FData, reduce_states: bool = True
@@ -318,23 +317,25 @@ class FarmResultsOutput(Output):
         -------
         chunk_results
             Shared NumPy payloads under ``FC.FARM_RESULTS`` for raw collection,
-            or a model-private key for reduced/custom-named collection.
+            or a model-private key for reduced collection.
 
         Raises
         ------
         KeyError
             If a requested farm variable is unavailable.
         ValueError
-            If a selected physical variable does not have state/turbine dimensions.
+            If a selected physical variable does not have state/turbine dimensions
+            or another collector uses the same result key.
         """
         # Add the dataset payload without discarding other outputs' results.
         chunk_results = super().calculate(
             algo, mdata, fdata, tdata, model_results, chunk_results
         )
-        if (
-            mdata.chunki_points in (None, 0)
-            and self._collection_key not in chunk_results
-        ):
+        if mdata.chunki_points in (None, 0):
+            if self._collection_key in chunk_results:
+                raise ValueError(
+                    f"{self.name}: Duplicate result key {self._public_key!r}"
+                )
             chunk_results[self._collection_key] = self._collect_chunk(
                 algo, mdata, fdata
             )
@@ -387,9 +388,10 @@ class FarmResultsOutput(Output):
         n_chunks_targets
             Number of point chunks. Farm data is collected from the first only.
         output_results
-            Updated with the dataset under its grouping/state-specific key or
-            ``result_name``. Unaggregated fields retain state/turbine dimensions
-            and compress uniform weights to ``(FC.STATE,)``. State reduction
+            Updated with the dataset under the ``FC`` key for its turbine
+            grouping and state reduction. Unaggregated fields
+            retain state/turbine dimensions and compress uniform weights to
+            ``(FC.STATE,)``. State reduction
             removes states; spatial grouping replaces turbines with farm/cluster
             groups or removes that axis for ``all``.
             Known scientific fields have ``units`` attributes; power, ambient
@@ -399,10 +401,13 @@ class FarmResultsOutput(Output):
         Raises
         ------
         ValueError
-            If target chunks or farm payload schemas are incompatible.
+            If the result key is already in use, or target chunks or farm
+            payload schemas are incompatible.
         """
         # Assemble chunks in global state order rather than completion order.
         chunks = output_results.pop(self._collection_key)
+        if self._public_key in output_results:
+            raise ValueError(f"{self.name}: Duplicate result key {self._public_key!r}")
         ordered = [chunks[(index, 0)] for index in range(n_chunks_states)]
         payload = (
             _merge_statistics(ordered)

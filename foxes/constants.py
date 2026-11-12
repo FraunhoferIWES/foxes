@@ -129,12 +129,56 @@ BLOCK_CONVERGENCE = "block_convergence"
 """
 
 
+PREV_FARM_RESULTS = "prev_farm_results"
+"""Identifier for previous iteration farm results
+"""
+
 FARM_RESULTS = "farm_results"
 """Identifier for farm results dataset
 """
 
-PREV_FARM_RESULTS = "prev_farm_results"
-"""Identifier for previous iteration farm results
+FARMS_RESULTS = "farms_results"
+"""Identifier for windfarms results dataset
+"""
+
+CLUSTER_RESULTS = "cluster_results"
+"""Identifier for cluster results dataset
+"""
+
+POINT_RESULTS = "point_results"
+"""Identifier for point results dataset
+"""
+
+TOTAL_FARM_RESULTS = "total_farm_results"
+"""Identifier for results aggregated across all turbines
+"""
+
+TOTAL_POINT_RESULTS = "total_point_results"
+"""Identifier for results aggregated across all points
+"""
+
+MEAN_FARM_RESULTS = "mean_farm_results"
+"""Identifier for mean farm results dataset
+"""
+
+MEAN_FARMS_RESULTS = "mean_farms_results"
+"""Identifier for mean windfarms results dataset
+"""
+
+MEAN_CLUSTER_RESULTS = "mean_cluster_results"
+"""Identifier for mean cluster results dataset
+"""
+
+MEAN_POINT_RESULTS = "mean_point_results"
+"""Identifier for mean point results dataset
+"""
+
+MEAN_TOTAL_FARM_RESULTS = "mean_total_farm_results"
+"""Identifier for state-mean results aggregated across all turbines
+"""
+
+MEAN_TOTAL_POINT_RESULTS = "mean_total_point_results"
+"""Identifier for state-mean results aggregated across all points
 """
 
 
@@ -208,4 +252,3 @@ NC_ENGINE = "nc_engine"
 UTM_ZONE = "utm_zone"
 """Identifier for the UTM zone (number, letter) tuple
 """
-POINT_RESULTS = "point_results"

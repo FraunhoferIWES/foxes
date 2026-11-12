@@ -1203,7 +1203,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Use `farms_results`, `cluster_results` and `total_results` for wind-farm,
     cluster and all-turbine aggregation across every filter/field/state/writer
     combination. Remove superseded selectors without aliases; keep constructor
-    options and public result keys unchanged.
+    options unchanged.
+  - Key farm and point datasets by the `FC` constants for their spatial
+    grouping and state reduction. Remove custom collector result names; reject
+    duplicate keys. Farm and point totals use distinct keys and compose safely.
   - Demonstrate quick model-book outputs, selector composition, field/filter/
     mean/writer suffixes and preset discovery in the output tutorial.
 - Tutorials and visual policy:

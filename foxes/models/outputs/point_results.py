@@ -38,10 +38,13 @@ class PointResultsOutput(Output):
         waked_vars: bool = True,
         aggregate_points: Literal["all"] | None = None,
         aggregate_states: bool = False,
-        result_name: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Select point fields to collect.
+
+        The dataset key is ``FC.POINT_RESULTS`` for individual points or
+        ``FC.TOTAL_POINT_RESULTS`` for all points. State reduction uses the
+        corresponding ``FC.MEAN_*`` key.
 
         Parameters
         ----------
@@ -61,8 +64,6 @@ class PointResultsOutput(Output):
             Use normalized state weights independently per target and target
             point. Workers retain only sufficient statistics for this reduction.
             Dataset attribute ``n_states`` records the selected input count.
-        result_name
-            Public dataset key, or ``None`` for the aggregation-specific name.
         kwargs
             Common output configuration.
 
@@ -80,7 +81,6 @@ class PointResultsOutput(Output):
             raise ValueError("Point aggregation: aggregate_states must be a boolean")
         self.aggregate_points = aggregate_points
         self.aggregate_states = aggregate_states
-        self.result_name = result_name
 
         # Point collectors read prepared target data and model return values.
         super().__init__(
@@ -117,18 +117,17 @@ class PointResultsOutput(Output):
     def _collection_key(self) -> str:
         return (
             self.var("point_collection")
-            if self.aggregate_points or self.aggregate_states or self.result_name
+            if self.aggregate_points or self.aggregate_states
             else FC.POINT_RESULTS
         )
 
     @property
     def _public_key(self) -> str:
-        if self.result_name is not None:
-            return self.result_name
-        name = (
-            "point_results_aggregate_all" if self.aggregate_points else FC.POINT_RESULTS
-        )
-        return name + "_mean" if self.aggregate_states else name
+        keys = {
+            None: (FC.POINT_RESULTS, FC.MEAN_POINT_RESULTS),
+            "all": (FC.TOTAL_POINT_RESULTS, FC.MEAN_TOTAL_POINT_RESULTS),
+        }
+        return keys[self.aggregate_points][self.aggregate_states]
 
     def calculate(  # type: ignore[override]
         self,
@@ -168,7 +167,7 @@ class PointResultsOutput(Output):
         Raises
         ------
         ValueError
-            If no target data is supplied.
+            If no target data is supplied or a result key is duplicated.
         """
         # Preserve state and global target labels independently of chunk counts.
         if tdata is None:
@@ -176,17 +175,18 @@ class PointResultsOutput(Output):
         results = super().calculate(
             algo, mdata, fdata, tdata, model_results, chunk_results
         )
-        if self._collection_key not in results:
-            raw = self._collect_chunk(mdata, tdata, model_results)
-            if self.aggregate_points or self.aggregate_states:
-                payload = self._as_result_data({(0, 0): raw}, 1, 1)
-                results[self._collection_key] = (
-                    _state_statistics(payload)
-                    if self.aggregate_states
-                    else _point_spatial_statistics(payload)
-                )
-            else:
-                results[self._collection_key] = raw
+        if self._collection_key in results:
+            raise ValueError(f"{self.name}: Duplicate result key {self._public_key!r}")
+        raw = self._collect_chunk(mdata, tdata, model_results)
+        if self.aggregate_points or self.aggregate_states:
+            payload = self._as_result_data({(0, 0): raw}, 1, 1)
+            results[self._collection_key] = (
+                _state_statistics(payload)
+                if self.aggregate_states
+                else _point_spatial_statistics(payload)
+            )
+        else:
+            results[self._collection_key] = raw
         return results
 
     def _collect_chunk(
@@ -331,15 +331,22 @@ class PointResultsOutput(Output):
             Total target chunks.
         output_results
             Mapping whose private point buffer is replaced with the dataset
-            under its grouping/state-specific key or ``result_name``. Raw
-            collection under ``FC.POINT_RESULTS`` retains internal dimensions
+            under its point grouping/state-specific ``FC`` key.
+            Raw collection under ``FC.POINT_RESULTS`` retains internal dimensions
             for algorithm-side public conversion. Other public keys select
             target point zero and rename retained targets to public points.
             Known scientific variables have ``units`` attributes, including
             metre units on ``FV.X``, ``FV.Y`` and ``FV.H``.
+
+        Raises
+        ------
+        ValueError
+            If the result key is already in use.
         """
         # Concatenate target tiles before joining state slabs in global order.
         chunks = output_results.pop(self._collection_key)
+        if self._public_key in output_results:
+            raise ValueError(f"{self.name}: Duplicate result key {self._public_key!r}")
         if self.aggregate_states:
             tiles = [
                 _finish_states(

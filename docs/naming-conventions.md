@@ -107,7 +107,7 @@ instead of numerical results, and `nofig` suppresses figure generation.
 Constructor `show` defaults are false; model-book plotting presets/factories
 enable it. These flags do not rename result keys or change scientific payloads.
 
-`FC.FARM_RESULTS` names the unified in-memory farm dataset. Buffered writers
+`FC.FARM_RESULTS` names the unaggregated in-memory farm dataset. Buffered writers
 use `model.var(FC.FARM_RESULTS)` as their private result key. A writer's file
 `index` is distinct from the engine's `chunki_states`: count/period intervals
 can span chunks or split a single chunk.
@@ -136,11 +136,16 @@ remains. Unaggregated point files retain internal `state`, `target` and
 removes the state dimension after per-turbine/point weight normalization.
 Grouping replaces `turbine` with `farm`/`cluster` or removes the spatial axis
 for `all`. Missing memberships use the reserved `<unassigned>` group label.
-Reduced public dataset keys use
-`farm_results_aggregate_<group>` or `point_results_aggregate_all`, with `_mean`
-appended for state reduction; state-only keys are `farm_results_mean` and
-`point_results_mean`. `result_name` overrides the public key. These are distinct
-from `*_results_all`, which selects available fields without grouping.
+Farm collector keys are `FC.FARM_RESULTS`, `FC.FARMS_RESULTS`,
+`FC.CLUSTER_RESULTS` and `FC.TOTAL_FARM_RESULTS`, respectively; state reduction
+uses `FC.MEAN_FARM_RESULTS`, `FC.MEAN_FARMS_RESULTS`,
+`FC.MEAN_CLUSTER_RESULTS` and `FC.MEAN_TOTAL_FARM_RESULTS`. Point collectors use
+`FC.POINT_RESULTS` or `FC.TOTAL_POINT_RESULTS` for retained or aggregated points,
+and `FC.MEAN_POINT_RESULTS` or `FC.MEAN_TOTAL_POINT_RESULTS` with state reduction.
+These keys are fixed. Farm and point totals have distinct keys and can be
+combined; collectors with the same key cannot be combined in one output.
+These keys are distinct from `*_results_all`, which
+selects available fields without grouping.
 Writers inherit the domain-specific options. See
 [ADR-0027](adr/0027-domain-result-aggregation.md).
 
@@ -148,7 +153,7 @@ Model-book families imply named turbine grouping: `farms_results` selects
 `aggregate_turbines="wind_farm"` and `cluster_results` selects
 `aggregate_turbines="cluster"`. `total_results` selects `aggregate_turbines="all"`
 and combines every turbine; `farm_results` retains individual turbines. Public
-dataset keys and constructor parameters are independent of these preset names.
+dataset keys are determined by aggregation rather than field/filter presets.
 
 Every collector and count/chunk/calendar writer supports the ordered components
 `<family>[_amb|_waked][_<variables>][_aggregate_all][_mean]`, followed for writers
