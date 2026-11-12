@@ -88,7 +88,9 @@ def main(argv=None):
         print("Running example: random_timeseries")
 
     mbook = foxes.models.ModelBook()
-    mbook.outputs["farm_results"].fdata_variables.extend([FV.AMB_CT, FV.AMB_WD, FV.EFF])
+    mbook.outputs["farm_results"].fdata_variables.extend(
+        [FV.AMB_CT, FV.AMB_WD, FV.CT, FV.EFF]
+    )
 
     if args.nofig:
         for name in args.outputs:

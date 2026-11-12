@@ -288,7 +288,7 @@ def test_population_model_calc_points_after_calc_farm():
     )
 
     with foxes.Engine.new("default", verbosity=0):
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs="farm_results_all")
         points = np.zeros((4, 1, 3))
         points[:, 0] = [100.0, 50.0, 80.0]
         point_results = algo.calc_points(farm_results, points)

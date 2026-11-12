@@ -391,10 +391,9 @@ The tests use synthetic inputs and temporary output directories.
 
 Those farm-output tests validate their NumPy/thread paths. Broader engine,
 algorithm and animation coverage is described above; do not treat one focused
-suite as certification of every runtime. The full suite collects successfully;
-older tests still expose unsupported calculation options and default-field
-expectations that differ from the committed model-book selection. Report exact
-failing test IDs separately from regressions in the current change.
+suite as certification of every runtime. Tests that require arbitrary or
+model-specific fields must request the explicit ``farm_results_all`` or
+``point_results_all`` preset instead of relying on the finite default selection.
 
 For the analogous point outputs and their shared farm-writer policies, run:
 

@@ -46,7 +46,7 @@ def test_set_farm_vars():
             verbosity=0,
         )
 
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs="farm_results_all")
 
         fr = farm_results.to_dataframe()
         print(fr[[FV.WD, "x"]])

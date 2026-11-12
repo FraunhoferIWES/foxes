@@ -38,7 +38,8 @@ def animation_algo():
 
 @pytest.fixture(autouse=True)
 def _headless():
-    # Restore the caller's backend and figures after file-output checks.
+    # Keep prior plotting tests from contaminating the animation checks.
+    plt.close("all")
     backend = plt.get_backend()
     plt.switch_backend("Agg")
     try:

@@ -26,20 +26,28 @@ def ambient_algorithm(request):
     )
 
 
-@pytest.mark.parametrize("ambient_keep", [None, False, True])
+@pytest.mark.parametrize("include_waked", [False, True])
 @pytest.mark.parametrize("calculation", ["farm", "points"])
-def test_ambient_variable_retention(ambient_algorithm, calculation, ambient_keep):
-    options = {} if ambient_keep is None else {"ambient_keep": ambient_keep}
+def test_ambient_variables_follow_output_selection(
+    ambient_algorithm, calculation, include_waked
+):
+    if calculation == "farm":
+        variables = [FV.AMB_P, FV.P] if include_waked else [FV.AMB_P]
+        output = FarmResultsOutput(variables=variables)
+    else:
+        variables = [FV.AMB_WS, FV.WS] if include_waked else [FV.AMB_WS]
+        output = foxes.models.outputs.PointResultsOutput(variables=variables)
     with foxes.Engine.new("single", verbosity=0):
         results = ambient_algorithm.calc_farm(
             ambient=True,
-            outputs=FarmResultsOutput(waked_vars=bool(ambient_keep))
-            if calculation == "farm"
-            else "farm_results",
+            outputs=output if calculation == "farm" else "farm_results_all",
         )
         if calculation == "points":
             results = ambient_algorithm.calc_points(
-                results, np.array([[800.0, 0.0, 90.0]]), ambient=True, **options
+                results,
+                np.array([[800.0, 0.0, 90.0]]),
+                ambient=True,
+                outputs=output,
             )
 
     result_dimension = FC.TURBINE if calculation == "farm" else FC.POINT
@@ -54,7 +62,7 @@ def test_ambient_variable_retention(ambient_algorithm, calculation, ambient_keep
         assert results[FV.AMB_P].min() > 0.0
     for variable, ambient in pairs:
         assert results[ambient].dims == (FC.STATE, result_dimension)
-        if ambient_keep:
+        if include_waked:
             assert variable in results
             assert results[variable].dims == results[ambient].dims
             np.testing.assert_allclose(results[variable], results[ambient])
@@ -63,7 +71,7 @@ def test_ambient_variable_retention(ambient_algorithm, calculation, ambient_keep
 
 
 @pytest.mark.parametrize("calculation", ["farm", "points"])
-def test_ambient_keep_respects_outputs(ambient_algorithm, calculation):
+def test_point_variables_respect_outputs(ambient_algorithm, calculation):
     with foxes.Engine.new("single", verbosity=0):
         if calculation == "farm":
             results = ambient_algorithm.calc_farm(
@@ -77,7 +85,6 @@ def test_ambient_keep_respects_outputs(ambient_algorithm, calculation):
                 farm_results,
                 np.array([[800.0, 0.0, 90.0]]),
                 ambient=True,
-                ambient_keep=True,
                 outputs=foxes.models.outputs.PointResultsOutput(
                     variables=[FV.WS, FV.AMB_WS]
                 ),
@@ -87,29 +94,32 @@ def test_ambient_keep_respects_outputs(ambient_algorithm, calculation):
 
 
 @pytest.mark.parametrize("calculation", ["farm", "points"])
-def test_ambient_keep_does_not_disable_wakes(ambient_algorithm, calculation):
+def test_point_output_selection_does_not_disable_wakes(ambient_algorithm, calculation):
     with foxes.Engine.new("single", verbosity=0):
         farm_results = ambient_algorithm.calc_farm(
-            outputs="farm_results_all" if calculation == "points" else "farm_results"
-        )
-        kept_results = ambient_algorithm.calc_farm(
             outputs="farm_results_all" if calculation == "points" else "farm_results"
         )
         if calculation == "farm":
             assert (farm_results[FV.P] < farm_results[FV.AMB_P]).any()
         else:
             points = np.array([[800.0, 0.0, 90.0]])
-            kept_results = ambient_algorithm.calc_points(
-                farm_results, points, ambient_keep=True
+            selected = ambient_algorithm.calc_points(
+                farm_results,
+                points,
+                outputs=foxes.models.outputs.PointResultsOutput(variables=[FV.WS]),
             )
-            farm_results = ambient_algorithm.calc_points(farm_results, points)
-            assert (farm_results[FV.WS] < farm_results[FV.AMB_WS]).any()
-    xr.testing.assert_identical(farm_results, kept_results)
+            full = ambient_algorithm.calc_points(
+                farm_results,
+                points,
+                outputs=foxes.models.outputs.PointResultsOutput(
+                    variables=[FV.WS, FV.AMB_WS]
+                ),
+            )
+            xr.testing.assert_identical(selected[FV.WS], full[FV.WS])
+            assert (full[FV.WS] < full[FV.AMB_WS]).any()
 
 
-def test_ambient_keep_does_not_allow_wakes_without_farm_results(ambient_algorithm):
+def test_waked_points_require_farm_results(ambient_algorithm):
     with foxes.Engine.new("single", verbosity=0):
         with pytest.raises(ValueError, match="without farm results"):
-            ambient_algorithm.calc_points(
-                None, np.array([[800.0, 0.0, 90.0]]), ambient_keep=True
-            )
+            ambient_algorithm.calc_points(None, np.array([[800.0, 0.0, 90.0]]))

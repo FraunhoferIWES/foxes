@@ -33,7 +33,7 @@ def _calculate(amb_ti=None, state_ti=None):
         verbosity=0,
     )
     with foxes.Engine.new("numpy", chunk_size_states=3):
-        return algo.calc_farm()
+        return algo.calc_farm(outputs="farm_results_all")
 
 
 def test_constant_ambient_ti_matches_farm_data_without_adapters():

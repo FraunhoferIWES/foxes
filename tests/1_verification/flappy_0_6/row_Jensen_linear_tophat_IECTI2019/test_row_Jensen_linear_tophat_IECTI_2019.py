@@ -59,7 +59,7 @@ def test():
             verbosity=1,
         )
 
-        data = algo.calc_farm()
+        data = algo.calc_farm(outputs="farm_results_all")
 
         df = data.to_dataframe()[
             [

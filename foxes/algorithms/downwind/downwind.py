@@ -1022,7 +1022,9 @@ class Downwind(Algorithm):
             result directly. Multiple outputs return a result-name mapping.
             ``None`` or an empty list disables collection.
             ``get_calc_points`` is ignored: supplied points or point results
-            determine the calculation locations.
+            determine the calculation locations. The selected point output's
+            variable and ambient/waked filters control which fields are
+            collected, independently of ``ambient``.
         point_models
             Additional point-model instances or ``ModelBook.point_models``
             names, supplied singly or in execution-order lists.

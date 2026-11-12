@@ -133,7 +133,7 @@ def main(argv=None):
         print("Running example: timelines")
 
     mbook = foxes.models.ModelBook()
-    mbook.outputs["farm_results"].fdata_variables.extend([FV.EFF])
+    mbook.outputs["farm_results"].fdata_variables.extend([FV.CT, FV.EFF])
 
     # Preserve the two-panel animation through the named output models.
     for suffix in ("gif", "mp4"):

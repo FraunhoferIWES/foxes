@@ -336,9 +336,10 @@ Import `foxes.variables as FV`. Use constants such as `FV.WS`, `FV.WD`,
 corresponding `FV.AMB_*` constant for unwaked values. Preserve canonical case,
 including intentionally unusual existing names such as `FV.p` and `FV.AMB_p`.
 
-`ambient_keep` names the opt-in retention of ordinary fields in ambient-only
-farm and point calculations. Retained ordinary and `FV.AMB_*` counterparts
-both represent unwaked values; their names do not imply wake effects were run.
+Ambient and ordinary fields are selected through output `variables`,
+`ambient_vars` and `waked_vars` options. When selected together during an
+ambient-only calculation, ordinary and `FV.AMB_*` counterparts both represent
+unwaked values; their names do not imply wake effects were run.
 
 `PowerMask.P_lim` is the boost-transition width in the same power units as
 `FV.P` and `FV.MAX_P`, not an absolute power cap. `SectorManagement` turbine

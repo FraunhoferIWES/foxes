@@ -291,7 +291,9 @@ to `FarmResultsOutput(variables=...)`; ambient/ordinary filtering belongs to
 its `ambient_vars` and `waked_vars` flags. `ambient=True` still controls the
 scientific calculation, independently of output selection.
 
-`calc_points()` retains `ambient_keep=False` for its point-facing contract.
+`calc_points(outputs=...)` uses the selected point output's `variables`,
+`ambient_vars` and `waked_vars` to choose ambient and ordinary result fields;
+`ambient=True` controls only the scientific calculation.
 Iterative and Sequential use explicit intermediate collectors. Iterative keeps
 all convergence fields in downwind order and restores farm order only for final
 outputs. Requested output models are initialized and executed only in its final

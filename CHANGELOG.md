@@ -1273,6 +1273,11 @@ This major version introduces the concept of `Engines` which handle the chunking
     custom-model collection explicitly unrestricted.
   - Honor script verbosity for all selected animations in dynamic-wake,
     timeline and Sequential examples, including MP4-only selections.
+- Bug fixes:
+  - Keep the documented ambient farm-field selection and require explicit
+    `*_all` presets in tests that exercise arbitrary model-specific fields.
+  - Remove the point-calculation `ambient_keep` option; select ambient-only
+    or paired point fields through output variables and filters.
     Announce creation at verbosity one; writing and successful completion at
     verbosity two, alongside frame counts and encoder settings; and per-frame
     progress at verbosity three.

@@ -127,7 +127,7 @@ def test():
             # f Algo is foxes.algorithms.Iterative:
             #    algo.set_urelax("post_rotor", CT=0.9)
 
-            data = algo.calc_farm()
+            data = algo.calc_farm(outputs="farm_results_all")
 
             df = data.to_dataframe()[
                 [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]

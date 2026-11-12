@@ -91,6 +91,7 @@ def main(argv=None):
         print("Running example: states_lookup_table")
 
     mbook = foxes.models.ModelBook()
+    mbook.outputs["farm_results"].fdata_variables.append(FV.CT)
 
     if args.nofig:
         for name in args.outputs:

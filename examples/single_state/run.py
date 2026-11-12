@@ -83,7 +83,9 @@ def main(argv=None):
 
     # create model book
     mbook = foxes.ModelBook()
-    mbook.outputs["farm_results"].fdata_variables.extend([FV.AMB_WD, FV.EFF, FV.ORDER])
+    mbook.outputs["farm_results"].fdata_variables.extend(
+        [FV.AMB_WD, FV.CT, FV.EFF, FV.ORDER]
+    )
 
     if args.nofig:
         for name in args.outputs:

@@ -90,7 +90,7 @@ def test():
                 verbosity=1,
             )
 
-            data = algo.calc_farm()
+            data = algo.calc_farm(outputs="farm_results_all")
 
             df = data.to_dataframe()[
                 [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]

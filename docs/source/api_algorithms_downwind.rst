@@ -34,10 +34,12 @@ waked_vars=False)`` collects ambient fields while omitting ordinary fields
 that have ambient counterparts. Choose both flags to retain both selected
 field names. Farm ``outputs`` are output models, not lists of variable names.
 
-``calc_points()`` retains its ``ambient_keep=False`` parameter and
-variable-name output selection, but its engine integration is not yet adopted
-into the chunk-output structure. Do not infer point or Iterative support from
-the farm-output tests.
+Point results use the selected output's ``variables``, ``ambient_vars`` and
+``waked_vars`` to control collected fields. For example,
+``PointResultsOutput(variables=["AMB_WS"])`` selects only ambient wind speed,
+while ``PointResultsOutput(variables=["WS", "AMB_WS"])`` retains both names.
+This output choice is independent of whether ``ambient=True`` skips wake
+effects.
 
 .. toctree::
     :maxdepth: 2

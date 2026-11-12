@@ -565,7 +565,7 @@ def _run_state_smoke(cls, tmp_path):
 
     engine_type = "threads"
     with _engine(engine_type=engine_type):
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs="farm_results_all")
         _assert_farm_results(farm_results)
         if name in {
             "PointCloudData",
@@ -591,7 +591,9 @@ def _run_state_smoke(cls, tmp_path):
                     [[0.0, 0.0, 90.0], [100.0, 0.0, 90.0]], dtype=float
                 )
             points = np.repeat(base_points[None, :, :], n_states, axis=0)
-            point_results = algo.calc_points(farm_results, points=points)
+            point_results = algo.calc_points(
+                farm_results, points=points, outputs="point_results_all"
+            )
             _assert_point_results(point_results)
 
 
@@ -618,10 +620,12 @@ def _run_vertical_profile_smoke(cls):
     )
 
     with _engine():
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs="farm_results_all")
         _assert_farm_results(farm_results)
         points = np.array([[[0.0, 0.0, 50.0], [0.0, 0.0, 120.0]]], dtype=float)
-        point_results = algo.calc_points(farm_results, points=points)
+        point_results = algo.calc_points(
+            farm_results, points=points, outputs="point_results_all"
+        )
         _assert_point_results(point_results)
 
 
@@ -884,7 +888,7 @@ def _run_turbine_model_smoke(cls, tmp_path):
         if name == "YawController":
             farm_results = next(iter(algo))
         else:
-            farm_results = algo.calc_farm()
+            farm_results = algo.calc_farm(outputs="farm_results_all")
     _assert_farm_results(farm_results)
 
 
@@ -1064,7 +1068,7 @@ def _run_point_model_smoke(cls):
         farm, states, wake_models=["Jensen_linear_k007"], mbook=mbook, verbosity=0
     )
     with _engine():
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(outputs="farm_results_all")
         points = np.array([[[0.0, 0.0, 90.0], [100.0, 0.0, 90.0]]], dtype=float)
         point_results = algo.calc_points(
             farm_results,
@@ -1273,7 +1277,7 @@ def _run_wake_frame_smoke(cls):
         if name == "SeqDynamicWakes":
             farm_results = next(iter(algo))
         else:
-            farm_results = algo.calc_farm()
+            farm_results = algo.calc_farm(outputs="farm_results_all")
     _assert_farm_results(farm_results)
 
 

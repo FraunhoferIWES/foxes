@@ -517,9 +517,11 @@ def test_downwind_outputs_are_chunk_independent(
         {FV.WS: [7.0, 8.0, 9.0, 10.0, 11.0], FV.WD: [90.0, 270.0, 90.0, 270.0, 90.0]},
         index=[0, 1, 4, 5, 8],
     )
+    table[FV.WEIGHT] = np.full(5, 1.0 / 5 if normalize else 1.0)
     states = foxes.input.states.StatesTable(
         table,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        var2col={FV.WEIGHT: FV.WEIGHT},
         fixed_vars={FV.TI: 0.08, FV.RHO: 1.225},
     )
     farm = foxes.WindFarm()
@@ -531,7 +533,7 @@ def test_downwind_outputs_are_chunk_independent(
 
     # Compare chunked output with a single-chunk reference using the supported pool path.
     with foxes.Engine.new("numpy", chunk_size_states=10, verbosity=0):
-        reference = algo.calc_farm()
+        reference = algo.calc_farm(outputs="farm_results_all")
     output = FarmResultsOutput(out_dir=tmp_path)
     writers = [
         FarmResultsCountWriter(
@@ -551,9 +553,7 @@ def test_downwind_outputs_are_chunk_independent(
     with foxes.Engine.new(
         engine_name, n_procs=2, chunk_size_states=chunk_size, verbosity=0
     ):
-        results = algo.calc_farm(outputs=[output, *writers], normalize=normalize)[
-            FC.FARM_RESULTS
-        ]
+        results = algo.calc_farm(outputs=[output, *writers])[FC.FARM_RESULTS]
     for variable in results.data_vars:
         if variable in reference:
             xr.testing.assert_allclose(results[variable], reference[variable])

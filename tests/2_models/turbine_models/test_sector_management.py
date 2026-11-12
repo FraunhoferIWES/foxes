@@ -122,7 +122,7 @@ def test_sector_management_shutdown_stays_on_named_turbine(algorithm, chunk_size
         verbosity=0,
     )
     with foxes.Engine.new("single", chunk_size_states=chunk_size, verbosity=0):
-        results = algo.calc_farm()
+        results = algo.calc_farm(outputs="farm_results_all")
 
     assert results[FV.MAX_P].dims == (FC.STATE, FC.TURBINE)
     np.testing.assert_array_equal(results["tname"], ["WT01", "WT02", "WT03"])
