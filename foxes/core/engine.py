@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -11,15 +12,32 @@ from xarray import Dataset
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.config import config
-from foxes.utils import new_instance
+from foxes.utils import Dict, new_instance
 
 from .data import FData, MData, TData
 
 if TYPE_CHECKING:
     from .algorithm import Algorithm
     from .data_calc_model import DataCalcModel
+    from .output import Output
 
 __global_engine_data__: dict[str, Engine | None] = dict(engine=None)
+
+
+@dataclass
+class _Calculation:
+    """Per-call caches, output mappings and chunk counts for the lifecycle."""
+
+    chunk_store: dict[Any, Any]
+    new_chunk_store: dict[Any, Any] = field(default_factory=dict)
+    chunk_results: Dict[str, Dict[tuple[int, int], Any]] = field(
+        default_factory=lambda: Dict(_name="chunk_results")
+    )
+    output_results: Dict[str, Any] = field(
+        default_factory=lambda: Dict(_name="output_results")
+    )
+    n_chunks_states: int = 0
+    n_chunks_targets: int = 0
 
 
 def _expand_farm_fields(data: dict[str, Any], dims: dict[str, Any]) -> None:
@@ -733,7 +751,6 @@ class Engine(ABC):
         msg += "."
         return msg
 
-    @abstractmethod
     def run_calculation(
         self,
         algo: Algorithm,
@@ -741,12 +758,17 @@ class Engine(ABC):
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
         point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+        output: Output | None = None,
+        chunk_store: dict[Any, Any] | None = None,
+        sel: dict[str, Any] | None = None,
+        iterative: bool = False,
         *,
         progress_label: str | None = None,
-        **kwargs: Any,
-    ) -> Any:
+        **calc_pars: Any,
+    ) -> Dict[str, Any]:
         """
-        Run the model calculation.
+        Run backend chunks within the common output and cache lifecycle.
 
         Parameters
         ----------
@@ -760,17 +782,310 @@ class Engine(ABC):
             The initial farm data.
         point_data
             The initial point data.
+        extra_data
+            Non-array model inputs forwarded to the backend.
+        output
+            Initialized, non-running output model, or ``None`` to omit output
+            collection. Remains running through parent-side result finalization.
+        chunk_store
+            Cached scientific data, reattached after backend cleanup even on
+            failure. ``None`` starts empty.
+        sel
+            Coordinate subsets passed to backend selection and output hooks.
+        iterative
+            Whether this calculation is an iterative algorithm pass.
         progress_label
             Operation label for progress displays. ``None`` uses the model class.
-        kwargs
-            Additional engine-specific calculation options.
+        calc_pars
+            Additional parameters forwarded to the scientific model.
+
+        Returns
+        -------
+        output_results
+            Result-name keyed output mapping, empty without a selected output.
+
+        Notes
+        -----
+        Worker cache updates are merged only on success. Reattachment is not
+        rollback: in-place mutations to shared caches can survive failures.
+        Backend cleanup precedes output restoration and cache reattachment.
+        """
+        # Reject invalid outputs before taking ownership of their lifecycle.
+        if output is not None:
+            if not output.initialized:
+                raise ValueError(
+                    f"Engine '{self.name}': Output model '{output.name}' is not initialized"
+                )
+            if output.running:
+                raise ValueError(
+                    f"Engine '{self.name}': Output model '{output.name}' is already running"
+                )
+            results = output.get_initial_output_results(
+                algo,
+                model_data=model_data,
+                farm_data=farm_data,
+                point_data=point_data,
+                extra_data=extra_data,
+            )
+        else:
+            results = Dict[str, Any](_name="results")
+        calculation = self._create_calculation(
+            {} if chunk_store is None else chunk_store
+        )
+        output_data_stash: dict[str, dict[str, Any]] = {}
+        failed = True
+
+        # Restore outputs and caches even if backend preparation or cleanup fails.
+        try:
+            try:
+                algo.reset_chunk_store()
+                if output is not None:
+                    output.set_running(
+                        algo, output_data_stash, sel=sel, verbosity=self.verbosity - 2
+                    )
+                results = self._run_calculation(
+                    calculation,
+                    algo,
+                    model,
+                    results,
+                    model_data,
+                    farm_data,
+                    point_data,
+                    extra_data=extra_data,
+                    output=output,
+                    sel=sel,
+                    iterative=iterative,
+                    progress_label=progress_label,
+                    **calc_pars,
+                )
+                if output is not None:
+                    output.finalize_results(
+                        algo=algo,
+                        n_chunks_states=calculation.n_chunks_states,
+                        n_chunks_targets=calculation.n_chunks_targets,
+                        output_results=results,
+                    )
+                failed = False
+            finally:
+                self._cleanup_calculation(calculation, failed)
+
+            calculation.chunk_store.update(calculation.new_chunk_store)
+            return results
+        finally:
+            try:
+                if output is not None and output.running:
+                    output.unset_running(
+                        algo, output_data_stash, sel=sel, verbosity=self.verbosity - 2
+                    )
+            finally:
+                algo.reset_chunk_store(calculation.chunk_store)
+
+    @abstractmethod
+    def _create_calculation(self, chunk_store: dict[Any, Any]) -> _Calculation:
+        """Create per-call state without allocating backend resources.
+
+        Parameters
+        ----------
+        chunk_store
+            Scientific caches retained by the common lifecycle.
+
+        Returns
+        -------
+        calculation
+            Backend state, safe to clean up before preparation has completed.
+        """
+
+    @abstractmethod
+    def _run_calculation(
+        self,
+        calculation: _Calculation,
+        algo: Algorithm,
+        model: DataCalcModel,
+        results: Dict[str, Any],
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        *,
+        extra_data: dict[str, Any] | None = None,
+        output: Output | None = None,
+        sel: dict[str, Any] | None = None,
+        iterative: bool = False,
+        progress_label: str | None = None,
+        **calc_pars: Any,
+    ) -> Dict[str, Any]:
+        """Prepare and execute chunks without finalizing the output lifecycle.
+
+        Parameters
+        ----------
+        calculation
+            Per-call state. Record resources as they are acquired, chunk counts
+            and collected cache updates here for finalization and cleanup.
+        algo
+            Running calculation algorithm.
+        model
+            Initialized scientific model.
+        results
+            Initial output results mapping, updated in place and returned.
+        model_data
+            Initial model dataset.
+        farm_data
+            Initial farm dataset or previous farm results.
+        point_data
+            Initial target dataset.
+        extra_data
+            Non-array model inputs.
+        output
+            Running output model, or ``None`` to omit output collection.
+        sel
+            Coordinate subsets.
+        iterative
+            Whether this is an iterative pass.
+        progress_label
+            Operation label for progress displays.
+        calc_pars
+            Scientific calculation parameters.
 
         Returns
         -------
         results
-            The model results.
-
+            Collected result-name mapping awaiting parent-side finalization.
         """
+
+    @abstractmethod
+    def _cleanup_calculation(self, calculation: _Calculation, failed: bool) -> None:
+        """Finish workers and release resources, including after partial setup.
+
+        Parameters
+        ----------
+        calculation
+            State populated by backend execution, possibly only partially.
+        failed
+            Whether setup, execution or output finalization failed.
+        """
+
+    def _collect_results(
+        self,
+        calculation: _Calculation,
+        algo: Algorithm,
+        output: Output | None,
+        futures: dict[tuple[int, int], Any],
+        on_chunk: Callable[[], None],
+    ) -> None:
+        """Resolve an ordered batch and merge chunk outputs and cache updates.
+
+        Parameters
+        ----------
+        calculation
+            Per-call result mappings, cache updates and total chunk counts.
+        algo
+            Running calculation algorithm passed to output hooks.
+        output
+            Running output model, or ``None`` to collect only cache updates.
+        futures
+            State/target keys and pending handles in submission order. Remove
+            each resolved entry before consuming its payload; leave pending
+            entries available to backend cleanup on failure.
+        on_chunk
+            Callback invoked after a chunk and its output updates succeed.
+        """
+        # Await the whole batch before consuming payloads in submission order.
+        keys = list(futures)
+        batch = self.await_results(list(futures.values()))
+        for key, (results, caches) in zip(keys, batch):
+            del futures[key]
+            if results is not None:
+                for name, result in results.items():
+                    if name not in calculation.chunk_results:
+                        calculation.chunk_results[name] = Dict({key: result})
+                    elif key not in calculation.chunk_results[name]:
+                        calculation.chunk_results[name][key] = result
+                    else:
+                        calculation.chunk_results[name][key].update(result)
+            for cache_key, entry in caches.items():
+                calculation.new_chunk_store.setdefault(cache_key, {}).update(entry)
+
+            # Outputs consume their pending keys before progress records success.
+            if output is not None:
+                output.update_results(
+                    algo,
+                    n_chunks_states=calculation.n_chunks_states,
+                    n_chunks_targets=calculation.n_chunks_targets,
+                    new_chunk_results=calculation.chunk_results,
+                    output_results=calculation.output_results,
+                )
+            on_chunk()
+
+    def _prepare_calculation_inputs(
+        self,
+        algo: Algorithm,
+        model: DataCalcModel,
+        model_data: Dataset | None,
+        farm_data: Dataset | None,
+        point_data: Dataset | None,
+        extra_data: dict[str, Any],
+        sel: dict[str, Any] | None,
+    ) -> tuple[Dataset, Dataset, Dataset | None, int]:
+        """Select and validate scientific inputs independently of dispatch.
+
+        Parameters
+        ----------
+        algo
+            Algorithm supplying the fallback state count.
+        model
+            Scientific model whose initialization is checked.
+        model_data
+            Required model dataset.
+        farm_data
+            Farm fields, or previous farm results when no target data is given.
+        point_data
+            Target dataset, or ``None`` for a farm calculation.
+        extra_data
+            Non-array inputs, updated in place with previous farm results.
+        sel
+            Coordinate-label subsets applied to all supplied datasets.
+
+        Returns
+        -------
+        model_data
+            Selected model dataset.
+        farm_data
+            Selected farm dataset, empty when absent or moved to ``extra_data``.
+        point_data
+            Selected target dataset, or ``None``.
+        n_states
+            State count after selection.
+
+        Raises
+        ------
+        ValueError
+            If model data or the state count is missing, selection is invalid,
+            or the scientific model is not initialized.
+        """
+        # Select before interpreting farm inputs or constructing empty containers.
+        (model_data, farm_data, point_data), n_states = self.select_subsets(
+            model_data, farm_data, point_data, sel=sel, default_n_states=algo.n_states
+        )
+        if model_data is None:
+            raise ValueError(f"Engine '{self.name}': Missing model_data")
+        if n_states is None:
+            raise ValueError(f"Engine '{self.name}': Could not determine n_states")
+        if farm_data is not None and point_data is None:
+            extra_data[FC.PREV_FARM_RESULTS] = farm_data
+            farm_data = None
+        self._validate_calculation(algo, model, model_data, farm_data, point_data)
+        if farm_data is None:
+            farm_data = Dataset()
+        return model_data, farm_data, point_data, n_states
+
+    def _validate_calculation(
+        self,
+        algo: Algorithm,
+        model: DataCalcModel,
+        model_data: Dataset | None,
+        farm_data: Dataset | None,
+        point_data: Dataset | None,
+    ) -> None:
+        """Validate initialization and report the selected calculation domain."""
         n_states = algo.n_states
         if model_data is not None and FC.STATE in model_data.sizes:
             n_states = model_data.sizes[FC.STATE]
@@ -788,18 +1103,6 @@ class Engine(ABC):
             )
         if not model.initialized:
             raise ValueError(f"Model '{model.name}' not initialized")
-
-    @abstractmethod
-    def new_runner(self) -> EngineRunner:
-        """
-        Create a new engine runner for this engine.
-
-        Returns
-        -------
-        runner
-            The engine runner.
-
-        """
 
     @classmethod
     def new(cls, engine_type: str | None, *args: Any, **kwargs: Any) -> Engine:

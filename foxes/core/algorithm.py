@@ -803,6 +803,7 @@ class Algorithm(Model):
 
     def calc_farm(
         self,
+        model: Model,
         *args: Any,
         clear_mem: bool = False,
         **kwargs: Any,
@@ -812,6 +813,8 @@ class Algorithm(Model):
 
         Parameters
         ----------
+        model
+            The model to be run for the farm calculation.
         args
             Positional parameters.
         clear_mem
@@ -833,33 +836,35 @@ class Algorithm(Model):
 
         # set to running:
         data_stash: dict[str, Any] | None = {} if not clear_mem else None
-        chunk_store = self.reset_chunk_store()
-        mdls = [
-            m
-            for m in [self] + list(args) + list(kwargs.values())
-            if isinstance(m, Model)
-        ]
         try:
-            # Unwind models already started if a later running hook fails.
-            for m in mdls:
-                m.set_running(self, data_stash, sel=None, verbosity=self.verbosity - 2)
+            model.set_running(self, data_stash, sel=None, verbosity=self.verbosity - 2)
+            self.set_running(
+                algo=self, data_stash=data_stash, sel=None, verbosity=self.verbosity - 2
+            )
 
             # run parallel calculation:
             return self._launch_parallel_farm_calc(
+                model,
                 *args,
-                chunk_store=chunk_store,
+                chunk_store=self.chunk_store,
                 **kwargs,
             )
         finally:
             # reset to not running:
-            for m in mdls:
-                if m.running:
-                    m.unset_running(
-                        self,
-                        data_stash,
-                        sel=None,
-                        verbosity=self.verbosity - 2,
-                    )
+            if self.running:
+                self.unset_running(
+                    algo=self,
+                    data_stash=data_stash,
+                    sel=None,
+                    verbosity=self.verbosity - 2,
+                )
+            if model.running:
+                model.unset_running(
+                    self,
+                    data_stash,
+                    sel=None,
+                    verbosity=self.verbosity - 2,
+                )
 
     def _launch_parallel_points_calc(self, *args: Any, **kwargs: Any) -> xr.Dataset:
         """
@@ -884,6 +889,7 @@ class Algorithm(Model):
 
     def calc_points(
         self,
+        model: Model,
         *args: Any,
         sel: dict[str, Any] | None = None,
         **kwargs: Any,
@@ -893,6 +899,8 @@ class Algorithm(Model):
 
         Parameters
         ----------
+        model
+            The model to be used for the points calculation.
         args
             Parameters
         sel
@@ -914,36 +922,35 @@ class Algorithm(Model):
 
         # Include supplied calculation/output models in the point-run lifecycle.
         data_stash: dict[str, Any] = {}
-        mdls = [
-            m
-            for m in [self] + list(args) + list(kwargs.values())
-            if isinstance(m, Model)
-        ]
-
-        # Restore the caller's farm caches after point evaluation, even on failure.
-        chunk_store = self.reset_chunk_store()
         try:
-            for m in mdls:
-                m.set_running(self, data_stash, sel=sel, verbosity=self.verbosity - 2)
+            model.set_running(self, data_stash, sel=sel, verbosity=self.verbosity - 2)
+            self.set_running(
+                algo=self, data_stash=data_stash, sel=None, verbosity=self.verbosity - 2
+            )
+
             return self._launch_parallel_points_calc(
+                model,
                 *args,
-                chunk_store=chunk_store,
+                chunk_store=self.chunk_store,
                 sel=sel,
                 **kwargs,
             )
         finally:
-            try:
-                self.reset_chunk_store(chunk_store)
-            finally:
-                # Restore every model after output finalization or a worker error.
-                for m in mdls:
-                    if m.running:
-                        m.unset_running(
-                            self,
-                            data_stash,
-                            sel=sel,
-                            verbosity=self.verbosity - 2,
-                        )
+            # reset to not running:
+            if self.running:
+                self.unset_running(
+                    algo=self,
+                    data_stash=data_stash,
+                    sel=None,
+                    verbosity=self.verbosity - 2,
+                )
+            if model.running:
+                model.unset_running(
+                    self,
+                    data_stash,
+                    sel=sel,
+                    verbosity=self.verbosity - 2,
+                )
 
     def finalize(self, clear_mem: bool = False) -> None:
         """
@@ -957,7 +964,7 @@ class Algorithm(Model):
         """
         if self.running:
             raise ValueError(f"Algorithm '{self.name}': Cannot finalize while running")
-        super().finalize(self, self.verbosity - 1)
+        super().finalize(algo=self, verbosity=self.verbosity - 1)
         if clear_mem:
             pass
             # self.reset_chunk_store()

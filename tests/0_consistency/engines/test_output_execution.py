@@ -14,13 +14,15 @@ import xarray as xr
 import foxes
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.core import MData
+from foxes.core import MData, Output
 from foxes.engines.progress import CalculationProgress
 from foxes.models.outputs import (
     FarmResultsOutput,
     FarmResultsChunkWriter,
     FarmResultsCountWriter,
+    FlowPlots2D,
 )
+from foxes.utils import Dict
 
 
 def _algorithm(algorithm="Downwind"):
@@ -85,6 +87,7 @@ def test_direct_engine_progress_label(monkeypatch, capsys, progress_label):
 @pytest.mark.parametrize(
     "backend",
     [
+        "default",
         "single",
         "numpy",
         "threads",
@@ -141,6 +144,137 @@ def test_farm_and_point_output_backend_parity(backend):
         assert algo.calc_farm(outputs=None) == {}
     xr.testing.assert_allclose(results, reference)
     xr.testing.assert_allclose(point_results, point_reference)
+
+
+class _SeededOutput(Output):
+    def __init__(self, failure=None, **kwargs):
+        # Constructor data must survive execution without travelling on the model.
+        super().__init__(fdata_variables=[], **kwargs)
+        self.payload = np.array([4.0, 7.0])
+        self.initial_results = Dict(seed=self.payload, chunks=0)
+        self.failure = failure
+
+    def get_initial_output_results(self, algo, **kwargs):
+        assert self.initialized and not self.running
+        return self.initial_results
+
+    def set_running(self, algo, data_stash, sel=None, verbosity=0):
+        super().set_running(algo, data_stash, sel, verbosity)
+        data_stash[self.name]["payload"] = self.payload
+        data_stash[self.name]["initial_results"] = self.initial_results
+        del self.payload, self.initial_results
+
+    def unset_running(self, algo, data_stash, sel=None, verbosity=0):
+        super().unset_running(algo, data_stash, sel, verbosity)
+        self.payload = data_stash[self.name].pop("payload")
+        self.initial_results = data_stash[self.name].pop("initial_results")
+
+    def calculate(self, algo, mdata, fdata, tdata, model_results, chunk_results=None):
+        assert self.running and algo.running and not hasattr(self, "payload")
+        assert not hasattr(self, "initial_results")
+        if self.failure == "worker":
+            raise ValueError("synthetic worker failure")
+        results = super().calculate(
+            algo, mdata, fdata, tdata, model_results, chunk_results
+        )
+        results["seeded_chunks"] = 1
+        return results
+
+    def update_results(
+        self, algo, n_chunks_states, n_chunks_targets, new_chunk_results, output_results
+    ):
+        output_results["chunks"] += sum(new_chunk_results.pop("seeded_chunks").values())
+
+    def finalize_results(self, algo, n_chunks_states, n_chunks_targets, output_results):
+        assert (
+            self.running
+            and output_results["chunks"] == n_chunks_states * n_chunks_targets
+        )
+        if self.failure == "finalize":
+            raise ValueError("synthetic finalize failure")
+        output_results["finalized"] = True
+
+
+@pytest.mark.parametrize(
+    "backend", ["default", "single", "numpy", "threads", "process"]
+)
+@pytest.mark.parametrize("composed", [False, True])
+def test_initial_results_survive_collection_and_delegation(tmp_path, backend, composed):
+    # Seeded mappings and constructor data retain their identity in the parent.
+    output = _SeededOutput(out_dir=tmp_path)
+    payload = output.payload
+    outputs = [output, FarmResultsOutput()] if composed else output
+    algo = _algorithm()
+    with foxes.Engine.new(backend, n_procs=2, chunk_size_states=2, verbosity=0):
+        results = algo.calc_farm(outputs=outputs, ret_dict=True)
+    assert results["seed"] is payload
+    assert results["finalized"] and results["chunks"] > 0
+    assert output.payload is payload and not output.running and not algo.running
+    if not composed:
+        assert results is output.initial_results
+
+
+@pytest.mark.parametrize("delegate", ["single", "process"])
+def test_default_hooks_preserve_initial_results(tmp_path, monkeypatch, delegate):
+    # Route launch through DefaultEngine itself, not its active process delegate.
+    output = _SeededOutput(out_dir=tmp_path)
+    algo = _algorithm()
+    with foxes.Engine.new("default", n_procs=2, verbosity=0) as engine:
+        monkeypatch.setattr(engine, "_select_engine_name", lambda **kwargs: delegate)
+        monkeypatch.setattr("foxes.core.engine.get_engine", lambda error=True: engine)
+        results = algo.calc_farm(outputs=output, ret_dict=True)
+    assert results is output.initial_results
+    assert results["finalized"] and results["seed"] is output.payload
+    assert not output.running and not algo.running
+
+
+def test_duplicate_initial_results_fail_before_starting_outputs(tmp_path):
+    # Composed outputs must not silently overwrite initialized parent data.
+    outputs = [_SeededOutput(out_dir=tmp_path), _SeededOutput(out_dir=tmp_path)]
+    algo = _algorithm()
+    with foxes.Engine.new("numpy", verbosity=0):
+        with pytest.raises(ValueError, match="Duplicate initial output result keys"):
+            algo.calc_farm(outputs=outputs)
+    assert all(not output.running and hasattr(output, "payload") for output in outputs)
+    assert not algo.running
+
+
+@pytest.mark.parametrize("backend", ["numpy", "process"])
+def test_point_output_preserves_shared_state_lifecycle(tmp_path, backend):
+    # Output point models share states already running under the algorithm stash.
+    algo = _algorithm()
+    output = FlowPlots2D(
+        out_dir=tmp_path, plot=False, grid_pars={"n_img_points": (2, 2)}
+    )
+    with foxes.Engine.new(backend, n_procs=2, chunk_size_states=2, verbosity=0):
+        farm = algo.calc_farm(outputs="farm_results_all")
+        results = algo.calc_outputs(outputs=output, farm_results=farm, ret_dict=True)
+        assert results and not algo.states.running
+        assert not output.running and not algo.running
+        algo.calc_farm()
+
+
+@pytest.mark.parametrize("backend", ["default", "numpy", "threads", "process"])
+@pytest.mark.parametrize("failure", ["setup", "worker", "finalize"])
+def test_output_failure_restores_configuration_and_cache(
+    tmp_path, monkeypatch, backend, failure
+):
+    # Every error boundary must preserve the engine-owned restoration contract.
+    output = _SeededOutput(failure=failure, out_dir=tmp_path)
+    payload = output.payload
+    algo = _algorithm()
+    cache = algo.chunk_store
+    with foxes.Engine.new(backend, n_procs=2, chunk_size_states=2, verbosity=0):
+        if failure == "setup":
+
+            def fail_setup(*args, **kwargs):
+                raise ValueError("synthetic setup failure")
+
+            monkeypatch.setattr(foxes.Engine, "_prepare_calculation_inputs", fail_setup)
+        with pytest.raises(ValueError, match=f"synthetic {failure} failure"):
+            algo.calc_farm(outputs=output, finalize=False)
+        assert algo.chunk_store is cache
+        assert output.payload is payload and not output.running and not algo.running
 
 
 def test_chunk_store_selection_allows_concurrent_chunk_insertion(monkeypatch):

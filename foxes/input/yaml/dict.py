@@ -515,7 +515,9 @@ def _run_calculations(
             if isinstance(points, str):
                 _print(verbosity, "Reading file", points)
                 points = pd.read_csv(points).to_numpy()
-            point_results = algo.calc_points(farm_results, points=points, **parameters)
+            point_results = algo.calc_points(
+                farm_results=farm_results, points=points, **parameters
+            )
         out += (point_results,)
     return farm_results, point_results, out
 

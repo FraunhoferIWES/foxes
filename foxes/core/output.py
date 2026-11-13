@@ -14,6 +14,7 @@ from foxes.utils import PandasFileHelper, new_instance, all_subclasses, Dict
 from .data_calc_model import DataCalcModel
 
 if TYPE_CHECKING:
+    from xarray import Dataset
     from foxes.core.algorithm import Algorithm
     from foxes.core.data import FData, MData, TData
     from foxes.core.model import Model
@@ -240,6 +241,38 @@ class Output(DataCalcModel):
             k = (mdata.chunki_states, mdata.chunki_points)
             chunk_results = Dict(_name=f"chunk_results_{k}")
         return chunk_results
+
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Create parent-owned results before entering the running lifecycle.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        model_data
+            Initial model dataset before engine subset selection.
+        farm_data
+            Initial farm dataset or previous farm results.
+        point_data
+            Initial target dataset, or ``None`` for farm calculations.
+        extra_data
+            Non-array model inputs.
+
+        Returns
+        -------
+        output_results
+            Result-name keyed mapping, updated in place by parent-side output
+            hooks. Overrides may transfer large initialized data into it before
+            ``set_running()`` removes raw configuration from worker models.
+        """
+        return Dict(_name="output_results")
 
     def update_results(
         self,
@@ -528,6 +561,64 @@ class OutputList(Output):
         """
         # Return child models for initialization and running-state propagation.
         return [output for output in self.outputs]
+
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Combine children's initial results without overwriting shared keys.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        model_data
+            Initial model dataset.
+        farm_data
+            Initial farm dataset or previous farm results.
+        point_data
+            Initial target dataset, or ``None``.
+        extra_data
+            Non-array model inputs.
+
+        Returns
+        -------
+        output_results
+            Combined mapping retaining each child's initial result objects.
+
+        Raises
+        ------
+        ValueError
+            If children initialize the same result key.
+        """
+        # Compose parent-owned data before any child enters its running lifecycle.
+        results = super().get_initial_output_results(
+            algo,
+            model_data=model_data,
+            farm_data=farm_data,
+            point_data=point_data,
+            extra_data=extra_data,
+        )
+        for output in self.outputs:
+            initial = output.get_initial_output_results(
+                algo,
+                model_data=model_data,
+                farm_data=farm_data,
+                point_data=point_data,
+                extra_data=extra_data,
+            )
+            duplicates = results.keys() & initial.keys()
+            if duplicates:
+                raise ValueError(
+                    f"{self.name}: Duplicate initial output result keys "
+                    f"from '{output.name}': {sorted(duplicates)}"
+                )
+            results.update(initial)
+        return results
 
     def calculate(  # type: ignore[override]
         self,

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import foxes
-from foxes.core import Algorithm
+from foxes.core import Algorithm, Model
 
 
 def test_algorithm_update_n_turbines_tracks_farm_reset():
@@ -51,15 +51,18 @@ def test_reset_turbines_clears_algorithm_cached_data_and_chunk_store():
 def test_algorithm_resets_running_after_calculation_failure(
     monkeypatch, calculation, launcher
 ):
+    # Both explicitly supplied models must unwind when the launcher fails.
     algo = Algorithm(mbook=foxes.ModelBook(), farm=foxes.WindFarm(), verbosity=0)
+    model = Model()
 
     def fail_calculation(*args, **kwargs):
+        assert algo.running and model.running
         raise RuntimeError("calculation failed")
 
     monkeypatch.setattr(algo, launcher, fail_calculation)
 
     with pytest.raises(RuntimeError, match="calculation failed"):
-        getattr(algo, calculation)()
+        getattr(algo, calculation)(model)
 
-    assert not algo.running
+    assert not algo.running and not model.running
     algo.finalize()

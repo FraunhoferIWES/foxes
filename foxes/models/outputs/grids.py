@@ -137,7 +137,7 @@ def calc_point_results(
     if averb is not None:
         algo.verbosity = verbosity
     fres = farm_results if seq_iter is None else seq_iter.farm_results
-    point_results = algo.calc_points(fres, points=g_pts, **kwargs)
+    point_results = algo.calc_points(farm_results=fres, points=g_pts, **kwargs)
     if averb is not None:
         algo.verbosity = averb
 

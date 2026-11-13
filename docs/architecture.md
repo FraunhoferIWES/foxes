@@ -273,6 +273,8 @@ parameters and state-turbine selections while executing only named models.
 Execution is bracketed by `set_running()` and `unset_running()`, which may move
 large data through a stash. `finalize()` recursively releases initialized state
 and cannot run while the model is marked running.
+When running model graphs share submodels, a non-null stash identifies lifecycle
+ownership: cleanup leaves running submodels absent from that stash untouched.
 
 For all FOXES models, between `set_running()` and `unset_running()`, instance
 state is treated as read-only.
@@ -294,6 +296,37 @@ returns a mapping of FOXES variable names to NumPy arrays with declared shapes.
 Algorithms own assembly and ordering of model chains. They prepare data,
 delegate chunk execution to an engine, and reconstruct ordered xarray results.
 Models must not select a parallel backend or depend on a concrete engine.
+
+Engines own chunk-store detachment and reattachment. After worker cleanup they
+reattach the supplied cache even on failure, merging worker updates on success.
+Shared-cache mutations are not rolled back. Iterative retains its explicit
+full-state cache snapshot restoration after selected-state passes.
+Engines also bracket selected outputs with `set_running()` and
+`unset_running()`, using the calculation's state selection and a parent-owned
+stash. Outputs remain running through result finalization; their configuration
+is restored after workers finish, including on failure.
+`Engine.run_calculation()` owns this lifecycle and parent-side output
+finalization. Backends implement the abstract `_create_calculation()`,
+`_run_calculation()` and `_cleanup_calculation()` hooks. Per-call contexts hold
+cache updates, output mappings, chunk counts and backend resources; no run state
+is retained on the engine. `PoolEngine` handles dispatch and worker cleanup, while
+`DefaultEngine` delegates those hooks without nesting the output lifecycle.
+`Engine._collect_results()` resolves ordered batches, merges worker payloads
+and cache updates, and invokes output updates. Backend progress callbacks run
+only after each chunk's updates succeed.
+The output's initial result mapping is passed through backend delegation and
+updated in place during collection, then used for parent-side finalization.
+It is created before output stashing, so initialized data can remain parent-owned
+without being serialized to workers. `OutputList` combines child mappings while
+preserving their values' identity and rejects duplicate initial result keys.
+The optional `_prepare_calculation_inputs()` helper selects and validates
+datasets and moves previous farm results into chunk metadata. Concrete backends
+call it after backend selection. It imposes no pool, future or worker contract;
+scheduling, batching, transport and progress remain backend responsibilities.
+`PoolEngine` requires `new_runner()` to keep worker execution separate from
+parent-side pools and clients. The base `Engine` and delegating `DefaultEngine`
+do not require or expose this factory; non-pool engines need no runner.
+See [ADR-0038](adr/0038-engine-calculation-lifecycle.md).
 
 `Downwind.calc_farm(outputs=...)` accepts an `Output`, a name from
 `ModelBook.outputs`, or a list of models and names. Variable selections belong

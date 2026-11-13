@@ -1188,6 +1188,26 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Engines:
+  - Own chunk-store detachment and reattachment for farm and point runs,
+    including setup and execution failures, while preserving Iterative caches.
+  - Own selected outputs' running hooks and configuration stash through result
+    finalization, restoring them after worker cleanup on success and failure.
+  - Centralize calculation lifecycle and output finalization in `Engine`, with
+    abstract per-call state, execution and cleanup hooks implemented by
+    `PoolEngine` and delegated by `DefaultEngine`.
+  - Share ordered chunk-result collection, cache merging and output updates
+    through `Engine`, with backend-owned progress callbacks.
+  - Share scientific input selection and validation through a base-engine
+    helper without imposing pool scheduling on other backend implementations.
+  - Require `new_runner()` only on `PoolEngine`; remove the base-engine
+    requirement and unused default-engine forwarding factory.
+  - Preserve initial output result mappings through default-engine delegation
+    and pool collection instead of replacing them with empty mappings.
+  - Compose child outputs' initial results without copying values or silently
+    overwriting duplicate keys.
+  - Leave shared running submodels attached to their owning lifecycle stash
+    during output cleanup.
 - Example results and outputs:
   - Add `-R/--results` with default `farm_results`; retain `-r` for rotors and
     use `--ref_xy` for reference points. Run script-specific `-o/--outputs`
@@ -1261,6 +1281,9 @@ This major version introduces the concept of `Engines` which handle the chunking
     Explicitly collect the ambient fields, wake-expansion coefficients and yaw
     offsets used by detailed notebook reports and point calculations.
 - Examples:
+  - Restore the power-mask example's two three-panel power/thrust comparisons
+    and turbine-curve styling from `dev`, using constructor-defined outputs
+    with each case's own results and preserving figure-less execution.
   - Print each collected farm-results dataset once at verbosity two or higher,
     independently of fields needed by later reports, including comparison and
     optional benchmark runs. Preserve quiet levels and distinguish non-farm

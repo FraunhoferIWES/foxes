@@ -5,11 +5,18 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
-from foxes.models.outputs import FarmResultsOutput
+from foxes.models.outputs import FarmResultsOutput, StateTurbineMap, TurbineTypeCurves
 
 
 def main(argv=None):
-    """Run this tutorial with an explicit argument list or command-line options."""
+    """Compare masked and unmasked turbine curves, power and thrust maps.
+
+    Parameters
+    ----------
+    argv
+        Command-line arguments, or ``None`` to read the process arguments.
+        ``--nofig`` suppresses all figures while retaining numerical outputs.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-nt", "--n_t", help="The number of turbines", type=int, default=5
@@ -147,7 +154,22 @@ def main(argv=None):
             verbosity=max(args.verbosity - 1, 0),
         )
         with engine:
-            axs = scan.calc_farm(outputs=foxes.models.outputs.TurbineTypeCurves())
+            axs = scan.calc_farm(
+                outputs=TurbineTypeCurves(
+                    plot_pars={
+                        "titles": {
+                            FV.P: f"Power curve, {ttype.name}",
+                            FV.CT: f"Thrust curve, {ttype.name}",
+                        },
+                        "y_labels": {FV.P: "Power [kW]", FV.CT: "ct [-]"},
+                        "linestyle": "-",
+                    }
+                )
+            )
+        for ax in axs:
+            ax.grid()
+            for line, width in zip(ax.lines, [2.5, 1.8]):
+                line.set_linewidth(width)
         plt.show()
         plt.close(axs[0].figure)
 
@@ -193,7 +215,54 @@ def main(argv=None):
     # Preserve the fields required by this example's farm collector.
     mbook.outputs["farm_results"] = FarmResultsOutput(variables=outputs)
 
-    # run calculation with power mask:
+    # Compose shared panels while each case still owns its calculated fields.
+    comparison_figures = []
+    comparison_maps = {"masked": [], "unmasked": []}
+    if not args.nofig and "state_turbine_map" in args.outputs:
+        power_limit = np.nanmax(Pmax_data)
+        for variable, label, cmap, limit in (
+            (FV.P, "Power", "YlOrRd", power_limit),
+            (FV.CT, "ct", "YlGn", 1.0),
+        ):
+            figure, axes = plt.subplots(1, 3, figsize=(11, 5))
+            comparison_figures.append(figure)
+            for case, ax, field, title, palette, maximum in (
+                (
+                    "unmasked",
+                    axes[0],
+                    variable,
+                    f"{label}, no power mask",
+                    cmap,
+                    limit,
+                ),
+                ("masked", axes[1], FV.MAX_P, "Power mask", "YlOrRd", power_limit),
+                (
+                    "masked",
+                    axes[2],
+                    variable,
+                    f"{label}, with power mask",
+                    cmap,
+                    limit,
+                ),
+            ):
+                comparison_maps[case].append(
+                    StateTurbineMap(
+                        variable=field,
+                        plot_pars={
+                            "ax": ax,
+                            "title": title,
+                            "edgecolor": "white",
+                            "cmap": palette,
+                            "vmin": 0,
+                            "vmax": maximum,
+                            "cbar_label": "",
+                        },
+                    )
+                )
+        mbook.outputs["state_turbine_map"] = foxes.core.OutputList(
+            outputs=comparison_maps["masked"]
+        )
+
     # Evaluate the masked and unmasked cases independently.
     if args.show_layout:
         args.outputs.insert(0, "farm_layout")
@@ -220,6 +289,13 @@ def main(argv=None):
                     print(f"\n{key}:\n{value}")
             output_results.update(data)
 
+        # Reuse the comparison axes for the independent unmasked calculation.
+        if comparison_figures:
+            mbook.outputs["state_turbine_map"] = foxes.core.OutputList(
+                outputs=comparison_maps["unmasked"]
+            )
+        if args.show_layout:
+            args.outputs.pop(0)
         for turbine in farm.turbines:
             turbine.models.remove("set_Pmax")
             turbine.models.remove("PMask")
@@ -243,6 +319,15 @@ def main(argv=None):
                 for key, value in data.items():
                     print(f"\n{key}:\n{value}")
             output_results.update(data)
+
+    # Display only complete comparisons, then release example-owned figures.
+    if comparison_figures:
+        for figure in comparison_figures:
+            for ax in figure.axes[:3]:
+                ax.set_ylabel("Turbine index")
+        plt.show()
+        for figure in comparison_figures:
+            plt.close(figure)
 
 
 if __name__ == "__main__":

@@ -31,9 +31,17 @@ animations and their image-only point calculations, including image files. Expli
 numerical slices, point data and NetCDF writers still run.
 
 Curve comparisons use an explicit no-wake wind-speed scan with default and
-power-masked turbines, selecting `TurbineTypeCurves` as the output. Heat maps
-select `StateTurbineMap` through `calc_outputs` with supplied farm results;
-neither plotting output retains the dataset or launches a hidden simulation.
+power-masked turbines at a 3000 kW limit, selecting `TurbineTypeCurves` as the
+output. The default `state_turbine_map` selection composes two three-panel
+figures: unmasked power, the power mask, and masked power; then unmasked thrust
+coefficient, the same power mask, and masked thrust coefficient. Power panels
+use `YlOrRd` from zero to the maximum supplied mask; thrust panels use `YlGn`
+from zero to one. `--show_layout` adds one layout figure.
+
+Heat maps select `StateTurbineMap` through `calc_outputs` with each case's
+supplied farm results and shared axes. Neither plotting output retains the
+dataset or launches a hidden simulation. Selecting another `--outputs` model
+replaces the comparison maps; `--nofig` also skips the initial curve scan.
 
 ```console
 python run.py --nofig

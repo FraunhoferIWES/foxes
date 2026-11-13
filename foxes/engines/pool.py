@@ -1,20 +1,34 @@
 from __future__ import annotations
 
-import numpy as np
-from xarray import Dataset
-from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
-
-from foxes.config import config
-from foxes.core import Engine
-from foxes.utils import Dict
-import foxes.constants as FC
-from .progress import CalculationProgress
 import sys
 import warnings
+from abc import abstractmethod
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
+from xarray import Dataset
+
+import foxes.constants as FC
+from foxes.config import config
+from foxes.core import Engine
+from foxes.core.engine import _Calculation
+from foxes.utils import Dict
+
+from .progress import CalculationProgress
 
 if TYPE_CHECKING:
-    from foxes.core import Algorithm, DataCalcModel, MData, Output
+    from foxes.core import Algorithm, DataCalcModel, EngineRunner, MData, Output
+
+
+@dataclass
+class _PoolCalculation(_Calculation):
+    """Pool resources retained until common lifecycle cleanup."""
+
+    futures: dict[tuple[int, int], Any] = field(default_factory=dict)
+    shared_memory: list[Any] = field(default_factory=list)
+    shared_handle: Any = None
+    progress: CalculationProgress | None = None
 
 
 def _run_map(func: Any, inputs: Any, *args: Any, **kwargs: Any) -> list[Any]:
@@ -75,6 +89,17 @@ class PoolEngine(Engine):
         self.pool_args = {} if pool_args is None else pool_args
         self.supports_shared_data = supports_shared_data
         self.min_shared_array_bytes = int(min_shared_array_bytes)
+
+    @abstractmethod
+    def new_runner(self) -> EngineRunner:
+        """Create a lightweight worker runner without parent-side pool state.
+
+        Returns
+        -------
+        runner
+            Backend-specific runner whose bound ``run`` method can be submitted
+            without serializing the engine or its execution resources.
+        """
 
     @abstractmethod
     def _create_pool(self) -> None:
@@ -170,300 +195,153 @@ class PoolEngine(Engine):
                 results += self.await_result(f)
             return results
 
-    def run_calculation(
+    def _create_calculation(self, chunk_store: dict[Any, Any]) -> _PoolCalculation:
+        # Shared backends update the supplied cache directly.
+        return _PoolCalculation(
+            chunk_store=chunk_store,
+            new_chunk_store=chunk_store if self.share_cstore else {},
+        )
+
+    def _cleanup_calculation(self, calculation: _Calculation, failed: bool) -> None:
+        # Workers must finish before shared storage and progress are released.
+        assert isinstance(calculation, _PoolCalculation)
+        try:
+            if failed:
+                self._drain_failed_tasks(calculation.futures)
+        finally:
+            try:
+                self.release_shared_memory(
+                    calculation.shared_memory, calculation.shared_handle
+                )
+            finally:
+                if calculation.progress is not None:
+                    calculation.progress.close(
+                        error=failed or sys.exc_info()[0] is not None
+                    )
+
+    def _run_calculation(
         self,
+        calculation: _Calculation,
         algo: Algorithm,
         model: DataCalcModel,
+        results: Dict[str, Any],
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
         point_data: Dataset | None = None,
+        *,
         extra_data: dict[str, Any] | None = None,
         output: Output | None = None,
-        chunk_store: dict[Any, Any] | None = None,
         sel: dict[str, Any] | None = None,
         iterative: bool = False,
-        *,
         progress_label: str | None = None,
         **calc_pars: Any,
     ) -> Dict[str, Any]:
-        """
-        Run chunk calculations and finalize the selected output models.
-
-        Parameters
-        ----------
-        algo
-            The calculation algorithm.
-        model
-            The initialized model whose ``calculate`` method runs in each chunk.
-        model_data
-            The initial model data.
-        farm_data
-            The initial farm data.
-        point_data
-            The initial point data.
-        extra_data
-            Additional non-array input data from the models.
-        output
-            The output model that consumes prepared chunk data, collects results
-            or writes files. ``None`` runs calculations without output collection.
-        chunk_store
-            Cached scientific data from previous chunk calculations.
-        sel
-            Selection of coordinate subsets.
-        iterative
-            Whether the calculation is an iterative algorithm pass.
-        progress_label
-            Operation label for progress displays. ``None`` uses the model class.
-        calc_pars
-            Additional parameters forwarded to the model's ``calculate`` method.
-
-        Returns
-        -------
-        output_results
-            Unified results keyed by output result name. An absent output model
-            returns an empty mapping while preserving model chunk-store updates.
-
-        """
+        """Prepare pool chunks and collect worker payloads for base finalization."""
         # prepare data:
-        chunk_store = {} if chunk_store is None else chunk_store
+        assert isinstance(calculation, _PoolCalculation)
+        calculation.output_results = results
+        chunk_store = calculation.chunk_store
         extra_data = {} if extra_data is None else extra_data
-
-        # reset chunk store:
         if self.share_cstore:
             algo.reset_chunk_store(chunk_store)
-            new_chunk_store = chunk_store
-        else:
-            new_chunk_store = {}
 
-        # subset selection:
-        (model_data, farm_data, point_data), n_states = self.select_subsets(
-            model_data,
-            farm_data,
-            point_data,
-            sel=sel,
-            default_n_states=algo.n_states,
+        # Select inputs before validating and partitioning the calculation.
+        model_data, farm_data, point_data, n_states = self._prepare_calculation_inputs(
+            algo, model, model_data, farm_data, point_data, extra_data, sel
         )
-        if model_data is None:
-            raise ValueError(f"Engine '{self.name}': Missing model_data")
-        if n_states is None:
-            raise ValueError(f"Engine '{self.name}': Could not determine n_states")
-        if farm_data is not None and point_data is None:
-            extra_data[FC.PREV_FARM_RESULTS] = farm_data
-            farm_data = None
-
-        # basic checks:
-        super().run_calculation(
-            algo,
-            model,
-            model_data,
-            farm_data,
-            point_data,
-            progress_label=progress_label,
-        )
-
-        # prepare:
         out_dims = model.output_coords()
-        coords = {}
-        if FC.STATE in out_dims and FC.STATE in model_data.coords:
-            coords[FC.STATE] = model_data[FC.STATE].to_numpy()
-        if farm_data is None:
-            farm_data = Dataset()
-
-        # DEBUG objec mem sizes:
-        # from foxes.utils import print_mem
-        # for m in [algo] + model.models:
-        #    print_mem(m, pre_str="MULTIP CHECKING LARGE DATA", min_csize=9999)
-
-        # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
             n_states, n_targets
         )
-        n_chunks_states = len(chunk_sizes_states)
-        n_chunks_targets = len(chunk_sizes_targets)
+        n_chunks_states = calculation.n_chunks_states = len(chunk_sizes_states)
+        n_chunks_targets = calculation.n_chunks_targets = len(chunk_sizes_targets)
         self.print(
             f"{type(self).__name__}: Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
             level=2,
         )
 
-        def _handle_new_results(
-            k: tuple[int, int],
-            new_results: tuple[dict[str, Any] | None, dict[Any, Any]],
-            chunk_results: Dict[str, Dict[tuple[int, int], Any]],
-            new_chunk_store: dict[Any, Any],
-        ) -> None:
-            """Collect a worker's payloads and update the selected output chain."""
-            # Preserve the worker chunk store even when no output is requested.
-            res, cs = new_results
-            if res is not None:
-                for rname, r in res.items():
-                    if rname not in chunk_results:
-                        chunk_results[rname] = Dict({k: r})
-                    elif k not in chunk_results[rname]:
-                        chunk_results[rname][k] = r
-                    else:
-                        chunk_results[rname][k].update(r)
-
-            # Merge stateful model data independently of output result collection.
-            for key, entry in cs.items():
-                new_chunk_store.setdefault(key, {}).update(entry)
-
-            # Invoke output hooks only when an output model was selected.
-            if output is not None:
-                output.update_results(
-                    algo,
-                    n_chunks_states=n_chunks_states,
-                    n_chunks_targets=n_chunks_targets,
-                    new_chunk_results=chunk_results,
-                    output_results=output_results,
-                )
-
-            # Report only chunks whose calculations and result updates succeeded.
-            progress.update()
-
-        # start calculation:
-        futures = {}
+        # Keep resources available to cleanup even when submission fails.
+        futures = calculation.futures
         runner = self.new_runner()
-        shared_memory: list[Any] = []
-        shared_handle = None
-        chunk_results: Dict[str, Dict[tuple[int, int], Any]] = Dict(
-            _name="chunk_results"
-        )
-        output_results: Dict = Dict(_name="output_results")
-        progress = CalculationProgress(
+        progress = calculation.progress = CalculationProgress(
             f"{self.name} [{type(model).__name__ if progress_label is None else progress_label}]",
             n_chunks_states * n_chunks_targets,
             self.progress_bar,
             self.verbosity,
         )
-        failed = True
-        try:
-            i0_states = 0
-            for chunki_states in range(n_chunks_states):
-                i1_states = i0_states + chunk_sizes_states[chunki_states]
-                i0_targets = 0
-                for chunki_points in range(n_chunks_targets):
-                    key = (chunki_states, chunki_points)
-                    i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
-                    # get this chunk's data:
-                    data = self.get_chunk_input_data(
-                        algo=algo,
-                        model_data=model_data,
-                        farm_data=farm_data,
-                        point_data=point_data,
-                        states_i0_i1=(i0_states, i1_states),
-                        targets_i0_i1=(i0_targets, i1_targets),
-                        chunki_states=chunki_states,
-                        chunki_points=chunki_points,
-                        n_chunks_states=n_chunks_states,
-                        n_chunks_points=n_chunks_targets,
-                    )
-                    mdata_chunk = data[0]
-                    fdata_chunk = data[1]
-                    tdata_chunk = data[2] if len(data) > 2 else None
-
-                    if len(extra_data) > 0:
-                        mdata_chunk.extra_data.update(extra_data)
-
-                    if self.supports_shared_data:
-                        if shared_handle is None and (
-                            len(mdata_chunk) > 0 or len(extra_data) > 0
-                        ):
-                            shared_mdata = mdata_chunk.pop_shared(
-                                min_shared_array_bytes=self.min_shared_array_bytes
-                            )
-                            shared_handle = self.init_shared_memory(
-                                shared_memory,
-                                mdata=mdata_chunk,
-                                shared_mdata=shared_mdata,
-                                verbosity=max(self.verbosity, algo.verbosity),
-                            )
-                            del shared_mdata
-                        elif shared_handle is not None:
-                            self.prepare_chunk_mdata_for_shared(
-                                mdata_chunk, shared_handle
-                            )
-
-                    """
-                    # For debugging: Check memory usage of main process before submitting the chunk calculation
-                    import psutil
-                    print(psutil.Process().pid, f"{algo.name} SUBMITTING {key} MEMORY:", psutil.Process().memory_info().rss / 1024 ** 2, "MB")
-                    """
-
-                    """
-                    # For debugging: Check object sizes in memory
-                    import psutil
-                    import objsize
-                    print(psutil.Process().pid, f"{algo.name} OBJECT SIZES BEFORE SUBMIT:", key, {k: objsize.get_deep_size(v) / 1024 ** 2 for k, v in {"algo": algo, "chunk_store": chunk_store, "shared": shared}.items()}, "MB")
-                    """
-
-                    # submit model calculation:
-                    utm_zone = config.utm_zone if config.utm_zone_set else None
-                    futures[(chunki_states, chunki_points)] = self.submit(
-                        runner.run,
-                        algo,
-                        model,
-                        mdata_chunk,
-                        fdata_chunk,
-                        tdata_chunk,
-                        output=output,
-                        shared=shared_handle,
-                        chunk_store=chunk_store,
-                        chunk_key=key,
-                        out_dims=out_dims,
-                        utm_zone=utm_zone,
-                        **calc_pars,
-                    )
-                    del data, mdata_chunk, fdata_chunk, tdata_chunk
-
-                    if len(futures) >= self.n_workers * 3:
-                        # Schedule lazy backends in batches while preserving order.
-                        keys = list(futures)
-                        batch = self.await_results(list(futures.values()))
-                        for k, new_results in zip(keys, batch):
-                            del futures[k]
-                            _handle_new_results(
-                                k, new_results, chunk_results, new_chunk_store
-                            )
-
-                    i0_targets = i1_targets
-                i0_states = i1_states
-            del calc_pars, farm_data
-
-            fkeys = list(futures)
-            batch = self.await_results(list(futures.values()))
-            for k, new_results in zip(fkeys, batch):
-                del futures[k]
-                _handle_new_results(k, new_results, chunk_results, new_chunk_store)
-
-            # Finalize the selected output chain after all worker payloads arrive.
-            progress.finalizing()
-            if output is not None:
-                output.finalize_results(
+        # Submit bounded batches in state/target order.
+        i0_states = 0
+        for chunki_states in range(n_chunks_states):
+            i1_states = i0_states + chunk_sizes_states[chunki_states]
+            i0_targets = 0
+            for chunki_points in range(n_chunks_targets):
+                key = (chunki_states, chunki_points)
+                i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
+                data = self.get_chunk_input_data(
                     algo=algo,
+                    model_data=model_data,
+                    farm_data=farm_data,
+                    point_data=point_data,
+                    states_i0_i1=(i0_states, i1_states),
+                    targets_i0_i1=(i0_targets, i1_targets),
+                    chunki_states=chunki_states,
+                    chunki_points=chunki_points,
                     n_chunks_states=n_chunks_states,
-                    n_chunks_targets=n_chunks_targets,
-                    output_results=output_results,
+                    n_chunks_points=n_chunks_targets,
                 )
-            failed = False
+                mdata_chunk = data[0]
+                fdata_chunk = data[1]
+                tdata_chunk = data[2] if len(data) > 2 else None
+                mdata_chunk.extra_data.update(extra_data)
+                if self.supports_shared_data:
+                    if calculation.shared_handle is None and (
+                        len(mdata_chunk) > 0 or len(extra_data) > 0
+                    ):
+                        shared_mdata = mdata_chunk.pop_shared(
+                            min_shared_array_bytes=self.min_shared_array_bytes
+                        )
+                        calculation.shared_handle = self.init_shared_memory(
+                            calculation.shared_memory,
+                            mdata=mdata_chunk,
+                            shared_mdata=shared_mdata,
+                            verbosity=max(self.verbosity, algo.verbosity),
+                        )
+                        del shared_mdata
+                    elif calculation.shared_handle is not None:
+                        self.prepare_chunk_mdata_for_shared(
+                            mdata_chunk, calculation.shared_handle
+                        )
 
-        finally:
-            # Workers must stop reading shared arrays before their storage is freed.
-            try:
-                if failed:
-                    self._drain_failed_tasks(futures)
-            finally:
-                try:
-                    self.release_shared_memory(shared_memory, shared_handle)
-                finally:
-                    progress.close(error=failed or sys.exc_info()[0] is not None)
+                futures[key] = self.submit(
+                    runner.run,
+                    algo,
+                    model,
+                    mdata_chunk,
+                    fdata_chunk,
+                    tdata_chunk,
+                    output=output,
+                    shared=calculation.shared_handle,
+                    chunk_store=chunk_store,
+                    chunk_key=key,
+                    out_dims=out_dims,
+                    utm_zone=config.utm_zone if config.utm_zone_set else None,
+                    **calc_pars,
+                )
+                del data, mdata_chunk, fdata_chunk, tdata_chunk
+                if len(futures) >= self.n_workers * 3:
+                    self._collect_results(
+                        calculation, algo, output, futures, progress.update
+                    )
+                i0_targets = i1_targets
+            i0_states = i1_states
 
-        # update chunk store:
-        chunk_store.update(new_chunk_store)
-        algo.reset_chunk_store(chunk_store)
-
-        return output_results
+        # Leave result finalization and resource cleanup to the base lifecycle.
+        if futures:
+            self._collect_results(calculation, algo, output, futures, progress.update)
+        progress.finalizing()
+        return calculation.output_results
 
     def init_shared_memory(
         self,

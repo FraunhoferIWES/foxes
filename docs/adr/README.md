@@ -49,6 +49,7 @@ all of them.
 | [0035](0035-fixed-collector-keys.md) | Accepted; shared total keys superseded by [0036](0036-domain-total-keys.md) | Fix farm and point collector keys by aggregation and reject duplicates instead of allowing custom names. |
 | [0036](0036-domain-total-keys.md) | Accepted; supersedes shared farm/point total keys in 0034 and 0035 | Use distinct farm and point total keys, including state means, so both results compose without ambiguity. |
 | [0037](0037-keyed-example-outputs.md) | Accepted | Offer opt-in keyed calculation returns; split monolithic example results from subsequent outputs and omit image-only scientific work under nofig. |
+| [0038](0038-engine-calculation-lifecycle.md) | Accepted | Centralize calculation lifecycle in Engine, with abstract backend hooks and per-call resource ownership for PoolEngine and DefaultEngine. |
 
 ## When To Add An ADR
 

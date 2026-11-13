@@ -1,13 +1,28 @@
 from __future__ import annotations
 
-import numpy as np
+from contextlib import ExitStack
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from foxes.core import Engine
+import numpy as np
+
 import foxes.constants as FC
+from foxes.core import Engine
+from foxes.core.engine import _Calculation
+from foxes.utils import Dict
 
 if TYPE_CHECKING:
-    from foxes.core import Algorithm, DataCalcModel
+    from foxes.core import Algorithm, DataCalcModel, Output
+    from xarray import Dataset
+
+
+@dataclass
+class _DefaultCalculation(_Calculation):
+    """Delegate and context ownership for one default-engine calculation."""
+
+    resources: ExitStack = field(default_factory=ExitStack)
+    backend: Engine | None = None
+    backend_calculation: _Calculation | None = None
 
 
 class DefaultEngine(Engine):
@@ -80,25 +95,6 @@ class DefaultEngine(Engine):
         """Releases temporary delegated process engine instances."""
         if temporary:
             engine.__exit__(None, None, None)
-
-    def new_runner(self) -> Any:
-        """
-        Creates a new EngineRunner for running calculations in this engine.
-
-        DefaultEngine delegates calculations to process or single engines,
-        therefore it reuses the process-engine runner implementation.
-
-        Returns
-        -------
-        runner
-            The engine runner
-
-        """
-        e, temporary = self._get_delegate_process_engine()
-        try:
-            return e.new_runner()
-        finally:
-            self._release_delegate_process_engine(e, temporary)
 
     def submit(self, f: Any, *args: Any, **kwargs: Any) -> Any:
         """
@@ -202,45 +198,40 @@ class DefaultEngine(Engine):
         finally:
             self._release_delegate_process_engine(e, temporary)
 
-    def run_calculation(
+    def _create_calculation(self, chunk_store: dict[Any, Any]) -> _DefaultCalculation:
+        return _DefaultCalculation(chunk_store=chunk_store)
+
+    def _cleanup_calculation(self, calculation: _Calculation, failed: bool) -> None:
+        # Finish delegated workers before leaving or restoring engine contexts.
+        assert isinstance(calculation, _DefaultCalculation)
+        try:
+            if calculation.backend is not None:
+                assert calculation.backend_calculation is not None
+                calculation.backend._cleanup_calculation(
+                    calculation.backend_calculation, failed
+                )
+        finally:
+            calculation.resources.close()
+
+    def _run_calculation(
         self,
+        calculation: _Calculation,
         algo: Algorithm,
         model: DataCalcModel,
-        model_data: Any = None,
-        farm_data: Any = None,
-        point_data: Any = None,
+        results: Dict[str, Any],
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
         *,
+        extra_data: dict[str, Any] | None = None,
+        output: Output | None = None,
+        sel: dict[str, Any] | None = None,
+        iterative: bool = False,
         progress_label: str | None = None,
-        **kwargs: Any,
-    ) -> Any:
-        """
-        Runs the model calculation
-
-        Parameters
-        ----------
-        algo
-            The algorithm object
-        model
-            The model that whose calculate function
-            should be run
-        model_data
-            The initial model data
-        farm_data
-            The initial farm data
-        point_data
-            The initial point data
-        progress_label
-            Upstream operation label, forwarded unchanged to the selected engine.
-            ``None`` retains the model-class label.
-        kwargs
-            Additional calculation options forwarded to the selected engine.
-
-        Returns
-        -------
-        results
-            The model results
-
-        """
+        **calc_pars: Any,
+    ) -> Dict[str, Any]:
+        """Delegate backend hooks without nesting the common output lifecycle."""
+        assert isinstance(calculation, _DefaultCalculation)
         if model_data is None:
             raise ValueError(f"Engine '{self.name}': Missing model_data")
 
@@ -252,49 +243,45 @@ class DefaultEngine(Engine):
         # context entry while DefaultEngine itself is active.
         if ename == "process":
             e, temporary = self._get_delegate_process_engine()
-            try:
-                return e.run_calculation(
-                    algo,
-                    model,
-                    model_data,
-                    farm_data,
-                    point_data=point_data,
-                    progress_label=progress_label,
-                    **kwargs,
+            calculation.resources.callback(
+                self._release_delegate_process_engine, e, temporary
+            )
+        else:
+            delegate = getattr(self, "_delegate_process_engine", None)
+            if delegate is not None:
+                delegate.__exit__(None, None, None)
+                calculation.resources.callback(delegate.__enter__)
+            e = calculation.resources.enter_context(
+                Engine.new(
+                    ename,
+                    n_procs=self.n_procs,
+                    chunk_size_states=self.chunk_size_states,
+                    chunk_size_points=self.chunk_size_points,
+                    progress_bar=self.progress_bar,
+                    verbosity=self.verbosity,
                 )
-            finally:
-                self._release_delegate_process_engine(e, temporary)
+            )
 
-        suspended_delegate = (
-            hasattr(self, "_delegate_process_engine")
-            and self._delegate_process_engine is not None
+        # Share cache updates and chunk counts with the common finalization.
+        backend_calculation = e._create_calculation(calculation.chunk_store)
+        calculation.backend_calculation = backend_calculation
+        calculation.backend = e
+        calculation.new_chunk_store = backend_calculation.new_chunk_store
+        results = e._run_calculation(
+            backend_calculation,
+            algo,
+            model,
+            results,
+            model_data,
+            farm_data,
+            point_data,
+            extra_data=extra_data,
+            output=output,
+            sel=sel,
+            iterative=iterative,
+            progress_label=progress_label,
+            **calc_pars,
         )
-        delegate = self._delegate_process_engine if suspended_delegate else None
-        if suspended_delegate:
-            assert delegate is not None
-            delegate.__exit__(None, None, None)
-
-        try:
-            with Engine.new(
-                ename,
-                n_procs=self.n_procs,
-                chunk_size_states=self.chunk_size_states,
-                chunk_size_points=self.chunk_size_points,
-                progress_bar=self.progress_bar,
-                verbosity=self.verbosity,
-            ) as e:
-                results = e.run_calculation(
-                    algo,
-                    model,
-                    model_data,
-                    farm_data,
-                    point_data=point_data,
-                    progress_label=progress_label,
-                    **kwargs,
-                )
-        finally:
-            if suspended_delegate:
-                assert delegate is not None
-                delegate.__enter__()
-
+        calculation.n_chunks_states = backend_calculation.n_chunks_states
+        calculation.n_chunks_targets = backend_calculation.n_chunks_targets
         return results

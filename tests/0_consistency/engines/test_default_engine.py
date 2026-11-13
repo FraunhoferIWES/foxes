@@ -2,6 +2,7 @@ from types import SimpleNamespace
 import pytest
 
 import foxes.constants as FC
+from foxes.core.engine import _Calculation
 from foxes.engines.default import DefaultEngine
 
 
@@ -9,6 +10,12 @@ class _Algo:
     def __init__(self, n_states, n_turbines):
         self.n_states = n_states
         self.n_turbines = n_turbines
+        self.chunk_store = {}
+
+    def reset_chunk_store(self, chunk_store=None):
+        previous = self.chunk_store
+        self.chunk_store = {} if chunk_store is None else chunk_store
+        return previous
 
 
 class _FakeDelegatedEngine:
@@ -40,13 +47,17 @@ class _FakeDelegatedEngine:
         self.called.append(("map", self.engine_type))
         return [func(i, *args, **kwargs) for i in inputs]
 
-    def new_runner(self):
-        self.called.append(("new_runner", self.engine_type))
-        return self.engine_type
+    def _create_calculation(self, chunk_store):
+        return _Calculation(chunk_store=chunk_store)
 
-    def run_calculation(self, *args, **kwargs):
+    def _run_calculation(self, calculation, algo, model, results, *args, **kwargs):
         self.called.append(("run_calculation", self.engine_type))
-        return self.engine_type
+        calculation.n_chunks_states = calculation.n_chunks_targets = 1
+        results["backend"] = self.engine_type
+        return results
+
+    def _cleanup_calculation(self, calculation, failed):
+        self.called.append(("cleanup", failed))
 
 
 class _GuardedFakeDelegatedEngine(_FakeDelegatedEngine):
@@ -94,9 +105,9 @@ def test_default_engine_run_calculation_uses_selected_engine(
     labels = []
 
     class LabelEngine(_FakeDelegatedEngine):
-        def run_calculation(self, *args, **kwargs):
+        def _run_calculation(self, *args, **kwargs):
             labels.append(kwargs["progress_label"])
-            return super().run_calculation(*args, **kwargs)
+            return super()._run_calculation(*args, **kwargs)
 
     def _fake_new(engine_type, *args, **kwargs):
         selected.append(engine_type)
@@ -112,7 +123,7 @@ def test_default_engine_run_calculation_uses_selected_engine(
         algo, object(), object(), point_data=None, progress_label=progress_label
     )
 
-    assert result == delegate
+    assert result == {"backend": delegate}
     assert selected == [delegate]
     assert labels == [progress_label]
 
@@ -132,9 +143,7 @@ def test_default_engine_non_calc_methods_fallback_to_process(monkeypatch):
     assert eng.future_is_done(object()) is True
     assert eng.await_result(object()) == ("await_result", "process")
     assert eng.map(lambda x: x + 1, [1, 2, 3]) == [2, 3, 4]
-    assert eng.new_runner() == "process"
-
-    assert selected == ["process", "process", "process", "process", "process"]
+    assert selected == ["process", "process", "process", "process"]
 
 
 def test_default_engine_run_single_with_active_delegate_process(monkeypatch):
@@ -155,7 +164,7 @@ def test_default_engine_run_single_with_active_delegate_process(monkeypatch):
     with eng:
         assert state["current"] == "process"
         result = eng.run_calculation(algo, object(), object(), point_data=None)
-        assert result == "single"
+        assert result == {"backend": "single"}
         assert state["current"] == "process"
 
     assert state["current"] is None

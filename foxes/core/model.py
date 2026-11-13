@@ -305,6 +305,8 @@ class Model(ABC):
         data_stash
             Reconstruct model data from this stash when provided.
             Keys are model names and values are dictionaries of large model data.
+            Submodels absent from this stash belong to another active lifecycle
+            and remain running.
         sel
             The subset selection dictionary.
         verbosity
@@ -316,7 +318,7 @@ class Model(ABC):
                 f"Model '{self.name}': Cannot call unset_running when not running"
             )
         for m in self.sub_models():
-            if m.running:
+            if m.running and (data_stash is None or m.name in data_stash):
                 m.unset_running(algo, data_stash, sel, verbosity=verbosity)
 
         if verbosity > 0:
