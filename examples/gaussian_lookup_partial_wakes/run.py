@@ -120,7 +120,7 @@ def main(argv=None) -> None:
         "--outputs",
         help="The post-processing output models",
         nargs="+",
-        default=["flow_plot_xy_states"],
+        default=[],
     )
     parser.add_argument(
         "-v",

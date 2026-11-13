@@ -42,7 +42,7 @@ def main(argv=None):
     )
     parser.add_argument("-e", "--engine", help="The engine", default="ProcessEngine")
     parser.add_argument(
-        "-n", "--n_cpus", help="The number of cpus", default=8, type=int
+        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
     parser.add_argument(
         "-c",
