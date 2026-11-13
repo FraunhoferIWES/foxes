@@ -1189,7 +1189,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.9](https://github.com/FraunhoferIWES/foxes/commits/v1.9.9)
 
-## v1.9.10
+## v1.10.0
 
 - Supplied output results:
   - Add the model-owned `Output.requires_chunk_calculation` requirement; mixed
@@ -1574,4 +1574,4 @@ This major version introduces the concept of `Engines` which handle the chunking
     detailed style, lifecycle, decision and report guidance lives in its
     owning development and architecture guides without weakening the rules.
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.9.10](https://github.com/FraunhoferIWES/foxes/commits/v1.9.10)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.0](https://github.com/FraunhoferIWES/foxes/commits/v1.10.0)
