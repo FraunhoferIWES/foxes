@@ -1253,7 +1253,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Correct wind-rose compass orientation and combine weighted bins without
   chunk-local normalization.
 - Preserve farm and cluster membership, state labels and field values when
-  reusing collected results. Correct multiple-output selection and dataset
+  reusing collected results, including missing labels normalized to `None`
+  when importing xarray datasets. Correct multiple-output selection and dataset
   normalization, reject duplicate result keys, avoid shared output-list
   defaults and keep writer buffers independent. Fix final-chunk and NetCDF
   writer handling, including exact intervals and ISO weeks.

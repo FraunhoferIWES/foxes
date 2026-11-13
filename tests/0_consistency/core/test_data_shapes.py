@@ -114,12 +114,14 @@ def test_dataset_copy_keeps_broadcast_storage_independent_and_bounded():
 
 @pytest.mark.parametrize("coordinate", [FC.FARM, FC.CLUSTER])
 @pytest.mark.parametrize("n_turbines", [1, 3])
+@pytest.mark.parametrize("missing_label", [None, np.nan])
 def test_farm_dataset_keeps_static_memberships_when_slicing_states(
-    coordinate, n_turbines
+    coordinate, n_turbines, missing_label
 ):
     import xarray as xr
 
-    memberships = np.array(["north", None, "south"], dtype=object)[:n_turbines]
+    memberships = np.array(["north", missing_label, "south"], dtype=object)[:n_turbines]
+    expected_memberships = np.array(["north", None, "south"], dtype=object)[:n_turbines]
     dataset = xr.Dataset(
         {"value": ((FC.STATE, FC.TURBINE), np.ones((4, n_turbines)))},
         coords={
@@ -132,7 +134,7 @@ def test_farm_dataset_keeps_static_memberships_when_slicing_states(
 
     assert data["value"].shape == (2, n_turbines)
     assert data.dims[coordinate] == (FC.TURBINE,)
-    np.testing.assert_array_equal(data[coordinate], memberships)
+    np.testing.assert_array_equal(data[coordinate], expected_memberships)
     assert not np.shares_memory(data[coordinate], memberships)
 
 

@@ -856,7 +856,8 @@ class FData(Data):
     Physical fields have leading dimensions ``(state, turbine)``. Dimension
     coordinates, turbine names and weights have their own declared dimensions.
     Wind-farm and cluster membership labels may retain ``(turbine,)`` dimensions
-    when collected results are reused.
+    when collected results are reused. Missing membership labels are represented
+    as ``None``.
     """
 
     def __init__(self, *args: Any, name: str = "fdata", **kwargs: Any) -> None:
@@ -974,7 +975,8 @@ class FData(Data):
             The mdata object
         callback
             Function f(data, dims) that manipulates
-            the data and dims dicts before construction
+            the data and dims dicts before construction; membership labels are
+            normalized before the callback runs
         n_states
             The number of states, if not found in the dataset
         n_turbines
@@ -987,9 +989,32 @@ class FData(Data):
         data
             The data object
 
+        Notes
+        -----
+        Missing wind-farm and cluster membership labels are normalized to
+        ``None``.
+
         """
+
+        def prepare_data(data: dict[str, Any], dims: dict[str, Any]) -> None:
+            for name in (FC.FARM, FC.CLUSTER):
+                memberships = data.get(name)
+                if (
+                    dims.get(name) == (FC.TURBINE,)
+                    and isinstance(memberships, np.ndarray)
+                    and memberships.dtype.kind in "Of"
+                ):
+                    memberships = memberships.copy()
+                    for i, value in enumerate(memberships):
+                        if isinstance(value, (float, np.floating)) and np.isnan(value):
+                            memberships[i] = None
+                    data[name] = memberships
+
+            if callback is not None:
+                callback(data, dims)
+
         if mdata is None:
-            return super().from_dataset(ds, *args, callback=callback, **kwargs)
+            return super().from_dataset(ds, *args, callback=prepare_data, **kwargs)
         else:
 
             def cb(data: dict[str, Any], dims: dict[str, Any]) -> None:
@@ -1015,8 +1040,7 @@ class FData(Data):
                         )
                         data[FC.TURBINE] = np.arange(n_turbines)
                         dims[FC.TURBINE] = (FC.TURBINE,)
-                if callback is not None:
-                    callback(data, dims)
+                prepare_data(data, dims)
 
             return super().from_dataset(
                 ds,
