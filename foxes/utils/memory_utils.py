@@ -12,7 +12,7 @@ def get_object_nbytes(
     seen: set[int] | None = None,
     allow_shallow_fallback: bool = True,
 ) -> int:
-    """Estimate payload bytes of nested extra_data values.
+    """Estimate the payload size of a value in bytes.
 
     The estimate is recursive for generic container types and focuses on
     payload-like elements (numpy arrays, bytes-like objects, nested
@@ -30,8 +30,6 @@ def get_object_nbytes(
         If True, use ``sys.getsizeof`` as a shallow last-resort estimate for
         unknown object types. If False, return 0 for unknown object types to
         preserve payload-only semantics.
-
-
     """
     if seen is None:
         seen = set()
@@ -146,21 +144,19 @@ def print_mem(
     max_csize: int | None = None,
     pre_str: str = "OBJECT SIZE",
 ) -> None:
-    """
-    Prints the memory consumption of a model and its components
+    """Print the memory usage of an object and its components.
 
-    Parmeters
-    ---------
+    Parameters
+    ----------
     obj
-        The object to be analyzed
+        The object whose memory usage is reported.
     min_csize
-        The minimal size of a component for being shown
+        The minimum component size to include, in bytes.
     max_csize
-        The maximal allowed size of a component
+        The maximum allowed component size, in bytes. Exceeding it raises
+        ``ValueError``.
     pre_str
-        String to be printed before
-
-
+        The prefix printed before the object summary.
     """
     objsize = import_module("objsize")
     n = obj.name if hasattr(obj, "name") else ""
@@ -186,27 +182,26 @@ def print_mem(
 
 
 def deep_split(condition: Any, data: Any, fill_None: bool = True) -> tuple[Any, Any]:
-    """
-    Recursively split data into two parts based on a condition.
+    """Split nested data into parts according to a condition.
+
+    Mapping and sequence structure is preserved. Values for which the
+    condition cannot be applied remain in both parts.
 
     Parameters
     ----------
     condition
-        A function or a nested structure of functions that takes an element of data and returns True or False.
+        A predicate, or a nested structure of predicates matching ``data``.
     data
-        The data to be split, which can be a nested structure (e.g., dict, list, tuple) or a single element.
+        A value or nested mapping/sequence to split.
     fill_None
-        If True, fill the parts with None where the condition is not met.
-        If False, the parts will be empty where the condition is not met.
+        Whether to retain unmatched positions as ``None``.
 
     Returns
     -------
     data_0
-        data filled only with elements that evaluate the condition to False
+        The structure containing values where the condition is false.
     data_1
-        data filled only with elements that evaluate the condition to True
-
-
+        The structure containing values where the condition is true.
     """
 
     if isinstance(data, Mapping):
@@ -256,32 +251,27 @@ def deep_split_by_nbytes(
     fill_None: bool = True,
     allow_shallow_fallback: bool = True,
 ) -> tuple[Any, Any]:
-    """
-    Recursively split data by payload size condition.
+    """Split nested data according to estimated payload size.
 
     Parameters
     ----------
     data
-        The data to split.
+        A value or nested mapping/sequence to split.
     max_nbytes
-        Maximal payload size in bytes. Elements with estimated payload smaller
-        than this threshold are placed in the first output.
+        Non-negative size threshold in bytes. Values below it go in the first
+        result; values at or above it go in the second.
     fill_None
-        If True, keep structure and fill missing branches with None.
-        If False, remove missing branches.
+        Whether to retain unmatched positions as ``None``.
     allow_shallow_fallback
-        Forwarded to ``get_object_nbytes`` for unknown object types.
+        Whether ``get_object_nbytes`` may use a shallow size estimate for
+        unknown object types.
 
     Returns
     -------
     data_small
-        Data filled only with elements that satisfy
-        ``get_object_nbytes(element) < max_nbytes``.
+        The structure containing values smaller than ``max_nbytes``.
     data_large
-        Data filled only with elements that satisfy
-        ``get_object_nbytes(element) >= max_nbytes``.
-
-
+        The structure containing values at least ``max_nbytes``.
     """
     if not isinstance(max_nbytes, int) or max_nbytes < 0:
         raise ValueError(

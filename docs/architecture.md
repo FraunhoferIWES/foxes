@@ -836,7 +836,7 @@ results only through explicit output APIs or command-line tools.
 - Point-cloud support-hull failures name the configured interpolation method and
 	the nearest-neighbor fallback setting that can resolve unsupported targets.
 - User input data can carry any classification. Before an AI tool inspects such
-	data, apply [the repository classification policy](../AGENTS.md#data-classification).
+	data, apply the [data classification policy](data-classification.md).
 	Synthetic tests and public packaged examples do not authorize access to a
 	user's separate data set.
 - No data-classification exception is currently recorded; see

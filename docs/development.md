@@ -284,11 +284,6 @@ Select NetCDF writers through output models rather than engine calculation
 options. Engine output tests cover worker-local chunk files and count-limited
 buffered files, including file completion before the engine returns.
 
-The engine migration's focused checks do not certify unrelated unfinished branch
-migrations. The full-suite gate still exposes mismatched default-field
-expectations and unsupported calculation options; do not hide these failures
-with aliases or claim full-suite success.
-
 Put a new dependency in the narrowest justified extra. A dependency required by
 an import of base `foxes` belongs in the main dependencies; an optional adapter
 must not make its package mandatory. `uv.lock` is currently ignored and is not a
@@ -394,6 +389,37 @@ or placeholders. Ask a focused question when the decision is materially unclear.
 Keep general policy in `AGENTS.md` concise: retain critical guardrails there,
 link to these owning guides for detail, and avoid circular links that leave a
 requirement unspecified.
+
+## Before-Release Review
+
+Before a release, review the complete maintained source and documentation
+against the current project version and the last released version on `main`.
+Do not treat prior changelog or documentation prose as evidence when code or
+tests contradict it.
+
+- Run the repository-wide style and type checks with
+  `uv run pre-commit run --all-files`. Review Python docstrings against
+  [docstring conventions](docstrings.md), including public constructors,
+  methods, properties and extension hooks; automated formatting alone is not a
+  docstring review.
+- Update the final `CHANGELOG.md` section. Organize it into concise user- and
+  developer-facing subsections, report each changed class at most once, remove
+  implementation-level detail, and verify every claim against the code and the
+  `main` release baseline. List all release bug fixes.
+- Review every `docs/source/` page for current facts, useful level of detail,
+  working links and references. Replace outdated `versionadded` and
+  `versionchanged` entries on `index.rst` with no more than three entries for
+  the release.
+- Keep `AGENTS.md` focused on guardrails and links. Verify architecture,
+  naming, development guidance, ADR status and content, and other related
+  documentation for accuracy and contradictions.
+- Review the smoke suite for coverage of current public workflows. Do not edit
+  verification tests. Remove tests only when they are clearly obsolete
+  development checks or duplicates, not to avoid failures. Keep checks aligned
+  with GitLab CI, GitHub CI and conda-forge feedstock expectations; do not
+  simulate conda-forge runs. Run
+  `uv run pytest tests/2_models/model_smoke tests/3_examples -q` and the full
+  `uv run pytest tests` suite.
 
 ## Focused Validation
 

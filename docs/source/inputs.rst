@@ -4,8 +4,8 @@ Inputs
 ======
 
 Every *foxes* case needs at least the following two inputs from the user in order
-to be able to run: :ref:`Wind farm layouts <inputs:wind-farm-layouts>` and
-:ref:`Ambient inflow states <inputs:ambient-inflow-states>`.
+to be able to run: :ref:`Wind farm layouts <wind-farm-layouts>` and
+:ref:`Ambient inflow states <ambient-inflow-states>`.
 
 Additionally, the applied models might need additional data, for example the power
 and thrust curves of the selected turbine types. See the :doc:`Models <models>` section for
@@ -28,7 +28,7 @@ are being represented. Turbine types and turbine models can vary for each
 wind turbine, such that this is no limitation of usage but merely a *foxes*
 code design choice.
 
-Wind turbines are to the wind farm, usually by calling one of the functions
+Wind turbines are added to the wind farm, usually by calling one of the functions
 of the sub-package :doc:`foxes.input.farm_layout <_autoapi/foxes/input/farm_layout/index>`. Typical choices are:
 
 * :func:`add_from_csv<foxes.input.farm_layout.add_from_csv>`: Reads a *csv* file, in which each row describes one turbine (also accepts a pandas *DataFrame* instead of the file),
@@ -65,7 +65,7 @@ which expects a list of strings that represent the names of the
 Ambient inflow states
 ---------------------
 
-The atmospheric inflow data are reffered to as *ambient states* or simply as *states*
+The atmospheric inflow data are referred to as *ambient states* or simply as *states*
 in *foxes* terminology. They are understood as a list of conditions, which are used
 for computing all required background data at any arbitrary evaluation point.
 

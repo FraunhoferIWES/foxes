@@ -1191,387 +1191,78 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.10.0
 
-- Supplied output results:
-  - Add the model-owned `Output.requires_chunk_calculation` requirement; mixed
-    lists skip parent-only children on output-only workers.
-  - Format plain state/turbine tables directly from selected supplied farm
-    datasets, preserving inputs and units without chunk dispatch. Keep
-    aggregation and fresh scientific result collection chunk-based.
-  - Dispatch supplied farm outputs directly through the engine rather than
-    calling `Algorithm.calc_farm` with an empty scientific model chain.
+### Core
 
-- Plotting outputs:
-  - Manage each output's initial results and named stash fields explicitly;
-    remove the shared attribute registry and generic rendering-data bundle
-    from `Output`.
-  - Adopt native binned-state support roses as `SupportWindRosePlotOutput`
-    (`support_rose_plot`), preserving support coordinates, bin edges and weights
-    without scientific recalculation or private algorithm access.
-  - Apply the engine-owned running lifecycle to metadata-only outputs and
-    normal output finalization to Sequential animation adapters.
-  - Keep figures, axes, callbacks and rendering options in parent-owned initial
-    results instead of serialized worker models, restoring constructor
-    configuration after execution or failure.
-  - Pass rendering inputs explicitly through layout, rose, rotor, map, curve,
-    slice and animation finalizers, including metadata-only and Sequential paths.
-  - Preserve caller-owned plotting objects without deep-copying animation
-    settings; retain only small scientific selectors on running outputs.
-  - Retain required wake inputs in notebooks that reuse thrust coefficients
-    for flow calculations or comparison plots, alongside requested metrics.
-  - Remove automatic support wind roses from the binned-states example while
-    preserving reduction artifact writing and reading.
+- Dimensioned data containers and `Model.get_data()` now preserve named
+  dimensions and use full-shaped read-only broadcast views. Corrected target
+  lookup and shape validation for named dimensions and selections, including
+  partially NaN results. Removed the superseded `upcast` and `broadcast`
+  options.
 
-- Engines:
-  - Keep `__init__` docstrings parameter-only across branch-modified classes;
-    move all other constructor prose and sections to class docstrings and
-    codify this split in the docstring guide.
-  - Describe NumPy and single-chunk execution as a loop over chunks in farm and
-    point progress headers instead of reporting workers.
-  - Own chunk-store detachment and reattachment for farm and point runs,
-    including setup and execution failures, while preserving Iterative caches.
-  - Own selected outputs' running hooks and configuration stash through result
-    finalization, restoring them after worker cleanup on success and failure.
-  - Centralize calculation lifecycle and output finalization in `Engine`, with
-    abstract per-call state, execution and cleanup hooks implemented by
-    `PoolEngine` and delegated by `DefaultEngine`.
-  - Share ordered chunk-result collection, cache merging and output updates
-    through `Engine`, with backend-owned progress callbacks.
-  - Share scientific input selection and validation through a base-engine
-    helper without imposing pool scheduling on other backend implementations.
-  - Require `new_runner()` only on `PoolEngine`; remove the base-engine
-    requirement and unused default-engine forwarding factory.
-  - Preserve initial output result mappings through default-engine delegation
-    and pool collection instead of replacing them with empty mappings.
-  - Compose child outputs' initial results without copying values or silently
-    overwriting duplicate keys.
-  - Leave shared running submodels attached to their owning lifecycle stash
-    during output cleanup.
-  - Include worker counts in farm and point calculation title lines.
-- Example results and outputs:
-  - Add `-R/--results` with default `farm_results`; retain `-r` for rotors and
-    use `--ref_xy` for reference points. Run script-specific `-o/--outputs`
-    afterward with the collected farm dataset or `None`.
-  - Print all returned keys and values at verbosity two and three, remove
-    dataset-specific dataframe reports, and keep every workflow in `main()`.
-  - Add opt-in `ret_dict=True` to farm, point and output calculations without
-    changing default returns or Iterative convergence data.
-  - Make `-nf` skip images, animations and image-only point calculations across
-    examples while retaining explicit numerical exports and input reductions.
-    Resolve `Output.nofig` before initialization, including nested output lists
-    and Sequential animation plugins, rather than filtering in tutorials.
-    Keep numerical modes active; mark image-only companion probes with
-    `image_only=True`. Suppressed image outputs return no numerical fallback.
-  - Align dynamic-wake and timelines notebooks with separate farm results and
-    animation processing. Explain keyed returns and early figure suppression
-    in the output tutorial, using natural results-oriented terminology.
-- Output dataset units:
-  - Attach per-variable `units` attributes to scientific output datasets and
-    NetCDF files, including point geometry, renamed tables/slices, roses and
-    normalized rotor metadata; preserve metadata in Sequential buffers.
-  - Resolve power units from turbine types and convert mixed power/capacity
-    fields to the smallest unit before aggregation, without unit-based groups.
-    Keep Iterative solver history native and repeated output processing
-    idempotent.
-  - Align the changed output helpers, rotor rendering and unit regressions with
-    coding conventions for imports, descriptive names, block structure and
-    docstrings without changing numerical behavior.
-- Output presets:
-  - Use `farms_results`, `cluster_results` and `total_results` for wind-farm,
-    cluster and all-turbine aggregation across every filter/field/state/writer
-    combination. Remove superseded selectors without aliases; keep constructor
-    options unchanged.
-  - Key farm and point datasets by the `FC` constants for their spatial
-    grouping and state reduction. Remove custom collector result names; reject
-    duplicate keys. Farm and point totals use distinct keys and compose safely.
-  - Demonstrate quick model-book outputs, selector composition, field/filter/
-    mean/writer suffixes and preset discovery in the output tutorial.
-- Tutorials and visual policy:
-  - Add a runnable output notebook covering collectors, automatic metrics,
-    aggregation, point probes, plots, NetCDF writers and GIF animation.
-  - Adopt user-selected free design, remove corporate guidance and Sphinx token
-    adapters, and record project visualization conventions and publication review.
-  - Preserve static farm/cluster membership coordinates when reusing collected
-    farm results for outputs and point calculations.
-  - Correct wind-rose compass orientation by avoiding a second rotation of
-    already converted meteorological bearings.
-- Turbine evaluation:
-  - Return zero efficiency for zero power, including zero ambient power, and
-    positive infinity for nonzero power over either signed zero without
-    division warnings. Preserve unclipped ratios, NaNs otherwise, selections
-    and nominal-capacity validation, including output-selected evaluation.
-- Maintenance:
-  - Make coding-style review of changed code an explicit closing task, separate
-    from automated linting and formatting, and report its result.
-  - Audit model-book factory precedence and all output preset combinations.
-    Order specialized rotor and ambient-TI variants before catchalls, remove
-    duplicate wake registrations and unsupported vector-limit/TurbOParkIX
-    growth variants, and parse decimal coefficients without corrupting them.
-  - Keep collectors in `farm_results.py` and `point_results.py`; put every
-    domain writer in the corresponding plural `*_results_writers.py` module.
-    Remove the generic `ResultsWriter`, its module and model-book preset.
-  - Put implementation comments below docstrings and check placement across
-    package code, tests, examples and notebooks. Remove an unused point-cloud
-    dimension helper and superseded dataset-only rose reductions; consolidate
-    both polar renderers without changing output schemas.
-  - Complete WindIO turbine/flow output execution with constructor options,
-    validated state selections, WindIO dimension names and figure suppression.
-  - Bound notebook worker counts and retain each comparison case's own algorithm
-    and results when rendering, removing duplicate numerical plot calculations.
-    Explicitly collect the ambient fields, wake-expansion coefficients and yaw
-    offsets used by detailed notebook reports and point calculations.
-- Examples:
-  - Restore the power-mask example's two three-panel power/thrust comparisons
-    and turbine-curve styling from `dev`, using constructor-defined outputs
-    with each case's own results and preserving figure-less execution.
-  - Print each collected farm-results dataset once at verbosity two or higher,
-    independently of fields needed by later reports, including comparison and
-    optional benchmark runs. Preserve quiet levels and distinguish non-farm
-    outputs; include YAML/WindIO examples without reducing verbosity twice.
-  - Verify output-preparation reordering and turbine evaluation against
-    changing three-turbine permutations, distinct capacities and mixed power
-    units on NumPy/thread/process chunks.
-  - Standardize `-v`/`--verbosity` across all scripts with default level two;
-    make the aggregate runner pass `-v 0` by default and preserve explicit
-    short/long options. Keep plot-variable selection on `--var`.
-  - Default aggregate execution to quiet algorithms/engines while retaining
-    per-example and completion messages. Add configurable verbosity to all
-    standalone scripts, with default reports, opt-in concise summaries and
-    detailed progress. Preserve explicit choices and suppress nested quiet-state
-    loading messages without hiding errors. Numerical NetCDF outputs inherit algorithm
-    verbosity unless explicitly configured otherwise.
-- Outputs:
-  - Register every collector/count/chunk/calendar combination of named fields,
-    ambient/waked filters, spatial aggregation and state means. Retain scalar
-    pre-aggregation state/turbine/point counts in datasets and files without
-    per-variable weight metadata.
-  - Execute aggregation presets through YAML and apply input state selections
-    before reduction. Support WindIO turbine summaries and normalized gridded
-    flow means, including circular directions and external field names.
-    Reuse shared chunk assembly and reductions; remove duplicate join/table
-    assembly and writer count bookkeeping.
-  - Apply consistent style to the changed files, extracting YAML component
-    construction, state selection, physical group reduction, payload validation
-    and tile assembly without changing their numerical/lifecycle contracts.
-  - Add independent `aggregate_turbines` (wind farm, cluster, all),
-    `aggregate_points` (all) and `aggregate_states` controls to collectors and
-    their writers. Reduce worker payloads to physical sufficient statistics,
-    including exact count/calendar intervals and uneven target tiles.
-    Normalize state weights independently per turbine/point before grouping;
-    recompute power ratios, sum extensive fields and average intensive fields.
-    Include unassigned memberships and normalize mixed-unit power before sums.
-    Add distinct grouped/mean model-book presets and result keys.
-  - Align point results with farm collection/count/chunk/calendar writers and
-    model-book selectors. Add independent point `default`/`all` wind-field sets
-    and ambient/waked filtering; keep scientific chunking owned by the engine.
-    Preserve every target point and dynamic geometry in files, and share
-    count/calendar policies with farm writers. Keep iterator-internal and
-    custom-model collection explicitly unrestricted.
-  - Honor script verbosity for all selected animations in dynamic-wake,
-    timeline and Sequential examples, including MP4-only selections.
-- Bug fixes:
-  - Keep the documented ambient farm-field selection and require explicit
-    `*_all` presets in tests that exercise arbitrary model-specific fields.
-  - Remove the point-calculation `ambient_keep` option; select ambient-only
-    or paired point fields through output variables and filters.
-    Announce creation at verbosity one; writing and successful completion at
-    verbosity two, alongside frame counts and encoder settings; and per-frame
-    progress at verbosity three.
-    Do not announce a nonexistent final frame or completion after a write error.
-  - Complete migration of remaining writers, tables, maps, arbitrary-point
-    calculations, rotor plots and turbine curves to constructor-defined
-    `foxes.models.outputs` models; remove the former output package.
-    Reduce arbitrary-point state means on workers and support dynamic coordinates.
-    Make curve scans explicit; handle the YAML-only `plt` exception directly in
-    the reader, without an output class. Update WindIO, examples and notebooks.
-  - Remove the output-based farm evaluator and grouped wind-farm/cluster
-    aggregation APIs, their numerical helpers and model-book registration.
-    Request turbine metrics through output variables instead; output preparation
-    applies `TurbineEvaluation` automatically without turbine-model registration.
-    Unrestricted collectors retain available fields without requesting new
-    metrics. Remove superseded aggregate reports from examples and notebooks,
-    and keep turbine-trace rendering with animations.
-  - Polish adopted output and helper docstrings, split model-book registration
-    by concern, and separate animation composition/rendering and farm writer
-    policies from collection and payload assembly without changing result schemas.
-  - Keep animation model-book presets noninteractive. Configure all test-owned
-    output presets/factories with `show=False` and prohibit enabled display in
-    tests, including mocked display checks.
-  - Add `show=False` to plotting constructors and enable display on model-book
-    static plotting presets/factories. Explicitly enabled animation playback uses
-    configured frame rates after saving, on the parent only. Respect numerical
-    and no-figure modes, preserve results and close transient figures on errors.
-  - Reduce worker payloads before transport: mean slices return weighted point
-    sums, roses return bin accumulators, and layouts retain selected geometry and
-    reduced colours. Merge bin denominators globally.
-    Preserve selections and physical results after output power normalization.
-  - Transport static point coordinates once per tile. Collect flow-plot vector
-    fields and farm geometry only for configured quivers and rotor overlays;
-    keep required state frames for datasets, writers and animations. Assemble
-    state-dependent point coordinates correctly in Sequential result buffers.
-  - Derive flow animations from `SliceData`, not the reverse. Share neutral
-    slice point/grid collection with `FlowPlots2D` and `SlicesData`, removing
-    animation settings and animation-labelled shared data from static outputs.
-    Verify reordered precomputed flow-plot values and weighted means in all
-    planes; document the `flow_plot_<plane>_<reduction>` model-book selectors.
-  - Register all newly adopted output models in `ModelBook.outputs`, including
-    lightweight layout/rose presets and plane/reduction factories
-    for slice data, parallel slices and two-dimensional flow plots.
-  - Collect farm output once per state chunk in point runs, while preserving
-    collection and input validation for calls without a point-chunk index.
-  - Allow Iterative output-only runs to consume explicitly supplied farm results
-    and state selections without injecting convergence data or recalculating.
-  -   Promote animation grids, flow/slice plotting, layout and rose
-  dependencies to constructor-defined `foxes.models.outputs`
-    models, removing their former dataset-bound classes and exports.
-  - Execute outputs through `calc_farm`, `calc_points` or `calc_outputs` while
-    retaining the public `outputs` string/list selector. Bound farm-run point
-    evaluation per state chunk, reuse supplied/precomputed points and reject
-    conflicting composed grids. Keep scientific grids and buffers off models.
-  - Support horizontal/vertical planes, configured reductions and one-write
-    multi-plane datasets; migrate Python, YAML/WindIO and notebook callers.
-- Turbine models:
-  - Restrict evaluation to nominal capacity, capacity factor, efficiency and
-    annualized/probability yields, with matching ambient metadata.
-  - Extend `TurbineEvaluation` with state-turbine capacity, capacity factor,
-    annualized yield and P75/P90 yield, including ambient
-    variants. Require explicit relative uncertainty for probability yields.
-    Honor original turbine identity and power units, preserve full-shaped
-    selections and keep running model state read-only.
-  - Export the evaluator and finalize its metrics after ambient/wake powers
-    exist, including unwaked turbines and ambient-only selections, without
-    rerunning power-changing models. Reevaluate Iterative's final under-relaxed
-    powers with correctly aligned turbine selections.
-    Fix its constructor's model-name handling.
-- Core:
-  - Removed stored data singletons in favor of full-shaped read-only NumPy
-    broadcast views. `Model.get_data()` automatically broadcasts mismatched
-    inputs to the target shape; its `upcast` and `broadcast` options are removed.
-  - Corrected default target-data lookup, full-rank shape validation, named
-    dimension alignment, slice/list selections and selected-result shapes.
-    Validate NaNs in returned selections, including partially NaN arrays.
-  - Keep iteration reconstruction confined to farm/wake sources, preserve
-    source arrays and report unavailable previous results explicitly.
-  - Updated read-only wake callers and removed boolean-mask construction for
-    turbine-model state slices; honor uniform TI in the `kTI` turbine model.
-- Examples:
-  - Give every script a callable `main(argv=None)` and intention-specific
-    `-o/--outputs` defaults, with figure-less execution independently selectable.
-    Run every documented example once in-process, using explicit README commands,
-    temporary working copies and bounded local quick inputs, including synthetic
-    ICON-DREAM, local-engine Slurm and inlined WindIO coverage. Restore process
-    state and remove generated files/figures on success and failure.
-    Replace the obsolete wake-field exporter with a selected numerical slice.
-  - Added `-o/--outputs` to all Downwind/Iterative Python example scripts.
-    Handle direct datasets, composed results and writer-only selections without
-    skipping later comparison runs. Retain example-specific collector fields.
-    Reserve `--figure-file` for the Gaussian comparison's optional PNG.
-    Stop requesting the removed maximum-power field in the unmasked comparison.
-- Engines:
-  - Unified synchronous and parallel execution around the core output lifecycle;
-    corrected chunk-store merging.
-  - Removed engine `write_nc` options and chunk-file helpers. NetCDF files are
-    written exclusively by selected output models; compose a writer with a
-    collector when an in-memory dataset is also needed.
-  - Replaced engine animation hooks with optional `FlowAnimation`:
-    reuse supplied target data or evaluate shared grids in bounded point blocks,
-    then combine all selected chunks and save one animation per variable during
-    output finalization. Removed the superseded chunk plotting helper.
-    Register `"create_gif"` and `"create_mp4"` in `ModelBook.outputs`, plus
-    `"chunk_gif_<chunk>"` and `"chunk_mp4_<chunk>"` factories. Defer configuration
-    validation and preparation from construction to initialization.
-    All-state selections use `None`; partial selections are boolean `FC.STATE`
-    variables in loaded data, and constructor inputs are stashed while running.
-    Select GIF/Pillow or MP4/ffmpeg encoding through the final filename suffix.
-  - Keep wake-frame caches available through scientific output calculations,
-    and return caches created by outputs alongside the model caches.
-  - Snapshot chunk entries during state-subset cache lookups to permit
-    concurrent insertion by thread workers without copying scientific arrays.
-  - Restored shared terminal/notebook progress with adaptive Unicode bars,
-    readable labels, quiet modes, newline-only logs and failure cleanup.
-  - Schedule local Dask chunks and buffered writes in ordered batches; prevent
-    distributed writer deduplication and restore cluster/configuration cleanup.
-  - Fixed Slurm startup to create only its selected cluster.
-- Algorithms:
-  - Added explicit point-output collection and updated Iterative/Sequential
-    callers while preserving intermediate downwind order.
-  - Kept the default farm field selection unchanged; callers requiring all
-    wake inputs explicitly request the existing all-fields output.
-  - `Downwind.calc_points(output=...)` adds chunk outputs alongside its standard
-    collector without changing point dataset returns.
-  - Include calculation/output models in the complete point-run lifecycle.
-    Iterative keeps requested output initialization and execution in the final
-    evaluation pass, with a separate internal convergence collector.
-- Dependencies:
-  - Added the `engines` extra combining all optional engine packages through
-    the existing Dask, MPI, multiprocess and Ray extras.
-- Bug fixes:
-  - Preserve the dynamic-wake example's flow-and-REWS animations through
-    `-o create_turbine_gif` and `-o create_turbine_mp4`, including headless
-    and writer-only runs. Always append the animated variable to the configured
-    base filename, including single-variable output (`ani_WS.gif`/`ani_WS.mp4`).
-    Remove its superseded `-a/--animation` and `-A/--ani_file` options.
-    Add reusable `FlowTurbineAnimation`, deriving from `FlowAnimation` in
-    `flow_animations.py`, with configurable turbine traces, layout annotations
-    and reference marker. Register `create_turbine_gif` and `create_turbine_mp4`
-    globally with `ani.gif` and `ani.mp4` base filenames, and customize the
-    dynamic-wake example's local turbine-animation registrations.
-  - Migrate timelines, sequential and sequential-yaw-controller animation
-    scripts to named output models, removing their old animation flags.
-    Add `SeqAnimationOutputPlugin` for step-local numerical collection and
-    final-only rendering, including wake-debug overlays. Share layout
-    annotations across flow outputs and accept positive finite fractional
-    frame rates. Migrate all three animation notebooks to the same models,
-    retaining their panels, markers, flow settings and playback timing.
-    Verify local Sequential animation settings for both formats and exercise
-    real MP4 writer-only runs with and without wake-debug overlays.
-  - Fix the timelines example's default state-chunked runs, including
-    `-o create_turbine_mp4`: initialize cross-chunk source values from the
-    current chunk only in iteration zero, then use actual source history.
-    Restore state chunking in the timelines notebook and test parity with
-    full-state results on NumPy and process engines.
-  - Enable timeline example progress messages that announce the animation
-    destination when encoding begins. Animation outputs accept their own
-    `verbosity`, inheriting algorithm verbosity when unset; the example enables
-    writer messages without increasing algorithm verbosity.
-    Enable these notices on both Sequential examples' local animation outputs
-    as well, keeping their algorithm calculations quiet.
-  - Label engine progress bars and text snapshots with the model class name
-    instead of its unique instance name for direct engine calls. Algorithm
-    calls supply `<algorithm class>.calc_farm` or `<algorithm class>.calc_points` through the
-    optional keyword-only engine `progress_label`.
-    Explicitly forward the upstream label through every engine dispatch and
-    delegation call, including both DefaultEngine backends.
-  - Consolidate `Animator` in `foxes.models.outputs.animator` and move all Sequential plugins
-    (`SeqWakeDebugPlugin`, `SeqAnimationOutputPlugin`, `SeqFlowAnimationPlugin`)
-    to the new `foxes.models.seq_plugins` package.
-    Update animation renderers, examples and the Sequential notebook without
-    old-path aliases.
-    Defer wake-model algorithm type-check imports to avoid initialization cycles.
-  - Bug fixed that prevented turbine models from using their loaded data during run time
-  - Chunk-based farm outputs preserve state labels and broadcast farm fields;
-    uniform weights are compacted only after dataset assembly.
-  - Count and period writers split the final chunk correctly, forward NetCDF
-    options, and keep private buffers independent of collected farm results.
-  - Weekly files use Monday-based ISO weeks and the ISO week year.
-  - Output lists no longer share mutable defaults; Downwind resolves multiple
-    output models correctly, supports disabled collection, and normalizes the
-    collected dataset rather than the output mapping.
-- Tests:
-  - Added regression coverage for the four implemented farm output models,
-    NetCDF files, output composition, validation and NumPy/thread chunk parity.
-  - Keep Python test modules visible despite generated-result ignore patterns.
-  - Added animation lifecycle, field parity, target-tile assembly, point-block
-    limits, actual GIF frames, filename transformation and failure-cleanup tests.
-  - Verify final-only Iterative animations, including streamline cases, and
-    exercise MP4 encoding when ffmpeg is available.
-- Development:
-  - Added logical-block comments, blank-line separation, natural code style and
-    polished docstring requirements to the canonical contributor rules.
-  - Documented parallel-safe instance-state rules for every FOXES model:
-    avoid runtime mutation of `self` after `set_running()` and keep calculation
-    state in data containers, chunk stores or explicit result mappings.
-  - Condensed `AGENTS.md` into guardrails and required documentation links;
-    detailed style, lifecycle, decision and report guidance lives in its
-    owning development and architecture guides without weakening the rules.
+### Algorithms
+
+- `Downwind`, `Iterative` and `Sequential` support constructor-defined outputs
+  through farm, point and supplied-result workflows. `ret_dict=True` opts into
+  keyed result mappings without changing default returns.
+
+### Models
+
+- `TurbineEvaluation` supplies state-turbine capacity, efficiency, capacity
+  factor and annualized/probability yields through output selection, respecting
+  turbine identity, power units and explicit uncertainty.
+- `ModelBook` adds grouped farm, cluster, all-turbine and point result presets
+  with consistent field, filter, reduction and writer options.
+
+### Outputs
+
+- Farm and point collectors, writers, plots, tables, maps and animations use
+  constructor-defined models in `foxes.models.outputs`; the old dataset-bound
+  output package and generic results writer are removed.
+- Plain tables format supplied farm results without chunk dispatch; aggregation
+  and fresh scientific calculations remain chunk-based. Farm and point results
+  support spatial grouping and weighted state means, including exact
+  count/calendar files and explicit result keys.
+- Output datasets and NetCDF files include units for known fields; mixed power
+  units are normalized before aggregation.
+- Add native support-point wind roses and reusable flow/turbine animations.
+  Figure suppression skips image-only calculations while retaining numerical
+  outputs and input reductions.
+- WindIO turbine and flow outputs use the shared output lifecycle, with
+  validated state selection and WindIO field/dimension names.
+
+### Engines
+
+- Engines own selected-output lifecycle, ordered chunk collection, cache updates
+  and parent-side finalization; progress reports distinguish worker pools from
+  synchronous chunk loops.
+- Add the `engines` extra for installing all optional execution backends.
+
+### Examples and documentation
+
+- Python examples use callable `main()` workflows, separate result and
+  post-processing selectors, consistent verbosity, and optional figure-less
+  execution. The aggregate runner executes examples in isolated temporary
+  copies.
+- Add a runnable output tutorial and document the new output, aggregation and visualization contracts.
+
+### Bug fixes
+
+- Correct zero-power efficiency and preserve turbine ordering, mixed-unit
+  values and final Iterative powers when deriving turbine metrics; correct
+  `TurbineEvaluation` model-name handling.
+- Correct wind-rose compass orientation and combine weighted bins without
+  chunk-local normalization.
+- Preserve farm and cluster membership, state labels and field values when
+  reusing collected results. Correct multiple-output selection and dataset
+  normalization, reject duplicate result keys, avoid shared output-list
+  defaults and keep writer buffers independent. Fix final-chunk and NetCDF
+  writer handling, including exact intervals and ISO weeks.
+- Correct weighted state reductions and precomputed flow-plot ordering; fix
+  state-dependent point coordinates and timeline wake history across chunks.
+- Keep dynamic-wake GIF/MP4 selections and filenames correct in headless and
+  writer-only runs. Fix Slurm cluster startup and plotting cleanup after
+  failures; do not report animation completion after a write error.
+- Correct model-book factory precedence and coefficient parsing, remove
+  duplicate registrations, and preserve loaded model data during execution.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.0](https://github.com/FraunhoferIWES/foxes/commits/v1.10.0)

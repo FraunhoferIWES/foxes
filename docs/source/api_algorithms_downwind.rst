@@ -19,9 +19,8 @@ an ordered output chain. Physical field selections belong to the output model:
 
 Multiple outputs return a result-name keyed mapping, even when only one output
 returns a dataset. Writer-only outputs and disabled collection (``None`` or an
-empty list) return an empty mapping. Use explicit NumPy or thread engines for
-the currently validated farm-output path; the other engine/algorithm and
-point-output paths still require migration.
+empty list) return an empty mapping. Selected outputs run through the same
+algorithm and engine lifecycle for farm, point and supplied-result processing.
 
 See :doc:`api_output` for dataset and NetCDF output models, composition and a
 runnable synthetic example.

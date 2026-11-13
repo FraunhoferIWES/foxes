@@ -112,7 +112,9 @@ Select derived fields through the farm collector. The
 capacity factors, efficiency and weights; output preparation applies
 `TurbineEvaluation` automatically. No manual turbine-model registration or
 post-calculation evaluation output is needed. Fields keep their state/turbine
-dimensions. Farm and cluster aggregation are not currently provided.
+dimensions unless aggregation is selected. Farm, cluster and all-turbine
+grouping, point aggregation and weighted state means are available through
+collector options and model-book presets.
 See the [output API](api_output.rst) for collector selections and plotting.
 
 ### Plot creation and variables

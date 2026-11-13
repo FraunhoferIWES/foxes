@@ -164,7 +164,7 @@ framework skips animation writers and image-only point calculations.
 Explicit numerical outputs remain enabled.
 
 Compact calculation payloads
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``calculate()`` returns only data required by the final output, under a private
 model key. Means are reduced on workers, not collected as full state histories:
 
@@ -485,7 +485,7 @@ Unaggregated collectors preserve supplied weights; normalized state means are
 selected explicitly through ``aggregate_states=True``.
 
 Point collection and writers
----------------------------
+----------------------------
 ``PointResultsOutput`` assembles state/target tiles under ``FC.POINT_RESULTS``.
 Select fields through ``variables``, ``ambient_vars`` and ``waked_vars``, as
 for farm collection. Coordinates remain present for empty field selections.
@@ -739,7 +739,7 @@ step indices with target index zero. ``debug=True`` adds the existing wake
 point/vector overlays without changing their scientific calculations.
 
 Tables, maps, arbitrary points and metadata plots
-------------------------------------------------
+--------------------------------------------------
 All concrete outputs belong to ``foxes.models.outputs`` and follow the same
 constructor-defined lifecycle. No separate dataset-bound output package remains.
 

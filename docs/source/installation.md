@@ -52,6 +52,7 @@ conda install foxes-opt -c conda-forge
 | `mpi` | MPI engine |
 | `multiprocess` | Multiprocess engine |
 | `ray` | Ray engine |
+| `engines` | All optional engine packages |
 | `doc` | Documentation tools |
 | `dev` | Development tools |
 | `test` | Test tools and runtime support |

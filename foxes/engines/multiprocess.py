@@ -37,8 +37,7 @@ class MultiprocessEngine(PoolEngine):
         Parameters
         ----------
         f
-            The function f(*args, **kwargs) to be
-            submitted
+            The function ``f(*args, **kwargs)`` to be submitted.
         args
             Arguments for the function
         kwargs

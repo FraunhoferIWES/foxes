@@ -609,6 +609,7 @@ def evaluate_lookup_dataset(
         - ``"clip"``: clip radial queries to axis limits before interpolation,
         - ``"nan"``: return ``fill_value`` for out-of-bounds radial queries,
         - ``"raise"``: raise ``ValueError`` for an out-of-bounds radial query.
+
         Queries below the ``sigma / D`` range use its lower bound and queries
         above it use the large-sigma asymptote regardless of this policy.
     fill_value

@@ -103,8 +103,7 @@ class DefaultEngine(Engine):
         Parameters
         ----------
         f
-            The function f(*args, **kwargs) to be
-            submitted
+            The function ``f(*args, **kwargs)`` to be submitted.
         args
             Arguments for the function
         kwargs
@@ -178,7 +177,7 @@ class DefaultEngine(Engine):
         ----------
         func
             Function to be called on each file,
-            func(input, *args, **kwargs) -> data
+            ``func(input, *args, **kwargs) -> data``
         inputs
             The input data list
         args

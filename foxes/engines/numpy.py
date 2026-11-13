@@ -83,7 +83,7 @@ class NumpyEngine(ThreadsEngine):
         ----------
         func
             Function to be called on each file,
-            func(input, *args, **kwargs) -> data
+            ``func(input, *args, **kwargs) -> data``
         inputs
             The input data list
         args

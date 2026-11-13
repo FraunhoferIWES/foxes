@@ -1,6 +1,7 @@
 # AI Data Classification Exceptions
 
-[AGENTS.md](../AGENTS.md#data-classification) restricts AI tool usage to `public`
+[The data classification policy](data-classification.md) restricts AI tool usage
+to `public`
 and `restricted` data. This register records each case where a user explicitly
 released work involving `confidential` or `strictly confidential` data anyway, so
 the decision stays traceable. It is a record, not an authorization: other
@@ -21,8 +22,8 @@ FOXES source code and its published package data are public, but data supplied
 to a calculation keeps its own classification. Wind-farm coordinates, turbine
 and operational data, measured atmospheric series, customer/site identifiers,
 and unpublished validation or research results can trigger the classification
-question in [AGENTS.md](../AGENTS.md#data-classification). Do not infer that data
-is public merely because FOXES can read its file format.
+question in [data-classification.md](data-classification.md). Do not infer that
+data is public merely because FOXES can read its file format.
 
 Use deterministic synthetic arrays or explicitly public packaged/example data
 for tests and reproductions. A release for one data set does not cover another
@@ -66,7 +67,7 @@ thread.
 
 ## Related Records
 
-- [AGENTS.md → Data Classification](../AGENTS.md#data-classification) — classes,
+- [Data classification policy](data-classification.md) — classes,
 	triggers, procedure.
 - [architecture.md](architecture.md) — classification of data the software
 	itself processes.

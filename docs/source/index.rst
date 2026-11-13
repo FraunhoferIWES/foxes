@@ -2,12 +2,17 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionadded:: 1.9.7
-    Support for Python 3.14.
+.. versionchanged:: 1.10.0
+    Farm, point and plotting outputs use constructor-defined models selected
+    through the algorithm output API.
 
-.. versionadded:: 1.9.7
-    ``FarmLayoutOutput`` can render physical rotor radii and override farm
-    boundaries for figures without changing numerical farm geometry.
+.. versionadded:: 1.10.0
+    Farm and point result collectors support spatial grouping and weighted
+    state reductions, including matching model-book presets.
+
+.. versionadded:: 1.10.0
+    Output datasets and NetCDF files include units for known variables;
+    mixed turbine power units are normalized before aggregation.
 
 Welcome to FOXES
 ================
