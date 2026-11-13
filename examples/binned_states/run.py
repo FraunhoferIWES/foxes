@@ -1,6 +1,5 @@
 import argparse
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 import foxes
@@ -156,6 +155,7 @@ def main(argv=None):
         source_algo = foxes.algorithms.Downwind(
             farm,
             states=source_binned_data,
+            mbook=mbook,
             wake_models=args.wakes,
             wake_frame=args.frame,
             partial_wakes=args.pwakes,
@@ -190,12 +190,10 @@ def main(argv=None):
         )
 
     with engine:
-        support_rose_data = None
         if source_algo is not None:
+            # Write the source reduction before reading the requested artifact.
             source_algo.initialize()
-            support_rose_data = source_binned_data.get_support_wind_rose_data(
-                source_algo._Algorithm__loaded_data
-            )
+            source_algo.finalize()
 
         binned_data = (
             foxes.input.states.read_binned_data(args.read_nc)
@@ -212,11 +210,6 @@ def main(argv=None):
             rotor_model=args.rotor,
             verbosity=max(args.verbosity - 1, 0),
         )
-        if args.read_nc is None and not args.nofig:
-            algo.initialize()
-            support_rose_data = source_binned_data.get_support_wind_rose_data(
-                algo._Algorithm__loaded_data
-            )
         # Keep result keys even when only one model is selected.
         results = algo.calc_farm(outputs=args.results, ret_dict=True)
         if args.verbosity > 1:
@@ -254,14 +247,6 @@ def main(argv=None):
                     for key, value in data.items():
                         print(f"\n{key}:\n{value}")
                 output_results.update(data)
-
-    if not args.nofig and support_rose_data is not None:
-        fig = source_binned_data.get_support_wind_roses_figure(
-            support_rose_data,
-            title="Timeseries wind roses at support points",
-        )
-        plt.show()
-        plt.close(fig)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ from xarray import Dataset
 
 import foxes.constants as FC
 import foxes.variables as FV
+from foxes.utils import Dict
 
 from .state_turbine_table import StateTurbineTable
 from ._variable_info import get_data_info
@@ -71,7 +72,98 @@ class TurbineTypeCurves(StateTurbineTable):
         self.plot_pars = {} if plot_pars is None else dict(plot_pars)
         self.to_file = to_file
 
-    def process(self, algo: Algorithm, data: Dataset) -> Any:
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Store curve plotting options alongside inherited table formatting.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        model_data
+            Initial model dataset passed to the base output hook.
+        farm_data
+            Initial farm dataset passed to the base output hook.
+        point_data
+            Initial target dataset, or ``None`` for farm calculations.
+        extra_data
+            Additional non-array inputs passed to the base output hook.
+
+        Returns
+        -------
+        output_results
+            Run-local results containing this output's private plotting key and
+            the inherited table keys, each referencing its original options.
+        """
+        output_results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+
+        # Bypass recursive Dict conversion to retain exact plotting configuration.
+        dict.update(output_results, {self.var("plot_pars"): self.plot_pars})
+        return output_results
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Move curve plotting options off the model while it is running.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data_stash
+            Model-name keyed lifecycle storage, or ``None`` to retain model state.
+        sel
+            Selected states for this calculation, if any.
+        verbosity
+            The lifecycle reporting level; ``0`` is silent.
+        """
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name]["plot_pars"] = self.plot_pars
+            del self.plot_pars
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore curve plotting options after execution.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data_stash
+            Model-name keyed lifecycle storage containing this output's options.
+        sel
+            Selected states for this calculation, if any.
+        verbosity
+            The lifecycle reporting level; ``0`` is silent.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            self.plot_pars = data_stash[self.name].pop("plot_pars")
+
+    def process(
+        self,
+        algo: Algorithm,
+        data: Dataset,
+        output_results: Dict[str, Any],
+    ) -> Any:
         """Render selected wind-speed curves or return their numerical dataset.
 
         Parameters
@@ -80,6 +172,8 @@ class TurbineTypeCurves(StateTurbineTable):
             Algorithm supplying turbine names; never rerun or modified here.
         data
             Selected, chunk-collected curve fields.
+        output_results
+            Shared run results containing this output's private formatting options.
 
         Returns
         -------
@@ -91,10 +185,12 @@ class TurbineTypeCurves(StateTurbineTable):
         ValueError
             If the number of supplied axes does not match the curve fields.
         """
-        table = self._table(data)
+        plot_pars = output_results.pop(self.var("plot_pars"))
+        write_pars = output_results.pop(self.var("write_pars"))
+        table = self._table(data, output_results)
         if not self.plot or self.nofig:
             return table
-        options = dict(self.plot_pars)
+        options = dict(plot_pars)
         axes = options.pop("axs", None)
         size = options.pop("figsize", (5 * len(self.curve_variables), 4))
         if axes is None:
@@ -133,6 +229,6 @@ class TurbineTypeCurves(StateTurbineTable):
             ax.grid(axis="y")
             ax.legend()
         if self.to_file is not None:
-            axes[0].figure.savefig(self.get_fpath(self.to_file), **self.write_pars)
+            axes[0].figure.savefig(self.get_fpath(self.to_file), **write_pars)
         self._show_figures()
         return axes

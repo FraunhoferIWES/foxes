@@ -62,7 +62,7 @@ def _farm_run(output, sizes=(1, 2, 1), indices=None, weights=_WEIGHTS, power=_PO
     """Run prepared farm chunks without relying on scientific models."""
     algo, data = _farm_data(weights, power)
     indices = np.arange(4) if indices is None else np.asarray(indices)
-    results = foxes.utils.Dict()
+    results = output.get_initial_output_results(algo)
     start = 0
     for index, size in enumerate(sizes):
         selected = indices[start : start + size]

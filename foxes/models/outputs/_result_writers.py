@@ -16,6 +16,8 @@ from ._result_data import _Results, _combine_chunks, _select_states
 from ._aggregation import _merge_statistics, _state_statistics
 
 if TYPE_CHECKING:
+    from xarray import Dataset
+
     from foxes.core import Algorithm, Engine, MData
 
 
@@ -61,6 +63,92 @@ class _ResultsCountWriter(Output):
         self.write_nc_pars = {} if write_nc_pars is None else dict(write_nc_pars)
         super().__init__(**kwargs)
         self._result_key = self.var(self._RESULTS)
+
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Store parent-only NetCDF options before worker execution.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        model_data
+            Initial model dataset passed to the base output hook.
+        farm_data
+            Initial farm dataset passed to the base output hook.
+        point_data
+            Initial target dataset, or ``None`` for farm calculations.
+        extra_data
+            Additional non-array inputs passed to the base output hook.
+
+        Returns
+        -------
+        output_results
+            Run-local results containing this writer's private NetCDF option
+            key, referencing its original configuration object.
+        """
+        output_results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+
+        # Bypass recursive Dict conversion to retain exact option object identity.
+        dict.update(output_results, {self.var("write_nc_pars"): self.write_nc_pars})
+        return output_results
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Move NetCDF options off the model while it is running.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data_stash
+            Model-name keyed lifecycle storage, or ``None`` to retain model state.
+        sel
+            Selected states for this calculation, if any.
+        verbosity
+            The lifecycle reporting level; ``0`` is silent.
+        """
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name]["write_nc_pars"] = self.write_nc_pars
+            del self.write_nc_pars
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore NetCDF options after execution.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data_stash
+            Model-name keyed lifecycle storage containing this writer's options.
+        sel
+            Selected states for this calculation, if any.
+        verbosity
+            The lifecycle reporting level; ``0`` is silent.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            self.write_nc_pars = data_stash[self.name].pop("write_nc_pars")
 
     def _ready(self, chunks: list[_Results]) -> bool:
         """Check whether buffered samples fill the configured state limit."""
@@ -134,7 +222,13 @@ class _ResultsCountWriter(Output):
         }
         payload["attrs"]["index"] = results["index"]
         results["futures"].append(
-            self._submit_file(engine, algo, self._get_fpath(payload["attrs"]), payload)
+            self._submit_file(
+                engine,
+                algo,
+                self._get_fpath(payload["attrs"]),
+                payload,
+                results["write_nc_pars"],
+            )
         )
         results["index"] += 1
         results["chunks"] = []
@@ -170,7 +264,12 @@ class _ResultsCountWriter(Output):
 
     @abstractmethod
     def _submit_file(
-        self, engine: Engine, algo: Algorithm, fpath: Path, payload: _Results
+        self,
+        engine: Engine,
+        algo: Algorithm,
+        fpath: Path,
+        payload: _Results,
+        write_nc_pars: dict[str, Any],
     ) -> Any:
         """Submit one independent file using the concrete dataset serializer.
 
@@ -184,6 +283,8 @@ class _ResultsCountWriter(Output):
             Fully resolved destination path.
         payload
             Selected NumPy fields and copied file attributes.
+        write_nc_pars
+            Parent-owned NetCDF options.
 
         Returns
         -------
@@ -216,7 +317,11 @@ class _ResultsCountWriter(Output):
             self._file_attrs(selected)
             results["futures"].append(
                 self._submit_file(
-                    engine, algo, self._get_fpath(selected["attrs"]), selected
+                    engine,
+                    algo,
+                    self._get_fpath(selected["attrs"]),
+                    selected,
+                    results["write_nc_pars"],
                 )
             )
             results["index"] += 1
@@ -263,6 +368,7 @@ class _ResultsCountWriter(Output):
                 futures=[],
                 last=False,
                 last_state=None,
+                write_nc_pars=output_results[self.var("write_nc_pars")],
             ),
         )
         for key, chunk in chunks.items():
@@ -318,7 +424,12 @@ class _ResultsCountWriter(Output):
         -----
         Worker write exceptions propagate when submitted futures are awaited.
         """
-        results = output_results.pop(self._result_key)
+        output_results.pop(self.var("write_nc_pars"))
+        results = output_results.pop(self._result_key, None)
+        if results is None:
+            if n_chunks_states:
+                raise ValueError(f"{self.name}: Missing result chunks")
+            return
         if results["next_chunk"] != n_chunks_states:
             raise ValueError(f"{self.name}: Missing result chunks")
         engine = get_engine(error=False)

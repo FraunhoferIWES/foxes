@@ -16,6 +16,7 @@ from .slice_data import SliceData
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm
+    from foxes.utils import Dict
 
 
 class FlowPlots2D(SliceData):
@@ -80,13 +81,130 @@ class FlowPlots2D(SliceData):
         self.ret_data = ret_data
         self.plot_options = {} if plot_pars is None else dict(plot_pars)
 
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Retain plotting options by reference until finalization.
+
+        Parameters
+        ----------
+        algo
+            Executing algorithm.
+        model_data
+            Initial model dataset before engine subset selection.
+        farm_data
+            Initial or previously calculated farm dataset.
+        point_data
+            Initial target dataset, or ``None`` for farm calculations.
+        extra_data
+            Non-array model inputs.
+
+        Returns
+        -------
+        output_results
+            Slice inputs extended with private plotting options.
+        """
+        results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+        dict.update(results, {self.var("plot_options"): self.plot_options})
+        return results
+
     def _farm_variables(self) -> tuple[str, ...]:
         """Retain geometry only when figures need turbine overlays."""
-        if not self.plot or self.nofig or self.plot_options.get("rotor_color") is None:
+        plot_rotors = (
+            self._plot_rotors
+            if self.running
+            else self.plot_options.get("rotor_color") is not None
+        )
+        if not self.plot or self.nofig or not plot_rotors:
             return ()
         return (FV.X, FV.Y, FV.H, FV.D, FV.YAW, FV.AMB_WD, FV.YAWM)
 
-    def format_payload(self, algo: Algorithm, payload: dict[str, Any]) -> Any:
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Retain only the rotor-overlay requirement for worker collection.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Parent lifecycle stash for restoring the complete plotting options.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        if not self.running:
+            self._plot_rotors = self.plot_options.get("rotor_color") is not None
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name]["plot_options"] = self.plot_options
+        del self.plot_options
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore plotting options after the slice lifecycle.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Lifecycle stash, or ``None`` for discarded configuration.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            self.plot_options = data_stash[self.name].pop("plot_options")
+
+    def finalize_results(
+        self,
+        algo: Algorithm,
+        n_chunks_states: int,
+        n_chunks_targets: int,
+        output_results: Dict[str, Any],
+    ) -> None:
+        """Format slices and consume this plot's private options.
+
+        Parameters
+        ----------
+        algo
+            Executing algorithm.
+        n_chunks_states
+            Total state chunks.
+        n_chunks_targets
+            Total target chunks.
+        output_results
+            Run-local inputs replaced by the public plot result.
+        """
+        super().finalize_results(
+            algo, n_chunks_states, n_chunks_targets, output_results
+        )
+        output_results.pop(self.var("plot_options"))
+
+    def format_payload(
+        self, algo: Algorithm, payload: dict[str, Any], output_results: Dict[str, Any]
+    ) -> Any:
         """Render the configured field from run-local numerical frames.
 
         Parameters
@@ -95,6 +213,9 @@ class FlowPlots2D(SliceData):
             Executing algorithm.
         payload
             Combined selected states, farm metadata, points and field arrays.
+        output_results
+            Run-local results containing private plotting and writing options,
+            including caller-supplied axes.
 
         Returns
         -------
@@ -104,11 +225,11 @@ class FlowPlots2D(SliceData):
         # Rendering functions consume explicit data, not dataset-bound output objects.
         grid = self._grid_data(payload)
         grid = tuple(
-            coordinate / self.normalize.get(axis, 1)
+            coordinate / output_results[self.var("normalize")].get(axis, 1)
             for axis, coordinate in zip("xyz", grid[:3])
         ) + (grid[3],)
         a, b = [grid["xyz".index(axis)] for axis in self.plane]
-        values = self._field_data(payload)
+        values = self._field_data(payload, output_results)
         states = payload["states"]
         if self.reduction == "mean":
             states = np.array(["mean"])
@@ -119,15 +240,17 @@ class FlowPlots2D(SliceData):
             var=self.variable,
             variables=list(self.fields),
             data_format="numpy",
-            vmin=self.vmin.get(self.variable),
-            vmax=self.vmax.get(self.variable),
+            vmin=output_results[self.var("vmin")].get(self.variable),
+            vmax=output_results[self.var("vmax")].get(self.variable),
             x_direction=self._grid_options.get("x_direction", 270),
         )
         if not self.plot or self.nofig:
-            data = self._format_data(payload)
+            data = self._format_data(payload, output_results)
             parameters["data_format"] = self.data_format
             if self.to_file is not None:
-                self._write_data(data, algo.verbosity)
+                self._write_data(
+                    data, algo.verbosity, output_results[self.var("write_pars")]
+                )
             if self.reduction == "mean":
                 return parameters, data, grid
             return parameters, data, states, grid
@@ -135,7 +258,7 @@ class FlowPlots2D(SliceData):
             {v: ((FC.STATE, FC.TURBINE), d) for v, d in payload["farm"].items()},
             coords={FC.STATE: states},
         )
-        options = dict(self.plot_options)
+        options = dict(output_results[self.var("plot_options")])
         options.setdefault("vlabel", get_data_info(self.variable)[1])
         generator = getattr(_flow_figures, f"_gen_states_fig_{self.plane}")(
             farm, self, (parameters, data, states, grid), **options
@@ -148,7 +271,14 @@ class FlowPlots2D(SliceData):
                     f"{self.name}: Use a mean plot or FlowAnimation to write figures"
                 )
             figure = figures[0][0] if isinstance(figures[0], tuple) else figures[0]
-            figure.savefig(self.get_fpath(self.to_file), **self.write_pars)
-        result = (result, self._format_data(payload)) if self.ret_data else result
+            figure.savefig(
+                self.get_fpath(self.to_file),
+                **output_results[self.var("write_pars")],
+            )
+        result = (
+            (result, self._format_data(payload, output_results))
+            if self.ret_data
+            else result
+        )
         self._show_figures()
         return result

@@ -15,7 +15,7 @@ import foxes
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.core import FData, MData, TData
-from foxes.models.outputs import FlowAnimation, FarmResultsOutput
+from foxes.models.outputs import FlowAnimation, FlowTurbineAnimation, FarmResultsOutput
 from foxes.utils import Dict
 
 
@@ -193,7 +193,9 @@ def test_chunk_selection_renders_once_on_parent(
     monkeypatch.setattr(
         FlowAnimation,
         "_render",
-        lambda self, algo, payload: calls.append((payload["states"], get_ident())),
+        lambda self, algo, payload, output_results, extra_generators=(): calls.append(
+            (payload["states"], get_ident())
+        ),
     )
     output = FlowAnimation(
         chunk=chunk,
@@ -300,7 +302,9 @@ def test_state_selection_is_global(tmp_path, monkeypatch, selection, expected, b
     monkeypatch.setattr(
         FlowAnimation,
         "_render",
-        lambda self, algo, payload: calls.append(payload["states"]),
+        lambda self, algo, payload, output_results, extra_generators=(): calls.append(
+            payload["states"]
+        ),
     )
     output = FlowAnimation(
         out_dir=tmp_path,
@@ -336,8 +340,14 @@ def test_target_tiles_are_copied_buffered_and_combined(tmp_path, monkeypatch):
     # Existing targets never trigger a second scientific calculation.
     output = _initialize_output(FlowAnimation(out_dir=tmp_path))
     monkeypatch.setattr(FlowAnimation, "_calculate_grid", _unexpected_grid)
-    calls, results = [], Dict()
-    monkeypatch.setattr(output, "_render", lambda algo, payload: calls.append(payload))
+    calls, results = [], output.get_initial_output_results(None)
+    monkeypatch.setattr(
+        output,
+        "_render",
+        lambda algo, payload, output_results, extra_generators=(): calls.append(
+            payload
+        ),
+    )
     for key in [(1, 1), (0, 1), (1, 0), (0, 0)]:
         md, fd, td = _target_chunk(output, *key)
         before = deepcopy(td)
@@ -388,7 +398,9 @@ def test_grid_is_loaded_once_and_point_blocks_are_bounded(tmp_path, monkeypatch)
         monkeypatch.setattr(
             output,
             "_render",
-            lambda algo, payload: rendered.append(payload),
+            lambda algo, payload, output_results, extra_generators=(): rendered.append(
+                payload
+            ),
         )
         algo.calc_farm(outputs=output)
     assert [n for n, _ in calls] == [4, 4, 1, 4, 4, 1]
@@ -411,7 +423,11 @@ def test_generated_grid_matches_independent_point_calculation(
         ambient=ambient,
     )
     monkeypatch.setattr(
-        output, "_render", lambda algo, payload: payloads.append(payload)
+        output,
+        "_render",
+        lambda algo, payload, output_results, extra_generators=(): payloads.append(
+            payload
+        ),
     )
     with foxes.Engine.new(
         "numpy",
@@ -442,7 +458,11 @@ def test_calc_outputs_uses_output_calculation_points(tmp_path, monkeypatch):
     output = FlowAnimation(out_dir=tmp_path, grid_pars={"n_img_points": (2, 2)})
     payloads = []
     monkeypatch.setattr(
-        output, "_render", lambda algo, payload: payloads.append(payload)
+        output,
+        "_render",
+        lambda algo, payload, output_results, extra_generators=(): payloads.append(
+            payload
+        ),
     )
     outputs = foxes.core.OutputList(outputs=[output])
     with foxes.Engine.new(
@@ -614,7 +634,11 @@ def test_streamline_cache_reuse_matches_collected_farm(tmp_path, monkeypatch):
         grid_pars={"n_img_points": (3, 3)},
     )
     monkeypatch.setattr(
-        output, "_render", lambda algo, payload: payloads.append(payload)
+        output,
+        "_render",
+        lambda algo, payload, output_results, extra_generators=(): payloads.append(
+            payload
+        ),
     )
     with foxes.Engine.new(
         "numpy",
@@ -657,8 +681,10 @@ def test_missing_tiles_are_rejected(tmp_path):
     output = _initialize_output(FlowAnimation(out_dir=tmp_path))
     md, fd, td = _target_chunk(output, 0, 0)
     chunk = output.calculate(None, md, fd, td, {})[output._result_key]
+    results = output.get_initial_output_results(None)
+    results[output._result_key] = {(0, 0): chunk}
     with pytest.raises(ValueError, match="Missing slice chunks"):
-        output.finalize_results(None, 1, 2, Dict({output._result_key: {(0, 0): chunk}}))
+        output.finalize_results(None, 1, 2, results)
 
 
 def test_moving_target_artists_preserve_coordinates_and_units(tmp_path):
@@ -847,6 +873,61 @@ def test_running_model_does_not_retain_grid_or_large_selection(tmp_path, keep_st
             output.unset_running(algo, stash)
     if keep_stash:
         assert output.states_isel is selection
+
+
+@pytest.mark.parametrize("output_type", [FlowAnimation, FlowTurbineAnimation])
+@pytest.mark.parametrize("failure", [False, True])
+def test_animation_owns_flat_render_inputs(tmp_path, monkeypatch, output_type, failure):
+    # Unpicklable options must remain available only in the parent's result mapping.
+    output = output_type(
+        out_dir=tmp_path,
+        grid_pars={"n_img_points": (2, 2)},
+        plot_pars={"renderer_only": lambda: None},
+        layout_pars={"annotate": 1},
+    )
+    plot_pars, layout_pars = output.plot_pars, output.layout_pars
+    write_pars, normalize = output.write_pars, output.normalize
+    results_seen = []
+
+    def render(self, algo, payload, output_results, extra_generators=()):
+        assert output.running
+        assert not hasattr(output, "plot_pars")
+        assert not hasattr(output, "layout_pars")
+        assert not hasattr(output, "write_pars")
+        assert not hasattr(output, "normalize")
+        assert output_results[output.var("plot_pars")] is plot_pars
+        assert output_results[output.var("layout_pars")] is layout_pars
+        assert output_results[output.var("write_pars")] is write_pars
+        assert output_results[output.var("normalize")] is normalize
+        if isinstance(output, FlowTurbineAnimation):
+            assert not hasattr(output, "turbines")
+            assert not hasattr(output, "_turbines")
+            assert not hasattr(output, "ref_xy")
+            assert not hasattr(output, "_ref_xy")
+            assert output_results[output.var("_turbines")] == (0, 1)
+            assert output_results[output.var("_ref_xy")] is None
+        assert len(pickle.dumps(output)) < 32768
+        results_seen.append(output_results)
+        if failure:
+            raise RuntimeError("synthetic renderer failure")
+
+    monkeypatch.setattr(output_type, "_render", render)
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        if failure:
+            with pytest.raises(RuntimeError, match="synthetic renderer failure"):
+                _algorithm().calc_farm(outputs=output)
+        else:
+            assert _algorithm().calc_farm(outputs=output) == {}
+            assert results_seen == [{}]
+    assert len(results_seen) == 1
+    assert not output.running
+    assert output.plot_pars is plot_pars
+    assert output.layout_pars is layout_pars
+    assert output.write_pars is write_pars
+    assert output.normalize is normalize
+    if isinstance(output, FlowTurbineAnimation):
+        assert output.turbines is None
+        assert output._turbines == (0, 1)
 
 
 @pytest.mark.parametrize(

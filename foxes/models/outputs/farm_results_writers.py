@@ -101,7 +101,12 @@ class FarmResultsCountWriter(_ResultsCountWriter, FarmResultsOutput):
         return chunk_results
 
     def _submit_file(
-        self, engine: Engine, algo: Algorithm, fpath: Path, payload: _Results
+        self,
+        engine: Engine,
+        algo: Algorithm,
+        fpath: Path,
+        payload: _Results,
+        write_nc_pars: dict[str, Any],
     ) -> Any:
         if self.aggregate_states:
             payload = self._file_payload(algo, payload)
@@ -110,7 +115,7 @@ class FarmResultsCountWriter(_ResultsCountWriter, FarmResultsOutput):
             fpath,
             payload,
             *self._metadata(algo),
-            {"verbosity": algo.verbosity, **self.write_nc_pars},
+            {"verbosity": algo.verbosity, **write_nc_pars},
         )
 
 

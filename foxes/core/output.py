@@ -27,6 +27,9 @@ class Output(DataCalcModel):
     calls ``update_results`` with ordered chunk payloads and ``finalize_results``
     after all chunks have been processed. Outputs share result mappings and must
     consume only their own pending keys.
+
+    Each output explicitly manages its own initialized results and data stash
+    through the model lifecycle hooks.
     """
 
     def __init__(
@@ -617,7 +620,8 @@ class OutputList(Output):
                     f"{self.name}: Duplicate initial output result keys "
                     f"from '{output.name}': {sorted(duplicates)}"
                 )
-            results.update(initial)
+            # Preserve borrowed plain dictionaries and lists instead of wrapping them.
+            dict.update(results, initial)
         return results
 
     def calculate(  # type: ignore[override]

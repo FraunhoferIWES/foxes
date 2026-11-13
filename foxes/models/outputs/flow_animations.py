@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -131,6 +130,97 @@ class FlowAnimation(SliceData):
         self.layout_pars = layout_pars
         self.verbosity = verbosity
 
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Retain exact animation options for run-local rendering.
+
+        Parameters
+        ----------
+        algo
+            Executing algorithm.
+        model_data
+            Initial model dataset before engine subset selection.
+        farm_data
+            Initial or previously calculated farm dataset.
+        point_data
+            Initial target dataset, or ``None`` for farm calculations.
+        extra_data
+            Non-array model inputs.
+
+        Returns
+        -------
+        output_results
+            Slice inputs extended with private plot and layout options.
+        """
+        results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+        dict.update(
+            results,
+            {
+                self.var("plot_pars"): self.plot_pars,
+                self.var("layout_pars"): self.layout_pars,
+            },
+        )
+        return results
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Stash animation options outside running worker models.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Lifecycle stash, or ``None`` to discard configuration.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name]["plot_pars"] = self.plot_pars
+            data_stash[self.name]["layout_pars"] = self.layout_pars
+        del self.plot_pars, self.layout_pars
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore exact animation options after execution.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Lifecycle stash, or ``None`` for discarded configuration.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            self.plot_pars = data_stash[self.name].pop("plot_pars")
+            self.layout_pars = data_stash[self.name].pop("layout_pars")
+
     def initialize(
         self,
         algo: Algorithm,
@@ -178,10 +268,8 @@ class FlowAnimation(SliceData):
             if self.layout_pars is not None and {"fig", "ax"} & self.layout_pars.keys():
                 raise ValueError(f"{self.name}: layout_pars must not supply fig or ax")
 
-            # Snapshot mutable settings before this output enters running state.
+            # Resolve the animation path without copying parent-owned plot objects.
             self._base_name = Path(self.base_name)
-            self._plot_pars = deepcopy(self.plot_pars or {})
-            self._layout_pars = deepcopy(self.layout_pars)
         return super().initialize(algo, loaded_data, force, verbosity)
 
     def _required_variables(self) -> tuple[str, ...]:
@@ -191,57 +279,6 @@ class FlowAnimation(SliceData):
     def _farm_variables(self) -> tuple[str, ...]:
         """Retain farm geometry needed by state-resolved frame overlays."""
         return (FV.X, FV.Y, FV.H, FV.D, FV.YAW, FV.AMB_WD, FV.YAWM)
-
-    def set_running(
-        self,
-        algo: Algorithm,
-        data_stash: dict[str, dict[str, Any]] | None,
-        sel: dict[str, Any] | None = None,
-        verbosity: int = 0,
-    ) -> None:
-        """Stash raw rendering configuration after starting the slice lifecycle.
-
-        Parameters
-        ----------
-        algo
-            Calculation algorithm.
-        data_stash
-            Shared lifecycle stash, or ``None`` to discard raw configuration.
-        sel
-            Engine state selection.
-        verbosity
-            Lifecycle verbosity.
-        """
-        super().set_running(algo, data_stash, sel, verbosity)
-        configuration = {
-            key: vars(self).pop(key) for key in ("plot_pars", "layout_pars")
-        }
-        if data_stash is not None:
-            data_stash[self.name]["animation_configuration"] = configuration
-
-    def unset_running(
-        self,
-        algo: Algorithm,
-        data_stash: dict[str, dict[str, Any]] | None,
-        sel: dict[str, Any] | None = None,
-        verbosity: int = 0,
-    ) -> None:
-        """Restore rendering configuration after leaving the slice lifecycle.
-
-        Parameters
-        ----------
-        algo
-            Calculation algorithm.
-        data_stash
-            Shared lifecycle stash, or ``None`` for discarded configuration.
-        sel
-            Engine state selection.
-        verbosity
-            Lifecycle verbosity.
-        """
-        super().unset_running(algo, data_stash, sel, verbosity)
-        if data_stash is not None:
-            vars(self).update(data_stash[self.name].pop("animation_configuration"))
 
     def finalize_results(
         self,
@@ -271,19 +308,34 @@ class FlowAnimation(SliceData):
         """
         chunks = output_results.get(self._result_key, {})
         chunks = self._selected_chunks(chunks, n_chunks_states, n_chunks_targets)
-        if not chunks:
-            output_results.pop(self._result_key, None)
-            return
 
         # Assemble already selected numerical frames before rendering once.
-        payload = self._combine_chunks(chunks)
-        self._render(algo, payload)
+        if chunks:
+            payload = self._combine_chunks(chunks)
+            self._render(
+                algo,
+                payload,
+                output_results,
+                output_results.get(self.var("extra_generators"), ()),
+            )
         output_results.pop(self._result_key, None)
+
+        # Consume inherited slice inputs and animation-specific render inputs.
+        output_results.pop(self.var("write_pars"))
+        output_results.pop(self.var("normalize"))
+        output_results.pop(self.var("normalize_v"))
+        output_results.pop(self.var("label_map"))
+        output_results.pop(self.var("vmin"))
+        output_results.pop(self.var("vmax"))
+        output_results.pop(self.var("plot_pars"))
+        output_results.pop(self.var("layout_pars"))
+        output_results.pop(self.var("extra_generators"), None)
 
     def _render(
         self,
         algo: Algorithm,
         payload: dict[str, Any],
+        output_results: Dict[str, Any],
         extra_generators: tuple[Callable[[Axes], Iterator[Any]], ...] = (),
     ) -> None:
         """Render and save collected fields, then optionally display them.
@@ -295,6 +347,9 @@ class FlowAnimation(SliceData):
         payload
             Combined state-ordered fields, points and overlay geometry.
             Arrays are borrowed only for parent-side rendering.
+        output_results
+            Run-local results containing private rendering options and any
+            turbine-panel selections, all absent from the running output model.
         extra_generators
             Factories adding synchronized artists to the flow axes.
 
@@ -305,7 +360,7 @@ class FlowAnimation(SliceData):
         """
         from ._flow_animation_render import render_flow_animation
 
-        render_flow_animation(self, algo, payload, extra_generators)
+        render_flow_animation(self, algo, payload, output_results, extra_generators)
 
     def _create_figure(self) -> tuple[Figure, Axes]:
         """Create a figure for the flow field without retaining it on the model.
@@ -322,7 +377,12 @@ class FlowAnimation(SliceData):
         return plt.subplots(figsize=self.figsize)
 
     def _create_animator(
-        self, algo: Algorithm, farm: Dataset, fig: Figure, ax: Axes
+        self,
+        algo: Algorithm,
+        farm: Dataset,
+        fig: Figure,
+        ax: Axes,
+        output_results: Dict[str, Any],
     ) -> Animator:
         """Create a figure-local animator and optional static farm overlay.
 
@@ -336,6 +396,8 @@ class FlowAnimation(SliceData):
             Shared figure owned by the caller.
         ax
             Flow axes receiving any configured XY layout overlay.
+        output_results
+            Run-local results containing private layout options.
 
         Returns
         -------
@@ -345,7 +407,8 @@ class FlowAnimation(SliceData):
         from ._layout import _get_figure
         from .farm_layout import FarmLayoutOutput
 
-        if self._layout_pars is not None and self.plane == "xy":
+        layout_pars = output_results[self.var("layout_pars")]
+        if layout_pars is not None and self.plane == "xy":
             _get_figure(
                 algo.farm,
                 farm,
@@ -353,7 +416,7 @@ class FlowAnimation(SliceData):
                 FarmLayoutOutput(),
                 fig=fig,
                 ax=ax,
-                **self._layout_pars,
+                **layout_pars,
             )
         return Animator(fig=fig)
 
@@ -471,6 +534,129 @@ class FlowTurbineAnimation(FlowAnimation):
         self.turbines = turbines
         self.turbine_variable = turbine_variable
         self.ref_xy = ref_xy
+
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Retain initialized turbine and reference-point snapshots.
+
+        Parameters
+        ----------
+        algo
+            Executing algorithm.
+        model_data
+            Initial model dataset before engine subset selection.
+        farm_data
+            Initial or previously calculated farm dataset.
+        point_data
+            Initial target dataset, or ``None`` for farm calculations.
+        extra_data
+            Non-array model inputs.
+
+        Returns
+        -------
+        output_results
+            Flow inputs extended with the private, immutable panel selections.
+        """
+        results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+        dict.update(
+            results,
+            {
+                self.var("_turbines"): self._turbines,
+                self.var("_ref_xy"): self._ref_xy,
+            },
+        )
+        return results
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Stash raw panel settings and their initialized snapshots.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Lifecycle stash, or ``None`` to discard panel settings.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name].update(
+                turbines=self.turbines,
+                ref_xy=self.ref_xy,
+                _turbines=self._turbines,
+                _ref_xy=self._ref_xy,
+            )
+        del self.turbines, self.ref_xy, self._turbines, self._ref_xy
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore panel settings and snapshots after execution.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Lifecycle stash, or ``None`` for discarded configuration.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            self.turbines = data_stash[self.name].pop("turbines")
+            self.ref_xy = data_stash[self.name].pop("ref_xy")
+            self._turbines = data_stash[self.name].pop("_turbines")
+            self._ref_xy = data_stash[self.name].pop("_ref_xy")
+
+    def finalize_results(
+        self,
+        algo: Algorithm,
+        n_chunks_states: int,
+        n_chunks_targets: int,
+        output_results: Dict[str, Any],
+    ) -> None:
+        """Render flow and turbine panels, then consume private panel inputs.
+
+        Parameters
+        ----------
+        algo
+            Executing algorithm.
+        n_chunks_states
+            Total state chunks.
+        n_chunks_targets
+            Total target chunks.
+        output_results
+            Run-local numerical buffers and private rendering inputs.
+        """
+        super().finalize_results(
+            algo, n_chunks_states, n_chunks_targets, output_results
+        )
+        output_results.pop(self.var("_turbines"))
+        output_results.pop(self.var("_ref_xy"))
 
     def initialize(
         self,
@@ -608,7 +794,12 @@ class FlowTurbineAnimation(FlowAnimation):
         return fig, axes[0]
 
     def _create_animator(
-        self, algo: Algorithm, farm: Dataset, fig: Figure, ax: Axes
+        self,
+        algo: Algorithm,
+        farm: Dataset,
+        fig: Figure,
+        ax: Axes,
+        output_results: Dict[str, Any],
     ) -> Animator:
         """Add synchronized turbine traces and optional flow annotations.
 
@@ -622,6 +813,9 @@ class FlowTurbineAnimation(FlowAnimation):
             Shared two-panel figure, owned by the rendering caller.
         ax
             Upper flow axes receiving layout and reference-point annotations.
+        output_results
+            Run-local results containing private layout options, turbine indices
+            and the reference-point position.
 
         Returns
         -------
@@ -632,11 +826,11 @@ class FlowTurbineAnimation(FlowAnimation):
         from ._flow_animation_render import turbine_frames
 
         # Attach traces to the figure, never to the running output instance.
-        animator = super()._create_animator(algo, farm, fig, ax)
+        animator = super()._create_animator(algo, farm, fig, ax, output_results)
         animator.add_generator(
             turbine_frames(
                 farm,
-                turbines=self._turbines,
+                turbines=output_results[self.var("_turbines")],
                 variable=self._turbine_variable,
                 fig=fig,
                 ax=fig.axes[1],
@@ -644,10 +838,11 @@ class FlowTurbineAnimation(FlowAnimation):
         )
 
         # Annotate only the flow axes, leaving inherited scales and grids intact.
-        if self._ref_xy is not None:
+        ref_xy = output_results[self.var("_ref_xy")]
+        if ref_xy is not None:
             ax.scatter(
-                [self._ref_xy[0]],
-                [self._ref_xy[1]],
+                [ref_xy[0]],
+                [ref_xy[1]],
                 marker="x",
                 color="red",
                 s=80,

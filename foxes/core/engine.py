@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
@@ -422,8 +422,24 @@ class Engine(ABC):
         results
             Task results in the same order, with worker exceptions propagated.
         """
-        # Preserve deterministic output order on every eager backend.
-        return [self.await_result(future) for future in futures]
+        return list(self.iter_results(futures))
+
+    def iter_results(self, futures: list[Any]) -> Iterator[Any]:
+        """Yield submitted task results incrementally in submission order.
+
+        Parameters
+        ----------
+        futures
+            Submitted tasks. Lazy backends must schedule their graphs together.
+
+        Yields
+        ------
+        result
+            The next task result, with worker exceptions propagated before
+            requesting subsequent results.
+        """
+        for future in futures:
+            yield self.await_result(future)
 
     @abstractmethod
     def map(
@@ -754,7 +770,7 @@ class Engine(ABC):
     def run_calculation(
         self,
         algo: Algorithm,
-        model: DataCalcModel,
+        model: DataCalcModel | None,
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
         point_data: Dataset | None = None,
@@ -775,7 +791,9 @@ class Engine(ABC):
         algo
             The algorithm object.
         model
-            The model whose ``calculate`` method should be executed.
+            The model whose ``calculate`` method should be executed. ``None``
+            runs only initial results and parent-side output finalization,
+            without dispatching scientific chunks or allocating worker resources.
         model_data
             The initial model data.
         farm_data
@@ -843,21 +861,22 @@ class Engine(ABC):
                     output.set_running(
                         algo, output_data_stash, sel=sel, verbosity=self.verbosity - 2
                     )
-                results = self._run_calculation(
-                    calculation,
-                    algo,
-                    model,
-                    results,
-                    model_data,
-                    farm_data,
-                    point_data,
-                    extra_data=extra_data,
-                    output=output,
-                    sel=sel,
-                    iterative=iterative,
-                    progress_label=progress_label,
-                    **calc_pars,
-                )
+                if model is not None:
+                    results = self._run_calculation(
+                        calculation,
+                        algo,
+                        model,
+                        results,
+                        model_data,
+                        farm_data,
+                        point_data,
+                        extra_data=extra_data,
+                        output=output,
+                        sel=sel,
+                        iterative=iterative,
+                        progress_label=progress_label,
+                        **calc_pars,
+                    )
                 if output is not None:
                     output.finalize_results(
                         algo=algo,
@@ -988,9 +1007,9 @@ class Engine(ABC):
         on_chunk
             Callback invoked after a chunk and its output updates succeed.
         """
-        # Await the whole batch before consuming payloads in submission order.
+        # Consume each ordered result without waiting for the rest of the batch.
         keys = list(futures)
-        batch = self.await_results(list(futures.values()))
+        batch = self.iter_results(list(futures.values()))
         for key, (results, caches) in zip(keys, batch):
             del futures[key]
             if results is not None:
@@ -1077,6 +1096,16 @@ class Engine(ABC):
             farm_data = Dataset()
         return model_data, farm_data, point_data, n_states
 
+    def _get_execution_description(self) -> str:
+        """Describe the execution resources used by calculation progress.
+
+        Returns
+        -------
+        description
+            Worker count and its singular or plural label.
+        """
+        return f"{self.n_workers} worker{'s' if self.n_workers != 1 else ''}"
+
     def _validate_calculation(
         self,
         algo: Algorithm,
@@ -1085,7 +1114,7 @@ class Engine(ABC):
         farm_data: Dataset | None,
         point_data: Dataset | None,
     ) -> None:
-        """Validate initialization and report the selected calculation domain."""
+        """Validate initialization and report the calculation domain and workers."""
         n_states = algo.n_states
         if model_data is not None and FC.STATE in model_data.sizes:
             n_states = model_data.sizes[FC.STATE]
@@ -1093,13 +1122,14 @@ class Engine(ABC):
             n_states = farm_data.sizes[FC.STATE]
         elif point_data is not None and FC.STATE in point_data.sizes:
             n_states = point_data.sizes[FC.STATE]
+        execution = self._get_execution_description()
         if point_data is None:
             self.print(
-                f"{self.name}: Calculating {n_states} states for {algo.n_turbines} turbines"
+                f"{self.name}: Calculating {n_states} states for {algo.n_turbines} turbines using {execution}"
             )
         else:
             self.print(
-                f"{self.name}: Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states"
+                f"{self.name}: Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states using {execution}"
             )
         if not model.initialized:
             raise ValueError(f"Model '{model.name}' not initialized")

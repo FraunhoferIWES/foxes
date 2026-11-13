@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 from copy import deepcopy
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Iterator, Mapping, MutableMapping
 from contextlib import ExitStack
 import sys
 from typing import TYPE_CHECKING, Any
@@ -333,6 +333,21 @@ class DaskEngine(ProcessEngine):
         # A process scheduler isolates algorithm chunk stores across tasks.
         with _get_dask().config.set(self.dask_config):
             return list(_get_dask().compute(*futures, num_workers=self.n_workers))
+
+    def iter_results(self, futures: list[Any]) -> Iterator[Any]:
+        """Yield lazy graph results after scheduling the batch concurrently.
+
+        Parameters
+        ----------
+        futures
+            Pending chunk graphs scheduled together rather than individually.
+
+        Yields
+        ------
+        result
+            Chunk results in submission order after the batch completes.
+        """
+        yield from self.await_results(futures)
 
     def _drain_failed_tasks(self, futures: dict[Any, Any]) -> None:
         """Discard lazy graphs after the scheduler has stopped a failed batch."""

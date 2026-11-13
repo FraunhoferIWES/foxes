@@ -429,9 +429,11 @@ class DatasetOutput(FarmResultsOutput):
             data = Dataset()
 
         _set_units(data)
-        output_results[self.result_name] = self.process(algo, data)
+        output_results[self.result_name] = self.process(algo, data, output_results)
 
-    def process(self, algo: Algorithm, data: Dataset) -> Any:
+    def process(
+        self, algo: Algorithm, data: Dataset, output_results: Dict[str, Any]
+    ) -> Any:
         """Transform a collected dataset into the configured public output.
 
         Parameters
@@ -440,6 +442,9 @@ class DatasetOutput(FarmResultsOutput):
             Algorithm supplying scientific models, farm metadata and verbosity.
         data
             Parent-side farm or point dataset, borrowed only for this operation.
+        output_results
+            Run-owned initial results. Concrete consumers explicitly retrieve
+            and remove their own rendering or formatting inputs.
 
         Returns
         -------

@@ -17,6 +17,7 @@ from .point_results_writers import PointResultsPeriodWriter as PointResultsPerio
 from .rose_plot import RosePlotOutput as RosePlotOutput
 from .rose_plot import StatesRosePlotOutput as StatesRosePlotOutput
 from .rose_plot import WindRoseBinPlot as WindRoseBinPlot
+from .support_wind_rose import SupportWindRosePlotOutput as SupportWindRosePlotOutput
 from .slice_data import SliceData as SliceData
 from .slices_data import SlicesData as SlicesData
 from .calc_points import PointCalculator as PointCalculator

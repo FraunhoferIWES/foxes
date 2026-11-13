@@ -14,6 +14,7 @@ import foxes.variables as FV
 
 from .seq_wake_debug_plugin import SeqWakeDebugPlugin
 from foxes.models.outputs import FlowAnimation, PointResultsOutput
+from foxes.utils import Dict
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -185,10 +186,8 @@ class SeqAnimationOutputPlugin(SequentialPlugin):
                     raise ValueError(
                         f"{output.name}: Selected chunk {selection!r} is unavailable"
                     )
-            if not chunks:
-                continue
             generators: tuple[Callable[[Axes], Iterator[Any]], ...] = ()
-            if self._debug is not None:
+            if self._debug is not None and chunks:
                 # Each variable needs a fresh, identically selected debug history.
                 debug = deepcopy(self._debug, {id(algo): algo})
                 debug._data = [debug._data[i] for i, _ in sorted(chunks)]
@@ -197,5 +196,25 @@ class SeqAnimationOutputPlugin(SequentialPlugin):
                     return deepcopy(debug, {id(algo): algo}).gen_images(ax)
 
                 generators = (create_debug_images,)
-            output._render(algo, output._combine_chunks(chunks), generators)
-            chunks.clear()
+            # Feed the ordinary output lifecycle with one tile per selected step.
+            count = len(algo.farm_results[FC.STATE])
+            pending = {
+                (index, 0): chunks.get((index, 0))
+                for index in range(count)
+                if any(
+                    c is None or c == index or c == (index, 0) for c in output.chunks
+                )
+            }
+            results = output.get_initial_output_results(algo)
+            results[output.var("extra_generators")] = generators
+            stash: dict[str, dict[str, Any]] = {}
+            try:
+                output.set_running(algo, stash)
+                output.update_results(
+                    algo, count, 1, Dict({output._result_key: pending}), results
+                )
+                output.finalize_results(algo, count, 1, results)
+            finally:
+                if output.running:
+                    output.unset_running(algo, stash)
+                chunks.clear()

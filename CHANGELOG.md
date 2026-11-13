@@ -608,6 +608,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Python versions:
   - Adding support for Python3.13
 - Engines:
+  - Update synchronous progress before the next chunk executes and collect
+    eager worker results incrementally instead of waiting for whole batches.
+    Preserve concurrent scheduling of lazy Dask batches.
   - Default number of processes is now os.cpu_count(), or os.process_cpu_count() for python3.13
   - New engine: `RayEngine` (short name `ray`), runs parallel computations based on  the [Ray package](https://docs.ray.io/en/latest/)
 - Inputs:
@@ -1188,7 +1191,30 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Plotting outputs:
+  - Manage each output's initial results and named stash fields explicitly;
+    remove the shared attribute registry and generic rendering-data bundle
+    from `Output`.
+  - Adopt native binned-state support roses as `SupportWindRosePlotOutput`
+    (`support_rose_plot`), preserving support coordinates, bin edges and weights
+    without scientific recalculation or private algorithm access.
+  - Apply the engine-owned running lifecycle to metadata-only outputs and
+    normal output finalization to Sequential animation adapters.
+  - Keep figures, axes, callbacks and rendering options in parent-owned initial
+    results instead of serialized worker models, restoring constructor
+    configuration after execution or failure.
+  - Pass rendering inputs explicitly through layout, rose, rotor, map, curve,
+    slice and animation finalizers, including metadata-only and Sequential paths.
+  - Preserve caller-owned plotting objects without deep-copying animation
+    settings; retain only small scientific selectors on running outputs.
+  - Retain required wake inputs in notebooks that reuse thrust coefficients
+    for flow calculations or comparison plots, alongside requested metrics.
+  - Remove automatic support wind roses from the binned-states example while
+    preserving reduction artifact writing and reading.
+
 - Engines:
+  - Describe NumPy and single-chunk execution as a loop over chunks in farm and
+    point progress headers instead of reporting workers.
   - Own chunk-store detachment and reattachment for farm and point runs,
     including setup and execution failures, while preserving Iterative caches.
   - Own selected outputs' running hooks and configuration stash through result
@@ -1208,6 +1234,7 @@ This major version introduces the concept of `Engines` which handle the chunking
     overwriting duplicate keys.
   - Leave shared running submodels attached to their owning lifecycle stash
     during output cleanup.
+  - Include worker counts in farm and point calculation title lines.
 - Example results and outputs:
   - Add `-R/--results` with default `farm_results`; retain `-r` for rotors and
     use `--ref_xy` for reference points. Run script-specific `-o/--outputs`

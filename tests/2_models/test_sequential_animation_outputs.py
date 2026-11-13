@@ -202,6 +202,70 @@ def test_no_animation_does_not_collect_debug():
     assert plugin._debug is None
 
 
+@pytest.mark.parametrize("failure", [False, True])
+def test_sequential_animation_finalizes_while_running_and_restores_options(
+    tmp_path, monkeypatch, failure
+):
+    output = FlowAnimation(
+        out_dir=tmp_path,
+        grid_pars={"n_img_points": (2, 2)},
+        plot_pars={"cmap": "viridis"},
+    )
+    plugin = foxes.models.seq_plugins.SeqAnimationOutputPlugin([output], debug=True)
+    original = output.plot_pars
+    calls = []
+
+    def render(algo, payload, output_results, generators):
+        assert output.running
+        assert not hasattr(output, "plot_pars")
+        assert output_results[output.var("plot_pars")] is original
+        assert len(generators) == 1
+        calls.append(payload["states"])
+        if failure:
+            raise RuntimeError("synthetic renderer failure")
+
+    monkeypatch.setattr(output, "_render", render)
+    with foxes.Engine.new("single", chunk_size_points=2, verbosity=0):
+        if failure:
+            with pytest.raises(RuntimeError, match="synthetic renderer failure"):
+                list(_algorithm(plugin))
+        else:
+            list(_algorithm(plugin))
+    assert len(calls) == 1
+    assert not output.running
+    assert output.plot_pars is original
+    assert all(not chunks for _, _, _, chunks in plugin._runs)
+
+
+def test_empty_sequential_selection_still_uses_output_lifecycle(tmp_path, monkeypatch):
+    output = FlowAnimation(
+        out_dir=tmp_path, states_isel=[], grid_pars={"n_img_points": (2, 2)}
+    )
+    plugin = foxes.models.seq_plugins.SeqAnimationOutputPlugin([output])
+    update, finalize = output.update_results, output.finalize_results
+    calls = []
+
+    def update_results(*args):
+        assert output.running
+        calls.append("update")
+        return update(*args)
+
+    def finalize_results(*args):
+        assert output.running
+        calls.append("finalize")
+        result = finalize(*args)
+        assert args[-1] == {}
+        return result
+
+    monkeypatch.setattr(output, "update_results", update_results)
+    monkeypatch.setattr(output, "finalize_results", finalize_results)
+    with foxes.Engine.new("single", chunk_size_points=2, verbosity=0):
+        list(_algorithm(plugin))
+    assert calls == ["update", "finalize"]
+    assert not output.running
+    assert not list(tmp_path.iterdir())
+
+
 @pytest.mark.parametrize("named", [False, True])
 def test_nofig_animation_skips_step_points_and_debug(tmp_path, monkeypatch, named):
     output = FlowAnimation(nofig=True, out_dir=tmp_path)

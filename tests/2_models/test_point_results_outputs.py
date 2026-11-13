@@ -62,7 +62,7 @@ def _run(
 ):
     """Feed all engine tiles, incrementally or in one parent update."""
     algo = SimpleNamespace(verbosity=0)
-    results = foxes.utils.Dict()
+    results = output.get_initial_output_results(algo)
     pending = foxes.utils.Dict()
     state_edges = np.r_[0, np.cumsum(state_sizes)]
     target_edges = np.r_[0, np.cumsum(target_sizes)]
@@ -381,7 +381,7 @@ def test_buffered_writer_rejects_duplicate_or_invalid_tiles(tmp_path, key):
     mdata, tdata, values = _chunk(np.arange(2), np.arange(2), np.arange(1))
     calculated = output.calculate(algo, mdata, FData(), tdata, values)
     name, payload = next(iter(calculated.items()))
-    results = foxes.utils.Dict()
+    results = output.get_initial_output_results(algo)
     output.update_results(
         algo, 1, 2, foxes.utils.Dict({name: {(0, 0): payload}}), results
     )
@@ -398,7 +398,7 @@ def test_buffered_writer_rejects_missing_target_tile(tmp_path):
     name, payload = next(
         iter(output.calculate(algo, mdata, FData(), tdata, values).items())
     )
-    results = foxes.utils.Dict()
+    results = output.get_initial_output_results(algo)
     output.update_results(
         algo, 1, 2, foxes.utils.Dict({name: {(0, 0): payload}}), results
     )

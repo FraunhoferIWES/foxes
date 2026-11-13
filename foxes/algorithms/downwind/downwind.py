@@ -17,8 +17,8 @@ from foxes.core import (
     OutputList,
     PointDataModel,
     PointDataModelList,
+    launch_parallel_calc,
 )
-from foxes.utils import Dict
 
 from . import models as mdls
 
@@ -1351,7 +1351,8 @@ class Downwind(Algorithm):
             The sole result of a single selected output unless ``ret_dict`` is
             true, otherwise a result-name-to-value mapping. ``None`` disables collection and
             returns an empty mapping. Without supplied data or requested points,
-            only the output's parent-side ``finalize_results`` hook is run.
+            initial results and parent-side finalization run inside the regular
+            output running lifecycle, without dispatching scientific chunks.
 
         Raises
         ------
@@ -1365,8 +1366,9 @@ class Downwind(Algorithm):
 
         Notes
         -----
-        Constructor configuration remains on output models; chunk buffers and
-        assembled values belong to the run's explicit result mappings.
+        Parent-only rendering configuration is transferred through initial
+        output results and stashed off running models. Chunk buffers and
+        assembled values also belong to the run's explicit result mappings.
 
         """
         # initialize:
@@ -1437,12 +1439,15 @@ class Downwind(Algorithm):
             return results
         else:
             self.print(f"{self.name}: Computing finalize_results for output {output}")
-            results = Dict[str, Any](_name="output_results")
-            output.finalize_results(
-                algo=self,
-                n_chunks_states=1,
-                n_chunks_targets=1,
-                output_results=results,
+            model_data, extra_data = self.get_model_data(pop=clear_mem)
+            results = launch_parallel_calc(
+                self,
+                model=None,
+                model_data=model_data,
+                extra_data=extra_data,
+                output=output,
+                chunk_store=self.chunk_store,
+                sel=None if states_sel is None else {FC.STATE: states_sel},
             )
 
         if clear_mem or finalize:

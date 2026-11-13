@@ -1,6 +1,7 @@
 """Contract, numerical and compact-payload checks for the final output adoption."""
 
 import pickle
+from functools import partial
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,16 +14,25 @@ import foxes.constants as FC
 import foxes.variables as FV
 from foxes.input.yaml.dict import read_dict, run_outputs
 from foxes.models.outputs import (
+    FarmLayoutOutput,
     FarmResultsChunkWriter,
     FarmResultsCountWriter,
     FarmResultsPeriodWriter,
+    PointResultsCountWriter,
+    PointResultsPeriodWriter,
+    FlowAnimation,
+    FlowPlots2D,
+    FlowTurbineAnimation,
     PointCalculator,
+    RosePlotOutput,
     RotorPointPlot,
     SliceData,
     SlicesData,
     StateTurbineMap,
     StateTurbineTable,
+    StatesRosePlotOutput,
     TurbineTypeCurves,
+    WindRoseBinPlot,
 )
 from foxes.utils import Dict
 
@@ -174,6 +184,225 @@ def _snapshot(output):
             if key not in ("calculate", "_collect_points")
         }
     )
+
+
+class _ParentOnlyFigure:
+    def __deepcopy__(self, memo):
+        return self
+
+    def __reduce__(self):
+        raise AssertionError("parent-only figure reached worker serialization")
+
+
+def _axis_title(index, state, *, ax):
+    return ax.get_title() or f"State {state}"
+
+
+def _configured_plot(output_type, fig, ax, **kwargs):
+    constructors = {
+        "layout": (FarmLayoutOutput, {"parameters": {"fig": fig, "ax": ax}}),
+        "rose": (RosePlotOutput, {"plot_pars": {"ax": ax}}),
+        "states_rose": (
+            StatesRosePlotOutput,
+            {"point": [0, 0, 90], "plot_pars": {"ax": ax}},
+        ),
+        "bins": (
+            WindRoseBinPlot,
+            {"variable": FV.P, "ws_bins": [0, 20], "plot_pars": {"ax": ax}},
+        ),
+        "rotor": (RotorPointPlot, {"plot_pars": {"fig": fig, "ax": ax}}),
+        "map": (StateTurbineMap, {"plot_pars": {"ax": ax}}),
+        "curves": (TurbineTypeCurves, {"plot_pars": {"axs": [ax, ax]}}),
+        "flow": (
+            FlowPlots2D,
+            {
+                "plot_pars": {"fig": fig, "ax": ax},
+                "grid_pars": {"n_img_points": (2, 2)},
+            },
+        ),
+        "animation": (
+            FlowAnimation,
+            {
+                "plot_pars": {"title": partial(_axis_title, ax=ax)},
+                "grid_pars": {"n_img_points": (2, 2)},
+            },
+        ),
+        "turbine_animation": (
+            FlowTurbineAnimation,
+            {
+                "plot_pars": {"title": partial(_axis_title, ax=ax)},
+                "grid_pars": {"n_img_points": (2, 2)},
+            },
+        ),
+    }
+    cls, parameters = constructors[output_type]
+    return cls(**parameters, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "output_type",
+    [
+        "layout",
+        "rose",
+        "states_rose",
+        "bins",
+        "rotor",
+        "map",
+        "curves",
+        "flow",
+        "animation",
+        "turbine_animation",
+    ],
+)
+def test_plot_configuration_stays_out_of_running_models(
+    algorithm, tmp_path, output_type
+):
+    # A non-serializable figure graph exposes even indirect worker references.
+    fig, ax = plt.subplots()
+    fig._foxes_parent_only = _ParentOnlyFigure()
+    output = _configured_plot(output_type, fig, ax, out_dir=tmp_path)
+    stash = {}
+    try:
+        algorithm.initialize()
+        algorithm.init_model(output)
+        initial = output.get_initial_output_results(algorithm)
+        original = {output.unvar(key): value for key, value in initial.items()}
+        assert all(getattr(output, name) is value for name, value in original.items())
+        with foxes.Engine.new("numpy", verbosity=0):
+            output.set_running(algorithm, stash)
+            try:
+                assert len(pickle.dumps(output)) < 32768
+                assert all(not hasattr(output, name) for name in original)
+            finally:
+                output.unset_running(algorithm, stash)
+        assert all(getattr(output, name) is value for name, value in original.items())
+    finally:
+        plt.close(fig)
+
+
+@pytest.mark.parametrize(
+    "output",
+    [
+        StateTurbineTable(name_map={f"unused_{i}": str(i) for i in range(5000)}),
+        StateTurbineMap(isel={FC.STATE: np.zeros(20000, dtype=int)}),
+        TurbineTypeCurves(sel={FC.STATE: np.zeros(20000, dtype=int)}),
+        SliceData(label_map={f"unused_{i}": str(i) for i in range(5000)}),
+        FlowPlots2D(normalize={f"unused_{i}": 1.0 for i in range(5000)}),
+        FarmResultsCountWriter(
+            "farm", 2, write_nc_pars={"engine": _ParentOnlyFigure()}
+        ),
+        FarmResultsPeriodWriter(
+            "farm", period="day", write_nc_pars={"engine": _ParentOnlyFigure()}
+        ),
+        PointResultsCountWriter(
+            "point", 2, write_nc_pars={"engine": _ParentOnlyFigure()}
+        ),
+        PointResultsPeriodWriter(
+            "point", period="day", write_nc_pars={"engine": _ParentOnlyFigure()}
+        ),
+    ],
+)
+def test_parent_format_and_buffered_writer_options_are_not_serialized(
+    algorithm, output
+):
+    # Large formatting dictionaries and parent-only writer options stay on the parent.
+    algorithm.initialize()
+    algorithm.init_model(output)
+    initial = output.get_initial_output_results(algorithm)
+    original = {output.unvar(key): value for key, value in initial.items()}
+    stash = {}
+    with foxes.Engine.new("numpy", verbosity=0):
+        output.set_running(algorithm, stash)
+        try:
+            assert len(pickle.dumps(output)) < 32768
+            assert all(not hasattr(output, key) for key in original)
+        finally:
+            output.unset_running(algorithm, stash)
+    assert all(getattr(output, key) is value for key, value in original.items())
+
+
+@pytest.mark.parametrize(
+    "output",
+    [
+        FarmResultsCountWriter("farm", 2),
+        FarmResultsPeriodWriter("farm", period="day"),
+        PointResultsCountWriter("point", 2),
+        PointResultsPeriodWriter("point", period="day"),
+    ],
+)
+def test_empty_buffered_writer_consumes_private_initial_results(algorithm, output):
+    # Empty runs do not write files or leak their parent-only configuration.
+    initial = output.get_initial_output_results(algorithm)
+    output.finalize_results(algorithm, 0, 0, initial)
+    assert not initial
+
+
+@pytest.mark.parametrize("backend", ["numpy", "process"])
+@pytest.mark.parametrize(
+    "output_type",
+    ["layout", "rose", "states_rose", "bins", "rotor", "map", "curves", "flow"],
+)
+def test_parent_figures_are_reused_without_serialization(
+    algorithm, tmp_path, backend, output_type
+):
+    # Real process dispatch must reuse the parent's axes, not a deserialized copy.
+    polar = output_type in ("rose", "states_rose", "bins")
+    fig, ax = plt.subplots(subplot_kw={"projection": "polar"} if polar else {})
+    fig._foxes_parent_only = _ParentOnlyFigure()
+    output = _configured_plot(output_type, fig, ax, out_dir=tmp_path)
+    configuration = (
+        "parameters"
+        if output_type == "layout"
+        else "plot_options"
+        if output_type == "flow"
+        else "plot_pars"
+    )
+    original = getattr(output, configuration)
+    try:
+        with foxes.Engine.new(backend, n_procs=2, chunk_size_states=2, verbosity=0):
+            results = algorithm.calc_farm(outputs=[output], ret_dict=True)
+        assert set(results) == {output.result_name}
+        result = results[output.result_name]
+        if output_type == "flow":
+            assert result is fig
+        elif output_type == "rotor":
+            assert result.axes is ax
+        elif polar:
+            assert result[0] is ax
+        elif output_type == "curves":
+            assert all(axis is ax for axis in result)
+        else:
+            assert result is ax
+        assert getattr(output, configuration) is original
+    finally:
+        plt.close(fig)
+
+
+@pytest.mark.parametrize("backend", ["numpy", "process"])
+@pytest.mark.parametrize("failure", ["worker", "finalize"])
+def test_plot_configuration_is_restored_on_failure(
+    algorithm, tmp_path, backend, failure
+):
+    # Both scientific and rendering failures release parent-only configuration.
+    fig, ax = plt.subplots()
+    fig._foxes_parent_only = _ParentOnlyFigure()
+    output = (
+        WindRoseBinPlot("unavailable", [0, 20], plot_pars={"ax": ax}, out_dir=tmp_path)
+        if failure == "worker"
+        else RotorPointPlot(plot_pars={"ax": ax, "marker": "invalid"}, out_dir=tmp_path)
+    )
+    original = output.plot_pars
+    try:
+        with foxes.Engine.new(backend, n_procs=2, chunk_size_states=2, verbosity=0):
+            with pytest.raises(
+                KeyError if failure == "worker" else ValueError,
+                match="unavailable" if failure == "worker" else "marker",
+            ):
+                algorithm.calc_farm(outputs=output)
+        assert output.plot_pars is original and output.plot_pars["ax"] is ax
+        assert not output.running and not algorithm.running
+    finally:
+        plt.close(fig)
 
 
 @pytest.fixture

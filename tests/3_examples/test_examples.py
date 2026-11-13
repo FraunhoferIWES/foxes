@@ -59,3 +59,28 @@ def test_example(example, monkeypatch, capsys):
     assert dict(config) == previous_config
     assert plt.get_fignums() == figures
     assert {path.relative_to(example) for path in example.rglob("*")} == before
+
+
+@pytest.mark.parametrize("roundtrip", [False, True])
+def test_binned_states_only_runs_selected_outputs(monkeypatch, roundtrip):
+    """Keep automatic support plots out of reduction and artifact workflows."""
+    processed = []
+    original = foxes.algorithms.Downwind.calc_outputs
+
+    def process(self, *, outputs, **kwargs):
+        assert outputs == "rose_plot"
+        processed.append(outputs)
+        return original(self, outputs=outputs, **kwargs)
+
+    monkeypatch.setattr(foxes.algorithms.Downwind, "calc_outputs", process)
+    with RUNNER.isolated_example(EXAMPLES / "binned_states", nofig=True) as work:
+        RUNNER._load(EXAMPLES / "_quick_inputs.py").prepare_inputs(
+            work, "binned_states"
+        )
+        options = ["-e", "numpy", "-d", "2", "-b", "2", "-v", "0"]
+        if roundtrip:
+            options.extend(["--write-nc", "binned.nc", "--read-nc", "binned.nc"])
+        RUNNER._load(work / "run.py").main(options)
+        assert processed == ["rose_plot"]
+        if roundtrip:
+            assert (work / "binned.nc").is_file()

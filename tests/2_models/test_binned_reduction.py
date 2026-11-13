@@ -1,5 +1,7 @@
 from types import SimpleNamespace
+import pickle
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import xarray as xr
@@ -17,6 +19,7 @@ from foxes.input.states.binned import (
 )
 from foxes.input.states.field_data import FieldData
 from foxes.input.states.point_cloud_data import PointCloudData
+from foxes.models.outputs import SupportWindRosePlotOutput
 
 
 _SUPPORT_POINTS = np.array(
@@ -59,6 +62,28 @@ class _Algorithm:
     def __init__(self):
         turbine = SimpleNamespace(xy=np.array([0.0, 0.0]))
         self.farm = SimpleNamespace(turbines=[turbine])
+
+
+class _ObservedSupportRose(SupportWindRosePlotOutput):
+    def finalize_results(self, algo, *args, **kwargs):
+        assert self.running
+        assert not hasattr(self, "_support_data")
+        assert not hasattr(self, "plot_pars")
+        return super().finalize_results(algo, *args, **kwargs)
+
+
+class _ParentOnlyFigure:
+    def __reduce__(self):
+        raise AssertionError("A parent figure was serialized")
+
+
+def _support_rose_algorithm(states):
+    farm = foxes.WindFarm()
+    farm.add_turbine(
+        foxes.Turbine(xy=[250, 250], H=90, turbine_models=["null_type"]),
+        verbosity=0,
+    )
+    return foxes.algorithms.Downwind(farm, states, wake_models=[], verbosity=0)
 
 
 class _Downwind:
@@ -154,6 +179,114 @@ def _meso_binned_artifact(states_class):
         FV.WD: {name: wd_mean.copy() for name in ("min", "mean", "max")},
     }
     return writer._binned._create_output_dataset(support, axes, stats, weights)
+
+
+@pytest.mark.parametrize("states_class", [BinnedFieldData, BinnedPointCloudData])
+@pytest.mark.parametrize("engine_name", ["numpy", "process"])
+@pytest.mark.parametrize("with_farm", [False, True])
+def test_support_roses_use_native_bins_and_output_lifecycle(
+    states_class, engine_name, with_farm, monkeypatch
+):
+    states = states_class(_meso_binned_artifact(states_class))
+    algo = _support_rose_algorithm(states)
+    output = _ObservedSupportRose(plot=False)
+    with foxes.Engine.new(
+        engine_name, n_procs=2, chunk_size_states=1, verbosity=0
+    ) as engine:
+        if with_farm:
+            data = algo.calc_farm(outputs=output)
+        else:
+
+            def unexpected_science(*args, **kwargs):
+                pytest.fail("Native support roses must not dispatch scientific chunks")
+
+            monkeypatch.setattr(engine, "_run_calculation", unexpected_science)
+            data = algo.calc_outputs(outputs=output)
+
+    assert not output.running
+    assert not hasattr(output, "_support_data")
+    assert hasattr(output, "plot_pars")
+    assert data.frequency.dims == (FC.POINT, FV.WD, FV.WS)
+    np.testing.assert_array_equal(data.attrs[f"{FV.WD}_bounds"], [0, 180, 360])
+    np.testing.assert_array_equal(data.attrs[f"{FV.WS}_bounds"], [0, 5, 10])
+    support = (
+        _SUPPORT_POINTS[[0, 2, 1, 3]]
+        if states_class is BinnedFieldData
+        else _SUPPORT_POINTS
+    )
+    np.testing.assert_array_equal(data["support"], support)
+    expected = np.zeros((4, 2, 2))
+    expected[:, 1, 0] = np.where(support[:, 0] == 500, 80, 20)
+    expected[:, 0, 1] = np.where(support[:, 0] == 500, 20, 80)
+    np.testing.assert_allclose(data.frequency, expected)
+
+
+@pytest.mark.parametrize("with_farm", [False, True])
+@pytest.mark.parametrize("invalid_axes", [False, True])
+def test_support_rose_parent_figures_are_lightweight_and_restored(
+    tmp_path, with_farm, invalid_axes
+):
+    states = BinnedPointCloudData(_meso_binned_artifact(BinnedPointCloudData))
+    algo = _support_rose_algorithm(states)
+    fig, axes = plt.subplots(
+        2, 2, subplot_kw={} if invalid_axes else {"projection": "polar"}
+    )
+    fig._parent_only = _ParentOnlyFigure()
+    output = _ObservedSupportRose(
+        plot_pars={"fig": fig, "axs": axes},
+        out_dir=tmp_path,
+        to_file="support.png",
+    )
+    original = output.plot_pars
+    try:
+        algo.initialize()
+        algo.init_model(output)
+        initial = output.get_initial_output_results(algo)
+        assert initial[output.var("plot_pars")] is original
+        assert isinstance(initial[output.var("data")], xr.Dataset)
+        stash = {}
+        output.set_running(algo, stash)
+        try:
+            assert len(pickle.dumps(output)) < 32768
+        finally:
+            output.unset_running(algo, stash)
+
+        with foxes.Engine.new("process", n_procs=2, chunk_size_states=1, verbosity=0):
+            calculate = algo.calc_farm if with_farm else algo.calc_outputs
+            if invalid_axes:
+                with pytest.raises(ValueError, match="must be polar"):
+                    calculate(outputs=output, ret_dict=True)
+            else:
+                results = calculate(outputs=output, ret_dict=True)
+                assert set(results) == {"support_rose_plot"}
+                assert results["support_rose_plot"][0] is fig
+                assert (tmp_path / "support.png").stat().st_size
+        assert not output.running
+        assert output.plot_pars is original
+        assert not hasattr(output, "_support_data")
+    finally:
+        plt.close(fig)
+
+
+def test_support_rose_rejects_nonbinned_states_but_nofig_skips_initialization():
+    algo = _support_rose_algorithm(_SourceStates())
+    with foxes.Engine.new("numpy", verbosity=0):
+        assert algo.calc_outputs(outputs=SupportWindRosePlotOutput(nofig=True)) == {}
+        with pytest.raises(TypeError, match="Require BinnedFieldData"):
+            algo.calc_outputs(outputs=SupportWindRosePlotOutput(plot=False))
+
+
+def test_reused_support_rose_reads_the_executing_algorithms_histogram():
+    artifact = _meso_binned_artifact(BinnedPointCloudData)
+    output = SupportWindRosePlotOutput(plot=False)
+    first_algo = _support_rose_algorithm(BinnedPointCloudData(artifact))
+    changed = artifact.copy(deep=True)
+    changed[FV.WEIGHT].values[:] *= 0.5
+    second_algo = _support_rose_algorithm(BinnedPointCloudData(changed))
+    with foxes.Engine.new("numpy", verbosity=0):
+        first = first_algo.calc_outputs(outputs=output)
+        second = second_algo.calc_outputs(outputs=output)
+    np.testing.assert_allclose(second.frequency, 0.5 * first.frequency)
 
 
 @pytest.mark.parametrize(

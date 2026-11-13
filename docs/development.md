@@ -74,6 +74,15 @@ packages, not external execution infrastructure.
 
 ### Engine Validation And Progress
 
+Farm and point progress headers report worker counts for parallel engines.
+NumPy and single-chunk engines report a loop over chunks instead: chunks run
+synchronously in the calling process without a worker pool.
+Synchronous loops update progress after every chunk and before executing the
+next. Eager parallel backends update as ordered results are collected, without
+waiting for the entire pending batch. Lazy Dask progress remains batch-based
+so graph scheduling retains concurrency. Redirected logs still use bounded
+percentage snapshots; interactive bars may throttle redraws.
+
 Run engine, algorithm and farm-output checks together:
 
 ```console
@@ -188,6 +197,18 @@ use Iterative and compare animation fields against separate point results.
 Memory checks verify that loaded grids and state-sized boolean selection masks
 stay out of running model instances, raw configuration is restored from the
 lifecycle stash, and worker calculations leave model serialization unchanged.
+Plotting-output regressions in `tests/2_models/test_remaining_outputs.py` also
+attach non-serializable sentinels to real figures, require running output
+serialization below 32 KiB, and verify exact parent figure/axes reuse through
+NumPy and process engines. They cover every figure-producing output family,
+initial-result ownership, private-key consumption and worker/rendering failure
+restoration. Each output handles its own private initial-result entries and
+named stash fields explicitly, without a shared attribute registry or ownership
+bundle. Rendering hooks must not restore plotting objects onto running models.
+Run `uv run pytest tests/2_models/test_binned_reduction.py -q` for native support
+roses: regular and scattered support, exact native bins and weights, output
+reuse across algorithms, metadata-only execution without scientific dispatch,
+process serialization, supplied figures and failure restoration.
 
 For synchronized flow/turbine animations, also run
 `uv run pytest tests/2_models/test_flow_turbine_animation.py tests/3_examples/test_output_selection.py -q`.
@@ -249,6 +270,8 @@ The prefix is the concrete algorithm class, including subclasses such as
 `Sequential`, rather than the base `Algorithm` class or a unique instance name.
 Direct engine calls may supply keyword-only `progress_label`; when unset they
 use the model class, not its unique instance name.
+Farm and point calculation title lines include the selected engine's worker
+count, for example `using 7 workers`.
 The launch helper and both default-engine delegation paths forward this label
 unchanged; intermediate dispatch functions do not replace the upstream operation.
 

@@ -13,6 +13,7 @@ from .slice_data import SliceData
 if TYPE_CHECKING:
     from foxes.core import Algorithm
     from foxes.core.model import LoadedData
+    from foxes.utils import Dict
 
 
 class SlicesData(SliceData):
@@ -79,7 +80,9 @@ class SlicesData(SliceData):
         translated.setflags(write=False)
         loaded_data["extra_data"][self._grid_key] = translated
 
-    def format_payload(self, algo: Algorithm, payload: dict[str, Any]) -> xr.Dataset:
+    def format_payload(
+        self, algo: Algorithm, payload: dict[str, Any], output_results: Dict[str, Any]
+    ) -> xr.Dataset:
         """Combine configured planes and write the resulting dataset once.
 
         Parameters
@@ -89,6 +92,8 @@ class SlicesData(SliceData):
         payload
             Combined field arrays and point coordinates, ordered by configured
             plane position. No nested scientific calculations are launched.
+        output_results
+            Run-local results containing private formatting and writing options.
 
         Returns
         -------
@@ -107,11 +112,11 @@ class SlicesData(SliceData):
                 "points": payload["points"][:, selection],
                 "values": {v: d[:, selection] for v, d in payload["values"].items()},
             }
-            datasets.append(self._format_data(selected))
+            datasets.append(self._format_data(selected, output_results))
 
         normal = next(axis for axis in "xyz" if axis not in self.plane)
-        normal_name = self.label_map.get(normal, normal)
-        normal_scale = self.normalize.get(normal, 1)
+        normal_name = output_results[self.var("label_map")].get(normal, normal)
+        normal_scale = output_results[self.var("normalize")].get(normal, 1)
         result = xr.concat(
             datasets,
             xr.IndexVariable(
@@ -123,6 +128,8 @@ class SlicesData(SliceData):
         result[normal_name].attrs["units"] = "1" if normal_scale != 1 else "m"
 
         if self.to_file is not None:
-            self._write_data(result, algo.verbosity)
+            self._write_data(
+                result, algo.verbosity, output_results[self.var("write_pars")]
+            )
 
         return result

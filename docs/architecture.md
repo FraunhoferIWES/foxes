@@ -311,14 +311,37 @@ finalization. Backends implement the abstract `_create_calculation()`,
 cache updates, output mappings, chunk counts and backend resources; no run state
 is retained on the engine. `PoolEngine` handles dispatch and worker cleanup, while
 `DefaultEngine` delegates those hooks without nesting the output lifecycle.
-`Engine._collect_results()` resolves ordered batches, merges worker payloads
-and cache updates, and invokes output updates. Backend progress callbacks run
-only after each chunk's updates succeed.
+`Engine._collect_results()` consumes `iter_results()` in submission order,
+merges worker payloads and cache updates, and invokes output updates. Eager
+backends yield each result without waiting for the whole batch; synchronous
+results are collected before the next chunk executes. Lazy Dask graphs remain
+scheduled together and yield results after their bounded batch completes.
+Backend progress callbacks run only after each chunk's updates succeed.
 The output's initial result mapping is passed through backend delegation and
 updated in place during collection, then used for parent-side finalization.
 It is created before output stashing, so initialized data can remain parent-owned
 without being serialized to workers. `OutputList` combines child mappings while
 preserving their values' identity and rejects duplicate initial result keys.
+Each output explicitly implements its own initial-result and running hooks.
+Rendering and writing options use separate model-private result keys, retaining
+original figures, axes and callbacks without recursive copying. The output's
+`set_running()` stashes and removes its named attributes; `unset_running()`
+restores them. Finalizers consume their own keys and pass concrete options to
+renderers without reattaching them while running. `Output` provides no attribute
+registry, generic ownership bundle or automatic stashing mechanism.
+Only worker-required configuration and scientific selectors remain on workers.
+Metadata-only calls use `Engine.run_calculation(model=None)`, exercising the same
+initial-result, running and finalization lifecycle without scientific dispatch.
+The Sequential animation adapter also uses explicit results and normal
+finalization. Public results and caller-owned plotting objects retain their
+identity. See [ADR-0040](adr/0040-explicit-output-data-lifecycle.md).
+
+`SupportWindRosePlotOutput`, selected as `support_rose_plot`, reads the current
+binned states' native histogram through model-data inputs when creating initial
+results. It preserves support coordinates, sparse-bin locations, native `WS` and
+`WD` edges and percentage weights; it neither interpolates points nor recalculates
+farm physics. No histogram is retained on the output instance. Binned states
+expose numerical data only; support-rose rendering belongs to output finalization.
 The optional `_prepare_calculation_inputs()` helper selects and validates
 datasets and moves previous farm results into chunk metadata. Concrete backends
 call it after backend selection. It imposes no pool, future or worker contract;
@@ -863,6 +886,13 @@ boundary and reusable logic in importable functions so tests need not spawn a
 subprocess.
 
 ## Cross-Cutting Decisions
+
+- Figure-producing outputs keep rendering options and caller-owned Matplotlib
+  objects in initial result mappings, not running worker models, and restore
+  constructor attributes through explicit per-output lifecycle hooks. There is
+  no shared attribute registry or ownership bundle. Metadata-only output calls
+  use the same engine-owned running lifecycle. See
+  [ADR-0040](adr/0040-explicit-output-data-lifecycle.md).
 
 - Calculation entry points offer opt-in keyed returns with `ret_dict=True`.
   Monolithic examples separate `-R/--results` from subsequent `-o/--outputs`;

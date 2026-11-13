@@ -8,7 +8,7 @@ from xarray import Dataset
 
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.utils import write_nc
+from foxes.utils import Dict, write_nc
 
 from ._dataset_output import DatasetOutput
 
@@ -67,12 +67,118 @@ class StateTurbineTable(DatasetOutput):
         self.to_file = to_file
         self.write_pars = {} if write_pars is None else dict(write_pars)
 
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Store parent-only table formatting options before worker execution.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        model_data
+            Initial model dataset passed to the base output hook.
+        farm_data
+            Initial farm dataset passed to the base output hook.
+        point_data
+            Initial target dataset, or ``None`` for farm calculations.
+        extra_data
+            Additional non-array inputs passed to the base output hook.
+
+        Returns
+        -------
+        output_results
+            Run-local results containing this table's private selection and
+            writing keys, each referencing its original configuration object.
+        """
+        output_results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+
+        # Bypass recursive Dict conversion to retain exact configuration objects.
+        dict.update(
+            output_results,
+            {
+                self.var("name_map"): self.name_map,
+                self.var("isel"): self.isel,
+                self.var("sel"): self.sel,
+                self.var("write_pars"): self.write_pars,
+            },
+        )
+        return output_results
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Move table formatting options off the model while it is running.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data_stash
+            Model-name keyed lifecycle storage, or ``None`` to retain model state.
+        sel
+            Selected states for this calculation, if any.
+        verbosity
+            The lifecycle reporting level; ``0`` is silent.
+        """
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name].update(
+                name_map=self.name_map,
+                isel=self.isel,
+                sel=self.sel,
+                write_pars=self.write_pars,
+            )
+            del self.name_map, self.isel, self.sel, self.write_pars
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore table formatting options after execution.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data_stash
+            Model-name keyed lifecycle storage containing this table's options.
+        sel
+            Selected states for this calculation, if any.
+        verbosity
+            The lifecycle reporting level; ``0`` is silent.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            stash = data_stash[self.name]
+            self.name_map = stash.pop("name_map")
+            self.isel = stash.pop("isel")
+            self.sel = stash.pop("sel")
+            self.write_pars = stash.pop("write_pars")
+
     def _farm_variables(self) -> tuple[str, ...]:
         """Select only the fields needed by this table's worker payload."""
         return self.fields
 
-    def _table(self, data: Dataset) -> Dataset:
+    def _table(self, data: Dataset, output_results: Dict[str, Any]) -> Dataset:
         """Validate fields and apply external names, dimension order and selection."""
+        name_map = output_results.pop(self.var("name_map"))
+        isel = output_results.pop(self.var("isel"))
+        sel = output_results.pop(self.var("sel"))
         missing = set(self.fields).difference(data.data_vars)
         if missing:
             raise KeyError(f"{self.name}: Missing farm fields {sorted(missing)}")
@@ -80,22 +186,24 @@ class StateTurbineTable(DatasetOutput):
         table = table.rename(
             {
                 key: value
-                for key, value in self.name_map.items()
+                for key, value in name_map.items()
                 if key in table.variables or key in table.dims
             }
         )
         if self.transpose:
             table = table.transpose(
                 *(
-                    self.name_map.get(dim, dim)
+                    name_map.get(dim, dim)
                     for dim in (FC.TURBINE, FC.FARM, FC.CLUSTER, FC.STATE)
-                    if self.name_map.get(dim, dim) in table.dims
+                    if name_map.get(dim, dim) in table.dims
                 ),
                 ...,
             )
-        return table.isel(self.isel).sel(self.sel)
+        return table.isel(isel).sel(sel)
 
-    def process(self, algo: Algorithm, data: Dataset) -> Dataset:
+    def process(
+        self, algo: Algorithm, data: Dataset, output_results: Dict[str, Any]
+    ) -> Dataset:
         """Return the configured table and write it once when requested.
 
         Parameters
@@ -104,6 +212,8 @@ class StateTurbineTable(DatasetOutput):
             Executing algorithm; no additional science is performed.
         data
             Selected farm fields assembled in original farm/state order.
+        output_results
+            Shared run results containing this table's private formatting options.
 
         Returns
         -------
@@ -115,8 +225,9 @@ class StateTurbineTable(DatasetOutput):
         KeyError
             If a requested field, dimension or label is unavailable.
         """
-        table = self._table(data)
+        write_pars = output_results.pop(self.var("write_pars"))
+        table = self._table(data, output_results)
         if self.to_file is not None:
-            options = {"verbosity": algo.verbosity, **self.write_pars}
+            options = {"verbosity": algo.verbosity, **write_pars}
             write_nc(table, self.get_fpath(self.to_file), **options)
         return table

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from xarray import Dataset
 
     from foxes.core import Algorithm, MData
+    from foxes.utils import Dict
 
 
 class RosePlotOutput(RoseOutput):
@@ -95,7 +96,9 @@ class RosePlotOutput(RoseOutput):
     def _contraction(self) -> str:
         return "frequency"
 
-    def process(self, algo: Algorithm, data: Dataset) -> Any:
+    def process(
+        self, algo: Algorithm, data: Dataset, output_results: Dict[str, Any]
+    ) -> Any:
         """Create the configured frequency dataset and optional polar figure.
 
         Parameters
@@ -104,6 +107,8 @@ class RosePlotOutput(RoseOutput):
             Executing algorithm.
         data
             Run-local frequency dataset already combined from worker histograms.
+        output_results
+            Run-owned results containing this rose's plotting options and axes.
 
         Returns
         -------
@@ -111,6 +116,7 @@ class RosePlotOutput(RoseOutput):
             Frequency dataset, or ``(axes, dataset)`` when plotting is enabled.
 
         """
+        plot_pars = output_results.pop(self.var("plot_pars"))
         if not self.plot or self.nofig:
             return data
         axes, result = _rose_get_figure(
@@ -119,7 +125,7 @@ class RosePlotOutput(RoseOutput):
             ws_var=self.ws_var,
             wd_var=self.wd_var,
             ret_data=True,
-            **self.plot_pars,
+            **plot_pars,
         )
         if self.to_file is not None:
             axes.figure.savefig(self.get_fpath(self.to_file), bbox_inches="tight")
@@ -251,7 +257,9 @@ class WindRoseBinPlot(RoseOutput):
     def _contraction(self) -> str:
         return self.contraction
 
-    def process(self, algo: Algorithm, data: Dataset) -> Any:
+    def process(
+        self, algo: Algorithm, data: Dataset, output_results: Dict[str, Any]
+    ) -> Any:
         """Render globally combined bin statistics without retaining raw samples.
 
         Parameters
@@ -260,6 +268,8 @@ class WindRoseBinPlot(RoseOutput):
             Executing algorithm.
         data
             Globally combined direction-by-speed bin dataset.
+        output_results
+            Run-owned results containing this plot's plotting options and axes.
 
         Returns
         -------
@@ -272,10 +282,11 @@ class WindRoseBinPlot(RoseOutput):
             wd_var=self.wd_var,
             ws_var=self.ws_var,
         )
+        plot_pars = output_results.pop(self.var("plot_pars"))
         if not self.plot or self.nofig:
             return data
         axes, result = _bins_get_figure(
-            data, self, **parameters, ret_data=True, **self.plot_pars
+            data, self, **parameters, ret_data=True, **plot_pars
         )
         if self.to_file is not None:
             axes.figure.savefig(self.get_fpath(self.to_file), bbox_inches="tight")

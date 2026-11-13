@@ -97,9 +97,9 @@ def test_traces_and_grid_match_farm_order(
     payloads = []
     render = FlowTurbineAnimation._render
 
-    def capture(self, algo, payload):
+    def capture(self, algo, payload, output_results, extra_generators=()):
         payloads.append(payload)
-        render(self, algo, payload)
+        render(self, algo, payload, output_results, extra_generators)
 
     monkeypatch.setattr(FlowTurbineAnimation, "_render", capture)
     output = FlowTurbineAnimation(

@@ -24,6 +24,8 @@ from ._result_data import _combine_chunks as _combine_result_chunks
 from ._units import _set_units
 
 if TYPE_CHECKING:
+    from xarray import Dataset
+
     from foxes.core import Algorithm, FData, MData, TData
     from foxes.core.model import LoadedData
     from foxes.utils import Dict
@@ -132,6 +134,113 @@ class SliceData(PointDataOutput):
         self.ret_states = ret_states
         self.result_name = result_name or self.name
         self._order_key = self.var("slice_order")
+
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Retain exact formatting references for finalization.
+
+        Parameters
+        ----------
+        algo
+            Executing algorithm.
+        model_data
+            Initial model dataset before engine subset selection.
+        farm_data
+            Initial or previously calculated farm dataset.
+        point_data
+            Initial target dataset, or ``None`` for farm calculations.
+        extra_data
+            Non-array model inputs.
+
+        Returns
+        -------
+        output_results
+            Initial results with private normalization, labels, clipping and
+            writing options, consumed after formatting.
+        """
+        results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+        dict.update(
+            results,
+            {
+                self.var("write_pars"): self.write_pars,
+                self.var("normalize"): self.normalize,
+                self.var("normalize_v"): self.normalize_v,
+                self.var("label_map"): self.label_map,
+                self.var("vmin"): self.vmin,
+                self.var("vmax"): self.vmax,
+            },
+        )
+        return results
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Stash slice formatting options outside running worker models.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Lifecycle stash retaining exact options, or ``None`` to discard them.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name].update(
+                write_pars=self.write_pars,
+                normalize=self.normalize,
+                normalize_v=self.normalize_v,
+                label_map=self.label_map,
+                vmin=self.vmin,
+                vmax=self.vmax,
+            )
+        del self.write_pars, self.normalize, self.normalize_v
+        del self.label_map, self.vmin, self.vmax
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore slice formatting references after execution.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Lifecycle stash, or ``None`` when configuration was discarded.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            self.write_pars = data_stash[self.name].pop("write_pars")
+            self.normalize = data_stash[self.name].pop("normalize")
+            self.normalize_v = data_stash[self.name].pop("normalize_v")
+            self.label_map = data_stash[self.name].pop("label_map")
+            self.vmin = data_stash[self.name].pop("vmin")
+            self.vmax = data_stash[self.name].pop("vmax")
 
     def initialize(
         self,
@@ -336,23 +445,35 @@ class SliceData(PointDataOutput):
             raise ValueError(f"{self.name}: No selected slice data")
         payload = self._combine_chunks(selected)
         if self.reduction == "mean":
-            output_results[self.result_name] = self.format_payload(algo, payload)
-            return
-        first_tiles = [
-            min(key for key in selected if key[0] == state)
-            for state in sorted({key[0] for key in selected})
-        ]
-        indices = np.argsort(
-            np.concatenate([selected[k]["order"] for k in first_tiles])
-        )
-        payload = {
-            **payload,
-            "states": payload["states"][indices],
-            "points": payload["points"][indices],
-            "farm": {v: d[indices] for v, d in payload["farm"].items()},
-            "values": {v: d[indices] for v, d in payload["values"].items()},
-        }
-        output_results[self.result_name] = self.format_payload(algo, payload)
+            output_results[self.result_name] = self.format_payload(
+                algo, payload, output_results
+            )
+        else:
+            first_tiles = [
+                min(key for key in selected if key[0] == state)
+                for state in sorted({key[0] for key in selected})
+            ]
+            indices = np.argsort(
+                np.concatenate([selected[k]["order"] for k in first_tiles])
+            )
+            payload = {
+                **payload,
+                "states": payload["states"][indices],
+                "points": payload["points"][indices],
+                "farm": {v: d[indices] for v, d in payload["farm"].items()},
+                "values": {v: d[indices] for v, d in payload["values"].items()},
+            }
+            output_results[self.result_name] = self.format_payload(
+                algo, payload, output_results
+            )
+
+        # Consume only this slice's private formatting inputs.
+        output_results.pop(self.var("write_pars"))
+        output_results.pop(self.var("normalize"))
+        output_results.pop(self.var("normalize_v"))
+        output_results.pop(self.var("label_map"))
+        output_results.pop(self.var("vmin"))
+        output_results.pop(self.var("vmax"))
 
     def _join_mean_tiles(self, tiles: list[dict[str, Any]]) -> dict[str, Any]:
         """Join target tiles for one state slab, retaining reduced statistics."""
@@ -485,7 +606,9 @@ class SliceData(PointDataOutput):
             )
         return tuple(axes[i] if i != c else axes[i][0] for i in range(3)) + (points,)
 
-    def format_payload(self, algo: Algorithm, payload: dict[str, Any]) -> Any:
+    def format_payload(
+        self, algo: Algorithm, payload: dict[str, Any], output_results: Dict[str, Any]
+    ) -> Any:
         """Format run-local values using constructor-defined reduction and names.
 
         Parameters
@@ -494,6 +617,8 @@ class SliceData(PointDataOutput):
             Executing algorithm, available to specialized renderers.
         payload
             Combined selected states, static target coordinates and point fields.
+        output_results
+            Run-local results containing this slice's private formatting options.
 
         Returns
         -------
@@ -502,9 +627,11 @@ class SliceData(PointDataOutput):
             over states when configured. If requested, append state labels and
             then static grid metadata in a tuple. Write ``to_file`` when set.
         """
-        result = self._format_data(payload)
+        result = self._format_data(payload, output_results)
         if self.to_file is not None:
-            self._write_data(result, algo.verbosity)
+            self._write_data(
+                result, algo.verbosity, output_results[self.var("write_pars")]
+            )
         returned = [result]
         if self.ret_states:
             returned.append(payload["states"])
@@ -512,13 +639,17 @@ class SliceData(PointDataOutput):
             returned.append(self._grid_data(payload))
         return returned[0] if len(returned) == 1 else tuple(returned)
 
-    def _format_data(self, payload: dict[str, Any]) -> Any:
+    def _format_data(
+        self, payload: dict[str, Any], output_results: Dict[str, Any]
+    ) -> Any:
         """Format fields without writing intermediate plane datasets.
 
         Parameters
         ----------
         payload
             Combined point fields, static coordinates and selected state labels.
+        output_results
+            Run-local results containing private formatting options.
 
         Returns
         -------
@@ -532,10 +663,12 @@ class SliceData(PointDataOutput):
         positions = dict(zip("xyz", grid[:3]))
         a_name, b_name = self.plane[0], self.plane[1]
         c_name = next(c for c in "xyz" if c not in self.plane)
-        a = positions[a_name] / self.normalize.get(a_name, 1)
-        b = positions[b_name] / self.normalize.get(b_name, 1)
-        c = positions[c_name] / self.normalize.get(c_name, 1)
-        data = self._field_data(payload)
+        normalize = output_results[self.var("normalize")]
+        label_map = output_results[self.var("label_map")]
+        a = positions[a_name] / normalize.get(a_name, 1)
+        b = positions[b_name] / normalize.get(b_name, 1)
+        c = positions[c_name] / normalize.get(c_name, 1)
+        data = self._field_data(payload, output_results)
         if self.reduction == "mean":
             data = {v: d[0] for v, d in data.items()}
 
@@ -545,17 +678,17 @@ class SliceData(PointDataOutput):
         if self.data_format == "numpy":
             return getattr(grids, f"np2np_{suffix}")(*args)
         if self.data_format == "pandas":
-            return getattr(grids, f"np2pd_{suffix}")(*args, self.plane, self.label_map)
-        result = getattr(grids, f"np2xr_{suffix}")(*args, c, self.plane, self.label_map)
+            return getattr(grids, f"np2pd_{suffix}")(*args, self.plane, label_map)
+        result = getattr(grids, f"np2xr_{suffix}")(*args, c, self.plane, label_map)
         result.attrs.update(payload.get("attrs", {}))
 
         # Divisors change the represented quantity, not just its display label.
         _set_units(
             result,
-            label_map=self.label_map,
+            label_map=label_map,
             dimensionless=[
                 key
-                for options in (self.normalize, self.normalize_v)
+                for options in (normalize, output_results[self.var("normalize_v")])
                 for key, value in options.items()
                 if value != 1
             ],
@@ -563,13 +696,17 @@ class SliceData(PointDataOutput):
 
         return result
 
-    def _field_data(self, payload: dict[str, Any]) -> dict[str, np.ndarray]:
+    def _field_data(
+        self, payload: dict[str, Any], output_results: Dict[str, Any]
+    ) -> dict[str, np.ndarray]:
         """Order supplied targets and apply configured field transforms.
 
         Parameters
         ----------
         payload
             Combined point fields and coordinates in supplied target order.
+        output_results
+            Run-local results containing private field scaling and clipping options.
 
         Returns
         -------
@@ -589,9 +726,9 @@ class SliceData(PointDataOutput):
         data = {v: payload["values"][v][:, order] for v in self.fields}
         return {
             v: np.clip(
-                d / self.normalize_v.get(v, 1),
-                self.vmin.get(v, -np.inf),
-                self.vmax.get(v, np.inf),
+                d / output_results[self.var("normalize_v")].get(v, 1),
+                output_results[self.var("vmin")].get(v, -np.inf),
+                output_results[self.var("vmax")].get(v, np.inf),
             )
             for v, d in data.items()
         }
@@ -607,7 +744,9 @@ class SliceData(PointDataOutput):
             variables = tuple(dict.fromkeys([*variables, FV.WEIGHT]))
         return variables
 
-    def _write_data(self, data: Any, verbosity: int) -> None:
+    def _write_data(
+        self, data: Any, verbosity: int, write_pars: dict[str, Any]
+    ) -> None:
         """Write the selected representation without retaining the result.
 
         Parameters
@@ -617,14 +756,16 @@ class SliceData(PointDataOutput):
             its writer, destination and ``write_pars`` options.
         verbosity
             Algorithm verbosity, used unless overridden in NetCDF write options.
+        write_pars
+            Parent-owned options for the selected writer.
         """
         if self.to_file is None:
             raise ValueError(f"{self.name}: No output filename configured")
         path = self.get_fpath(self.to_file)
         if self.data_format == "xarray":
-            options = {"verbosity": verbosity, **self.write_pars}
+            options = {"verbosity": verbosity, **write_pars}
             write_nc(data, path, **options)
         elif self.data_format == "pandas":
-            self.write(str(self.to_file), data, **self.write_pars)
+            self.write(str(self.to_file), data, **write_pars)
         else:
-            data.tofile(path, **self.write_pars)
+            data.tofile(path, **write_pars)

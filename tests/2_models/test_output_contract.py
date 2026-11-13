@@ -239,10 +239,10 @@ def test_multiple_planes_write_once(algorithm, tmp_path, monkeypatch):
     writes = []
     original = output._write_data
 
-    def write(data, verbosity):
+    def write(data, verbosity, write_pars):
         writes.append(dict(data.sizes))
         assert verbosity == algorithm.verbosity
-        original(data, verbosity)
+        original(data, verbosity, write_pars)
 
     monkeypatch.setattr(output, "_write_data", write)
     with foxes.Engine.new("numpy", chunk_size_points=2, verbosity=0):
@@ -466,6 +466,64 @@ def test_mean_slice_keeps_only_explicitly_requested_state_labels(algorithm):
         data, states = algorithm.calc_farm(outputs=output)
     np.testing.assert_array_equal(states, [30, 10])
     np.testing.assert_allclose(data[FV.WS], 6.2)
+
+
+@pytest.mark.parametrize("output_type", [SliceData, SlicesData, FlowPlots2D])
+def test_slice_owns_flat_formatting_inputs(algorithm, monkeypatch, output_type):
+    # Each family extends the slice lifecycle without copying formatting options.
+    kwargs = {"positions": [80.0, 100.0]} if output_type is SlicesData else {}
+    if output_type is FlowPlots2D:
+        kwargs["plot"] = False
+        kwargs["plot_pars"] = {"ax": object()}
+    output = output_type(
+        grid_pars={"n_img_points": (2, 3)},
+        normalize={"x": 1000.0},
+        normalize_v={FV.WS: 2.0},
+        label_map={FV.WS: "speed"},
+        vmin={FV.WS: 0.0},
+        vmax={FV.WS: 20.0},
+        **kwargs,
+    )
+    normalize, normalize_v = output.normalize, output.normalize_v
+    label_map, write_pars = output.label_map, output.write_pars
+    vmin, vmax = output.vmin, output.vmax
+    format_payload = output.format_payload
+    results_seen = []
+
+    def format_selected(algo, payload, output_results):
+        assert output.running
+        assert not hasattr(output, "normalize")
+        assert not hasattr(output, "normalize_v")
+        assert not hasattr(output, "label_map")
+        assert not hasattr(output, "write_pars")
+        assert not hasattr(output, "vmin")
+        assert not hasattr(output, "vmax")
+        assert output_results[output.var("normalize")] is normalize
+        assert output_results[output.var("normalize_v")] is normalize_v
+        assert output_results[output.var("label_map")] is label_map
+        assert output_results[output.var("write_pars")] is write_pars
+        assert output_results[output.var("vmin")] is vmin
+        assert output_results[output.var("vmax")] is vmax
+        if isinstance(output, FlowPlots2D):
+            assert not hasattr(output, "plot_options")
+            assert (
+                output_results[output.var("plot_options")]["ax"]
+                is kwargs["plot_pars"]["ax"]
+            )
+        results_seen.append(output_results)
+        return format_payload(algo, payload, output_results)
+
+    monkeypatch.setattr(output, "format_payload", format_selected)
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        results = algorithm.calc_farm(outputs=output, ret_dict=True)
+    assert len(results_seen) == 1
+    assert set(results_seen[0]) == set(results) == {output.result_name}
+    assert output.normalize is normalize
+    assert output.normalize_v is normalize_v
+    assert output.label_map is label_map
+    assert output.write_pars is write_pars
+    assert output.vmin is vmin
+    assert output.vmax is vmax
 
 
 @pytest.mark.parametrize(

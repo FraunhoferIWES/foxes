@@ -330,7 +330,10 @@ class PoolEngine(Engine):
                     **calc_pars,
                 )
                 del data, mdata_chunk, fdata_chunk, tdata_chunk
-                if len(futures) >= self.n_workers * 3:
+                if (
+                    self.future_is_done(futures[key])
+                    or len(futures) >= self.n_workers * 3
+                ):
                     self._collect_results(
                         calculation, algo, output, futures, progress.update
                     )

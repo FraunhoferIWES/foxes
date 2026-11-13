@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from xarray import Dataset
 
+from foxes.utils import Dict
+
 from ._dataset_output import DatasetOutput
 
 if TYPE_CHECKING:
@@ -50,11 +52,112 @@ class RotorPointPlot(DatasetOutput):
         self.to_file = to_file
         self.write_pars = {} if write_pars is None else dict(write_pars)
 
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Store parent-only rotor rendering and writing options.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        model_data
+            Initial model dataset passed to the base output hook.
+        farm_data
+            Initial farm dataset passed to the base output hook.
+        point_data
+            Initial target dataset, or ``None`` for farm calculations.
+        extra_data
+            Additional non-array inputs passed to the base output hook.
+
+        Returns
+        -------
+        output_results
+            Run-local results containing this plot's private options, each
+            referencing its original configuration object.
+        """
+        output_results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+
+        # Bypass recursive Dict conversion to retain exact option object identity.
+        dict.update(
+            output_results,
+            {
+                self.var("plot_pars"): self.plot_pars,
+                self.var("write_pars"): self.write_pars,
+            },
+        )
+        return output_results
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Move rendering and writing options off the model while it is running.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data_stash
+            Model-name keyed lifecycle storage, or ``None`` to retain model state.
+        sel
+            Selected states for this calculation, if any.
+        verbosity
+            The lifecycle reporting level; ``0`` is silent.
+        """
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name].update(
+                plot_pars=self.plot_pars, write_pars=self.write_pars
+            )
+            del self.plot_pars, self.write_pars
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore rendering and writing options after execution.
+
+        Parameters
+        ----------
+        algo
+            The calculation algorithm.
+        data_stash
+            Model-name keyed lifecycle storage containing this plot's options.
+        sel
+            Selected states for this calculation, if any.
+        verbosity
+            The lifecycle reporting level; ``0`` is silent.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            stash = data_stash[self.name]
+            self.plot_pars = stash.pop("plot_pars")
+            self.write_pars = stash.pop("write_pars")
+
     def _farm_variables(self) -> tuple[str, ...]:
         """Request no scientific farm payload for rotor metadata."""
         return ()
 
-    def process(self, algo: Algorithm, data: Dataset) -> Any:
+    def process(
+        self,
+        algo: Algorithm,
+        data: Dataset,
+        output_results: Dict[str, Any],
+    ) -> Any:
         """Return rotor metadata or render it without additional initialization.
 
         Parameters
@@ -63,6 +166,8 @@ class RotorPointPlot(DatasetOutput):
             Initialized algorithm whose ``rotor_model`` supplies design points.
         data
             Empty dataset; scientific state/turbine arrays are not collected.
+        output_results
+            Shared run results containing this plot's rendering and writing options.
 
         Returns
         -------
@@ -71,6 +176,8 @@ class RotorPointPlot(DatasetOutput):
             unit-sum quadrature weights when rendering is disabled. Both
             numerical fields have units ``1`` and own independent array copies.
         """
+        plot_pars = output_results.pop(self.var("plot_pars"))
+        write_pars = output_results.pop(self.var("write_pars"))
         rotor = algo.rotor_model
         points = rotor.design_points()
         weights = rotor.rotor_point_weights()
@@ -84,7 +191,7 @@ class RotorPointPlot(DatasetOutput):
                 }
             )
 
-        options = dict(self.plot_pars)
+        options = dict(plot_pars)
         ax = options.pop("ax", None)
         fig = options.pop("fig", None)
         figsize = options.pop("figsize", (5, 5))
@@ -109,7 +216,7 @@ class RotorPointPlot(DatasetOutput):
             colorbar.set_ticks(ticks, labels=[f"{w:.2f}" for w in ticks])
 
         if self.to_file is not None:
-            ax.figure.savefig(self.get_fpath(self.to_file), **self.write_pars)
+            ax.figure.savefig(self.get_fpath(self.to_file), **write_pars)
         self._show_figures()
 
         return image

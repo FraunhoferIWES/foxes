@@ -12,10 +12,9 @@ uv run --no-sync python run.py
 By default, the example reduces the source states and runs directly from the
 resulting `BinnedFieldData` object. Each retained histogram bin becomes a state,
 while bin weights remain spatially resolved on the regular support grid. The
-source-state reduction is initialized in an engine context, and the support
-wind-rose data is prepared there. The Matplotlib canvas is created after the
-engine context has closed and then shown with `plt.show()`. The process engine
-is supported as well:
+source-state reduction is initialized in an engine context. Only the selected
+result and output models run; native support wind roses are not created
+automatically. The process engine is supported as well:
 
 ```text
 uv run --no-sync python run.py -e process

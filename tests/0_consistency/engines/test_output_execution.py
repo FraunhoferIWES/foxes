@@ -15,6 +15,7 @@ import foxes
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.core import MData, Output
+from foxes.engines.numpy import NumpyEngine
 from foxes.engines.progress import CalculationProgress
 from foxes.models.outputs import (
     FarmResultsOutput,
@@ -48,18 +49,32 @@ def _algorithm(algorithm="Downwind"):
     )
 
 
-@pytest.mark.parametrize("backend", ["numpy", "threads", "process"])
+@pytest.mark.parametrize("backend", ["numpy", "single", "threads", "process"])
 @pytest.mark.parametrize("algorithm", ["Downwind", "Iterative"])
-def test_engine_progress_uses_algorithm_operation(backend, capsys, algorithm):
+@pytest.mark.parametrize("n_procs", [2, 3])
+def test_engine_progress_uses_algorithm_operation(backend, capsys, algorithm, n_procs):
     # Farm and point launch boundaries supply stable upstream operation labels.
     algo = _algorithm(algorithm)
     with foxes.Engine.new(
-        backend, n_procs=2, chunk_size_states=2, verbosity=1, progress_bar=False
+        backend, n_procs=n_procs, chunk_size_states=2, verbosity=1, progress_bar=False
     ) as engine:
         farm_results = algo.calc_farm(outputs="farm_results_all")
         algo.calc_points(farm_results, np.array([[800.0, 0.0, 90.0]]))
         name = engine.name
-    stderr = capsys.readouterr().err
+        execution = (
+            "a loop over chunks"
+            if backend in ("numpy", "single")
+            else f"{engine.n_workers} worker{'s' if engine.n_workers != 1 else ''}"
+        )
+    captured = capsys.readouterr()
+    stderr = captured.err
+    assert (
+        f"{name}: Calculating 4 states for 2 turbines using {execution}" in captured.out
+    )
+    assert (
+        f"{name}: Calculating data at 1 points for 4 states using {execution}"
+        in captured.out
+    )
     for operation in ("calc_farm", "calc_points"):
         label = f"{name} [{algorithm}.{operation}]"
         assert f"{label}: Starting" in stderr
@@ -82,6 +97,61 @@ def test_direct_engine_progress_label(monkeypatch, capsys, progress_label):
         _algorithm().calc_farm()
     expected = "FarmDataModelList" if progress_label is None else progress_label
     assert f"NumpyEngine [{expected}]: Finished" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("points", [False, True])
+def test_numpy_progress_advances_before_the_next_chunk(monkeypatch, points):
+    algo = _algorithm()
+    with foxes.Engine.new("single", verbosity=0):
+        farm = algo.calc_farm(outputs="farm_results_all")
+
+    completed, submitted = [], []
+    original_update = CalculationProgress.update
+    original_submit = NumpyEngine.submit
+
+    def update(self):
+        original_update(self)
+        completed.append(self.completed)
+
+    def submit(self, *args, **kwargs):
+        assert len(completed) == len(submitted)
+        result = original_submit(self, *args, **kwargs)
+        submitted.append(result)
+        return result
+
+    monkeypatch.setattr(CalculationProgress, "update", update)
+    monkeypatch.setattr(NumpyEngine, "submit", submit)
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=1, chunk_size_points=1, verbosity=0
+    ):
+        if points:
+            algo.calc_points(farm, np.array([[800.0, 0.0, 90.0], [1000.0, 0.0, 90.0]]))
+        else:
+            algo.calc_farm()
+    assert completed == list(range(1, (8 if points else 4) + 1))
+
+
+def test_ordered_collection_updates_progress_before_later_tasks_finish():
+    first_collected = Event()
+    engine = foxes.Engine.new("threads", n_procs=3, verbosity=0)
+    calculation = engine._create_calculation({})
+    calculation.n_chunks_states = 2
+    calculation.n_chunks_targets = 1
+
+    def later_chunk():
+        assert first_collected.wait(5), "Progress waited for the whole batch"
+        return {"probe": 2}, {}
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = {
+            (0, 0): executor.submit(lambda: ({"probe": 1}, {})),
+            (1, 0): executor.submit(later_chunk),
+        }
+        engine._collect_results(
+            calculation, _algorithm(), None, futures, first_collected.set
+        )
+    assert futures == {}
+    assert calculation.chunk_results["probe"] == {(0, 0): 1, (1, 0): 2}
 
 
 @pytest.mark.parametrize(
@@ -237,6 +307,17 @@ def test_duplicate_initial_results_fail_before_starting_outputs(tmp_path):
             algo.calc_farm(outputs=outputs)
     assert all(not output.running and hasattr(output, "payload") for output in outputs)
     assert not algo.running
+
+
+def test_composed_initial_results_preserve_borrowed_plain_containers(tmp_path):
+    output = _SeededOutput(out_dir=tmp_path)
+    options = {"labels": ["wind speed"]}
+    dict.update(output.initial_results, options=options)
+    algo = _algorithm()
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        results = algo.calc_farm(outputs=[output, FarmResultsOutput()], ret_dict=True)
+    assert results["options"] is options
+    assert results["options"]["labels"] is options["labels"]
 
 
 @pytest.mark.parametrize("backend", ["numpy", "process"])

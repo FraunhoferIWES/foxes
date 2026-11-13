@@ -215,11 +215,11 @@ def main(argv=None):
             verbosity=max(args.verbosity - 1, 0),
         ).calc_outputs(
             outputs=foxes.models.outputs.FarmLayoutOutput(
-                operation="get_figure", parameters=dict()
+                operation="get_figure", parameters={"figsize": (8, 8)}
             )
         )
         plt.show()
-        plt.close(ax.get_figure(figsize=(8, 8)))
+        plt.close(ax.figure)
 
     engine = foxes.Engine.new(
         engine_type=args.engine,

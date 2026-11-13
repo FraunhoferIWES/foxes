@@ -217,6 +217,19 @@ Additional presets are ``state_turbine_map`` (power heat map),
 or curve scan states on the appropriate input before execution.
 ``plt`` is deliberately not a model-book entry; it is YAML-only.
 
+``support_rose_plot`` selects ``SupportWindRosePlotOutput`` for algorithms using
+``BinnedFieldData`` or ``BinnedPointCloudData``. It renders all native support
+points using their original ``WS``/``WD`` bin edges and percentage frequencies,
+without interpolation or scientific recalculation. Set ``plot=False`` for only
+the ``(point, WD, WS)`` frequency dataset. Plotting returns ``(figure, data)``;
+``plot_pars`` accepts ``ncols``, ``figsize``, ``title``, ``fig`` and polar ``axs``.
+Use ``to_file`` to save the figure during finalization. ``nofig=True`` disables
+image mode before initialization; it does not disable explicit numerical mode.
+
+Outputs without supplied scientific results or requested calculation points
+still enter the normal initial-result, running and finalization lifecycle.
+They do not dispatch scientific chunks.
+
 The binned power preset uses speed edges ``(0, 5, 10, 15, 20, 25)`` m/s.
 The slice families also support ``slice_data_<plane>_<reduction>``,
 ``slices_data_<plane>_<reduction>`` and

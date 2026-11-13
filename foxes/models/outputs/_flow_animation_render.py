@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from matplotlib.lines import Line2D
 
     from foxes.core import Algorithm
+    from foxes.utils import Dict
 
     from .flow_animations import FlowAnimation
 
@@ -122,18 +123,23 @@ def _grid_data(
 
 
 def _variable_options(
-    output: FlowAnimation, variable: str, values: dict[str, np.ndarray]
+    output: FlowAnimation,
+    variable: str,
+    values: dict[str, np.ndarray],
+    plot_pars: dict[str, Any] | None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path]:
     """Resolve one field's renderer parameters and output path.
 
     Parameters
     ----------
     output
-        Initialized animation with frozen path and plotting configuration.
+        Initialized animation supplying filename and projection configuration.
     variable
         Scientific field rendered into this animation file.
     values
         Available field arrays, used only to preserve their variable ordering.
+    plot_pars
+        Parent-owned plot options; ``None`` selects rendering defaults.
 
     Returns
     -------
@@ -144,7 +150,7 @@ def _variable_options(
     path
         Resolved filename with the variable appended to its stem.
     """
-    options = dict(output._plot_pars)
+    options = dict(plot_pars or {})
     options.setdefault("vlabel", get_data_info(variable)[1])
     parameters = dict(
         var=variable,
@@ -214,6 +220,7 @@ def _render_variable(
     algo: Algorithm,
     payload: dict[str, Any],
     variable: str,
+    output_results: Dict[str, Any],
     extra_generators: tuple[Callable[[Axes], Iterator[Any]], ...],
 ) -> None:
     """Save and optionally display one animation, closing its figure on failure.
@@ -228,12 +235,16 @@ def _render_variable(
         Parent-local prepared render data; scientific arrays remain read-only.
     variable
         Field whose name determines the file suffix.
+    output_results
+        Run-local results containing this animation's private rendering options.
     extra_generators
         Factories for synchronized artists on the shared flow axes.
     """
     import matplotlib.pyplot as plt
 
-    parameters, options, path = _variable_options(output, variable, payload["values"])
+    parameters, options, path = _variable_options(
+        output, variable, payload["values"], output_results[output.var("plot_pars")]
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     verbosity = algo.verbosity if output.verbosity is None else output.verbosity
     if verbosity > 0:
@@ -247,7 +258,9 @@ def _render_variable(
         )
     fig, ax = output._create_figure()
     try:
-        animator = output._create_animator(algo, payload["farm_dataset"], fig, ax)
+        animator = output._create_animator(
+            algo, payload["farm_dataset"], fig, ax, output_results
+        )
         for create_generator in extra_generators:
             animator.add_generator(create_generator(ax))
         animator.add_generator(
@@ -285,6 +298,7 @@ def render_flow_animation(
     output: FlowAnimation,
     algo: Algorithm,
     payload: dict[str, Any],
+    output_results: Dict[str, Any],
     extra_generators: tuple[Callable[[Axes], Iterator[Any]], ...] = (),
 ) -> None:
     """Render collected flow fields exclusively in parent-side finalization.
@@ -299,6 +313,8 @@ def render_flow_animation(
     payload
         Combined state-ordered field arrays, coordinates and overlay geometry.
         Arrays are borrowed, not copied or retained on the model.
+    output_results
+        Run-local results containing this animation's private rendering options.
     extra_generators
         Factories adding synchronized artists to every variable's animation.
 
@@ -315,6 +331,13 @@ def render_flow_animation(
         coords={FC.STATE: payload["states"]},
     )
     grid, gridded = _grid_data(output, payload)
-    prepared = {**payload, "farm_dataset": farm, "grid": grid, "gridded": gridded}
+    prepared = {
+        **payload,
+        "farm_dataset": farm,
+        "grid": grid,
+        "gridded": gridded,
+    }
     for variable in output._variables:
-        _render_variable(output, algo, prepared, variable, extra_generators)
+        _render_variable(
+            output, algo, prepared, variable, output_results, extra_generators
+        )

@@ -837,7 +837,9 @@ class Algorithm(Model):
         # set to running:
         data_stash: dict[str, Any] | None = {} if not clear_mem else None
         try:
-            model.set_running(self, data_stash, sel=None, verbosity=self.verbosity - 2)
+            model.set_running(
+                algo=self, data_stash=data_stash, sel=None, verbosity=self.verbosity - 2
+            )
             self.set_running(
                 algo=self, data_stash=data_stash, sel=None, verbosity=self.verbosity - 2
             )
@@ -860,8 +862,8 @@ class Algorithm(Model):
                 )
             if model.running:
                 model.unset_running(
-                    self,
-                    data_stash,
+                    algo=self,
+                    data_stash=data_stash,
                     sel=None,
                     verbosity=self.verbosity - 2,
                 )
@@ -923,7 +925,9 @@ class Algorithm(Model):
         # Include supplied calculation/output models in the point-run lifecycle.
         data_stash: dict[str, Any] = {}
         try:
-            model.set_running(self, data_stash, sel=sel, verbosity=self.verbosity - 2)
+            model.set_running(
+                algo=self, data_stash=data_stash, sel=sel, verbosity=self.verbosity - 2
+            )
             self.set_running(
                 algo=self, data_stash=data_stash, sel=None, verbosity=self.verbosity - 2
             )
@@ -946,8 +950,8 @@ class Algorithm(Model):
                 )
             if model.running:
                 model.unset_running(
-                    self,
-                    data_stash,
+                    algo=self,
+                    data_stash=data_stash,
                     sel=sel,
                     verbosity=self.verbosity - 2,
                 )

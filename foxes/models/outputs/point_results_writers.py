@@ -230,21 +230,27 @@ class PointResultsCountWriter(_ResultsCountWriter, PointResultsOutput):
         ValueError
             If any target slab or state chunk is incomplete.
         """
-        if output_results.pop(self._tiles_key):
+        if output_results.pop(self._tiles_key, {}):
+            output_results.pop(self.var("write_nc_pars"))
             raise ValueError(f"{self.name}: Missing point result chunks")
         super().finalize_results(
             algo, n_chunks_states, n_chunks_targets, output_results
         )
 
     def _submit_file(
-        self, engine: Engine, algo: Algorithm, fpath: Path, payload: _Results
+        self,
+        engine: Engine,
+        algo: Algorithm,
+        fpath: Path,
+        payload: _Results,
+        write_nc_pars: dict[str, Any],
     ) -> Any:
         payload = self._file_payload(payload)
         return engine.submit(
             _point_data_to_nc,
             fpath,
             payload,
-            {"verbosity": algo.verbosity, **self.write_nc_pars},
+            {"verbosity": algo.verbosity, **write_nc_pars},
         )
 
 

@@ -16,7 +16,6 @@ import foxes.variables as FV
 from foxes.core import Algorithm, LoadedData, States
 from foxes.input.states.field_data import FieldData
 
-from ._output import get_support_wind_roses_figure, write_support_wind_roses
 from ._reduction import _BinnedStateReduction
 
 
@@ -327,7 +326,7 @@ class BinnedFieldData(FieldData):
                 raise TypeError(f"States '{self.name}': Invalid binned data stash")
             self._binned.restore_worker_data(data)
 
-    def get_support_wind_rose_data(self, loaded_data: Any) -> xr.Dataset:
+    def get_support_wind_rose_data(self, loaded_data: LoadedData) -> xr.Dataset:
         """
         Build wind-rose frequencies at every regular-grid point.
 
@@ -338,7 +337,7 @@ class BinnedFieldData(FieldData):
 
         Returns
         -------
-        xarray.Dataset
+        data
             Frequencies in percent with dimensions ``(point, WD, WS)`` and
             flattened regular-grid support coordinates.
 
@@ -348,45 +347,3 @@ class BinnedFieldData(FieldData):
             If the histogram does not contain exactly ``WS`` and ``WD``.
         """
         return self._binned.support_wind_rose_data(self, loaded_data)
-
-    def get_support_wind_roses_figure(
-        self,
-        data: xr.Dataset,
-        **kwargs: Any,
-    ) -> Any:
-        """
-        Create one wind rose per support point on a single canvas.
-
-        Parameters
-        ----------
-        data
-            Dataset returned by :meth:`get_support_wind_rose_data`.
-        kwargs
-            Figure options accepted by the binned wind-rose renderer.
-
-        Returns
-        -------
-        matplotlib.figure.Figure
-            Figure containing the support-point wind roses.
-        """
-        return get_support_wind_roses_figure(data, **kwargs)
-
-    def write_support_wind_roses(
-        self,
-        file_name: str,
-        data: xr.Dataset,
-        **kwargs: Any,
-    ) -> None:
-        """
-        Write a support-point wind-rose canvas.
-
-        Parameters
-        ----------
-        file_name
-            Output image path.
-        data
-            Dataset returned by :meth:`get_support_wind_rose_data`.
-        kwargs
-            Figure options accepted by the binned wind-rose renderer.
-        """
-        write_support_wind_roses(file_name, data, **kwargs)

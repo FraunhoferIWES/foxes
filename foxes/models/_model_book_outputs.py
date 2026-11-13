@@ -61,6 +61,7 @@ def _populate_plot_outputs(book: ModelBook) -> None:
     """
     book.outputs["farm_layout"] = fm.outputs.FarmLayoutOutput(show=True)
     book.outputs["rose_plot"] = fm.outputs.RosePlotOutput(show=True)
+    book.outputs["support_rose_plot"] = fm.outputs.SupportWindRosePlotOutput(show=True)
     book.outputs["states_rose_plot"] = fm.outputs.StatesRosePlotOutput(
         point=(0.0, 0.0, 100.0), show=True
     )

@@ -95,6 +95,9 @@ Newly adopted consumers use the snake-case names `farm_layout`,
 `states` or `mean`. Names are selectors, not physical variable lists; constructor
 configuration remains on the selected output model.
 
+`support_rose_plot` selects `SupportWindRosePlotOutput` for native histogram
+frequencies at all regular-grid or scattered binned-state support points.
+
 The final adoption adds `state_turbine_map`, `state_turbine_table`,
 `point_calculator`, `rotor_point_plot` and `turbine_type_curves`.
 These names follow the same constructor-defined lifecycle. YAML `plt` is an
@@ -111,6 +114,10 @@ enable it. These flags do not rename result keys or alter retained payloads;
 disabled image outputs add no result.
 The calculation option `ret_dict=True` retains public result keys even for a
 single selected model with one result; it does not rename keys or change payloads.
+Each output names its own initial-result entries with `output.var(...)`, such as
+`output.var("plot_pars")`, and explicitly manages the corresponding stash fields.
+There is no shared attribute registry or ownership bundle. Finalization consumes
+these private keys rather than exposing them as public results.
 
 `FC.FARM_RESULTS` names the unaggregated in-memory farm dataset. Buffered writers
 use `model.var(FC.FARM_RESULTS)` as their private result key. A writer's file

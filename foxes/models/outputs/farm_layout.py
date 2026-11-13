@@ -73,7 +73,7 @@ class FarmLayoutOutput(DatasetOutput):
     def _farm_variables(self) -> tuple[str, ...]:
         """Select geometry only when read from results, plus the colour field."""
         fields = [FV.X, FV.Y, FV.H] if self.from_results else []
-        color = self.parameters.get("color_by")
+        color = self._color_by if self.running else self.parameters.get("color_by")
         if color is not None and color not in (FC.FARM, FC.CLUSTER):
             choice, _, variable = color.partition("_")
             fields.append(color)
@@ -83,6 +83,91 @@ class FarmLayoutOutput(DatasetOutput):
             if choice == "mean":
                 fields.append(FV.WEIGHT)
         return tuple(dict.fromkeys(fields))
+
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Retain layout options and supplied axes in initial results.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        model_data
+            Initial model dataset forwarded unchanged.
+        farm_data
+            Initial farm dataset forwarded unchanged.
+        point_data
+            Initial target dataset forwarded unchanged.
+        extra_data
+            Additional model inputs.
+
+        Returns
+        -------
+        output_results
+            Run-owned results borrowing this layout's original parameters.
+        """
+        results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+        dict.update(results, {self.var("parameters"): self.parameters})
+        return results
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Retain only the scientific colour selector in worker models.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Parent lifecycle stash for restoring the complete layout options.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        if not self.running:
+            self._color_by = self.parameters.get("color_by")
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name]["parameters"] = self.parameters
+        del self.parameters
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore the layout's original parameters after execution.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Owning lifecycle stash, or ``None`` for discarded parameters.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            self.parameters = data_stash[self.name].pop("parameters")
 
     def calculate(  # type: ignore[override]
         self,
@@ -165,7 +250,7 @@ class FarmLayoutOutput(DatasetOutput):
             If the color selection does not resolve a supported field/reduction.
         """
         compact: dict[str, Any] = {}
-        color = self.parameters.get("color_by")
+        color = self._color_by
         if color is not None and color not in (FC.FARM, FC.CLUSTER):
             choice, _, variable = color.partition("_")
             operation = {
@@ -267,6 +352,7 @@ class FarmLayoutOutput(DatasetOutput):
         """
         from xarray import Dataset
 
+        parameters = output_results.pop(self.var("parameters"))
         chunks = output_results.pop(self.var("data"), {})
         ordered = [chunks[key] for key in sorted(chunks)]
         fields: dict[str, Any] = {}
@@ -284,7 +370,7 @@ class FarmLayoutOutput(DatasetOutput):
             fields.update(
                 {v: ((FC.TURBINE,), d) for v, d in geometry[position].items()}
             )
-        color = self.parameters.get("color_by")
+        color = parameters.get("color_by")
         if ordered and "color" in ordered[0]:
             if color is None:
                 raise ValueError(f"{self.name}: Colour statistics require color_by")
@@ -304,9 +390,11 @@ class FarmLayoutOutput(DatasetOutput):
             else None
         )
         _set_units(data, power_unit)
-        output_results[self.result_name] = self.process(algo, data)
+        output_results[self.result_name] = self.process(algo, data, parameters)
 
-    def process(self, algo: Algorithm, data: Dataset) -> Any:
+    def process(
+        self, algo: Algorithm, data: Dataset, parameters: dict[str, Any]
+    ) -> Any:
         """Render or export the configured layout from run-local inputs.
 
         Parameters
@@ -315,6 +403,8 @@ class FarmLayoutOutput(DatasetOutput):
             Algorithm owning the farm and turbine metadata.
         data
             Turbine-only selected geometry and globally reduced colour fields.
+        parameters
+            Layout operation options, including caller-supplied axes.
 
         Returns
         -------
@@ -346,9 +436,7 @@ class FarmLayoutOutput(DatasetOutput):
             )
         if self.from_results and (not data.data_vars or self.results_state is None):
             raise ValueError(f"{self.name}: Supply farm results and results_state")
-        result = operations[self.operation](
-            algo.farm, data, algo, self, **self.parameters
-        )
+        result = operations[self.operation](algo.farm, data, algo, self, **parameters)
         if self.operation == "get_figure":
             self._show_figures()
         return result

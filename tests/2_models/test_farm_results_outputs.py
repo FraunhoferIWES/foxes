@@ -86,7 +86,7 @@ def test_farm_collection_uses_only_first_or_unindexed_point_chunk(
 def _run(output, algo, labels, chunk_sizes, batched=False):
     """Feed chunks incrementally or in one ordered engine update."""
     # Accumulate result-name keyed payloads as the pool engine does.
-    results = foxes.utils.Dict()
+    results = output.get_initial_output_results(algo)
     pending = foxes.utils.Dict()
     start = 0
     for index, size in enumerate(chunk_sizes):

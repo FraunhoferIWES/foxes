@@ -16,6 +16,8 @@ from ._result_data import _Results
 from ._units import _normalize_farm_power, _power_unit, _set_units
 
 if TYPE_CHECKING:
+    from xarray import Dataset
+
     from foxes.core import Algorithm, FData, MData, TData
     from foxes.core.model import LoadedData
 
@@ -31,6 +33,90 @@ class RoseOutput(DatasetOutput):
     point: int
     variable: str
     add_inf: bool
+    plot_pars: dict[str, Any]
+
+    def get_initial_output_results(
+        self,
+        algo: Algorithm,
+        model_data: Dataset | None = None,
+        farm_data: Dataset | None = None,
+        point_data: Dataset | None = None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Retain this rose's plotting options in its initial results.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        model_data
+            Initial model dataset forwarded to the base hook.
+        farm_data
+            Initial farm dataset forwarded to the base hook.
+        point_data
+            Initial target dataset forwarded to the base hook.
+        extra_data
+            Additional model inputs forwarded unchanged.
+
+        Returns
+        -------
+        output_results
+            Run-owned results borrowing the original plotting options.
+        """
+        results = super().get_initial_output_results(
+            algo, model_data, farm_data, point_data, extra_data
+        )
+        dict.update(results, {self.var("plot_pars"): self.plot_pars})
+        return results
+
+    def set_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Stash this rose's plotting options before worker serialization.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Lifecycle stash preserving the original options, or ``None``.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().set_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            data_stash[self.name]["plot_pars"] = self.plot_pars
+        del self.plot_pars
+
+    def unset_running(
+        self,
+        algo: Algorithm,
+        data_stash: dict[str, dict[str, Any]] | None,
+        sel: dict[str, Any] | None = None,
+        verbosity: int = 0,
+    ) -> None:
+        """Restore this rose's original plotting options after execution.
+
+        Parameters
+        ----------
+        algo
+            Calculation algorithm.
+        data_stash
+            Owning stash, or ``None`` when the options were discarded.
+        sel
+            Engine state selection.
+        verbosity
+            Lifecycle verbosity.
+        """
+        super().unset_running(algo, data_stash, sel, verbosity)
+        if data_stash is not None:
+            self.plot_pars = data_stash[self.name].pop("plot_pars")
 
     def initialize(
         self,
@@ -432,4 +518,4 @@ class RoseOutput(DatasetOutput):
             else None
         )
         _set_units(data, power_unit)
-        output_results[self.result_name] = self.process(algo, data)
+        output_results[self.result_name] = self.process(algo, data, output_results)

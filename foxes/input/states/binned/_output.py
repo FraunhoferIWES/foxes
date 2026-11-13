@@ -1,117 +1,14 @@
-"""Create and render support-point wind roses for binned states.
+"""Convert native binned-state weights into support-point frequencies.
 
-The functions in this module convert sparse Cartesian ``WD``/``WS`` bin
-weights into a dense wind-rose dataset and render one polar plot per support
-location. They are shared by regular-grid and scattered-support states.
+Regular-grid and scattered-support states share this numerical conversion.
+Rendering belongs to lifecycle-managed output models.
 """
-
-from typing import Any
 
 import numpy as np
 import xarray as xr
 
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.utils import plot_wind_rose_bars
-
-
-def get_support_wind_roses_figure(
-    data: xr.Dataset,
-    *,
-    ncols: int = 4,
-    figsize: tuple[float, float] | None = None,
-    title: str | None = None,
-) -> Any:
-    """
-    Create one wind rose per support point on a single canvas.
-
-    Parameters
-    ----------
-    data
-        Wind-rose dataset returned by :func:`wind_rose_dataset`.
-    ncols
-        Maximum number of polar axes per row.
-    figsize
-        Figure size in inches. If ``None``, derive it from the number of
-        support points and columns.
-    title
-        Optional figure title.
-
-    Returns
-    -------
-    matplotlib.figure.Figure
-        Figure containing one polar wind rose per support point.
-    """
-    import matplotlib.pyplot as plt
-
-    support = np.asarray(data["support"])
-    frequencies = data["frequency"].to_numpy()
-    wd_edges = np.asarray(data.attrs[f"{FV.WD}_bounds"])
-    n_points = support.shape[0]
-    ncols = max(1, min(ncols, n_points))
-    nrows = int(np.ceil(n_points / ncols))
-    if figsize is None:
-        figsize = (4.0 * ncols, 4.0 * nrows)
-    fig, axes = plt.subplots(
-        nrows,
-        ncols,
-        figsize=figsize,
-        squeeze=False,
-        subplot_kw={"projection": "polar"},
-    )
-    for point_i, point in enumerate(support):
-        ax = axes.flat[point_i]
-        plot_wind_rose_bars(
-            ax,
-            frequencies[point_i],
-            wd_edges,
-            cmap="viridis",
-        )
-        ax.set_title(f"x={point[0]:.0f}, y={point[1]:.0f}, h={point[2]:.0f}")
-
-    for ax in axes.flat[n_points:]:
-        ax.set_visible(False)
-    if title is not None:
-        fig.suptitle(title)
-    fig.tight_layout()
-    return fig
-
-
-def write_support_wind_roses(
-    file_name: str,
-    data: xr.Dataset,
-    *,
-    ncols: int = 4,
-    figsize: tuple[float, float] | None = None,
-    title: str | None = None,
-) -> None:
-    """
-    Write a support-point wind-rose canvas to a file.
-
-    Parameters
-    ----------
-    file_name
-        Output image path accepted by :meth:`matplotlib.figure.Figure.savefig`.
-    data
-        Wind-rose dataset returned by :func:`wind_rose_dataset`.
-    ncols
-        Maximum number of polar axes per row.
-    figsize
-        Figure size in inches. If ``None``, derive it from the number of
-        support points and columns.
-    title
-        Optional figure title.
-    """
-    import matplotlib.pyplot as plt
-
-    fig = get_support_wind_roses_figure(
-        data,
-        ncols=ncols,
-        figsize=figsize,
-        title=title,
-    )
-    fig.savefig(file_name, bbox_inches="tight")
-    plt.close(fig)
 
 
 def wind_rose_dataset(
@@ -144,7 +41,7 @@ def wind_rose_dataset(
 
     Returns
     -------
-    xarray.Dataset
+    data
         Frequencies in percent with dimensions ``(point, WD, WS)``, explicit
         support coordinates, bin centers, and bin-edge attributes.
 

@@ -50,6 +50,8 @@ all of them.
 | [0036](0036-domain-total-keys.md) | Accepted; supersedes shared farm/point total keys in 0034 and 0035 | Use distinct farm and point total keys, including state means, so both results compose without ambiguity. |
 | [0037](0037-keyed-example-outputs.md) | Accepted | Offer opt-in keyed calculation returns; split monolithic example results from subsequent outputs and omit image-only scientific work under nofig. |
 | [0038](0038-engine-calculation-lifecycle.md) | Accepted | Centralize calculation lifecycle in Engine, with abstract backend hooks and per-call resource ownership for PoolEngine and DefaultEngine. |
+| [0039](0039-parent-owned-output-rendering.md) | Superseded by [0040](0040-explicit-output-data-lifecycle.md) | Transfer rendering options and caller-owned figures/axes through initial results, remove them from running outputs, and pass them explicitly to parent-side renderers. |
+| [0040](0040-explicit-output-data-lifecycle.md) | Accepted | Let each output explicitly manage named initial results and stash fields, without a generic attribute registry or ownership bundle; use the normal lifecycle for metadata and native support roses. |
 
 ## When To Add An ADR
 

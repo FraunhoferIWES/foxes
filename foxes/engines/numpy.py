@@ -6,9 +6,7 @@ from .threads import ThreadsEngine, ThreadsEngineRunner
 
 
 class NumpyEngine(ThreadsEngine):
-    """
-    The numpy engine for foxes calculations.
-    """
+    """Execute NumPy chunks synchronously in the calling process."""
 
     def _create_pool(self) -> None:
         """Synchronous execution needs no worker resources."""
@@ -18,13 +16,12 @@ class NumpyEngine(ThreadsEngine):
 
     def submit(self, f: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """
-        Submits a job to worker, obtaining a future
+        Execute a chunk immediately and return its completed result.
 
         Parameters
         ----------
         f
-            The function f(*args, **kwargs) to be
-            submitted
+            Function called synchronously as ``f(*args, **kwargs)``.
         args
             Arguments for the function
         kwargs
@@ -33,7 +30,7 @@ class NumpyEngine(ThreadsEngine):
         Returns
         -------
         future
-            The future object
+            Completed-result mapping consumed by the engine's collection loop.
 
         """
         return {"result": f(*args, **kwargs), "done": True}
@@ -101,6 +98,16 @@ class NumpyEngine(ThreadsEngine):
 
         """
         return [func(input, *args, **kwargs) for input in inputs]
+
+    def _get_execution_description(self) -> str:
+        """Describe synchronous chunk execution for calculation progress.
+
+        Returns
+        -------
+        description
+            Loop-based execution without worker resources.
+        """
+        return "a loop over chunks"
 
     def get_start_calc_message(
         self,

@@ -330,9 +330,13 @@ class PointCalculator(DatasetOutput):
             )
         from xarray import concat
 
-        output_results[self.result_name] = self.process(algo, concat(tiles, FC.POINT))
+        output_results[self.result_name] = self.process(
+            algo, concat(tiles, FC.POINT), output_results
+        )
 
-    def process(self, algo: Algorithm, data: Dataset) -> Dataset:
+    def process(
+        self, algo: Algorithm, data: Dataset, output_results: Dict[str, Any]
+    ) -> Dataset:
         """Return point fields with compact coordinates and optionally write once.
 
         Parameters
@@ -341,6 +345,8 @@ class PointCalculator(DatasetOutput):
             Executing algorithm; no additional science is performed.
         data
             State-resolved point fields or merged weighted means.
+        output_results
+            Run-owned output results; unused by numerical point outputs.
 
         Returns
         -------

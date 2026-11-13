@@ -1,8 +1,11 @@
+from threading import Event
+
 import numpy as np
+import pytest
 import xarray as xr
 
 from foxes.core import MData, FData
-from foxes.engines.dask import DaskProcessRunner, LocalClusterEngine
+from foxes.engines.dask import DaskEngine, DaskProcessRunner, LocalClusterEngine
 
 
 class _DummyAlgo:
@@ -64,6 +67,20 @@ class _FakeClient:
 
     def __del__(self):
         return None
+
+
+def test_dask_result_iteration_keeps_lazy_tasks_concurrent():
+    pytest.importorskip("dask")
+    engine = DaskEngine(n_procs=3, verbosity=0, dask_config={"scheduler": "threads"})
+    started = [Event(), Event()]
+
+    def task(index):
+        started[index].set()
+        assert started[1 - index].wait(5), "Lazy tasks were scheduled separately"
+        return index
+
+    futures = [engine.submit(task, index) for index in range(2)]
+    assert list(engine.iter_results(futures)) == [0, 1]
 
 
 def test_local_cluster_submit_futureizes_large_arrays(monkeypatch):
