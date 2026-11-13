@@ -17,7 +17,10 @@ if TYPE_CHECKING:
 
 
 class RotorPointPlot(DatasetOutput):
-    """Render the executing algorithm's initialized rotor design and weights."""
+    """Render the executing algorithm's initialized rotor design and weights.
+
+    Configure rotor rendering without capturing a model or algorithm.
+    """
 
     def _creates_figures(self) -> bool:
         """Keep quadrature metadata available in numerical mode."""
@@ -31,8 +34,7 @@ class RotorPointPlot(DatasetOutput):
         write_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure rotor rendering without capturing a model or algorithm.
-
+        """
         Parameters
         ----------
         plot

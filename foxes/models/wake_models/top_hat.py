@@ -17,13 +17,9 @@ if TYPE_CHECKING:
 
 
 class TopHatWakeModel(AxisymmetricWakeModel):
-    """
-    Abstract base class for top-hat wake models.
+    """Abstract base class for top-hat wake models.
 
-    Parameters
-    ----------
-    induction
-        The induction model
+    Configure the top-hat wake and its axial-induction model.
     """
 
     def __init__(
@@ -33,11 +29,12 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         Parameters
         ----------
         args
-            Additional parameters for the base class
+            Positional parameters for ``AxisymmetricWakeModel``.
         induction
-            The induction model
+            An axial-induction model instance or a name in
+            ``ModelBook.axial_induction``, resolved during initialization.
         kwargs
-            Additional parameters for the base class
+            Additional keyword parameters for ``AxisymmetricWakeModel``.
         """
         super().__init__(*args, **kwargs)
         self.induction = induction

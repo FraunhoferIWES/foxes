@@ -182,7 +182,7 @@ class DaskProcessRunner(ProcessEngineRunner):
     def run(
         self,
         algo: Algorithm,
-        model: DataCalcModel,
+        model: DataCalcModel | None,
         mdata: MData,
         fdata: FData,
         tdata: TData | None = None,
@@ -202,7 +202,7 @@ class DaskProcessRunner(ProcessEngineRunner):
         algo
             Algorithm copied locally to isolate tasks sharing a worker process.
         model
-            Initialized scientific model to execute.
+            Initialized scientific model, or ``None`` for output-only chunks.
         mdata
             Chunk model data whose shared arrays and futures are resolved in place.
         fdata
@@ -246,7 +246,9 @@ class DaskProcessRunner(ProcessEngineRunner):
         fdata, _ = self._apply_prev_farm_results(algo, mdata, fdata)
 
         model_results: dict[str, Any] | None
-        if tdata is None:
+        if model is None:
+            model_results = None
+        elif tdata is None:
             model_results = model.calculate(algo, mdata, fdata, **cpars)
         else:
             model_results = model.calculate(algo, mdata, fdata, tdata, **cpars)

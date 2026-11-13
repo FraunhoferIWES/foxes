@@ -130,7 +130,7 @@ def main(argv=None):
         "--outputs",
         help="The post-processing output models",
         nargs="+",
-        default=["create_turbine_gif"],
+        default=[],  # try create_turbine_gif or create_turbine_mp4
     )
     parser.add_argument(
         "-v",

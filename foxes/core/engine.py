@@ -791,9 +791,10 @@ class Engine(ABC):
         algo
             The algorithm object.
         model
-            The model whose ``calculate`` method should be executed. ``None``
-            runs only initial results and parent-side output finalization,
-            without dispatching scientific chunks or allocating worker resources.
+            Scientific model to execute. ``None`` processes supplied results
+            without scientific calculation, dispatching chunks only if the
+            output requires them. Without supplied farm or point data, only
+            initial results and parent-side finalization run.
         model_data
             The initial model data.
         farm_data
@@ -810,6 +811,7 @@ class Engine(ABC):
             failure. ``None`` starts empty.
         sel
             Coordinate subsets passed to backend selection and output hooks.
+            Output-only calls select supplied datasets before initial results.
         iterative
             Whether this calculation is an iterative algorithm pass.
         progress_label
@@ -828,6 +830,18 @@ class Engine(ABC):
         rollback: in-place mutations to shared caches can survive failures.
         Backend cleanup precedes output restoration and cache reattachment.
         """
+        # Select borrowed output-only inputs before their initial-result hooks.
+        backend_sel = sel
+        if model is None and (farm_data is not None or point_data is not None):
+            (model_data, farm_data, point_data), _ = self.select_subsets(
+                model_data,
+                farm_data,
+                point_data,
+                sel=sel,
+                default_n_states=algo.n_states,
+            )
+            backend_sel = None
+
         # Reject invalid outputs before taking ownership of their lifecycle.
         if output is not None:
             if not output.initialized:
@@ -861,7 +875,11 @@ class Engine(ABC):
                     output.set_running(
                         algo, output_data_stash, sel=sel, verbosity=self.verbosity - 2
                     )
-                if model is not None:
+                if model is not None or (
+                    output is not None
+                    and output.requires_chunk_calculation
+                    and (farm_data is not None or point_data is not None)
+                ):
                     results = self._run_calculation(
                         calculation,
                         algo,
@@ -872,7 +890,7 @@ class Engine(ABC):
                         point_data,
                         extra_data=extra_data,
                         output=output,
-                        sel=sel,
+                        sel=backend_sel,
                         iterative=iterative,
                         progress_label=progress_label,
                         **calc_pars,
@@ -919,7 +937,7 @@ class Engine(ABC):
         self,
         calculation: _Calculation,
         algo: Algorithm,
-        model: DataCalcModel,
+        model: DataCalcModel | None,
         results: Dict[str, Any],
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
@@ -942,7 +960,7 @@ class Engine(ABC):
         algo
             Running calculation algorithm.
         model
-            Initialized scientific model.
+            Initialized scientific model, or ``None`` for output-only chunks.
         results
             Initial output results mapping, updated in place and returned.
         model_data
@@ -1037,7 +1055,7 @@ class Engine(ABC):
     def _prepare_calculation_inputs(
         self,
         algo: Algorithm,
-        model: DataCalcModel,
+        model: DataCalcModel | None,
         model_data: Dataset | None,
         farm_data: Dataset | None,
         point_data: Dataset | None,
@@ -1051,7 +1069,8 @@ class Engine(ABC):
         algo
             Algorithm supplying the fallback state count.
         model
-            Scientific model whose initialization is checked.
+            Scientific model whose initialization is checked, or ``None`` for
+            output-only processing.
         model_data
             Required model dataset.
         farm_data
@@ -1109,7 +1128,7 @@ class Engine(ABC):
     def _validate_calculation(
         self,
         algo: Algorithm,
-        model: DataCalcModel,
+        model: DataCalcModel | None,
         model_data: Dataset | None,
         farm_data: Dataset | None,
         point_data: Dataset | None,
@@ -1131,7 +1150,7 @@ class Engine(ABC):
             self.print(
                 f"{self.name}: Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states using {execution}"
             )
-        if not model.initialized:
+        if model is not None and not model.initialized:
             raise ValueError(f"Model '{model.name}' not initialized")
 
     @classmethod

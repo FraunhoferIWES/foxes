@@ -34,12 +34,20 @@ class TurbineEvaluation(TurbineModel):
     Zero power gives zero efficiency, including when ambient power is zero;
     nonzero power over zero ambient power gives positive infinity.
 
+    Configure the turbine performance metrics.
+
     Attributes
     ----------
     variables
         Configured output variable names, copied at construction.
     power_uncert
         Relative power uncertainty used for P75/P90 yields.
+
+    Raises
+    ------
+    ValueError
+        If a variable is unsupported, uncertainty is invalid, or a
+        requested P75/P90 metric has no uncertainty.
     """
 
     BASE_VARIABLES = _BASE_VARIABLES
@@ -53,8 +61,7 @@ class TurbineEvaluation(TurbineModel):
         power_uncert: float | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure the turbine performance metrics.
-
+        """
         Parameters
         ----------
         variables
@@ -69,12 +76,6 @@ class TurbineEvaluation(TurbineModel):
             Required when requesting P75/P90, including ambient variants.
         kwargs
             Additional keyword arguments passed to the base class.
-
-        Raises
-        ------
-        ValueError
-            If a variable is unsupported, uncertainty is invalid, or a
-            requested P75/P90 metric has no uncertainty.
         """
         # Own the configuration instead of retaining the caller's mutable list.
         super().__init__(**kwargs)

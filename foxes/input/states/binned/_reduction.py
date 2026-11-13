@@ -37,8 +37,7 @@ if TYPE_CHECKING:
 
 
 class _BinnedStateReduction:
-    """
-    Prepare binned datasets for native field or point-cloud states.
+    """Prepare binned datasets for native field or point-cloud states.
 
     The helper accepts either source states that still need reduction or an
     existing binned artifact. It owns histogram definitions, sparse-bin
@@ -50,6 +49,8 @@ class _BinnedStateReduction:
     weights and optional diagnostics use ``(state, x, y, height)``;
     point-cloud weights and diagnostics use ``(state, point)``. In both cases,
     ``state`` labels are flat Cartesian-bin indices.
+
+    Initialize the reduction configuration.
     """
 
     def __init__(
@@ -68,8 +69,6 @@ class _BinnedStateReduction:
         nan_threshold: float,
     ) -> None:
         """
-        Initialize the reduction configuration.
-
         Parameters
         ----------
         states

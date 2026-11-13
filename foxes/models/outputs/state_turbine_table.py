@@ -1,9 +1,10 @@
-"""Selected state/turbine tables assembled from private chunk payloads."""
+"""Selected state/turbine tables from supplied results or chunk payloads."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 from xarray import Dataset
 
 import foxes.constants as FC
@@ -11,13 +12,18 @@ import foxes.variables as FV
 from foxes.utils import Dict, write_nc
 
 from ._dataset_output import DatasetOutput
+from ._units import _normalize_farm_power, _set_units
 
 if TYPE_CHECKING:
     from foxes.core import Algorithm
+    from ._result_data import _Results
 
 
 class StateTurbineTable(DatasetOutput):
-    """Collect selected farm fields without retaining a farm dataset."""
+    """Select supplied farm fields directly, or collect fresh scientific chunks.
+
+    Configure table selection, naming and optional NetCDF writing.
+    """
 
     def __init__(
         self,
@@ -30,8 +36,7 @@ class StateTurbineTable(DatasetOutput):
         write_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure table selection, naming and optional NetCDF writing.
-
+        """
         Parameters
         ----------
         variables
@@ -53,7 +58,8 @@ class StateTurbineTable(DatasetOutput):
             Private result naming, ``aggregate_turbines``, ``aggregate_states``
             and common output options. Reductions run on workers before table
             formatting. Select input states through ``calc_outputs(states_sel=...)``
-            before reducing their dimension.
+            before reducing their dimension. Without reductions, supplied farm
+            results are formatted directly on the parent without engine chunks.
         """
         fields = [FV.P, FV.REWS] if variables is None else list(variables)
         if not fields or any(not isinstance(v, str) or not v for v in fields):
@@ -66,6 +72,17 @@ class StateTurbineTable(DatasetOutput):
         self.transpose = transpose
         self.to_file = to_file
         self.write_pars = {} if write_pars is None else dict(write_pars)
+
+    @property
+    def requires_chunk_calculation(self) -> bool:
+        """Whether this table needs chunk reductions of supplied results.
+
+        Returns
+        -------
+        required
+            ``True`` for turbine or state aggregation; otherwise ``False``.
+        """
+        return bool(self.aggregate_turbines or self.aggregate_states)
 
     def get_initial_output_results(
         self,
@@ -84,7 +101,8 @@ class StateTurbineTable(DatasetOutput):
         model_data
             Initial model dataset passed to the base output hook.
         farm_data
-            Initial farm dataset passed to the base output hook.
+            Selected initial farm dataset, borrowed for parent-only processing
+            when no aggregation is requested.
         point_data
             Initial target dataset, or ``None`` for farm calculations.
         extra_data
@@ -94,7 +112,8 @@ class StateTurbineTable(DatasetOutput):
         -------
         output_results
             Run-local results containing this table's private selection and
-            writing keys, each referencing its original configuration object.
+            writing keys, each referencing its original configuration object,
+            and any supplied farm dataset needed for parent-only processing.
         """
         output_results = super().get_initial_output_results(
             algo, model_data, farm_data, point_data, extra_data
@@ -110,6 +129,8 @@ class StateTurbineTable(DatasetOutput):
                 self.var("write_pars"): self.write_pars,
             },
         )
+        if not self.requires_chunk_calculation and farm_data is not None:
+            output_results[self.var("farm_data")] = farm_data
         return output_results
 
     def set_running(
@@ -173,6 +194,58 @@ class StateTurbineTable(DatasetOutput):
     def _farm_variables(self) -> tuple[str, ...]:
         """Select only the fields needed by this table's worker payload."""
         return self.fields
+
+    def finalize_results(
+        self,
+        algo: Algorithm,
+        n_chunks_states: int,
+        n_chunks_targets: int,
+        output_results: Dict[str, Any],
+    ) -> None:
+        """Format supplied fields directly unless fresh chunks were collected.
+
+        Parameters
+        ----------
+        algo
+            Running algorithm supplying turbine units and verbosity.
+        n_chunks_states
+            Number of state chunks, zero for entirely parent-only execution.
+        n_chunks_targets
+            Number of target chunks.
+        output_results
+            Run-local mapping containing borrowed data and formatting options.
+            Private entries are consumed; the public table uses ``result_name``.
+        """
+        farm_data = output_results.pop(self.var("farm_data"), None)
+        if farm_data is None or output_results.get(self.var("data")):
+            super().finalize_results(
+                algo, n_chunks_states, n_chunks_targets, output_results
+            )
+            return
+
+        # Reuse power conversion without copying or mutating borrowed arrays.
+        output_results.pop(self.var("data"), None)
+        data = farm_data[[v for v in self.fields if v in farm_data]].copy(deep=False)
+        payload: _Results = {
+            "coords": {
+                FC.TURBINE: (
+                    farm_data.get_index(FC.TURBINE).to_numpy()
+                    if FC.TURBINE in farm_data.dims
+                    else np.arange(algo.n_turbines)
+                )
+            },
+            "data_vars": {
+                str(k): (tuple(str(d) for d in v.dims), v.values)
+                for k, v in data.data_vars.items()
+            },
+            "attrs": dict(data.attrs),
+        }
+        _normalize_farm_power(payload, algo, farm_data)
+        for variable, (dims, values) in payload["data_vars"].items():
+            data[variable] = (dims, values, dict(data[variable].attrs))
+        data.attrs.update(payload["attrs"])
+        _set_units(data)
+        output_results[self.result_name] = self.process(algo, data, output_results)
 
     def _table(self, data: Dataset, output_results: Dict[str, Any]) -> Dataset:
         """Validate fields and apply external names, dimension order and selection."""

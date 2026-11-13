@@ -10,6 +10,27 @@ the output's ``update_results()`` and ``finalize_results()`` hooks unify them.
 ``OutputList`` composes models in declaration order and merges their required
 input variables.
 
+Processing supplied results
+---------------------------
+``Output.requires_chunk_calculation`` defaults to ``True``. Outputs override
+this read-only property with ``False`` when their initial-result and
+parent-side finalization hooks can process supplied data directly.
+``calc_outputs`` never calls ``calc_farm`` for supplied farm fields without
+requested point calculations; the engine runs only the required output work.
+
+``StateTurbineTable`` without aggregation formats supplied farm results directly
+on the parent, including field selection, power-unit normalization, renaming,
+transposition and optional NetCDF writing. It does not dispatch chunks or copy
+unchanged scientific arrays, and does not mutate the supplied dataset.
+State selection is applied before the initial-result hook. Tables configured
+with ``aggregate_turbines`` or ``aggregate_states`` retain chunk reductions.
+
+``OutputList`` requests chunks when any child needs them, but skips parent-only
+children during output-only chunk evaluation. Every child retains the normal
+initialization, running, finalization and restoration lifecycle. Fresh scientific
+calculations still collect every selected output from chunks, regardless of
+this property. ``model_results=None`` identifies output-only chunks.
+
 Constructor-defined consumers
 -----------------------------
 ``FarmLayoutOutput``, ``SliceData``, ``SlicesData``,

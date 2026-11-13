@@ -29,6 +29,10 @@ Document every public:
 - abstract or protected extension hook that downstream subclasses are expected
 	to implement or call.
 
+Constructor docstrings contain only their `Parameters` section. Constructors
+without parameters other than `self` omit their docstring; their behavior is
+documented on the class.
+
 A symbol is public when it is exported by a package, documented as an extension
 contract, used by examples or configuration, or intentionally available to
 downstream callers without a private underscore prefix. Public model-book names,
@@ -55,7 +59,9 @@ not add empty narration to a trivial private helper.
 
 ## Structure And Style
 
-Use triple double quotes. Start with a concise one-line summary:
+Use triple double quotes. Except for `__init__`, start with a concise one-line
+summary. Constructor docstrings start directly with `Parameters` and contain
+no summary, other prose or other sections.
 
 - Use an imperative verb for an operation: "Calculate farm results."
 - Use a noun phrase for a class, property, or exposed value: "The active engine."
@@ -140,8 +146,11 @@ state.
 
 Class prose explains the concept and invariants. Constructor arguments belong
 in the `__init__` docstring, following the established AutoAPI configuration
-that combines class and constructor content. Do not duplicate constructor
-parameters in the class docstring.
+that combines class and constructor content. The `__init__` docstring contains
+only the `Parameters` section and its parameter descriptions, with no summary
+or other text. All constructor behavior, explanatory prose and other sections,
+including `Raises`, `Notes` and `Examples`, belong in the top-level class
+docstring. Do not duplicate constructor parameters there.
 
 ## Returns And Yields
 
@@ -360,8 +369,7 @@ class ExampleModel(Model):
     """A model that calculates an example FOXES quantity."""
 
     def __init__(self, variable: str, scale: float = 1.0) -> None:
-        """Initialize the example model.
-
+        """
         Parameters
         ----------
         variable
@@ -394,6 +402,8 @@ Before closing a change that touches a public API, confirm:
 
 - [ ] The summary describes the current public contract.
 - [ ] Signature names and docstring parameter names match exactly.
+- [ ] Constructor docstrings contain only `Parameters`; all other constructor
+      prose and sections appear on the class.
 - [ ] Annotations contain types; prose does not duplicate them.
 - [ ] Units, dimensions, `FC` axes, `FV` variables, and ordering are explicit.
 - [ ] Mutation, lifecycle, chunking, caching, and optional dependencies are

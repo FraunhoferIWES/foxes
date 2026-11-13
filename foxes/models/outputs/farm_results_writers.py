@@ -21,7 +21,15 @@ from .farm_results import FarmResultsOutput
 
 
 class FarmResultsCountWriter(_ResultsCountWriter, FarmResultsOutput):
-    """Farm files with a fixed state limit, independent of engine chunk sizes."""
+    """Farm files with a fixed state limit, independent of engine chunk sizes.
+
+    Configure count-limited farm files.
+
+    Raises
+    ------
+    ValueError
+        If ``n_states_per_file`` is not a positive integer.
+    """
 
     _RESULTS = FC.FARM_RESULTS
 
@@ -32,8 +40,7 @@ class FarmResultsCountWriter(_ResultsCountWriter, FarmResultsOutput):
         write_nc_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure count-limited farm files.
-
+        """
         Parameters
         ----------
         base_name
@@ -46,11 +53,6 @@ class FarmResultsCountWriter(_ResultsCountWriter, FarmResultsOutput):
         kwargs
             Field selection, ``aggregate_turbines``, ``aggregate_states``,
             metadata and path options for ``FarmResultsOutput``.
-
-        Raises
-        ------
-        ValueError
-            If ``n_states_per_file`` is not a positive integer.
         """
         super().__init__(
             base_name, n_states_per_file, write_nc_pars=write_nc_pars, **kwargs
@@ -120,7 +122,10 @@ class FarmResultsCountWriter(_ResultsCountWriter, FarmResultsOutput):
 
 
 class FarmResultsChunkWriter(FarmResultsOutput):
-    """One NetCDF file per engine state chunk, without a returned dataset."""
+    """One NetCDF file per engine state chunk, without a returned dataset.
+
+    Configure per-chunk farm files.
+    """
 
     def __init__(
         self,
@@ -128,8 +133,7 @@ class FarmResultsChunkWriter(FarmResultsOutput):
         write_nc_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure per-chunk farm files.
-
+        """
         Parameters
         ----------
         base_name

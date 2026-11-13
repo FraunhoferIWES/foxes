@@ -1320,8 +1320,10 @@ class Downwind(Algorithm):
             output must request identical calculation points.
         farm_results
             Precomputed farm fields in original turbine order on
-            ``(FC.STATE, FC.TURBINE)``. These are collected without rerunning farm
-            physics. Missing state coordinates are filled from ``self.states``.
+            ``(FC.STATE, FC.TURBINE)``. No farm physics is rerun. Outputs whose
+            ``requires_chunk_calculation`` is false process these on the parent;
+            other outputs use engine chunks. Missing state coordinates are
+            filled from ``self.states``.
             If absent and an output requests points, all required farm fields
             are calculated first.
         point_results
@@ -1407,20 +1409,26 @@ class Downwind(Algorithm):
 
         # run calculation:
         if farm_results is not None and points is None and point_results is None:
-            # Run only output collection on already farm-ordered arrays.
-            mlist = FarmDataModelList()
-            self.init_model(mlist)
+            # Keep loaded algorithm data off workers during output-only execution.
             model_data, extra_data = self.get_model_data(pop=clear_mem)
-            results = super().calc_farm(
-                mlist,
-                model_data,
-                farm_data=farm_results,
-                extra_data=extra_data,
-                output=output,
-                sel=None if states_sel is None else {FC.STATE: states_sel},
-                clear_mem=clear_mem,
-                **kwargs,
-            )
+            data_stash: dict[str, Any] | None = {} if not clear_mem else None
+            kwargs.setdefault("progress_label", f"{self.name}.calc_outputs")
+            try:
+                self.set_running(self, data_stash, verbosity=self.verbosity - 2)
+                results = launch_parallel_calc(
+                    self,
+                    model=None,
+                    model_data=model_data,
+                    farm_data=farm_results,
+                    extra_data=extra_data,
+                    output=output,
+                    chunk_store=self.chunk_store,
+                    sel=None if states_sel is None else {FC.STATE: states_sel},
+                    **kwargs,
+                )
+            finally:
+                if self.running:
+                    self.unset_running(self, data_stash, verbosity=self.verbosity - 2)
         elif farm_results is not None and (
             points is not None or point_results is not None
         ):

@@ -14,7 +14,10 @@ class SingleChunkEngineRunner(ThreadsEngineRunner):
 
 
 class SingleChunkEngine(NumpyEngine):
-    """Execute the full state/target domain synchronously in one chunk."""
+    """Execute the full state/target domain synchronously in one chunk.
+
+    Configure synchronous execution.
+    """
 
     def __init__(
         self,
@@ -24,8 +27,7 @@ class SingleChunkEngine(NumpyEngine):
         progress_bar: bool | None = True,
         verbosity: int = 1,
     ) -> None:
-        """Configure synchronous execution.
-
+        """
         Parameters
         ----------
         chunk_size_states

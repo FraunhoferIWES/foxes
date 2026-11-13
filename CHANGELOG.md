@@ -1191,6 +1191,15 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.9.10
 
+- Supplied output results:
+  - Add the model-owned `Output.requires_chunk_calculation` requirement; mixed
+    lists skip parent-only children on output-only workers.
+  - Format plain state/turbine tables directly from selected supplied farm
+    datasets, preserving inputs and units without chunk dispatch. Keep
+    aggregation and fresh scientific result collection chunk-based.
+  - Dispatch supplied farm outputs directly through the engine rather than
+    calling `Algorithm.calc_farm` with an empty scientific model chain.
+
 - Plotting outputs:
   - Manage each output's initial results and named stash fields explicitly;
     remove the shared attribute registry and generic rendering-data bundle
@@ -1213,6 +1222,9 @@ This major version introduces the concept of `Engines` which handle the chunking
     preserving reduction artifact writing and reading.
 
 - Engines:
+  - Keep `__init__` docstrings parameter-only across branch-modified classes;
+    move all other constructor prose and sections to class docstrings and
+    codify this split in the docstring guide.
   - Describe NumPy and single-chunk execution as a loop over chunks in farm and
     point progress headers instead of reporting workers.
   - Own chunk-store detachment and reattachment for farm and point runs,

@@ -39,7 +39,20 @@ _FARM_COORDINATES = frozenset(
 
 
 class FarmResultsOutput(Output):
-    """Farm results collected from NumPy chunks into one xarray dataset."""
+    """Farm results collected from NumPy chunks into one xarray dataset.
+
+    Configure the farm result selection and metadata.
+
+    Dataset keys are ``FC.FARM_RESULTS``, ``FC.FARMS_RESULTS``,
+    ``FC.CLUSTER_RESULTS`` or ``FC.TOTAL_FARM_RESULTS`` according to turbine
+    grouping. State reduction uses the corresponding ``FC.MEAN_*`` key.
+
+    Raises
+    ------
+    ValueError
+        If ``aggregate_turbines`` is not a supported grouping or
+        ``aggregate_states`` is not a boolean.
+    """
 
     def __init__(
         self,
@@ -53,12 +66,7 @@ class FarmResultsOutput(Output):
         aggregate_states: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Configure the farm result selection and metadata.
-
-        Dataset keys are ``FC.FARM_RESULTS``, ``FC.FARMS_RESULTS``,
-        ``FC.CLUSTER_RESULTS`` or ``FC.TOTAL_FARM_RESULTS`` according to turbine
-        grouping. State reduction uses the corresponding ``FC.MEAN_*`` key.
-
+        """
         Parameters
         ----------
         variables
@@ -89,12 +97,6 @@ class FarmResultsOutput(Output):
             Dataset attribute ``n_states`` records the selected input count.
         kwargs
             Additional parameters for :class:`foxes.core.Output`.
-
-        Raises
-        ------
-        ValueError
-            If ``aggregate_turbines`` is not a supported grouping or
-            ``aggregate_states`` is not a boolean.
         """
         if aggregate_turbines not in (None, "wind_farm", "cluster", "all"):
             raise ValueError(f"Invalid farm aggregation: {aggregate_turbines!r}")

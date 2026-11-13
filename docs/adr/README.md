@@ -52,6 +52,7 @@ all of them.
 | [0038](0038-engine-calculation-lifecycle.md) | Accepted | Centralize calculation lifecycle in Engine, with abstract backend hooks and per-call resource ownership for PoolEngine and DefaultEngine. |
 | [0039](0039-parent-owned-output-rendering.md) | Superseded by [0040](0040-explicit-output-data-lifecycle.md) | Transfer rendering options and caller-owned figures/axes through initial results, remove them from running outputs, and pass them explicitly to parent-side renderers. |
 | [0040](0040-explicit-output-data-lifecycle.md) | Accepted | Let each output explicitly manage named initial results and stash fields, without a generic attribute registry or ownership bundle; use the normal lifecycle for metadata and native support roses. |
+| [0041](0041-parent-only-supplied-results.md) | Accepted | Let outputs declare whether supplied datasets require chunks; plain tables finalize directly, while aggregations and fresh scientific collection retain chunks. |
 
 ## When To Add An ADR
 

@@ -20,8 +20,14 @@ from ._point_plot_utils import farm_plot_pars, line_plot_pars
 
 
 class NEWAStates(DatasetStates):
-    """
-    Heterogeneous ambient states in NEWA-WRF format.
+    """Heterogeneous ambient states in NEWA-WRF format.
+
+    Initialize ambient states from NEWA-format WRF data.
+
+    Raises
+    ------
+    TypeError
+        If a plot-parameter mapping is not a dictionary or ``None``.
 
     Examples
     --------
@@ -60,8 +66,6 @@ class NEWAStates(DatasetStates):
         **kwargs: object,
     ) -> None:
         """
-        Initialize ambient states from NEWA-format WRF data.
-
         Parameters
         ----------
         input_files_nc
@@ -111,11 +115,6 @@ class NEWAStates(DatasetStates):
             transparent turbine overlay. Caller dictionaries are copied.
         kwargs
             Additional parameters for the base class
-
-        Raises
-        ------
-        TypeError
-            If a plot-parameter mapping is not a dictionary or ``None``.
         """
         if output_vars is None:
             ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]

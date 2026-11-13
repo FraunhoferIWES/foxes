@@ -38,6 +38,13 @@ class PointResultsCountWriter(_ResultsCountWriter, PointResultsOutput):
 
     Unaggregated files retain ``(state, target, target_point)`` coordinates and fields,
     including every target point rather than selecting target point zero.
+
+    Configure count-limited point files.
+
+    Raises
+    ------
+    ValueError
+        If the state limit is not a positive integer.
     """
 
     _RESULTS = FC.POINT_RESULTS
@@ -49,8 +56,7 @@ class PointResultsCountWriter(_ResultsCountWriter, PointResultsOutput):
         write_nc_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure count-limited point files.
-
+        """
         Parameters
         ----------
         base_name
@@ -62,11 +68,6 @@ class PointResultsCountWriter(_ResultsCountWriter, PointResultsOutput):
         kwargs
             Field selection, ``aggregate_points``, ``aggregate_states`` and
             path options for ``PointResultsOutput``.
-
-        Raises
-        ------
-        ValueError
-            If the state limit is not a positive integer.
         """
         super().__init__(
             base_name, n_states_per_file, write_nc_pars=write_nc_pars, **kwargs
@@ -260,6 +261,8 @@ class PointResultsChunkWriter(PointResultsOutput):
     Filenames end in ``_<state chunk:06d>_<target chunk:06d>.nc``. Fields and
     geometry retain every target-point position without rechunking. Requested
     aggregation removes the corresponding state/target dimensions of this tile.
+
+    Configure engine-chunk point files.
     """
 
     def __init__(
@@ -268,8 +271,7 @@ class PointResultsChunkWriter(PointResultsOutput):
         write_nc_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure engine-chunk point files.
-
+        """
         Parameters
         ----------
         base_name

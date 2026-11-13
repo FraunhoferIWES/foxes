@@ -22,7 +22,15 @@ if TYPE_CHECKING:
 
 
 class _ResultsCountWriter(Output):
-    """Buffered state intervals shared by farm and point result writers."""
+    """Buffered state intervals shared by farm and point result writers.
+
+    Configure count limits, file options and the concrete collector.
+
+    Raises
+    ------
+    ValueError
+        If the state limit is not a positive integer.
+    """
 
     _RESULTS: str
 
@@ -33,8 +41,7 @@ class _ResultsCountWriter(Output):
         write_nc_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure count limits, file options and the concrete collector.
-
+        """
         Parameters
         ----------
         base_name
@@ -46,11 +53,6 @@ class _ResultsCountWriter(Output):
             the executing algorithm unless explicitly overridden.
         kwargs
             Selection, metadata and path options for the concrete collector.
-
-        Raises
-        ------
-        ValueError
-            If the state limit is not a positive integer.
         """
         if (
             isinstance(n_states_per_file, bool)
@@ -439,7 +441,15 @@ class _ResultsCountWriter(Output):
 
 
 class _ResultsPeriodWriter(_ResultsCountWriter):
-    """Calendar boundaries shared by buffered farm and point writers."""
+    """Calendar boundaries shared by buffered farm and point writers.
+
+    Configure chronological calendar-period files.
+
+    Raises
+    ------
+    ValueError
+        If the period is unsupported.
+    """
 
     def __init__(
         self,
@@ -449,8 +459,7 @@ class _ResultsPeriodWriter(_ResultsCountWriter):
         write_nc_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure chronological calendar-period files.
-
+        """
         Parameters
         ----------
         base_name
@@ -463,11 +472,6 @@ class _ResultsPeriodWriter(_ResultsCountWriter):
             Options for ``foxes.utils.write_nc``, inheriting algorithm verbosity.
         kwargs
             Selection, metadata and path options for the concrete collector.
-
-        Raises
-        ------
-        ValueError
-            If the period is unsupported.
         """
         if period not in {"day", "week", "month", "year"}:
             raise ValueError(

@@ -31,6 +31,8 @@ class SeqAnimationOutputPlugin(SequentialPlugin):
     physical-variable ``outputs`` argument or its one-state-at-a-time contract.
     Numerical buffers belong to the plugin, never to the output model.
     An incomplete iteration does not write animation files.
+
+    Select animation models and optional wake-debug overlays.
     """
 
     def __init__(
@@ -38,8 +40,7 @@ class SeqAnimationOutputPlugin(SequentialPlugin):
         outputs: list[str | FlowAnimation],
         debug: bool = False,
     ) -> None:
-        """Select animation models and optional wake-debug overlays.
-
+        """
         Parameters
         ----------
         outputs

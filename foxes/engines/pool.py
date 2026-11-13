@@ -37,22 +37,9 @@ def _run_map(func: Any, inputs: Any, *args: Any, **kwargs: Any) -> list[Any]:
 
 
 class PoolEngine(Engine):
-    """
-    Abstract engine for pool type parallelizations.
+    """Abstract engine for pool-based chunk execution.
 
-    Parameters
-    ----------
-    share_cstore
-        Whether to share the chunk store between chunks.
-    pool_args
-        Arguments for the pool constructor
-    supports_shared_data
-        Flag for whether this engine supports shared data for chunk calculations.
-    min_shared_array_bytes
-        Minimum array size in bytes for placing model data into process
-        shared storage. Arrays with ``nbytes`` less than or equal to this
-        threshold are transferred inline to workers. Supported top-level
-        ``extra_data`` values use their complete payload size.
+    Configure the worker pool, shared inputs and chunk-store ownership.
     """
 
     def __init__(
@@ -68,20 +55,21 @@ class PoolEngine(Engine):
         Parameters
         ----------
         args
-            Arguments for the base class
-        pool_args
-            Arguments for the pool constructor
+            Positional parameters for ``Engine``.
         share_cstore
-            Whether to share the chunk store between chunks.
+            Share the engine-managed chunk store between chunks.
+        pool_args
+            Keyword arguments for the pool constructor. ``None`` uses an empty
+            mapping.
         supports_shared_data
-            Flag for whether this engine supports shared data for chunk calculations.
+            Enable backend-supported shared inputs for chunk calculations.
         min_shared_array_bytes
             Minimum array size in bytes for placing model data into process
             shared storage. Arrays with ``nbytes`` less than or equal to this
             threshold are transferred inline to workers. Supported top-level
             ``extra_data`` values use their complete payload size.
         kwargs
-            Additional arguments for the base class
+            Additional keyword parameters for ``Engine``.
         """
         super().__init__(*args, **kwargs)
         self._pool: Any = None
@@ -223,7 +211,7 @@ class PoolEngine(Engine):
         self,
         calculation: _Calculation,
         algo: Algorithm,
-        model: DataCalcModel,
+        model: DataCalcModel | None,
         results: Dict[str, Any],
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,
@@ -249,7 +237,7 @@ class PoolEngine(Engine):
         model_data, farm_data, point_data, n_states = self._prepare_calculation_inputs(
             algo, model, model_data, farm_data, point_data, extra_data, sel
         )
-        out_dims = model.output_coords()
+        out_dims = model.output_coords() if model is not None else ()
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
             n_states, n_targets

@@ -119,6 +119,11 @@ For adopted animations, run
 `uv run pytest tests/2_models/test_flow_animations.py -q`.
 For the remaining adopted writers, tables, maps, points and metadata plots, run
 `uv run pytest tests/2_models/test_remaining_outputs.py -q`.
+Supplied plain tables must bypass both farm calculation and backend dispatch,
+including in mixed lists. Check lifecycle restoration, reordered states,
+unchanged inputs, static/scalar fields, unit normalization, reuse and NetCDF
+writing. Aggregating tables and fresh scientific runs must retain chunk
+collection; compare supplied-result reductions with fresh calculations.
 These cases verify all algorithm entry points, uneven NumPy/thread/process
 chunks, state-free weighted point payloads, dynamic coordinates, original-order
 renaming/CSV tables and parent-only plotting. YAML-only Matplotlib calls are

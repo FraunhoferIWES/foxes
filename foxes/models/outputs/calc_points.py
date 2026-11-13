@@ -25,6 +25,8 @@ class PointCalculator(DatasetOutput):
 
     State means transport weighted sums, not full state histories. Farm runs
     evaluate configured locations in bounded point blocks without nested engines.
+
+    Configure points, fields and optional state reduction.
     """
 
     def __init__(
@@ -37,8 +39,7 @@ class PointCalculator(DatasetOutput):
         write_pars: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure points, fields and optional state reduction.
-
+        """
         Parameters
         ----------
         points

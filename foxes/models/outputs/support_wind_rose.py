@@ -22,6 +22,8 @@ class SupportWindRosePlotOutput(Output):
     The histogram is taken directly from initialized binned states, without
     interpolating points or evaluating farm physics. Its original speed and
     direction edges, sparse-bin locations and percentage weights are preserved.
+
+    Configure native support roses without retaining a states provider.
     """
 
     def __init__(
@@ -32,8 +34,7 @@ class SupportWindRosePlotOutput(Output):
         result_name: str = "support_rose_plot",
         **kwargs: Any,
     ) -> None:
-        """Configure native support roses without retaining a states provider.
-
+        """
         Parameters
         ----------
         plot

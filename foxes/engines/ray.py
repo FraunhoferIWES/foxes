@@ -82,7 +82,14 @@ class RayEngine(PoolEngine):
         **kwargs: Any,
     ) -> None:
         """
-        Constructor.
+        Parameters
+        ----------
+        args
+            Positional parameters for ``PoolEngine``.
+        supports_shared_data
+            Share supported calculation inputs through the Ray object store.
+        kwargs
+            Additional keyword parameters for ``PoolEngine``.
         """
         super().__init__(*args, supports_shared_data=supports_shared_data, **kwargs)
 

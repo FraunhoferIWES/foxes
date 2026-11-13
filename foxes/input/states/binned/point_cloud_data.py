@@ -20,8 +20,7 @@ from ._reduction import _BinnedStateReduction
 
 
 class BinnedPointCloudData(PointCloudData):
-    """
-    Ambient states reduced to histogram bins on scattered support points.
+    """Ambient states reduced to histogram bins on scattered support points.
 
     When initialized from a source :class:`~foxes.core.States` model, the
     source is evaluated at every support point and reduced into the Cartesian
@@ -44,6 +43,8 @@ class BinnedPointCloudData(PointCloudData):
     moved to the standard model stash and duplicate constructor data is
     released from this object. :meth:`unset_running` restores the controller's
     original references after execution.
+
+    Initialize point-cloud binned ambient states.
     """
 
     def __init__(
@@ -63,8 +64,6 @@ class BinnedPointCloudData(PointCloudData):
         **kwargs: Any,
     ) -> None:
         """
-        Initialize point-cloud binned ambient states.
-
         Parameters
         ----------
         states

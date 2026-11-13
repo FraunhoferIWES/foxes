@@ -17,13 +17,15 @@ if TYPE_CHECKING:
 
 
 class SlicesData(SliceData):
-    """Evaluate configured parallel planes using one engine point calculation."""
+    """Evaluate configured parallel planes using one engine point calculation.
+
+    Configure all plane positions before initialization.
+    """
 
     def __init__(
         self, positions: Sequence[float], plane: str = "xy", **kwargs: Any
     ) -> None:
-        """Configure all plane positions before initialization.
-
+        """
         Parameters
         ----------
         positions

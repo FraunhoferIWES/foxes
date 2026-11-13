@@ -31,6 +31,8 @@ class FlowAnimation(SliceData):
     Supplied target data is reused without further scientific calculations.
     Farm-only runs evaluate a shared grid in bounded point blocks. Workers
     return independent payloads; only finalization creates figures and files.
+
+    Configure optional chunk animations.
     """
 
     def _creates_figures(self) -> bool:
@@ -55,8 +57,7 @@ class FlowAnimation(SliceData):
         show: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Configure optional chunk animations.
-
+        """
         Parameters
         ----------
         chunk
@@ -498,6 +499,8 @@ class FlowTurbineAnimation(FlowAnimation):
     Each animated flow variable shares the same lower panel, using original
     farm turbine indices. Chunk/state selection, point evaluation, filenames
     and encoding follow ``FlowAnimation``.
+
+    Configure the turbine panel and optional flow-field annotations.
     """
 
     def __init__(
@@ -508,8 +511,7 @@ class FlowTurbineAnimation(FlowAnimation):
         ref_xy: list[float] | tuple[float, float] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure the turbine panel and optional flow-field annotations.
-
+        """
         Parameters
         ----------
         turbines

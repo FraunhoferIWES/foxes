@@ -217,7 +217,7 @@ class DefaultEngine(Engine):
         self,
         calculation: _Calculation,
         algo: Algorithm,
-        model: DataCalcModel,
+        model: DataCalcModel | None,
         results: Dict[str, Any],
         model_data: Dataset | None = None,
         farm_data: Dataset | None = None,

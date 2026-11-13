@@ -20,7 +20,10 @@ if TYPE_CHECKING:
 
 
 class PointDataOutput(Output):
-    """Collect configured point grids in run-local, engine-owned chunk payloads."""
+    """Collect configured point grids in run-local, engine-owned chunk payloads.
+
+    Retain point/grid configuration without preparing scientific data.
+    """
 
     def __init__(
         self,
@@ -33,8 +36,7 @@ class PointDataOutput(Output):
         ambient: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Retain point/grid configuration without preparing scientific data.
-
+        """
         Parameters
         ----------
         plane

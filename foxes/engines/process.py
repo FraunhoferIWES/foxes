@@ -168,7 +168,7 @@ class ProcessEngineRunner(EngineRunner):
     def run(
         self,
         algo: Algorithm,
-        model: DataCalcModel,
+        model: DataCalcModel | None,
         mdata: MData,
         fdata: FData,
         tdata: TData | None = None,
@@ -188,7 +188,7 @@ class ProcessEngineRunner(EngineRunner):
         algo
             Worker algorithm whose chunk store is replaced with a local copy.
         model
-            Initialized scientific model to execute.
+            Initialized scientific model, or ``None`` for output-only chunks.
         mdata
             Chunk model data, recombined with shared arrays before calculation.
         fdata
@@ -228,7 +228,9 @@ class ProcessEngineRunner(EngineRunner):
         fdata, _ = self._apply_prev_farm_results(algo, mdata, fdata)
 
         model_results: dict[str, Any] | None
-        if tdata is None:
+        if model is None:
+            model_results = None
+        elif tdata is None:
             model_results = model.calculate(algo, mdata, fdata, **cpars)
         else:
             model_results = model.calculate(algo, mdata, fdata, tdata, **cpars)

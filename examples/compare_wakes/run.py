@@ -53,8 +53,8 @@ def main(argv=None):
         "--wakes",
         help="The wake models",
         default=[
-            "Bastankhah2014B_linear_k004",
-            "Bastankhah2014_linear_k004",
+            "TurbOPark",
+            "Bastankhah2014",
             "Bastankhah2016_linear_k004",
         ],
         nargs="+",

@@ -16,7 +16,15 @@ from foxes.models.outputs import FlowPlots2D, _flow_figures
 
 
 class SeqFlowAnimationPlugin(SequentialPlugin):
-    """An iterator plugin buffering plane data for later flow-animation frames."""
+    """An iterator plugin buffering plane data for later flow-animation frames.
+
+    Configure the animation plane, plotted field and grid evaluation.
+
+    Raises
+    ------
+    ValueError
+        If ``orientation`` is not one of the supported planes.
+    """
 
     def __init__(
         self,
@@ -26,8 +34,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         grid_pars: dict[str, Any] | None = None,
         **data_pars: Any,
     ) -> None:
-        """Configure the animation plane, plotted field and grid evaluation.
-
+        """
         Parameters
         ----------
         orientation
@@ -42,11 +49,6 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
             in metres. The mapping is copied.
         data_pars
             Additional ``FlowPlots2D`` constructor options for numerical data.
-
-        Raises
-        ------
-        ValueError
-            If ``orientation`` is not one of the supported planes.
         """
         super().__init__()
         self.orientation = orientation

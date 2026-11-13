@@ -36,6 +36,13 @@ class SliceData(PointDataOutput):
 
     This numerical output owns slice formatting independently of rendering.
     Flow plots and animations specialize this contract.
+
+    Configure all slice decisions without creating grids or result arrays.
+
+    Raises
+    ------
+    ValueError
+        If ``aggregate_states`` is not a boolean.
     """
 
     def __init__(
@@ -58,8 +65,7 @@ class SliceData(PointDataOutput):
         aggregate_states: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Configure all slice decisions without creating grids or result arrays.
-
+        """
         Parameters
         ----------
         plane
@@ -103,11 +109,6 @@ class SliceData(PointDataOutput):
             number of contributing states.
         kwargs
             Common output paths, state/chunk selections and ambient mode.
-
-        Raises
-        ------
-        ValueError
-            If ``aggregate_states`` is not a boolean.
         """
         # Scientific dependencies and grids are deferred to normal initialization.
         fields = [FV.WS] if variables is None else list(variables)

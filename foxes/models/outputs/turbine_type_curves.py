@@ -24,6 +24,8 @@ class TurbineTypeCurves(StateTurbineTable):
 
     Configure wind-speed scan states, turbine types and optional power-mask
     comparison turbines on the executing no-wake algorithm.
+
+    Configure collected fields and final curve rendering.
     """
 
     def _creates_figures(self) -> bool:
@@ -39,8 +41,7 @@ class TurbineTypeCurves(StateTurbineTable):
         to_file: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure collected fields and final curve rendering.
-
+        """
         Parameters
         ----------
         variables

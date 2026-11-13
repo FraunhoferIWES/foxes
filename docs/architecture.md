@@ -332,6 +332,17 @@ registry, generic ownership bundle or automatic stashing mechanism.
 Only worker-required configuration and scientific selectors remain on workers.
 Metadata-only calls use `Engine.run_calculation(model=None)`, exercising the same
 initial-result, running and finalization lifecycle without scientific dispatch.
+With supplied farm or point datasets, `model=None` dispatches output-only chunks
+only when `Output.requires_chunk_calculation` is true (the default). Input
+selection precedes initial results in these calls and is not repeated by the
+backend. `OutputList` requires chunks if any child does, skipping parent-only
+children on output-only workers; scientific runs still calculate every child.
+Plain `StateTurbineTable` instances borrow the selected farm dataset through an
+explicit private initial-result key and format it directly during finalization.
+They preserve input arrays and metadata while applying existing power-unit
+normalization. Aggregating tables retain worker reductions, and fresh scientific
+chunk results always take precedence over supplied data.
+See [ADR-0041](adr/0041-parent-only-supplied-results.md).
 The Sequential animation adapter also uses explicit results and normal
 finalization. Public results and caller-owned plotting objects retain their
 identity. See [ADR-0040](adr/0040-explicit-output-data-lifecycle.md).
@@ -886,6 +897,12 @@ boundary and reusable logic in importable functions so tests need not spawn a
 subprocess.
 
 ## Cross-Cutting Decisions
+
+- Outputs declare whether supplied results need chunks through
+  `requires_chunk_calculation`. Plain state/turbine tables finalize directly
+  from borrowed datasets; aggregation and fresh science remain chunk-based.
+  Mixed lists skip parent-only children on output-only workers. See
+  [ADR-0041](adr/0041-parent-only-supplied-results.md).
 
 - Figure-producing outputs keep rendering options and caller-owned Matplotlib
   objects in initial result mappings, not running worker models, and restore

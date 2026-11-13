@@ -21,7 +21,10 @@ if TYPE_CHECKING:
 
 
 class StateTurbineMap(StateTurbineTable):
-    """Render a selected field after its state/turbine chunks are assembled."""
+    """Render a selected field after its state/turbine chunks are assembled.
+
+    Configure one heat map without capturing scientific results.
+    """
 
     def _creates_figures(self) -> bool:
         """Keep numerical tables enabled independently of figure suppression."""
@@ -35,8 +38,7 @@ class StateTurbineMap(StateTurbineTable):
         to_file: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure one heat map without capturing scientific results.
-
+        """
         Parameters
         ----------
         variable

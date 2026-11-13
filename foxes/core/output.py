@@ -23,13 +23,17 @@ if TYPE_CHECKING:
 class Output(DataCalcModel):
     """Base contract for chunk-local output and unified calculation results.
 
-    Engine workers call ``calculate`` on prepared NumPy data. The engine then
+    Engine workers call ``calculate`` on prepared NumPy data when required.
+    Outputs with ``requires_chunk_calculation=False`` process supplied results
+    through initial results and parent-side finalization instead. The engine
     calls ``update_results`` with ordered chunk payloads and ``finalize_results``
     after all chunks have been processed. Outputs share result mappings and must
     consume only their own pending keys.
 
     Each output explicitly manages its own initialized results and data stash
     through the model lifecycle hooks.
+
+    Configure input requirements, output paths and optional figure display.
     """
 
     def __init__(
@@ -44,8 +48,7 @@ class Output(DataCalcModel):
         image_only: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Configure input requirements, output paths and optional figure display.
-
+        """
         Parameters
         ----------
         out_dir
@@ -101,6 +104,19 @@ class Output(DataCalcModel):
     def _creates_figures(self) -> bool:
         """Identify image-only work from this output's current configuration."""
         return self.image_only
+
+    @property
+    def requires_chunk_calculation(self) -> bool:
+        """Whether processing supplied results requires chunk calculations.
+
+        Returns
+        -------
+        required
+            ``True`` by default. Override with ``False`` when initial results
+            and parent-side finalization suffice. Scientific calculations still
+            evaluate this output on every chunk regardless of this requirement.
+        """
+        return True
 
     def get_enabled_output(self, nofig: bool = False) -> Output | None:
         """Resolve this output before initialization and scientific calculation.
@@ -229,7 +245,7 @@ class Output(DataCalcModel):
         tdata
             The target data, or ``None`` for farm calculations.
         model_results
-            The results from the model calculation for this chunk
+            Scientific calculation results, or ``None`` for output-only chunks.
         chunk_results
             Existing chunk results, keys are result object names
 
@@ -418,7 +434,10 @@ class Output(DataCalcModel):
 
 
 class OutputList(Output):
-    """An ordered output chain with merged chunk input requirements."""
+    """An ordered output chain with merged chunk input requirements.
+
+    Configure an independent list of outputs.
+    """
 
     def __init__(
         self,
@@ -426,8 +445,7 @@ class OutputList(Output):
         outputs: list[Output] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Configure an independent list of outputs.
-
+        """
         Parameters
         ----------
         args
@@ -504,6 +522,17 @@ class OutputList(Output):
         """
         # Expose the child order used by the engine output hooks.
         return self._outputs
+
+    @property
+    def requires_chunk_calculation(self) -> bool:
+        """Whether any child requires chunks when processing supplied results.
+
+        Returns
+        -------
+        required
+            ``True`` if at least one child requires chunk calculation.
+        """
+        return any(output.requires_chunk_calculation for output in self.outputs)
 
     def get_calc_points(self, algo: Algorithm) -> np.ndarray | None:
         """Return the common calculation points required by child outputs.
@@ -650,7 +679,9 @@ class OutputList(Output):
         tdata
             The target point data, or ``None`` for farm calculations.
         model_results
-            The results from the model calculation for this chunk
+            Results from the scientific model, or ``None`` for output-only
+            processing of supplied results. Parent-only children are skipped
+            in that case, but retain their initialization and finalization.
         chunk_results
             Existing chunk results, keys are result object names
 
@@ -671,6 +702,8 @@ class OutputList(Output):
         )
         # Execute children in declaration order while retaining earlier payloads.
         for o in self.outputs:
+            if model_results is None and not o.requires_chunk_calculation:
+                continue
             chunk_results = o.calculate(
                 algo=algo,
                 mdata=mdata,

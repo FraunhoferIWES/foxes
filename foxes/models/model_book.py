@@ -58,6 +58,8 @@ class ModelBook:
     Configure selected outputs before algorithm initialization. Registry entries
     are model instances owned by this book, not shared between books.
 
+    Create independent model registries and their parameterized factories.
+
     Attributes
     ----------
     point_models
@@ -112,8 +114,7 @@ class ModelBook:
     base_classes: FDict
 
     def __init__(self, Pct_file: str | None = None) -> None:
-        """Create independent model registries and their parameterized factories.
-
+        """
         Parameters
         ----------
         Pct_file

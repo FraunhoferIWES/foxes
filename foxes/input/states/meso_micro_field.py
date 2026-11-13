@@ -35,13 +35,23 @@ from ._point_plot_utils import (
 
 
 class MesoMicroField(States):
-    """
-    Micro-scale sector fields calibrated against meso-scale reference states.
+    """Micro-scale sector fields calibrated against meso-scale reference states.
 
     Micro-state loading supports scalar and state-dependent turbine positions,
     including positions produced by vectorized population evaluations.
     Optional reference disks average calibration fields during loading without
     smoothing the micro fields evaluated at turbine targets.
+
+    Combine micro-scale sector fields with meso-scale reference states.
+
+    Raises
+    ------
+    TypeError
+        If a plot-parameter mapping is not a dictionary or ``None``, or the
+        plot stride is not an integer.
+    ValueError
+        If the plot stride is less than 1 or the reference-point radius is
+        not positive and finite.
     """
 
     def __init__(
@@ -65,8 +75,6 @@ class MesoMicroField(States):
         **kwargs: object,
     ) -> None:
         """
-        Combine micro-scale sector fields with meso-scale reference states.
-
         Parameters
         ----------
         micro_states
@@ -131,15 +139,6 @@ class MesoMicroField(States):
             Only reference calibration is smoothed, not turbine-target fields.
         kwargs
             Additional parameters for the base states class.
-
-        Raises
-        ------
-        TypeError
-            If a plot-parameter mapping is not a dictionary or ``None``, or the
-            plot stride is not an integer.
-        ValueError
-            If the plot stride is less than 1 or the reference-point radius is
-            not positive and finite.
         """
         super().__init__(**kwargs)  # type: ignore[arg-type]
         self.micro_states = micro_states

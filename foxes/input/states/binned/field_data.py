@@ -20,8 +20,7 @@ from ._reduction import _BinnedStateReduction
 
 
 class BinnedFieldData(FieldData):
-    """
-    Ambient states reduced to histogram bins on a regular support grid.
+    """Ambient states reduced to histogram bins on a regular support grid.
 
     When initialized from a source :class:`~foxes.core.States` model, the
     source is evaluated at every configured support point and reduced into the
@@ -44,6 +43,8 @@ class BinnedFieldData(FieldData):
     moved to the standard model stash and duplicate constructor data is
     released from this object. :meth:`unset_running` restores the controller's
     original references after execution.
+
+    Initialize regular-grid binned ambient states.
     """
 
     def __init__(
@@ -63,8 +64,6 @@ class BinnedFieldData(FieldData):
         **kwargs: Any,
     ) -> None:
         """
-        Initialize regular-grid binned ambient states.
-
         Parameters
         ----------
         states

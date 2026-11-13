@@ -9,11 +9,13 @@ if TYPE_CHECKING:
 
 
 class Animator:
-    """Synchronized animation composition from figure/artist generators."""
+    """Synchronized animation composition from figure/artist generators.
+
+    Configure the shared figure.
+    """
 
     def __init__(self, fig: Figure | None = None) -> None:
-        """Configure the shared figure.
-
+        """
         Parameters
         ----------
         fig

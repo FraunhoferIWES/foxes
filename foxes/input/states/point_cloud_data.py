@@ -242,8 +242,14 @@ def _interpolate_point_cloud_fields(
 
 
 class PointCloudData(DatasetStates):
-    """
-    Inflow data with point cloud support.
+    """Inflow data with point cloud support.
+
+    Initialize ambient states on scattered support points.
+
+    Raises
+    ------
+    TypeError
+        If a plot-parameter mapping is not a dictionary or ``None``.
 
     Notes
     -----
@@ -285,8 +291,6 @@ class PointCloudData(DatasetStates):
         **kwargs: Any,
     ) -> None:
         """
-        Initialize ambient states on scattered support points.
-
         Parameters
         ----------
         args
@@ -316,11 +320,6 @@ class PointCloudData(DatasetStates):
             Caller parameter dictionaries are copied rather than mutated.
         kwargs
             Additional parameters for the base class
-
-        Raises
-        ------
-        TypeError
-            If a plot-parameter mapping is not a dictionary or ``None``.
         """
         kwargs["bounds_extra_space"] = None
         super().__init__(*args, **kwargs)
@@ -963,8 +962,14 @@ class WeibullPointCloud(PointCloudData):
 
 
 class TurbinePointCloud(DatasetStates):
-    """
-    Point cloud data at turbine locations, for wake calculations.
+    """Point cloud data at turbine locations, for wake calculations.
+
+    Initialize point-cloud states supported at farm turbine locations.
+
+    Raises
+    ------
+    TypeError
+        If a plot-parameter mapping is not a dictionary or ``None``.
 
     Notes
     -----
@@ -987,8 +992,6 @@ class TurbinePointCloud(DatasetStates):
         **kwargs: Any,
     ) -> None:
         """
-        Initialize point-cloud states supported at farm turbine locations.
-
         Parameters
         ----------
         args
@@ -1011,11 +1014,6 @@ class TurbinePointCloud(DatasetStates):
             ``None`` preserves the usual overlay. Parameter dictionaries are copied.
         kwargs
             Keyword arguments for the base class
-
-        Raises
-        ------
-        TypeError
-            If a plot-parameter mapping is not a dictionary or ``None``.
         """
         # Turbine-point-cloud data is indexed by turbine, not by global X/Y grids.
         # Disable XY-bound filtering from DatasetStates to avoid requiring X/Y cmap.

@@ -39,16 +39,11 @@ class LoadedData(TypedDict):
 
 
 class Model(ABC):
-    """
-    Base class for all models.
-    """
+    """Base class for all models."""
 
     _ids: dict[str, Iterator[int]] = {}
 
     def __init__(self) -> None:
-        """
-        Constructor.
-        """
         t = type(self).__name__
         if t not in self._ids:
             self._ids[t] = count(0)

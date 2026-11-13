@@ -22,7 +22,10 @@ if TYPE_CHECKING:
 
 
 class RosePlotOutput(RoseOutput):
-    """Collect weighted frequencies for one constructor-defined wind rose."""
+    """Collect weighted frequencies for one constructor-defined wind rose.
+
+    Configure frequency bins, data location and optional rendering.
+    """
 
     get_data_info = staticmethod(get_data_info)
 
@@ -46,8 +49,7 @@ class RosePlotOutput(RoseOutput):
         show: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Configure frequency bins, data location and optional rendering.
-
+        """
         Parameters
         ----------
         wd_sectors
@@ -134,11 +136,13 @@ class RosePlotOutput(RoseOutput):
 
 
 class StatesRosePlotOutput(RosePlotOutput):
-    """Evaluate the executing algorithm's states at one configured location."""
+    """Evaluate the executing algorithm's states at one configured location.
+
+    Configure one state-evaluation location without running a calculation.
+    """
 
     def __init__(self, point: Sequence[float], **kwargs: Any) -> None:
-        """Configure one state-evaluation location without running a calculation.
-
+        """
         Parameters
         ----------
         point
@@ -191,7 +195,10 @@ class StatesRosePlotOutput(RosePlotOutput):
 
 
 class WindRoseBinPlot(RoseOutput):
-    """Reduce one field within configured wind-direction and wind-speed bins."""
+    """Reduce one field within configured wind-direction and wind-speed bins.
+
+    Configure the binned field, reduction and optional polar rendering.
+    """
 
     def _creates_figures(self) -> bool:
         """Keep numerical bins enabled independently of figure suppression."""
@@ -212,8 +219,7 @@ class WindRoseBinPlot(RoseOutput):
         show: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Configure the binned field, reduction and optional polar rendering.
-
+        """
         Parameters
         ----------
         variable

@@ -21,7 +21,10 @@ if TYPE_CHECKING:
 
 
 class FarmLayoutOutput(DatasetOutput):
-    """Render or export a layout supplied by the executing algorithm."""
+    """Render or export a layout supplied by the executing algorithm.
+
+    Configure layout rendering or export without retaining a farm.
+    """
 
     def _creates_figures(self) -> bool:
         """Suppress figure operations without disabling layout data exports."""
@@ -39,8 +42,7 @@ class FarmLayoutOutput(DatasetOutput):
         show: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Configure layout rendering or export without retaining a farm.
-
+        """
         Parameters
         ----------
         operation

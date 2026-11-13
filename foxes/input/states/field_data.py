@@ -64,9 +64,18 @@ def _reference_farm_plot_bounds(
 
 
 class FieldData(DatasetStates):
-    """
-    Heterogeneous ambient states on a regular
+    """Heterogeneous ambient states on a regular
     horizontal grid in NetCDF format.
+
+    Initialize heterogeneous ambient states on a regular support grid.
+
+    Raises
+    ------
+    TypeError
+        If a plot-parameter mapping is not a dictionary or ``None``, or the
+        plot stride is not an integer.
+    ValueError
+        If the plot stride is less than 1.
 
     Examples
     --------
@@ -99,8 +108,6 @@ class FieldData(DatasetStates):
         **kwargs: Any,
     ) -> None:
         """
-        Initialize heterogeneous ambient states on a regular support grid.
-
         Parameters
         ----------
         args
@@ -136,14 +143,6 @@ class FieldData(DatasetStates):
             retain the outermost coordinates, and do not change loaded data.
         kwargs
             Additional parameters for the base class
-
-        Raises
-        ------
-        TypeError
-            If a plot-parameter mapping is not a dictionary or ``None``, or the
-            plot stride is not an integer.
-        ValueError
-            If the plot stride is less than 1.
         """
         kwargs.pop("time_format", None)
         kwargs["time_format"] = time_format
@@ -330,8 +329,14 @@ class FieldData(DatasetStates):
 
 
 class LatLonFieldData(DatasetStates):
-    """
-    Heterogeneous ambient states based on regular lat-lon grid in NetCDF format.
+    """Heterogeneous ambient states based on regular lat-lon grid in NetCDF format.
+
+    Initialize heterogeneous ambient states on a longitude/latitude grid.
+
+    Raises
+    ------
+    TypeError
+        If a plot-parameter mapping is not a dictionary or ``None``.
     """
 
     def __init__(
@@ -349,8 +354,6 @@ class LatLonFieldData(DatasetStates):
         **kwargs: Any,
     ) -> None:
         """
-        Initialize heterogeneous ambient states on a longitude/latitude grid.
-
         Parameters
         ----------
         data_source
@@ -387,11 +390,6 @@ class LatLonFieldData(DatasetStates):
             the title and make turbines transparent.
         kwargs
             Additional parameters for the base class
-
-        Raises
-        ------
-        TypeError
-            If a plot-parameter mapping is not a dictionary or ``None``.
         """
         kwargs.pop("time_format", None)
         super().__init__(

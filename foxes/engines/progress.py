@@ -16,7 +16,10 @@ def _in_notebook() -> bool:
 
 
 class CalculationProgress:
-    """One parent-side progress display whose lifetime includes finalization."""
+    """One parent-side progress display whose lifetime includes finalization.
+
+    Configure one calculation display.
+    """
 
     def __init__(
         self,
@@ -26,8 +29,7 @@ class CalculationProgress:
         verbosity: int,
         stream: TextIO | None = None,
     ) -> None:
-        """Configure one calculation display.
-
+        """
         Parameters
         ----------
         name

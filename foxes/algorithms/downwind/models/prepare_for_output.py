@@ -23,11 +23,12 @@ class PrepareForOutput(DataCalcModel):
     permutation. ``FV.ORDER`` maps downwind columns to original turbine
     indices; its inverse restores physical fields to original farm order.
     The order array itself remains downwind-sequence metadata.
+
+    Configure output filtering and final turbine reordering.
     """
 
     def __init__(self, output: Output | None, reorder: bool = True) -> None:
-        """Configure output filtering and final turbine reordering.
-
+        """
         Parameters
         ----------
         output

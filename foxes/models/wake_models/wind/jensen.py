@@ -176,14 +176,20 @@ class JensenWake(TopHatWakeModel):
 
 
 class JensenTurbOParkWake(TopHatWakeModel):
-    """
-    Jensen wake model with TurbOPark-like wake growth.
+    """Jensen wake model with TurbOPark-like wake growth.
 
     The model keeps the top-hat wake structure of Jensen's
     centreline formulation, but uses the TurbOPark wake-growth
     expression for the effective wake radius.
 
     :group: models.wake_models.wind
+
+    Initialize Jensen deficits with TurbOPark-like wake growth.
+
+    Raises
+    ------
+    ValueError
+        If ``amb_ti`` is provided but is not finite and strictly positive.
     """
 
     def __init__(
@@ -197,8 +203,6 @@ class JensenTurbOParkWake(TopHatWakeModel):
         **wake_k: Any,
     ) -> None:
         """
-        Initialize Jensen deficits with TurbOPark-like wake growth.
-
         Parameters
         ----------
         superposition
@@ -220,11 +224,6 @@ class JensenTurbOParkWake(TopHatWakeModel):
         wake_k
             Parameters for ``WakeK``. Set ``ti_var=FV.AMB_TI`` to use the
             same ambient turbulence intensity for the wake coefficient.
-
-        Raises
-        ------
-        ValueError
-            If ``amb_ti`` is provided but is not finite and strictly positive.
         """
         super().__init__(wind_superposition=superposition, induction=induction)
         if amb_ti is not None and (not np.isfinite(amb_ti) or amb_ti <= 0):

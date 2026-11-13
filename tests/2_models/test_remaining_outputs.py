@@ -587,6 +587,141 @@ def test_table_fields_transposition_selection_and_auto_evaluation(
     np.testing.assert_allclose(result.efficiency, 1.0)
 
 
+@pytest.mark.parametrize("engine", ["default", "numpy", "threads", "process"])
+def test_supplied_table_skips_chunks_and_preserves_input(
+    algorithm, monkeypatch, tmp_path, engine
+):
+    farm = xr.Dataset(
+        {
+            FV.P: ((FC.STATE, FC.TURBINE), np.arange(10).reshape(5, 2) / 1000),
+            FV.REWS: (FC.TURBINE, [6.0, 7.0]),
+        },
+        coords={FC.STATE: [10, 20, 30, 40, 50], FC.TURBINE: [0, 1]},
+        attrs={"source": "provided"},
+    )
+    farm[FV.P].attrs["units"] = "MW"
+    original = farm.copy(deep=True)
+    output = StateTurbineTable(
+        name_map={FV.P: "power", FC.STATE: "time"},
+        transpose=True,
+        isel={"time": [1, 0]},
+        to_file="table.nc",
+        out_dir=tmp_path,
+    )
+    name_map = output.name_map
+    process = output.process
+
+    def parent_process(algo, data, results):
+        assert output.running and algo.running
+        return process(algo, data, results)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("A supplied plain table dispatched farm/chunk calculations")
+
+    monkeypatch.setattr(output, "process", parent_process)
+    monkeypatch.setattr(foxes.core.Algorithm, "calc_farm", forbidden)
+    monkeypatch.setattr(output, "calculate", forbidden)
+    with foxes.Engine.new(engine, n_procs=2, verbosity=0) as backend:
+        monkeypatch.setattr(backend, "_run_calculation", forbidden)
+        result = algorithm.calc_outputs(
+            outputs=output, farm_results=farm, states_sel=[50, 10]
+        )
+        repeated = algorithm.calc_outputs(
+            outputs=output, farm_results=farm, states_sel=[50, 10]
+        )
+    xr.testing.assert_identical(repeated, result)
+    np.testing.assert_array_equal(result.time, [10, 50])
+    np.testing.assert_allclose(result.power, np.array([[0, 8], [1, 9]]))
+    assert result.power.attrs["units"] == "kW"
+    assert result[FV.REWS].dims == (FC.TURBINE,)
+    assert result.attrs["source"] == "provided"
+    xr.testing.assert_identical(farm, original)
+    with xr.open_dataset(tmp_path / "table.nc") as written:
+        xr.testing.assert_identical(written, result)
+    assert not output.running and not algorithm.running
+    assert output.name_map is name_map
+
+
+class _ParentOnlyTable(StateTurbineTable):
+    def calculate(self, *args, **kwargs):
+        raise AssertionError("A parent-only table was evaluated on a chunk")
+
+
+@pytest.mark.parametrize("engine", ["numpy", "process", "dask"])
+def test_mixed_supplied_outputs_skip_parent_only_children(algorithm, engine):
+    if engine == "dask":
+        pytest.importorskip("dask")
+    with foxes.Engine.new("single", verbosity=0):
+        farm = algorithm.calc_farm()
+    table = _ParentOnlyTable(result_name="table")
+    with foxes.Engine.new(engine, n_procs=2, chunk_size_states=2, verbosity=0):
+        results = algorithm.calc_outputs(
+            outputs=[table, "farm_results"],
+            farm_results=farm,
+            states_sel=[50, 10, 30],
+            ret_dict=True,
+        )
+    np.testing.assert_array_equal(results["table"][FC.STATE], [50, 10, 30])
+    xr.testing.assert_allclose(results["table"][FV.P], results["farm_results"][FV.P])
+    assert not table.running and not algorithm.running
+
+
+def test_supplied_table_failure_restores_parent_configuration(algorithm):
+    output = StateTurbineTable(variables=[FV.P])
+    name_map, write_pars = output.name_map, output.write_pars
+    farm = xr.Dataset(coords={FC.STATE: [10, 20, 30, 40, 50], FC.TURBINE: [0, 1]})
+    with foxes.Engine.new("numpy", verbosity=0):
+        with pytest.raises(KeyError, match="Missing farm fields"):
+            algorithm.calc_outputs(outputs=output, farm_results=farm)
+    assert output.name_map is name_map and output.write_pars is write_pars
+    assert not output.running and not algorithm.running
+
+
+@pytest.mark.parametrize("dims", [(FC.STATE, FC.TURBINE), (FC.STATE,), ()])
+def test_supplied_table_units_without_explicit_turbine_coordinates(algorithm, dims):
+    values = np.full(tuple(5 if d == FC.STATE else 2 for d in dims), 0.002)
+    farm = xr.Dataset({FV.P: (dims, values)})
+    farm[FV.P].attrs["units"] = "MW"
+    output = StateTurbineTable(variables=[FV.P])
+    with foxes.Engine.new("numpy", verbosity=0):
+        first = algorithm.calc_outputs(outputs=output, farm_results=farm)
+        repeated = algorithm.calc_outputs(outputs=output, farm_results=first)
+    assert first[FV.P].dims == dims
+    np.testing.assert_allclose(first[FV.P], 2.0)
+    xr.testing.assert_identical(first, repeated)
+    np.testing.assert_allclose(farm[FV.P], 0.002)
+    assert farm[FV.P].attrs["units"] == "MW"
+
+
+@pytest.mark.parametrize(
+    "aggregation",
+    [
+        {"aggregate_states": True},
+        {"aggregate_turbines": "all"},
+        {"aggregate_turbines": "all", "aggregate_states": True},
+    ],
+)
+def test_supplied_aggregating_table_preserves_chunk_reductions(
+    algorithm, monkeypatch, aggregation
+):
+    output = StateTurbineTable(**aggregation)
+    labels = [50, 10, 30]
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        farm = algorithm.calc_farm(finalize=False)
+        expected = algorithm.calc_farm(
+            outputs=output, sel={FC.STATE: labels}, finalize=False
+        )
+
+        def forbidden(*args, **kwargs):
+            pytest.fail("Output-only aggregation called Algorithm.calc_farm")
+
+        monkeypatch.setattr(foxes.core.Algorithm, "calc_farm", forbidden)
+        result = algorithm.calc_outputs(
+            outputs=output, farm_results=farm, states_sel=labels
+        )
+    xr.testing.assert_allclose(result, expected)
+
+
 @pytest.mark.parametrize("labels", [[42], pd.date_range("2020", periods=3), ["a", "b"]])
 def test_maps_singletons_and_non_numeric_labels(algorithm, labels, tmp_path):
     values = np.arange(len(labels) * 2).reshape(len(labels), 2)

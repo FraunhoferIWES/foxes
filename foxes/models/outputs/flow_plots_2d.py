@@ -24,6 +24,8 @@ class FlowPlots2D(SliceData):
 
     Numerical data, point grids and reductions follow ``SliceData`` without
     inheriting animation configuration or file-writing behavior.
+
+    Configure the field, plane, reduction and rendering before execution.
     """
 
     def _creates_figures(self) -> bool:
@@ -41,8 +43,7 @@ class FlowPlots2D(SliceData):
         show: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Configure the field, plane, reduction and rendering before execution.
-
+        """
         Parameters
         ----------
         var

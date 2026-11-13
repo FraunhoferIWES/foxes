@@ -29,7 +29,20 @@ if TYPE_CHECKING:
 
 
 class PointResultsOutput(Output):
-    """Unify state/target chunks without expanding static input coordinates."""
+    """Unify state/target chunks without expanding static input coordinates.
+
+    Select point fields to collect.
+
+    The dataset key is ``FC.POINT_RESULTS`` for individual points or
+    ``FC.TOTAL_POINT_RESULTS`` for all points. State reduction uses the
+    corresponding ``FC.MEAN_*`` key.
+
+    Raises
+    ------
+    ValueError
+        If ``aggregate_points`` is neither ``None`` nor ``all``, or
+        ``aggregate_states`` is not a boolean.
+    """
 
     def __init__(
         self,
@@ -40,12 +53,7 @@ class PointResultsOutput(Output):
         aggregate_states: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Select point fields to collect.
-
-        The dataset key is ``FC.POINT_RESULTS`` for individual points or
-        ``FC.TOTAL_POINT_RESULTS`` for all points. State reduction uses the
-        corresponding ``FC.MEAN_*`` key.
-
+        """
         Parameters
         ----------
         variables
@@ -66,12 +74,6 @@ class PointResultsOutput(Output):
             Dataset attribute ``n_states`` records the selected input count.
         kwargs
             Common output configuration.
-
-        Raises
-        ------
-        ValueError
-            If ``aggregate_points`` is neither ``None`` nor ``all``, or
-            ``aggregate_states`` is not a boolean.
         """
         if aggregate_points not in (None, "all"):
             raise ValueError(

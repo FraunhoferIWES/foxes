@@ -107,13 +107,15 @@ def _join_point_blocks(blocks: list[dict[str, Any]], n_points: int) -> dict[str,
 
 
 class DatasetOutput(FarmResultsOutput):
-    """Collect farm chunks under a private key before a final output operation."""
+    """Collect farm chunks under a private key before a final output operation.
+
+    Configure private farm or point collection without retaining datasets.
+    """
 
     def __init__(
         self, result_name: str | None = None, use_points: bool = False, **kwargs: Any
     ) -> None:
-        """Configure private farm or point collection without retaining datasets.
-
+        """
         Parameters
         ----------
         result_name
