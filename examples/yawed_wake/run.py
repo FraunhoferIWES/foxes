@@ -35,7 +35,7 @@ def main(argv=None):
         "-w",
         "--wakes",
         help="The wake models",
-        default=["TurbOPark_vector_ambka004", "CrespoHernandez_quadratic_ambka04"],
+        default=["TurbOPark_vector_ambk1_004", "CrespoHernandez_quadratic_ambk1_04"],
         nargs="+",
     )
     parser.add_argument(

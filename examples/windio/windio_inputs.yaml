@@ -27,9 +27,9 @@ attributes:
 
     wind_deficit_model:
       name: Bastankhah2014
-      wake_expansion_coefficient: # k = k_a + k_b * ti
-        k_a: 0.04
-        k_b: 0.0
+      wake_expansion_coefficient: # k = k_a * TI + k_b
+        k_a: 0.0
+        k_b: 0.04
         free_stream_ti: false
       ceps: 0.2
       use_effective_ws: true

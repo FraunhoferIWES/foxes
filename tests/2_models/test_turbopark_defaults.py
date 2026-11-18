@@ -21,7 +21,7 @@ def test_turbopark_defaults_match_original_model():
     assert direct_wake_model.wind_superposition == "ws_quadratic_amb_target"
     assert wake_model.induction == "Betz"
     assert wake_model.wind_superposition == "ws_quadratic_amb_target"
-    assert wake_model.wake_k.repr() == f"k=0.04*{FV.AMB_TI}"
+    assert wake_model.wake_k.repr() == f"k=0.0+0.04*{FV.AMB_TI}"
     assert mbook.default_partial_wakes(wake_model) == "gaussian_lookup"
 
     algo = foxes.algorithms.Downwind(
@@ -49,7 +49,7 @@ def test_jensen_turbopark_defaults():
     assert direct_wake_model.wind_superposition == "ws_quadratic_amb_target"
     assert wake_model.induction == "Betz"
     assert wake_model.wind_superposition == "ws_quadratic_amb_target"
-    assert wake_model.wake_k.repr() == f"k=0.6*{FV.AMB_TI}"
+    assert wake_model.wake_k.repr() == f"k=0.0+0.6*{FV.AMB_TI}"
     assert mbook.default_partial_wakes(wake_model) == "top_hat"
 
 
@@ -81,7 +81,7 @@ def test_windio_turbopark_uses_original_model_structure():
     wake_model = mbook.wake_models["TurbOPark"]
     assert wake_model.induction == "Betz"
     assert wake_model.wind_superposition == "ws_quadratic_amb_target"
-    assert wake_model.wake_k.repr() == f"k=0.04*{FV.AMB_TI}"
+    assert wake_model.wake_k.repr() == "k=0.04"
     assert algo_dict["wake_models"] == ["TurbOPark"]
     assert algo_dict["ground_models"] == {"TurbOPark": "ground_mirror"}
 
@@ -92,7 +92,7 @@ def test_windio_keeps_non_turbopark_configuration():
     wind_deficit = Dict(
         {
             "name": "Jensen",
-            "wake_expansion_coefficient": {"k_a": 0.04},
+            "wake_expansion_coefficient": {"k_b": 0.04},
         }
     )
     superposition = Dict({"ws_superposition": "Linear"})

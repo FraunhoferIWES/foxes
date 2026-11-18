@@ -14,7 +14,7 @@ from _model_smoke_helpers import _farm, _mbook_with_ttype
 def _calculate(amb_ti=None, state_ti=None):
     mbook, turbine_type = _mbook_with_ttype()
     mbook.wake_models["test_wake"] = JensenTurbOParkWake(
-        amb_ti=amb_ti, ka=0.6, ti_var=FV.AMB_TI
+        amb_ti=amb_ti, k_1=0.6, ti_var=FV.AMB_TI
     )
     values = pd.DataFrame({FV.WS: [8.0] * 4, FV.WD: [270.0, 90.0, 0.0, 270.0]})
     output_vars = [FV.WS, FV.WD]

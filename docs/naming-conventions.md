@@ -353,6 +353,15 @@ Import `foxes.variables as FV`. Use constants such as `FV.WS`, `FV.WD`,
 corresponding `FV.AMB_*` constant for unwaked values. Preserve canonical case,
 including intentionally unusual existing names such as `FV.p` and `FV.AMB_p`.
 
+Wake growth uses `FV.K = FV.K_0 + FV.K_1 * TI`, where `FV.K_0 = "k0"`
+is the dimensionless intercept and `FV.K_1 = "k1"` the dimensionless multiplier.
+Python configuration uses `k_0`/`k_1`; model-book names use `k0_<value>` and
+`k1_<value>`, or `ambk0_<value>` and `ambk1_<value>` for ambient TI.
+Keep the underscore before the value to distinguish coefficients from the
+unchanged constant `k<value>` syntax. WindIO retains `k_a`/`k_b` at its
+boundary, translated to multiplier/intercept respectively. See
+[ADR-0042](adr/0042-wake-growth-coefficients.md).
+
 Ambient and ordinary fields are selected through output `variables`,
 `ambient_vars` and `waked_vars` options. When selected together during an
 ambient-only calculation, ordinary and `FV.AMB_*` counterparts both represent

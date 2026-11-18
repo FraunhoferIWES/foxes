@@ -2,10 +2,11 @@ from __future__ import annotations
 # mypy: disable-error-code=override
 
 import numpy as np
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from foxes.core import TurbineModel
 from foxes.config import config
+from foxes.utils.factory import _reject_legacy_wake_coefficients
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -15,65 +16,80 @@ if TYPE_CHECKING:
 
 
 class kTI(TurbineModel):
-    """
-    Calculates the wake model parameter `k`
-    as a linear function of `TI`.
+    """Wake growth from ``FV.K = FV.K_0 + FV.K_1 * TI``.
+
+    Uniform coefficients override farm data. The intercept defaults to zero
+    when neither a uniform value nor ``FV.K_0`` farm data is available.
+
+    Raises
+    ------
+    ValueError
+        If ``FV.K_1`` or the selected turbulence field is unavailable during
+        calculation.
+    DeprecationWarning
+        If removed coefficient keywords are supplied, raised as an exception
+        with migration guidance.
     """
 
     def __init__(
         self,
-        kTI: float | None = None,
-        kb: float | None = None,
+        k_0: float | None = None,
+        k_1: float | None = None,
         ti_var: str = FV.TI,
         ti_val: float | None = None,
         k_var: str = FV.K,
+        **kwargs: Any,
     ) -> None:
         """
         Parameters
         ----------
-        kTI
-            Uniform value for `kTI`. If not given it
-            will be searched in farm data
-        kb
-            Uniform value for `kb`. If not given it
-            will be searched in farm data, and zero by default
+        k_0
+            Uniform dimensionless intercept, or ``None`` to use ``FV.K_0``
+            from farm data, defaulting to zero if absent.
+        k_1
+            Uniform dimensionless TI multiplier, or ``None`` to retrieve
+            ``FV.K_1`` from farm data.
         ti_var
-            The `TI` variable name
+            Turbulence field, such as ``FV.TI`` or ``FV.AMB_TI``.
         ti_val
-            The uniform value of `TI`. If not given it
-            will be searched in farm data
+            Uniform dimensionless turbulence intensity, or ``None`` to
+            retrieve ``ti_var`` from farm data.
         k_var
-            The variable name for k
+            Output wake growth field with dimensions ``(FC.STATE, FC.TURBINE)``.
+        kwargs
+            Removed keywords are rejected; no extra configuration is accepted.
         """
+        _reject_legacy_wake_coefficients(kwargs)
+        if kwargs:
+            raise TypeError(f"kTI: Unexpected parameters {sorted(kwargs)}")
         super().__init__()
 
         self.ti_var = ti_var
         self.k_var = k_var
         setattr(self, ti_var, ti_val)
-        setattr(self, FV.KTI, kTI)
-        setattr(self, FV.KB, 0 if kb is None else kb)
+        setattr(self, FV.K_0, k_0)
+        setattr(self, FV.K_1, k_1)
 
     def __repr__(self) -> str:
-        kti = getattr(self, FV.KTI)
-        kb = getattr(self, FV.KB)
+        k_0 = getattr(self, FV.K_0)
+        k_1 = getattr(self, FV.K_1)
         ti = getattr(self, self.ti_var)
         tiv = f", ti_val={ti}" if ti is not None else ""
-        a = f"kTI={kti}, kb={kb}, ti_var={self.ti_var}{tiv}, k_var={self.k_var}"
+        a = f"k_0={k_0}, k_1={k_1}, ti_var={self.ti_var}{tiv}, k_var={self.k_var}"
         return f"{type(self).__name__}({a})"
 
     def output_farm_vars(self, algo: Algorithm) -> list[str]:
-        """
-        The variables which are being modified by the model.
+        """List the wake growth field modified by this model.
 
         Parameters
         ----------
         algo
-            The calculation algorithm
+            The calculation algorithm.
 
         Returns
         -------
         output_vars
-            The output variable names
+            The configured ``k_var`` output field.
 
         """
         return [self.k_var]
@@ -95,7 +111,8 @@ class kTI(TurbineModel):
         mdata
             The model data.
         fdata
-            The farm data; the coefficient field is updated in place.
+            Farm data containing ``FV.K_0``, ``FV.K_1`` and ``ti_var`` unless
+            supplied uniformly. The ``k_var`` growth field is updated in place.
         st_sel
             A state slice or boolean state-turbine mask with shape
             ``(n_states, n_turbines)``.
@@ -112,20 +129,23 @@ class kTI(TurbineModel):
         n_states = fdata.n_states
         n_turbines = fdata.n_turbines
         assert n_states is not None and n_turbines is not None
-        kti = self.get_data(
-            FV.KTI,
+        k_1 = self.get_data(
+            FV.K_1,
             FC.STATE_TURBINE,
             lookup="sf",
             fdata=fdata,
             selection=st_sel,
         )
-        kb = self.get_data(
-            FV.KB,
+        k_0 = self.get_data(
+            FV.K_0,
             FC.STATE_TURBINE,
             lookup="sf",
             fdata=fdata,
             selection=st_sel,
+            accept_none=True,
         )
+        if k_0 is None:
+            k_0 = 0.0
         ti = self.get_data(
             self.ti_var,
             FC.STATE_TURBINE,
@@ -139,6 +159,6 @@ class kTI(TurbineModel):
             np.zeros((n_states, n_turbines), dtype=config.dtype_double),
         )
 
-        k[st_sel] = kti * ti + kb
+        k[st_sel] = k_0 + k_1 * ti
 
         return {self.k_var: k}

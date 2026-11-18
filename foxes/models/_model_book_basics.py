@@ -149,37 +149,43 @@ def _populate_turbine_models(book: ModelBook) -> None:
     )
     book.turbine_models.add_factory(
         fm.turbine_models.kTI,
-        "kTI_amb_<kTI>_<kb>",
+        "kTI_ambk0_<ambk0>_ambk1_<ambk1>",
         kwargs=dict(ti_var=FV.AMB_TI),
-        kTI=_parse_coefficient,
-        kb=_parse_coefficient,
+        var2arg={"ambk0": "k_0", "ambk1": "k_1"},
+        ambk0=_parse_coefficient,
+        ambk1=_parse_coefficient,
         hints={
-            "kTI": "(Value, e.g. 04 for 0.4)",
-            "kb": "(Value, e.g. 004 for 0.04)",
+            "ambk0": "(Intercept, e.g. 004 for 0.04)",
+            "ambk1": "(TI multiplier, e.g. 04 for 0.4)",
+        },
+        example_vars={"ambk0": 0.001, "ambk1": 0.2},
+    )
+    book.turbine_models.add_factory(
+        fm.turbine_models.kTI,
+        "kTI_ambk1_<ambk1>",
+        kwargs=dict(ti_var=FV.AMB_TI),
+        var2arg={"ambk1": "k_1"},
+        ambk1=_parse_coefficient,
+        hints={"ambk1": "(TI multiplier, e.g. 04 for 0.4)"},
+        example_vars={"ambk1": 0.2},
+    )
+    book.turbine_models.add_factory(
+        fm.turbine_models.kTI,
+        "kTI_k0_<k0>_k1_<k1>",
+        var2arg={"k0": "k_0", "k1": "k_1"},
+        k0=_parse_coefficient,
+        k1=_parse_coefficient,
+        hints={
+            "k0": "(Intercept, e.g. 004 for 0.04)",
+            "k1": "(TI multiplier, e.g. 04 for 0.4)",
         },
     )
     book.turbine_models.add_factory(
         fm.turbine_models.kTI,
-        "kTI_amb_<kTI>",
-        kwargs=dict(ti_var=FV.AMB_TI),
-        kTI=_parse_coefficient,
-        hints={"kTI": "(Value, e.g. 04 for 0.4)"},
-    )
-    book.turbine_models.add_factory(
-        fm.turbine_models.kTI,
-        "kTI_<kTI>_<kb>",
-        kTI=_parse_coefficient,
-        kb=_parse_coefficient,
-        hints={
-            "kTI": "(Value, e.g. 04 for 0.4)",
-            "kb": "(Value, e.g. 004 for 0.04)",
-        },
-    )
-    book.turbine_models.add_factory(
-        fm.turbine_models.kTI,
-        "kTI_<kTI>",
-        kTI=_parse_coefficient,
-        hints={"kTI": "(Value, e.g. 02 for 0.2)"},
+        "kTI_k1_<k1>",
+        var2arg={"k1": "k_1"},
+        k1=_parse_coefficient,
+        hints={"k1": "(TI multiplier, e.g. 02 for 0.2)"},
     )
 
     book.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc(

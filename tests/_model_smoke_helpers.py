@@ -549,7 +549,7 @@ def _run_state_smoke(cls, tmp_path):
         farm = _farm(["NREL5MW"], n_turbines=2, H=90.0)
     rotor = "level10" if "MultiHeight" in name else "centre"
     wakes = (
-        ["Bastankhah2014_linear_ka02"]
+        ["Bastankhah2014_linear_k1_02"]
         if "MultiHeight" in name
         else ["Jensen_linear_k007"]
     )
@@ -759,7 +759,7 @@ def _run_turbine_model_smoke(cls, tmp_path):
             func=lambda rews, ti, **_: (rews + ti,),
         )
     elif name == "kTI":
-        model = cls(kTI=0.2)
+        model = cls(k_1=0.2)
     elif name == "LookupTable":
         table = pd.DataFrame(
             {

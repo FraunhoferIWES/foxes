@@ -4,6 +4,7 @@ import numpy as np
 from typing import TYPE_CHECKING, Any
 
 from foxes.core import WakeK
+from foxes.utils.factory import _reject_legacy_wake_coefficients
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
@@ -17,6 +18,14 @@ if TYPE_CHECKING:
 class IECTIWake(TopHatWakeModel):
     """
     The TI wake model from IEC-64100-1-2005-8 (2005):
+
+    Raises
+    ------
+    KeyError
+        If explicit growth parameters and ``opening_angle`` are both supplied.
+    DeprecationWarning
+        If removed wake-growth coefficient keywords are supplied, raised as
+        an exception with migration guidance.
 
     Notes
     -----
@@ -50,8 +59,6 @@ class IECTIWake(TopHatWakeModel):
             based on the wake opening angle.
         iec_type
             Either '2005' or '2019'/'Frandsen'
-        wake_k
-            Parameters for the WakeK class
         induction
             The induction model to use. Default: 'Betz'
         c0
@@ -60,6 +67,10 @@ class IECTIWake(TopHatWakeModel):
             The c1 parameter for the wake decay
         c2
             The c2 parameter for the wake decay
+        wake_k
+            Parameters for ``WakeK``, including dimensionless ``k_0`` and
+            ``k_1`` in ``k = k_0 + k_1 * TI``. Explicit growth parameters require
+            ``opening_angle=None``.
         """
         super().__init__(
             other_superpositions={FV.TI: superposition}, induction=induction
@@ -70,12 +81,13 @@ class IECTIWake(TopHatWakeModel):
         self.c1 = c1
         self.c2 = c2
 
+        _reject_legacy_wake_coefficients(wake_k)
         if opening_angle is None:
             self.wake_k = WakeK(**wake_k)
         else:
-            if "k" in wake_k or "ka" in wake_k or "kb" in wake_k:
+            if any(key in wake_k for key in ("k", "k_0", "k_1")):
                 raise KeyError(
-                    "Can handle 'opening_angle' or ('k', 'ka', 'kb') parameters, not both"
+                    "Can handle 'opening_angle' or ('k', 'k_0', 'k_1') parameters, not both"
                 )
             self._k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 

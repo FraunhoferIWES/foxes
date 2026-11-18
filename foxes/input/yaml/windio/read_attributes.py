@@ -67,27 +67,26 @@ def _read_wind_deficit(
         kcoef = Dict(
             wind_deficit.get_item(
                 "wake_expansion_coefficient",
-                {"k_a": 0.003678, "k_b": 0.3837},
+                {"k_a": 0.3837, "k_b": 0.003678},
             ),
             _name="kcoef",
         )
     else:
         kcoef = Dict(wind_deficit["wake_expansion_coefficient"], _name="kcoef")
-    ka = kcoef.get_item("k_a", 0.0)
-    kb = kcoef.get_item("k_b", 0.0)
+    k_0 = kcoef.get_item("k_b", 0.0)
+    k_1 = kcoef.get_item("k_a", 0.0)
     amb_ti = kcoef.get_item("free_stream_ti", False)
-    if kb is None or kb == 0.0:
-        wind_def_dict["k"] = ka
+    if k_1 is None or k_1 == 0.0:
+        wind_def_dict["k"] = k_0
         if verbosity > 2:
-            print("        Using k =", ka)
+            print("        Using k =", k_0)
     else:
         ti_var = FV.AMB_TI if amb_ti else FV.TI
         if verbosity > 2:
-            print(f"      Using k = {ka} + {kb} * {ti_var}")
+            print(f"      Using k = {k_0} + {k_1} * {ti_var}")
         wind_def_dict["k"] = None
-        # WindIO uses k = k_a + k_b * TI; foxes uses k = ka * TI + kb.
-        wind_def_dict["ka"] = kb
-        wind_def_dict["kb"] = ka
+        wind_def_dict["k_0"] = k_0
+        wind_def_dict["k_1"] = k_1
         wind_def_dict["ti_var"] = ti_var
     if "ceps" in wind_deficit:
         sbf = wind_deficit["ceps"]
@@ -109,7 +108,7 @@ def _read_wind_deficit(
         ground_models = algo_dict.setdefault("ground_models", {})
         ground_models[wname] = "ground_mirror"
 
-    return ka, kb, amb_ti
+    return k_0, k_1, amb_ti
 
 
 def _read_turbulence(
@@ -118,8 +117,8 @@ def _read_turbulence(
     induction: Any,
     algo_dict: dict[str, Any],
     mbook: ModelBook,
-    ka: Any,
-    kb: Any,
+    k_0: Any,
+    k_1: Any,
     amb_ti: Any,
     verbosity: int,
 ) -> None:
@@ -172,21 +171,20 @@ def _read_turbulence(
             kcoef: Dict[str, Any] = Dict(
                 turbulence_model["wake_expansion_coefficient"], _name="kcoef"
             )
-            ka = kcoef.get_item("k_a", 0.0)
-            kb = kcoef.get_item("k_b", 0.0)
+            k_0 = kcoef.get_item("k_b", 0.0)
+            k_1 = kcoef.get_item("k_a", 0.0)
             amb_ti = kcoef.get_item("free_stream_ti", False)
-        if kb is None or kb == 0.0:
-            tiwake_dict["k"] = ka
+        if k_1 is None or k_1 == 0.0:
+            tiwake_dict["k"] = k_0
             if verbosity > 2:
-                print("        Using k =", ka)
+                print("        Using k =", k_0)
         else:
             ti_var = FV.AMB_TI if amb_ti else FV.TI
             if verbosity > 2:
-                print(f"      Using k = {ka} + {kb} * {ti_var}")
+                print(f"      Using k = {k_0} + {k_1} * {ti_var}")
             tiwake_dict["k"] = None
-            # WindIO uses k = k_a + k_b * TI; foxes uses k = ka * TI + kb.
-            tiwake_dict["ka"] = kb
-            tiwake_dict["kb"] = ka
+            tiwake_dict["k_0"] = k_0
+            tiwake_dict["k_1"] = k_1
             tiwake_dict["ti_var"] = ti_var
         tiwake_dict["superposition"] = ti_sup_dict[superposition["ti_superposition"]]
 
@@ -397,7 +395,7 @@ def _read_analysis(
     wind_deficit: Any = Dict(
         wio_ana[wake_model_key], _name=wio_ana.name + "." + wake_model_key
     )
-    ka, kb, amb_ti = _read_wind_deficit(
+    k_0, k_1, amb_ti = _read_wind_deficit(
         wake_model_key,
         wind_deficit,
         superposition,
@@ -418,8 +416,8 @@ def _read_analysis(
             induction,
             algo_dict,
             mbook,
-            ka,
-            kb,
+            k_0,
+            k_1,
             amb_ti,
             verbosity,
         )

@@ -178,6 +178,11 @@ check unique factory templates, every closed option, advertised examples and
 representative numeric tokens against actual lookup and constructor parameters.
 Disable factory caching during precedence tests. Membership alone does not prove
 that a finite-option factory will construct the requested name.
+For wake-growth changes, also run
+`uv run pytest tests/0_consistency/core/test_wake_k.py tests/2_models/turbine_models/test_kTI_model.py tests/2_models/test_niayifar.py tests/2_models/test_turbopark_defaults.py tests/2_models/test_jensen_turbopark_ambient_ti.py -q`.
+Verify intercept/multiplier ordering, state-turbine coefficients and selections,
+ambient TI, removed-input errors, unchanged constant-growth tokens and WindIO
+translation without changing its external schema.
 Style cleanup of changed files separates component construction, state
 selection, payload validation and tile assembly from their lifecycle coordinators;
 keep declarative field tables intact rather than splitting them for line counts.
@@ -403,9 +408,11 @@ tests contradict it.
   methods, properties and extension hooks; automated formatting alone is not a
   docstring review.
 - Update the final `CHANGELOG.md` section. Organize it into concise user- and
-  developer-facing subsections, report each changed class at most once, remove
-  implementation-level detail, and verify every claim against the code and the
-  `main` release baseline. List all release bug fixes.
+  developer-facing categories as top-level list items ending in a colon
+  (for example `- Core:`), with individual changes as indented list items.
+  Do not use Markdown subheadings for categories. Report each changed class
+  at most once, remove implementation-level detail, and verify every claim
+  against the code and the `main` release baseline. List all release bug fixes.
 - Review every `docs/source/` page for current facts, useful level of detail,
   working links and references. Replace outdated `versionadded` and
   `versionchanged` entries on `index.rst` with no more than three entries for

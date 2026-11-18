@@ -763,6 +763,10 @@ logical category. Keep resource lookup separate from scientific calculation.
 The WindIO adapter selects the iterative algorithm and per-wake `ground_mirror`
 for every enabled blockage (induction wake) model. It also enables ground
 mirroring for TurbOPark wind deficits, preserving other per-wake ground settings.
+Its unchanged `wake_expansion_coefficient` schema follows WIFA's
+`k = k_a * TI + k_b`: `k_a` maps to FOXES `k_1` and `k_b` to `k_0`;
+`free_stream_ti` selects `FV.AMB_TI`. Wind deficit coefficients remain the
+defaults for turbulence models unless explicitly overridden.
 
 State support-point diagnostics are opt-in loading-time outputs. Regular,
 scattered, Weibull, binned, and turbine-backed spatial states expose
@@ -897,6 +901,14 @@ boundary and reusable logic in importable functions so tests need not spawn a
 subprocess.
 
 ## Cross-Cutting Decisions
+
+- Wake growth uses dimensionless `FV.K_0 = "k0"` and `FV.K_1 = "k1"` for
+  `k = k_0 + k_1 * TI`. `WakeK` owns direct wake configuration; the `kTI`
+  turbine model computes the same relation from uniform values or farm fields.
+  Model-book coefficient labels are `k0`/`k1` or `ambk0`/`ambk1`, separated
+  from values by underscores. Removed inputs fail with migration guidance;
+  no old coefficient values are accepted. See
+  [ADR-0042](adr/0042-wake-growth-coefficients.md).
 
 - Outputs declare whether supplied results need chunks through
   `requires_chunk_calculation`. Plain state/turbine tables finalize directly

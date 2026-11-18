@@ -5,6 +5,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, cast
 
 from foxes.utils import new_instance
+from foxes.utils.factory import _reject_legacy_wake_coefficients
 import foxes.variables as FV
 
 from .model import Model
@@ -241,79 +242,113 @@ class WakeModel(Model):
 
 
 class WakeK(Model):
-    """
-    Handler for the wake growth parameter k
+    """Wake growth parameter ``k = k_0 + k_1 * TI``.
+
+    Supplying either coefficient selects the linear relation, with the other
+    coefficient defaulting to zero. A zero multiplier does not require TI.
+    Without coefficients, use uniform ``k`` or retrieve ``k_var`` from data.
+
+    Raises
+    ------
+    ValueError
+        If ``k`` and either linear coefficient are supplied together.
+    DeprecationWarning
+        If removed coefficient keywords are supplied. This is raised as an
+        exception, not emitted as a warning.
     """
 
     def __init__(
         self,
         k: float | None = None,
-        ka: float | None = None,
-        kb: float | None = None,
+        k_0: float | None = None,
+        k_1: float | None = None,
         k_var: str = FV.K,
         ti_var: str = FV.TI,
+        **kwargs: Any,
     ) -> None:
         """
         Parameters
         ----------
         k
-            The k value
-        ka
-            The ka value in k = ka * TI + kb
-        kb
-            The kb value in k = ka * TI + kb
+            Uniform dimensionless wake growth parameter.
+        k_0
+            Dimensionless intercept in ``k = k_0 + k_1 * TI``.
+        k_1
+            Dimensionless TI multiplier in ``k = k_0 + k_1 * TI``.
         k_var
-            The name of the k variable
+            Wake growth field to retrieve when no uniform values are supplied.
         ti_var
-            The name of the TI variable
+            Turbulence field, such as ``FV.TI`` or ``FV.AMB_TI``.
+        kwargs
+            Removed keywords are rejected with migration guidance; no extra
+            configuration is accepted.
         """
+        _reject_legacy_wake_coefficients(kwargs)
+        if kwargs:
+            raise TypeError(f"WakeK: Unexpected parameters {sorted(kwargs)}")
         super().__init__()
         self._k = k
-        self._ka = ka
-        self._kb = kb
+        self._k_0 = k_0
+        self._k_1 = k_1
         self.k_var = k_var
         self.ti_var = ti_var
 
-        if k is not None and (ka is not None or kb is not None):
-            raise ValueError("Got 'k' and also ('ka' or 'kb') as non-None parameters")
-        elif k is None and kb is not None and (ka is None or ka == 0):
-            raise ValueError(f"Got k={k}, ka={ka}, kb={kb}, use k={kb} instead")
+        if k is not None and (k_0 is not None or k_1 is not None):
+            raise ValueError("Got 'k' and also ('k_0' or 'k_1') as non-None parameters")
 
-        setattr(self, self.k_var, None)
+        setattr(self, self.k_var, k)
+        self._intercept = 0.0 if k_0 is None else k_0
 
     def repr(self) -> str:
-        """
-        Provides the representative string
+        """Describe the configured wake growth relation.
 
         Returns
         -------
-        s
-            The representative string
-
+        relation
+            Uniform growth, the intercept/multiplier relation, or the field
+            requested from data.
         """
         if self._k is not None:
             s = f"{self.k_var}={self._k}"
-        elif self._ka is not None or self._kb is not None:
-            s = f"{self.k_var}={self._ka}*{self.ti_var}"
-            if self._kb is not None and self._kb > 0:
-                s += f"+{self._kb}"
+        elif self._k_0 is not None or self._k_1 is not None:
+            k_0 = 0.0 if self._k_0 is None else self._k_0
+            k_1 = 0.0 if self._k_1 is None else self._k_1
+            s = f"{self.k_var}={k_0}+{k_1}*{self.ti_var}"
         else:
             s = f"k_var={self.k_var}"
         return s
 
     @property
     def is_kTI(self) -> bool:
-        """Flag for ka != 0"""
-        return self._ka is not None and self._ka != 0
+        """Whether the TI multiplier is nonzero.
+
+        Returns
+        -------
+        uses_ti
+            Whether the linear relation requires turbulence intensity.
+        """
+        return self._k_1 is not None and self._k_1 != 0
 
     @property
     def all_none(self) -> bool:
-        """Flag for k=ka=kb=None"""
-        return self._k is None and self._ka is None and self._kb is None
+        """Whether uniform growth and both coefficients are unspecified.
+
+        Returns
+        -------
+        data_driven
+            Whether to retrieve the growth field from data.
+        """
+        return self._k is None and self._k_0 is None and self._k_1 is None
 
     @property
     def use_amb_ti(self) -> bool:
-        """Flag for using ambient ti"""
+        """Whether the turbulence field is ambient.
+
+        Returns
+        -------
+        ambient
+            Whether ``ti_var`` belongs to ``FV.amb2var``.
+        """
         return self.ti_var in FV.amb2var
 
     def __call__(
@@ -323,55 +358,88 @@ class WakeK(Model):
         lookup_k: str = "sw",
         ti: np.ndarray | None = None,
         amb_ti: np.ndarray | None = None,
-        selection: np.ndarray | tuple[slice] | None = None,
+        selection: np.ndarray | tuple[slice, ...] | slice | None = None,
         **kwargs: Any,
     ) -> np.ndarray:
-        """
-        Gets the k value
+        """Evaluate dimensionless wake growth without changing model state.
 
         Parameters
         ----------
         args
-            Arguments for get_data
+            Target dimensions identifier for ``Model.get_data()``, followed
+            by any positional data-lookup arguments. Supported targets are
+            ``FC.STATE_TURBINE``, ``FC.STATE_TARGET`` and
+            ``FC.STATE_TARGET_TPOINT``.
         lookup_ti
-            The ti lookup order for get_data
+            Lookup order for ``ti_var`` when turbulence is not supplied.
         lookup_k
-            The k lookup order for get_data
+            Growth lookup order. ``s`` selects the configured uniform value or
+            linear relation; other sources retrieve ``k_var`` from data.
         ti
-            ti data in the requested target shape,
-            if known
+            Local TI array in the full requested target shape. Used only when
+            ``ti_var`` is ``FV.TI``.
         amb_ti
-            Ambient ti data in the requested target shape,
-            if known
+            Ambient TI array in the full requested target shape. Used only when
+            ``ti_var`` is ``FV.AMB_TI``.
         selection
-            Optional data selection for get_data
+            Selection applied to the full target-shaped growth array.
         kwargs
-            Arguments for get_data
+            Data containers and validation options for ``Model.get_data()``.
 
         Returns
         -------
         k
-            The k array as returned by get_data
+            Dimensionless growth array aligned to the requested target and
+            selection. Intercept-only growth is a read-only broadcast view
+            when expansion is required.
 
         """
-        setattr(self, self.k_var, self._k)
         assert len(args) > 0, f"{self.name}: Missing target argument for K call"
         target = cast(str, args[0])
         data_args = args[1:]
-        if self._ka is not None or self._kb is not None:
-            if self.ti_var == FV.TI and ti is not None:
-                pass
-            elif self.ti_var == FV.AMB_TI and amb_ti is not None:
-                ti = amb_ti
-            else:
-                ti = cast(
-                    np.ndarray,
-                    self.get_data(  # type: ignore[call-overload]
-                        self.ti_var, target, *data_args, lookup=lookup_ti, **kwargs
-                    ),
+        if (self._k_0 is not None or self._k_1 is not None) and "s" in lookup_k:
+            preceding = lookup_k.split("s", 1)[0]
+            if preceding:
+                configured = self.get_data(  # type: ignore[call-overload]
+                    self.k_var,
+                    target,
+                    *data_args,
+                    lookup=preceding,
+                    selection=selection,
+                    **{**kwargs, "accept_none": True},
                 )
-            kb = 0 if self._kb is None else self._kb
-            setattr(self, self.k_var, self._ka * ti + kb)
+                if configured is not None:
+                    return cast(np.ndarray, configured)
+            k = cast(
+                np.ndarray,
+                self.get_data(  # type: ignore[call-overload]
+                    "_intercept",
+                    target,
+                    *data_args,
+                    lookup="s",
+                    selection=selection,
+                    **kwargs,
+                ),
+            )
+            if self.is_kTI:
+                assert self._k_1 is not None
+                if self.ti_var == FV.TI and ti is not None:
+                    pass
+                elif self.ti_var == FV.AMB_TI and amb_ti is not None:
+                    ti = amb_ti
+                else:
+                    ti = cast(
+                        np.ndarray,
+                        self.get_data(  # type: ignore[call-overload]
+                            self.ti_var, target, *data_args, lookup=lookup_ti, **kwargs
+                        ),
+                    )
+                k = np.asarray(
+                    k + self._k_1 * (ti if selection is None else ti[selection])
+                )
+            if not kwargs.get("accept_nan", True) and np.isnan(k).any():
+                raise ValueError(f"Model '{self.name}': NaN values in '{self.k_var}'")
+            return k
 
         k = cast(
             np.ndarray,
@@ -384,5 +452,4 @@ class WakeK(Model):
                 **kwargs,
             ),
         )
-        setattr(self, self.k_var, None)
         return k

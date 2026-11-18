@@ -335,12 +335,12 @@ K = "k"
 """ Wake growth parameter
 """
 
-KB = "kb"
-""" KTI value for zero TI, K = KB + KTI*TI
+K_0 = "k0"
+""" Dimensionless wake growth intercept, K = K_0 + K_1 * TI.
 """
 
-KTI = "kTI"
-""" Factor between K and TI, K = KB + KTI*TI
+K_1 = "k1"
+""" Dimensionless TI multiplier, K = K_0 + K_1 * TI.
 """
 
 

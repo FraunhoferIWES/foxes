@@ -48,7 +48,7 @@ def test():
             foxes.input.farm_layout.add_from_file(
                 farm,
                 lfile,
-                turbine_models=["kTI_amb_02", ttype.name],
+                turbine_models=["kTI_ambk1_02", ttype.name],
                 verbosity=1,
             )
 

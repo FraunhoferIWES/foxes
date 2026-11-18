@@ -130,14 +130,14 @@ def test_partial_gaussian_lookup_handles_yawed_vector_wakes() -> None:
         farm.add_turbine(
             foxes.Turbine(
                 xy=[x, 0.0],
-                turbine_models=["set_yawm", "yawm2yaw", "NREL5MW", "kTI_05"],
+                turbine_models=["set_yawm", "yawm2yaw", "NREL5MW", "kTI_k1_05"],
             )
         )
     algo = foxes.algorithms.Downwind(
         farm,
         states,
         rotor_model="centre",
-        wake_models=["TurbOPark_vector_ambka004", "CrespoHernandez_quadratic"],
+        wake_models=["TurbOPark_vector_ambk1_004", "CrespoHernandez_quadratic"],
         wake_deflection="Jimenez",
         mbook=mbook,
         verbosity=0,
