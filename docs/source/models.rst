@@ -146,25 +146,48 @@ Here the convention is that you write `linear` for the choice `ws_linear` or `ti
 The `[wake_k]` part of the model name can be replaced by one of the following patterns:
 
 * `k<k>`, where `<k>` is to be replaced by the value for the wake growth factor `k`, with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
-* `ka<ka>`, where `<ka>` is to be replaced by the value for `ka` in `k = ka * TI`, with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
-* `ambka<ka>`, where `<ka>` is to be replaced by the value for `ka` in `k = ka * AMB_TI`, with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
-* `ka<ka>_kb<kb>`, where `<ka>` and `<kb>` are to be replaced by the values for `ka` and `kb` in `k = ka * TI + kb`, both with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
-* `ambka<ka>_kb<kb>`, where `<ka>` and `<kb>` are to be replaced by the values for `ka` and `kb` in `k = ka * AMB_TI + kb`, both with dot-skipping convention (e.g. `004` for the value `0.04`, etc.)
+* ``k0_<k0>`` for a constant intercept, or ``k1_<k1>`` for a TI multiplier with zero intercept.
+* ``k0_<k0>_k1_<k1>`` for ``k = k_0 + k_1 * TI``.
+* ``ambk0_<ambk0>``, ``ambk1_<ambk1>`` or
+  ``ambk0_<ambk0>_ambk1_<ambk1>`` for the corresponding relation using ``AMB_TI``.
 * nothing, e.g. `Bastankhah2014_linear`, which searches the value for `k` in the list of available farm data. This is intended to be used whenever a turbine model computes the `k` values, typically the the :class:`kTI<foxes.models.turbine_models.kTI_model.kTI>` turbine model, or an optimizer.
+
+Python wake constructors accept ``k_0`` and ``k_1``. The canonical coefficient
+fields are ``FV.K_0 = "k0"`` and ``FV.K_1 = "k1"``; both are dimensionless.
+An omitted coefficient is zero when the other is supplied. A zero multiplier
+does not require TI. Explicit ``k`` and linear coefficients are mutually exclusive.
+The underscore between a coefficient label and its value is required:
+``k0_004`` selects an intercept of 0.04, while the existing ``k004`` constant
+growth notation is unchanged.
+
+Removed FOXES keywords ``ka``, ``kb``, ``kti`` and ``kTI`` and old parameterized
+model-book names raise ``DeprecationWarning`` as an exception, with migration
+guidance. Replace the former intercept ``kb`` with ``k_0`` and the former
+multiplier ``ka``/``kti``/``kTI`` with ``k_1``.
+
+WindIO schema keys remain unchanged. Following WIFA's
+``k = k_a * TI + k_b``, ``wake_expansion_coefficient.k_a`` maps to
+``k_1``, ``k_b`` maps to ``k_0``, and ``free_stream_ti`` selects ambient TI.
+This translation applies to wind deficits and turbulence models, including
+inherited coefficients. This corrects FOXES's previous reversed interpretation.
+Existing configurations written for that interpretation must swap the two
+coefficient values to preserve their results; for example, constant growth
+of 0.04 is now ``k_a: 0.0, k_b: 0.04``.
 
 Coefficient tokens also accept standard floating-point notation, for example
 ``Jensen_linear_k0.04`` and ``Jensen_linear_k004`` select the same growth factor.
 The integrated model ``TurbOParkIX_<superposition>_k<k>_dx<dx>`` accepts a
 constant growth factor, while ``TurbOParkIX_<superposition>_dx<dx>`` reads it
-from farm data. It does not support ``ka`` or ``ambka`` growth modes.
+from farm data. Its factories do not offer linear-coefficient suffixes;
+the Python constructor rejects a nonzero ``k_1``.
 
 Examples for valid wake model choices are:
 
 * `Jensen_quadratic_k0075`
-* `Bastankhah2014_linear_ka02_kb0012`
-* `Bastankhah2016_linear_lim_ambka04`
+* ``Bastankhah2014_linear_k0_0012_k1_02``
+* ``Bastankhah2016_linear_lim_ambk1_04``
 * `TurbOPark_quadratic_amb_target_k004`
-* `CrespoHernandez_max_ka0213_kb003`
+* ``CrespoHernandez_max_k0_003_k1_0213``
 * `Bastankhah2014_linear`
 * `Niayifar`
 
@@ -286,7 +309,14 @@ For each state and turbine, those compute data from currently existing data.
 The list of available turbine model classes can be found
 :doc:`here in the API <_autoapi/foxes/models/turbine_models/index>`. For example:
 
-* :class:`kTI<foxes.models.turbine_models.kTI_model.kTI>`: Computes the wake expansion coefficient `k` as a linear function of `TI`: `k = kb + kTI * TI`. All models that do not specify `k` explicitly (i.e, `k=None` in the constructor), will then use this result when computing wake deltas.
+* :class:`kTI<foxes.models.turbine_models.kTI_model.kTI>`: Computes
+  ``FV.K = FV.K_0 + FV.K_1 * TI`` for each state and turbine.
+  Supply uniform Python parameters ``k_0``/``k_1`` or farm fields ``k0``/``k1``.
+  A missing intercept defaults to zero; a missing multiplier is an error.
+  Model-book examples are ``kTI_k1_02``, ``kTI_k0_001_k1_02`` and
+  ``kTI_ambk0_001_ambk1_02``. The ``kTI`` and ``kTI_amb`` presets read
+  coefficients from farm data, using local and ambient TI respectively.
+  Wake models without explicit growth configuration use the computed ``FV.K``.
 * :class:`SetFarmVars<foxes.models.turbine_models.set_farm_vars.SetFarmVars>`: Set any farm variable to any state-turbine data array, or sub-array (nan values are ignored), either initially (`pre_rotor=True`) or after the wake calculation.
 * :class:`PowerMask<foxes.models.turbine_models.power_mask.PowerMask>`: Curtail or boost the turbine by re-setting the maximal power of the turbine, see the Power mask example.
 * :class:`SectorManagement<foxes.models.turbine_models.sector_management.SectorManagement>`: Modify farm variables if wind speed and/or wind direction values are within certain ranges, see the Wind sector management example.

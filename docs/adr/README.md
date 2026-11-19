@@ -53,6 +53,7 @@ all of them.
 | [0039](0039-parent-owned-output-rendering.md) | Superseded by [0040](0040-explicit-output-data-lifecycle.md) | Transfer rendering options and caller-owned figures/axes through initial results, remove them from running outputs, and pass them explicitly to parent-side renderers. |
 | [0040](0040-explicit-output-data-lifecycle.md) | Accepted | Let each output explicitly manage named initial results and stash fields, without a generic attribute registry or ownership bundle; use the normal lifecycle for metadata and native support roses. |
 | [0041](0041-parent-only-supplied-results.md) | Accepted | Let outputs declare whether supplied datasets require chunks; plain tables finalize directly, while aggregations and fresh scientific collection retain chunks. |
+| [0042](0042-wake-growth-coefficients.md) | Accepted | Use k0/k1 fields and intercept/multiplier configuration consistently, preserving WindIO schema and rejecting removed FOXES inputs. |
 
 ## When To Add An ADR
 

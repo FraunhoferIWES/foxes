@@ -47,7 +47,7 @@ def test():
         xy_base=p0,
         xy_step=stp,
         n_turbines=n_t,
-        turbine_models=["kTI_amb_02", ttype.name],
+        turbine_models=["kTI_ambk1_02", ttype.name],
         verbosity=1,
     )
 

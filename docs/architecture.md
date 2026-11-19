@@ -431,8 +431,26 @@ choosing a child's grid.
 
 `calc_farm` evaluates requested grids in bounded point slices within each state
 chunk. `calc_outputs` uses the ordinary point engine to chunk requested locations,
-or collects supplied farm results without rerunning farm physics. When points
-are requested without farm results it first calculates the required farm inputs.
+or collects supplied farm results without rerunning farm physics. Without supplied
+results or requested points, outputs requiring farm fields delegate to
+`calc_farm`, including unrestricted field requirements. State selections and
+return conventions are preserved; the delegated call owns finalization.
+Outputs requiring neither farm fields nor points use the metadata-only lifecycle.
+Outputs with empty farm-field requirements ignore supplied farm results unless
+new point science needs them. Without point inputs or requests, they run only
+the metadata lifecycle; empty-field farm collectors return an empty dataset
+without borrowing input coordinates. When points are requested without farm
+results it first calculates the required farm inputs, even with an empty output
+field list. Intermediate farm calculations honor the same state selection as
+point execution; state-dependent requested points are selected from the full
+algorithm state index in matching label order.
+Explicit output farm-field selections are merged with the
+`farm_results_calc` preset for standard point-calculation inputs, without
+mutating either selection. An unrestricted output requirement retains all
+available farm fields.
+With precomputed point results, only explicit nonempty farm-field requirements
+trigger missing farm calculations; unrestricted requirements consume available
+fields. No point-calculation baseline is added when point science is skipped.
 `calc_points` uses only supplied points or precomputed point results and never
 calls `get_calc_points`. Precomputed public point datasets include `FV.X`,
 `FV.Y` and `FV.H` coordinates and bypass scientific point calculations.
@@ -769,6 +787,10 @@ logical category. Keep resource lookup separate from scientific calculation.
 The WindIO adapter selects the iterative algorithm and per-wake `ground_mirror`
 for every enabled blockage (induction wake) model. It also enables ground
 mirroring for TurbOPark wind deficits, preserving other per-wake ground settings.
+Its unchanged `wake_expansion_coefficient` schema follows WIFA's
+`k = k_a * TI + k_b`: `k_a` maps to FOXES `k_1` and `k_b` to `k_0`;
+`free_stream_ti` selects `FV.AMB_TI`. Wind deficit coefficients remain the
+defaults for turbulence models unless explicitly overridden.
 
 State support-point diagnostics are opt-in loading-time outputs. Regular,
 scattered, Weibull, binned, and turbine-backed spatial states expose
@@ -903,6 +925,14 @@ boundary and reusable logic in importable functions so tests need not spawn a
 subprocess.
 
 ## Cross-Cutting Decisions
+
+- Wake growth uses dimensionless `FV.K_0 = "k0"` and `FV.K_1 = "k1"` for
+  `k = k_0 + k_1 * TI`. `WakeK` owns direct wake configuration; the `kTI`
+  turbine model computes the same relation from uniform values or farm fields.
+  Model-book coefficient labels are `k0`/`k1` or `ambk0`/`ambk1`, separated
+  from values by underscores. Removed inputs fail with migration guidance;
+  no old coefficient values are accepted. See
+  [ADR-0042](adr/0042-wake-growth-coefficients.md).
 
 - Outputs declare whether supplied results need chunks through
   `requires_chunk_calculation`. Plain state/turbine tables finalize directly

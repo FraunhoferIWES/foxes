@@ -403,8 +403,8 @@ def _populate_gaussian_wakes(book: ModelBook) -> None:
     """
     book.wake_models["Niayifar"] = fm.wake_models.wind.Bastankhah2014(
         superposition="ws_linear",
-        ka=0.3837,
-        kb=0.003678,
+        k_1=0.3837,
+        k_0=0.003678,
         ti_var=FV.TI,
         induction="Madsen",
     )
@@ -458,21 +458,21 @@ def _populate_park_wakes(book: ModelBook) -> None:
     """
     book.wake_models["TurbOPark"] = fm.wake_models.wind.TurbOParkWake(
         superposition="ws_quadratic_amb_target",
-        ka=0.04,
+        k_1=0.04,
         ti_var=FV.AMB_TI,
         induction="Betz",
     )
 
     book.wake_models["TurbOPark0045"] = fm.wake_models.wind.TurbOParkWake(
         superposition="ws_quadratic_amb_target",
-        ka=0.045,
+        k_1=0.045,
         ti_var=FV.AMB_TI,
         induction="Betz",
     )
 
     book.wake_models["JensenTurbOPark"] = fm.wake_models.wind.JensenTurbOParkWake(
         superposition="ws_quadratic_amb_target",
-        ka=0.6,
+        k_1=0.6,
         ti_var=FV.AMB_TI,
         induction="Betz",
     )

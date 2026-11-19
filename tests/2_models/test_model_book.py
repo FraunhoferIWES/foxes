@@ -18,11 +18,11 @@ _FACTORY_TOKENS = {
     "dx": ["10", "100"],
     "dt": ["30s", "2min"],
     "height": ["100", "500"],
-    "kTI": ["02", "0.2"],
     "k": ["004", "0.04"],
-    "ka": ["02", "0.2"],
-    "ambka": ["04", "0.4"],
-    "kb": ["0001", "0.001"],
+    "k0": ["0001", "0.001"],
+    "k1": ["02", "0.2"],
+    "ambk0": ["0001", "0.001"],
+    "ambk1": ["04", "0.4"],
     "superposition": ["linear", "quadratic"],
 }
 
@@ -219,6 +219,44 @@ def test_coefficient_tokens_preserve_compact_and_standard_numbers(token, expecte
 def test_coefficient_tokens_reject_invalid_numbers(token):
     with pytest.raises(ValueError):
         _parse_coefficient(token)
+
+
+@pytest.mark.parametrize(
+    "suffix,intercept,multiplier,ti_var",
+    [
+        ("k0_001_k1_02", 0.01, 0.2, FV.TI),
+        ("ambk0_0.01_ambk1_0.2", 0.01, 0.2, FV.AMB_TI),
+        ("k0_004", 0.04, None, FV.TI),
+        ("ambk1_04", None, 0.4, FV.AMB_TI),
+    ],
+)
+def test_wake_growth_tokens_map_to_intercept_and_multiplier(
+    suffix, intercept, multiplier, ti_var
+):
+    growth = ModelBook().wake_models[f"Jensen_linear_{suffix}"].wake_k
+    assert growth._k_0 == intercept
+    assert growth._k_1 == multiplier
+    assert growth.ti_var == ti_var
+
+
+def test_constant_growth_token_is_not_parsed_as_intercept():
+    growth = ModelBook().wake_models["Jensen_linear_k004"].wake_k
+    assert growth._k == 0.04
+    assert growth._k_0 is None
+
+
+@pytest.mark.parametrize(
+    "collection,name",
+    [
+        ("wake_models", "Jensen_linear_ka02_kb001"),
+        ("wake_models", "Jensen_linear_ambka04"),
+        ("turbine_models", "kTI_02"),
+        ("turbine_models", "kTI_amb_02_001"),
+    ],
+)
+def test_removed_growth_names_raise_actionable_errors(collection, name):
+    with pytest.raises(DeprecationWarning, match=r"k = k_0 \+ k_1 \* TI"):
+        ModelBook().sources[collection][name]
 
 
 @pytest.mark.parametrize("suffix", ["", "_amb", "_target", "_amb_target", "_loc"])

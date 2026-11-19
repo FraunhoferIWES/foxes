@@ -281,6 +281,12 @@ class TurbOParkWakeIX(GaussianWakeModel):
     The generalized TurbOPark wake model, integrating TI over the streamline.
 
     https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf
+
+    Raises
+    ------
+    ValueError
+        If a nonzero ``k_1`` is supplied; this model integrates TI along the
+        streamline rather than using a source-TI growth multiplier.
     """
 
     def __init__(
@@ -309,7 +315,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
         ipars
             Additional parameters for centreline integration
         wake_k
-            Parameters for the WakeK class
+            Parameters for ``WakeK``. Supply constant ``k`` or intercept
+            ``k_0``, or retrieve ``FV.K`` from farm data. A nonzero ``k_1``
+            is not supported.
         """
         super().__init__(wind_superposition=superposition)
 
@@ -321,7 +329,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
 
-        assert not self.wake_k.is_kTI, f"{self.name}: Cannot apply ka or ambka setup"
+        if self.wake_k.is_kTI:
+            raise ValueError(f"{self.name}: Cannot apply nonzero k_1 setup")
 
     def __repr__(self) -> str:
         iname = (

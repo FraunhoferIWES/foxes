@@ -116,7 +116,7 @@ def main(argv=None):
         col_x="x",
         col_y="y",
         col_H="H",
-        turbine_models=[ttype.name, "kTI_02"] + args.tmodels,
+        turbine_models=[ttype.name, "kTI_k1_02"] + args.tmodels,
         verbosity=max(args.verbosity - 1, 0),
     )
 

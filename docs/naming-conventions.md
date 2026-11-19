@@ -128,6 +128,12 @@ can span chunks or split a single chunk.
 dataset. Public point results rename `FC.TARGET` to `FC.POINT`. The model-book
 `"default"` field selection is not an implicit list of every wake input; request
 `"farm_results_all"` explicitly when all farm variables are required.
+`"farm_results_calc"` selects turbine position, diameter, wind/yaw direction,
+thrust coefficient, ambient/waked rotor-equivalent wind speed and turbulence
+intensity, and state weights. Point calculations requested through
+`calc_outputs` merge this baseline with explicit output farm-field requirements;
+an unrestricted requirement retains all fields. Model-specific extra inputs
+belong in the output's farm-field requirements.
 
 Count/chunk filenames use six-digit zero-padded indices. Calendar files use
 `YYYY-MM-DD`, `YYYY-Www`, `YYYY-MM` or `YYYY` suffixes. Weekly `YYYY` is the ISO
@@ -352,6 +358,15 @@ Import `foxes.variables as FV`. Use constants such as `FV.WS`, `FV.WD`,
 `FV.TI`, `FV.RHO`, `FV.P`, and `FV.CT` instead of string literals. Use the
 corresponding `FV.AMB_*` constant for unwaked values. Preserve canonical case,
 including intentionally unusual existing names such as `FV.p` and `FV.AMB_p`.
+
+Wake growth uses `FV.K = FV.K_0 + FV.K_1 * TI`, where `FV.K_0 = "k0"`
+is the dimensionless intercept and `FV.K_1 = "k1"` the dimensionless multiplier.
+Python configuration uses `k_0`/`k_1`; model-book names use `k0_<value>` and
+`k1_<value>`, or `ambk0_<value>` and `ambk1_<value>` for ambient TI.
+Keep the underscore before the value to distinguish coefficients from the
+unchanged constant `k<value>` syntax. WindIO retains `k_a`/`k_b` at its
+boundary, translated to multiplier/intercept respectively. See
+[ADR-0042](adr/0042-wake-growth-coefficients.md).
 
 Ambient and ordinary fields are selected through output `variables`,
 `ambient_vars` and `waked_vars` options. When selected together during an

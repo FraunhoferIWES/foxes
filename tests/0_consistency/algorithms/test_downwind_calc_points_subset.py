@@ -31,7 +31,7 @@ def test_downwind_calc_points_respects_states_sel_subset():
         farm,
         states,
         rotor_model="level10",
-        wake_models=["Bastankhah2014_linear_ka02"],
+        wake_models=["Bastankhah2014_linear_k1_02"],
         partial_wakes=None,
         verbosity=0,
     )

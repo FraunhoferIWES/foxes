@@ -1,10 +1,24 @@
 # mypy: disable-error-code=override
 
 import numpy as np
+import re
 from typing import Any
 
 from .dict import Dict
 import foxes.variables as FV
+
+
+def _reject_legacy_wake_coefficients(parameters: dict[str, Any]) -> None:
+    """Reject removed FOXES coefficient keywords with migration guidance."""
+    removed = sorted(set(parameters).intersection({"ka", "kb", "kti", "kTI"}))
+    if removed:
+        raise DeprecationWarning(
+            f"Removed wake-growth parameters {removed}. Use "
+            "'k_0' (formerly 'kb') and 'k_1' (formerly 'ka'/'kti'/'kTI'): "
+            "k = k_0 + k_1 * TI, with fields FV.K_0 and FV.K_1. "
+            "Model-book tokens are k0_<value>/k1_<value> or "
+            "ambk0_<value>/ambk1_<value>."
+        )
 
 
 def _parse_coefficient(token: str) -> float:
@@ -116,8 +130,8 @@ class Factory:
             n=5,
             n2=9,
             superposition="linear",
-            kTI=0.2,
-            kb=0.001,
+            k0=0.001,
+            k1=0.2,
             step=100,
             dx=100,
             dt="10s",
@@ -408,86 +422,36 @@ class WakeKFactory:
                 f"String '_[wake_k]' not found in name template '{name_template}'"
             )
 
-        exvars = dict(k=0.04, ka=0.2, ambka=0.4, kb=0.001)
+        exvars = dict(k=0.04, k0=0.001, k1=0.2, ambk0=0.001, ambk1=0.4)
         if example_vars is not None:
             exvars.update(example_vars)
 
         fbase = dict(options)
 
-        # add case ka, kb:
-        t0 = name_template[:i0]
-        t = t0 + "_ka<ka>_kb<kb>"
-        if len(name_template) > i1:
-            t += name_template[i1:]
-        h = hints.copy()
-        h["ka"] = "(Value, e.g. 04 for 0.4)"
-        h["kb"] = "(Value, e.g. 001 for 0.01)"
-        kw["ti_var"] = FV.TI
-        fpars = dict(fbase)
-        fpars.update(
-            hints=h,
-            kwargs=kw.copy(),
-            ka=_parse_coefficient,
-            kb=_parse_coefficient,
-            example_vars=exvars,
-        )
-        self.factories.append(Factory(base, t, *args, **fpars))
-
-        # add case ambient ambka, kb:
-        t = name_template[:i0] + "_ambka<ambka>_kb<kb>"
-        if len(name_template) > i1:
-            t += name_template[i1:]
-        h = hints.copy()
-        h["ambka"] = "(Value, e.g. 04 for 0.4)"
-        h["kb"] = "(Value, e.g. 001 for 0.01)"
-        kw["ti_var"] = FV.AMB_TI
-        hv2a = v2a.copy()
-        hv2a["ambka"] = "ka"
-        fpars = dict(fbase)
-        fpars.update(
-            hints=h,
-            kwargs=kw.copy(),
-            var2arg=hv2a,
-            ambka=_parse_coefficient,
-            kb=_parse_coefficient,
-            example_vars=exvars,
-        )
-        self.factories.append(Factory(base, t, *args, **fpars))
-
-        # add case ka:
-        t = name_template[:i0] + "_ka<ka>"
-        if len(name_template) > i1:
-            t += name_template[i1:]
-        h = hints.copy()
-        h["ka"] = "(Value, e.g. 04 for 0.4)"
-        kw["ti_var"] = FV.TI
-        fpars = dict(fbase)
-        fpars.update(
-            hints=h,
-            kwargs=kw.copy(),
-            ka=_parse_coefficient,
-            example_vars=exvars,
-        )
-        self.factories.append(Factory(base, t, *args, **fpars))
-
-        # add case ambka:
-        t = name_template[:i0] + "_ambka<ambka>"
-        if len(name_template) > i1:
-            t += name_template[i1:]
-        h = hints.copy()
-        h["ambka"] = "(Value, e.g. 04 for 0.4)"
-        kw["ti_var"] = FV.AMB_TI
-        hv2a = v2a.copy()
-        hv2a["ambka"] = "ka"
-        fpars = dict(fbase)
-        fpars.update(
-            hints=h,
-            kwargs=kw.copy(),
-            var2arg=hv2a,
-            ambka=_parse_coefficient,
-            example_vars=exvars,
-        )
-        self.factories.append(Factory(base, t, *args, **fpars))
+        # Register intercept/multiplier pairs before their single-token forms.
+        for prefix, ti_var in [("", FV.TI), ("amb", FV.AMB_TI)]:
+            for indices in [(0, 1), (0,), (1,)]:
+                tokens = {f"{prefix}k{i}": f"k_{i}" for i in indices}
+                suffix = "".join(f"_{token}_<{token}>" for token in tokens)
+                fpars = dict(fbase)
+                fpars.update(
+                    hints={
+                        **hints,
+                        **{token: "(Coefficient value)" for token in tokens},
+                    },
+                    kwargs={**kw, "ti_var": ti_var},
+                    var2arg={**v2a, **tokens},
+                    example_vars=exvars,
+                    **{token: _parse_coefficient for token in tokens},
+                )
+                self.factories.append(
+                    Factory(
+                        base,
+                        name_template[:i0] + suffix + name_template[i1:],
+                        *args,
+                        **fpars,
+                    )
+                )
 
         # add case k:
         t = name_template[:i0] + "_k<k>"
@@ -525,7 +489,11 @@ class WakeKFactory:
                 s += f"\n  {v} from {list(f0.options[v])}"
             else:
                 s += f"\n  {v}={f0.hints.get(v, '(value)')}"
-        s += "\n  [wake_k]=(None or k<k> or ka<ka> or ka<ka>_kb<kb>, e.g. 004 for 0.04)"
+        s += (
+            "\n  [wake_k]=(None, k<k>, k0_<k0>, k1_<k1>, k0_<k0>_k1_<k1>, "
+            "ambk0_<ambk0>, ambk1_<ambk1> or ambk0_<ambk0>_ambk1_<ambk1>; "
+            "k = k_0 + k_1 * TI, e.g. 004 for 0.04)"
+        )
         return s
 
 
@@ -648,6 +616,20 @@ class FDict(Dict):
         try:
             return super().__getitem__(key)
         except KeyError:
+            if isinstance(key, str) and any(
+                argument in {"k_0", "k_1"}
+                for factory in self.factories
+                for argument in factory.var2arg.values()
+            ):
+                if re.search(
+                    r"(?:^|_)(?:ambka|ka|kb|kti)(?=$|[+-]?(?:\d|\.))", key
+                ) or re.match(r"kTI_(?:amb_)?[0-9]", key):
+                    raise DeprecationWarning(
+                        f"Removed wake-growth model-book name '{key}'. Use "
+                        "k0_<value>/k1_<value> or ambk0_<value>/ambk1_<value>: "
+                        "k = k_0 + k_1 * TI "
+                        "(old kb -> k0, ka/kti/kTI multiplier -> k1)."
+                    )
             for f in self.factories:
                 try:
                     obj = f.construct(key)

@@ -29,7 +29,7 @@ def main(argv=None):
         nargs="+",
     )
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
+        "-m", "--tmodels", help="The turbine models", default=["kTI_k1_04"], nargs="+"
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(

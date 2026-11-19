@@ -46,7 +46,7 @@ def main(argv=None):
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2014_linear_k004", "CrespoHernandez_quadratic_ambka04"],
+        default=["Bastankhah2014_linear_k004", "CrespoHernandez_quadratic_ambk1_04"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")

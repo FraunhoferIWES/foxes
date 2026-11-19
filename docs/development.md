@@ -178,6 +178,11 @@ check unique factory templates, every closed option, advertised examples and
 representative numeric tokens against actual lookup and constructor parameters.
 Disable factory caching during precedence tests. Membership alone does not prove
 that a finite-option factory will construct the requested name.
+For wake-growth changes, also run
+`uv run pytest tests/0_consistency/core/test_wake_k.py tests/2_models/turbine_models/test_kTI_model.py tests/2_models/test_niayifar.py tests/2_models/test_turbopark_defaults.py tests/2_models/test_jensen_turbopark_ambient_ti.py -q`.
+Verify intercept/multiplier ordering, state-turbine coefficients and selections,
+ambient TI, removed-input errors, unchanged constant-growth tokens and WindIO
+translation without changing its external schema.
 Style cleanup of changed files separates component construction, state
 selection, payload validation and tile assembly from their lifecycle coordinators;
 keep declarative field tables intact rather than splitting them for line counts.
@@ -403,9 +408,11 @@ tests contradict it.
   methods, properties and extension hooks; automated formatting alone is not a
   docstring review.
 - Update the final `CHANGELOG.md` section. Organize it into concise user- and
-  developer-facing subsections, report each changed class at most once, remove
-  implementation-level detail, and verify every claim against the code and the
-  `main` release baseline. List all release bug fixes.
+  developer-facing categories as top-level list items ending in a colon
+  (for example `- Core:`), with individual changes as indented list items.
+  Do not use Markdown subheadings for categories. Report each changed class
+  at most once, remove implementation-level detail, and verify every claim
+  against the code and the `main` release baseline. List all release bug fixes.
 - Review every `docs/source/` page for current facts, useful level of detail,
   working links and references. Replace outdated `versionadded` and
   `versionchanged` entries on `index.rst` with no more than three entries for
@@ -708,11 +715,18 @@ runs. See [ADR-0023](adr/0023-in-process-example-runs.md).
 
 Execute the user-oriented output notebook with
 `uv run pytest --nbmake notebooks/outputs.ipynb --nbmake-timeout=300 -q`.
-It uses six synthetic states, six public-curve turbines, a bounded NumPy engine
-and temporary writer/animation directories. It covers composed result keys,
-automatic metrics, physical aggregation, selected-state counts, point results,
-layout/rose/flow plots, count/calendar files and GIF output.
-It also demonstrates `ret_dict=True` and image suppression before point requests.
+It uses 2,400 synthetic hourly timestamps, 12 public-curve turbines, a bounded
+NumPy engine and temporary writer/animation directories. Every public
+output-module class has a runnable example, including the `Animator` helper and
+all six writer classes. Flow maps and animations retain 240-by-160 grids;
+expensive examples explicitly select timestamp subsets.
+It explains all three algorithm entry points, composed result keys, automatic
+metrics, physical aggregation, selected-state counts, point results,
+`ret_dict=True` and image suppression before point requests.
+The complete preset/factory catalogue is Markdown, so it remains visible without
+execution. Validate its rows against a fresh `ModelBook`, and keep every public
+class represented in executed examples. Run validation in an isolated copy and
+save the source notebook with all cell outputs and execution counts cleared.
 Use natural terms such as results, farm results and results classes in this
 user-facing tutorial, rather than collectors. Dynamic-wake and timelines
 notebooks calculate keyed farm results before creating animations through

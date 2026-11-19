@@ -41,7 +41,7 @@ def main(argv=None):
         nargs="+",
     )
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
+        "-m", "--tmodels", help="The turbine models", default=["kTI_k1_02"], nargs="+"
     )
     parser.add_argument(
         "-r", "--rotors", help="The rotor model(s)", default=["grid400"], nargs="+"

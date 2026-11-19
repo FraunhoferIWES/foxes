@@ -758,7 +758,8 @@ class Downwind(Algorithm):
         """
         # Preserve instance identity and declaration order across selector forms.
         if isinstance(outputs, Output):
-            output, oneout = outputs, True
+            output = outputs
+            oneout = not isinstance(output, OutputList) or len(output.outputs) < 2
         elif isinstance(outputs, str):
             output, oneout = self.mbook.outputs[outputs], True
         elif isinstance(outputs, list):
@@ -1310,7 +1311,7 @@ class Downwind(Algorithm):
         **kwargs: Any,
     ) -> Dataset | dict[str, Any]:
         """
-        Run selected outputs on supplied results or their requested points.
+        Run selected outputs, reusing results or calculating required fields.
 
         Parameters
         ----------
@@ -1324,37 +1325,46 @@ class Downwind(Algorithm):
             ``requires_chunk_calculation`` is false process these on the parent;
             other outputs use engine chunks. Missing state coordinates are
             filled from ``self.states``.
-            If absent and an output requests points, all required farm fields
-            are calculated first.
+            If absent, required farm fields are calculated when needed by an
+            output or its requested points. An unrestricted farm-field
+            requirement collects all available fields. Supplied farm results
+            are ignored when neither the output nor point science needs them.
         point_results
             Precomputed ``(FC.STATE, FC.POINT)`` fields with location coordinates
             as required by ``calc_points``. These take precedence over requested
             grids and are consumed without scientific point recalculation.
+            Missing farm results are calculated only for explicit nonempty
+            farm-field requirements. An unrestricted requirement consumes
+            available farm fields without triggering farm calculation.
         calc_parameters
-            Model-name-to-keyword-parameter mapping forwarded to point
-            calculations when point evaluation is needed.
+            Model-name-to-keyword-parameter mapping forwarded to delegated
+            farm or point calculations.
         finalize
             Finalize initialized models and the algorithm after execution.
         states_sel
-            State-coordinate labels forwarded to collection or point execution.
-            ``None`` retains all states; point execution requires unique labels.
+            State-coordinate labels forwarded to farm, point or supplied-result
+            execution. ``None`` retains all states; point execution requires
+            unique labels. Intermediate farm calculations use the same
+            selection; state-dependent requested points are selected from the
+            algorithm's full state index.
         clear_mem
             Remove loaded model data for execution and finalize afterward,
             even if ``finalize`` is false.
         ret_dict
             Preserve the result-name mapping even for a single output with
-            exactly one result, including delegated point calculations.
+            exactly one result, including delegated farm or point calculations.
         kwargs
-            Additional engine or point-calculation options.
+            Additional engine or farm/point-calculation options.
 
         Returns
         -------
         results
             The sole result of a single selected output unless ``ret_dict`` is
-            true, otherwise a result-name-to-value mapping. ``None`` disables collection and
-            returns an empty mapping. Without supplied data or requested points,
-            initial results and parent-side finalization run inside the regular
-            output running lifecycle, without dispatching scientific chunks.
+            true, otherwise a result-name-to-value mapping. ``None`` disables
+            collection and returns an empty mapping. Without supplied data,
+            outputs requiring neither farm fields nor points run initial
+            results and parent-side finalization inside the regular output
+            running lifecycle, without dispatching scientific chunks.
 
         Raises
         ------
@@ -1381,57 +1391,113 @@ class Downwind(Algorithm):
         output, oneout = self._resolve_outputs(outputs)
         if output is None:
             return {}
-
-        # Initialize the resolved output chain before preparing model inputs.
-        if output is not None:
+        else:
             self.init_model(output)
 
-        # welcome:
+        # prepare:
         points = output.get_calc_points(self) if point_results is None else None
-        if farm_results is not None and FC.STATE not in farm_results.sizes:
-            farm_results = farm_results.assign_coords({FC.STATE: self.states.index()})
-        if farm_results is None and point_results is not None:
-            kwargs.setdefault("ambient", True)
-            return self.calc_points(
-                farm_results=None,
-                points=points,
-                point_results=point_results,
-                outputs=output,
-                calc_parameters=calc_parameters,
-                finalize=finalize,
-                states_sel=states_sel,
-                clear_mem=clear_mem,
-                ret_dict=ret_dict,
-                **kwargs,
+        fdata_vars = output.fdata_variables
+        need_farm_results = (
+            points is not None
+            or bool(fdata_vars)
+            or (
+                fdata_vars is None
+                and (farm_results is not None or point_results is None)
             )
-        if farm_results is None and points is not None:
-            farm_results = self.calc_farm(outputs="farm_results_all", finalize=False)
+        )
+        if not need_farm_results:
+            farm_results = None
+        elif farm_results is not None and FC.STATE not in farm_results.sizes:
+            farm_results = farm_results.assign_coords({FC.STATE: self.states.index()})
 
-        # run calculation:
-        if farm_results is not None and points is None and point_results is None:
-            # Keep loaded algorithm data off workers during output-only execution.
-            model_data, extra_data = self.get_model_data(pop=clear_mem)
-            data_stash: dict[str, Any] | None = {} if not clear_mem else None
-            kwargs.setdefault("progress_label", f"{self.name}.calc_outputs")
-            try:
-                self.set_running(self, data_stash, verbosity=self.verbosity - 2)
-                results = launch_parallel_calc(
-                    self,
-                    model=None,
-                    model_data=model_data,
-                    farm_data=farm_results,
-                    extra_data=extra_data,
-                    output=output,
-                    chunk_store=self.chunk_store,
+        # Align state-dependent locations with the selected farm calculation.
+        if points is not None and points.ndim == 3 and states_sel is not None:
+            points = (
+                self.new_point_data(points, self.states.index())
+                .sel({FC.STATE: states_sel})[FC.TARGETS]
+                .to_numpy()[:, :, 0]
+            )
+
+        # run calculation without point results:
+        if points is None and point_results is None:
+            # run with given farm results:
+            if need_farm_results and farm_results is not None:
+                # Keep loaded algorithm data off workers during output-only execution.
+                model_data, extra_data = self.get_model_data(pop=clear_mem)
+                data_stash: dict[str, Any] | None = {} if not clear_mem else None
+                kwargs.setdefault("progress_label", f"{self.name}.calc_outputs")
+                try:
+                    self.set_running(self, data_stash, verbosity=self.verbosity - 2)
+                    results = launch_parallel_calc(
+                        self,
+                        model=None,
+                        model_data=model_data,
+                        farm_data=farm_results,
+                        extra_data=extra_data,
+                        output=output,
+                        chunk_store=self.chunk_store,
+                        sel=None if states_sel is None else {FC.STATE: states_sel},
+                        **kwargs,
+                    )
+                finally:
+                    if self.running:
+                        self.unset_running(
+                            self, data_stash, verbosity=self.verbosity - 2
+                        )
+                    del data_stash, model_data, extra_data
+
+            # compute required farm results along with outputs:
+            elif need_farm_results:
+                return self.calc_farm(
+                    outputs=output,
+                    ret_dict=ret_dict,
+                    finalize=finalize,
                     sel=None if states_sel is None else {FC.STATE: states_sel},
+                    clear_mem=clear_mem,
+                    calc_parameters=calc_parameters,
                     **kwargs,
                 )
-            finally:
-                if self.running:
-                    self.unset_running(self, data_stash, verbosity=self.verbosity - 2)
-        elif farm_results is not None and (
-            points is not None or point_results is not None
-        ):
+
+            # run calculation with neither farm nor point results:
+            else:
+                self.print(
+                    f"{self.name}: Computing finalize_results for output {output}"
+                )
+                model_data, extra_data = self.get_model_data(pop=clear_mem)
+                data_stash = {} if not clear_mem else None
+                kwargs.setdefault("progress_label", f"{self.name}.calc_outputs")
+                try:
+                    self.set_running(self, data_stash, verbosity=self.verbosity - 2)
+                    results = launch_parallel_calc(
+                        self,
+                        model=None,
+                        model_data=model_data,
+                        extra_data=extra_data,
+                        output=output,
+                        chunk_store=self.chunk_store,
+                        sel=None if states_sel is None else {FC.STATE: states_sel},
+                        **kwargs,
+                    )
+                finally:
+                    if self.running:
+                        self.unset_running(
+                            self, data_stash, verbosity=self.verbosity - 2
+                        )
+                    del model_data, extra_data, data_stash
+
+        # run calculation with point results:
+        else:
+            if farm_results is None and need_farm_results:
+                if points is not None and fdata_vars is not None:
+                    calc_vars = self.mbook.outputs["farm_results_calc"].fdata_variables
+                    assert calc_vars is not None
+                    fdata_vars = list(dict.fromkeys(calc_vars + fdata_vars))
+                farm_results = self.calc_farm(
+                    outputs=fm.outputs.FarmResultsOutput(variables=fdata_vars),
+                    calc_parameters=calc_parameters,
+                    sel=None if states_sel is None else {FC.STATE: states_sel},
+                    finalize=False,
+                )
             results = self.calc_points(
                 farm_results=farm_results,
                 points=points,
@@ -1445,18 +1511,6 @@ class Downwind(Algorithm):
                 **kwargs,
             )
             return results
-        else:
-            self.print(f"{self.name}: Computing finalize_results for output {output}")
-            model_data, extra_data = self.get_model_data(pop=clear_mem)
-            results = launch_parallel_calc(
-                self,
-                model=None,
-                model_data=model_data,
-                extra_data=extra_data,
-                output=output,
-                chunk_store=self.chunk_store,
-                sel=None if states_sel is None else {FC.STATE: states_sel},
-            )
 
         if clear_mem or finalize:
             self.finalize(clear_mem=clear_mem)
