@@ -1284,5 +1284,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Preserve streamline source identities across farm/downwind turbine ordering,
     handle unreached forward projections correctly when ordering turbines, and
     retain selected state labels when reusing geometry across point chunks.
+  - Retain thrust coefficients and other wake inputs in both blockage notebooks
+    for subsequent point calculations and flow plots, including all induction
+    and ground-mirror comparisons.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.0](https://github.com/FraunhoferIWES/foxes/commits/v1.10.0)
