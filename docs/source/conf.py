@@ -40,7 +40,7 @@ release = __version__
 # -- General configuration ---------------------------------------------------
 
 extensions = [
-    "numpydoc",
+    "sphinx.ext.napoleon",
     "sphinx_immaterial",
     "autoapi.extension",
     "sphinx.ext.autosectionlabel",
@@ -79,11 +79,8 @@ exclude_patterns = [
 pygments_style = None
 
 # NumPy-style docstrings and stable cross-reference labels.
-# Keep class members visible so constructors and inherited API members appear in
-# the generated reference pages for the concrete model classes.
-numpydoc_use_rtype = False
-numpydoc_show_class_members = True
-numpydoc_class_members_toctree = False
+napoleon_use_rtype = False
+napoleon_use_ivar = True
 autosectionlabel_prefix_document = True
 
 
@@ -156,6 +153,7 @@ myst_enable_extensions = [
 
 nb_execution_mode = "auto"
 nb_execution_timeout = 300
+nb_execution_raise_on_error = True
 nb_ipywidgets_js = {
     "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js": {
         "integrity": "sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=",
@@ -178,8 +176,20 @@ def remove_autoapi_submodule_heading(app, docname, source):
         )
 
 
+def separate_autoapi_constructor_docstrings(app, what, name, obj, options, lines):
+    if obj is None and what == "method" and name.endswith((".__init__", ".__new__")):
+        # AutoAPI appends processed constructors to raw class docstrings.
+        # Two blank lines terminate Napoleon's preceding NumPy section.
+        lines[:0] = ["", ""]
+
+
 def setup(app):
     app.connect("source-read", remove_autoapi_submodule_heading)
+    app.connect(
+        "autodoc-process-docstring",
+        separate_autoapi_constructor_docstrings,
+        priority=600,
+    )
 
 
 suppress_warnings = ["mystnb.unknown_mime_type"]

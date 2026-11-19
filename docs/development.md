@@ -53,7 +53,7 @@ Multiple extras can be combined by repeating the option.
 |---|---|
 | `test` | pytest, notebook tests, pre-commit, mypy, and test runtime support |
 | `dev` | interactive development and object-size investigation |
-| `doc` | Sphinx, AutoAPI, numpydoc, MyST-NB, and documentation notebooks |
+| `doc` | Sphinx with Napoleon, AutoAPI, MyST-NB, and documentation notebooks |
 | `opt` | `foxes-opt` integration |
 | `icon_dream` | ICON-DREAM conversion dependencies |
 | `era5` | ERA5/metpy support |
@@ -715,17 +715,16 @@ runs. See [ADR-0023](adr/0023-in-process-example-runs.md).
 
 Execute the user-oriented output notebook with
 `uv run pytest --nbmake notebooks/outputs.ipynb --nbmake-timeout=300 -q`.
-It uses 2,400 synthetic hourly timestamps, 12 public-curve turbines, a bounded
-NumPy engine and temporary writer/animation directories. Every public
-output-module class has a runnable example, including the `Animator` helper and
-all six writer classes. Flow maps and animations retain 240-by-160 grids;
-expensive examples explicitly select timestamp subsets.
-It explains all three algorithm entry points, composed result keys, automatic
-metrics, physical aggregation, selected-state counts, point results,
-`ret_dict=True` and image suppression before point requests.
-The complete preset/factory catalogue is Markdown, so it remains visible without
-execution. Validate its rows against a fresh `ModelBook`, and keep every public
-class represented in executed examples. Run validation in an isolated copy and
+It is a visual gallery using 288 synthetic weighted wind cases, 12 public-curve
+turbines and a bounded NumPy engine. Examples cover efficiency layouts/maps,
+wind roses, horizontal/vertical wake fields, turbine curves, rotor quadrature
+and two embedded GIFs. Horizontal maps and animations use 240-by-160 grids;
+vertical maps use 240-by-100 grids. Flow examples select individual cases, and
+the movies select 24 independent steady states rather than a time history.
+GIFs are embedded before their temporary files are removed. Keep the gallery
+focused on pictures and interpretation; the
+[Outputs reference](source/outputs.rst) owns the API and preset catalogue.
+Validate actual rendered figures and GIF frame counts in an isolated copy, and
 save the source notebook with all cell outputs and execution counts cleared.
 Use natural terms such as results, farm results and results classes in this
 user-facing tutorial, rather than collectors. Dynamic-wake and timelines
@@ -734,8 +733,11 @@ notebooks calculate keyed farm results before creating animations through
 
 Public Python APIs follow [docstring conventions](docstrings.md). Types remain in
 annotations; NumPy-style docstrings describe the scientific and runtime
-contract. Sphinx uses numpydoc and AutoAPI for package references and MyST-NB
+contract. Sphinx uses Napoleon and AutoAPI for package references and MyST-NB
 for Markdown/notebook content.
+Napoleon renders attribute descriptions as fields so AutoAPI owns their API
+entries. A post-processing hook separates constructor docstrings before AutoAPI
+combines them with class documentation, preserving NumPy section boundaries.
 
 When an explicit Sphinx rendering check is useful, use the same command as CI:
 
@@ -743,6 +745,9 @@ When an explicit Sphinx rendering check is useful, use the same command as CI:
 uv sync --extra doc
 uv run sphinx-build -E -b html docs/source docs/build/html
 ```
+
+Notebook execution failures stop the documentation build
+(`nb_execution_raise_on_error = True`).
 
 Open `docs/build/html/index.html` for local inspection. `docs/build/` and
 generated AutoAPI pages under `docs/source/_*` are build output; do not edit or

@@ -334,8 +334,10 @@ and table outputs are:
 * :class:`StateTurbineTable <foxes.models.outputs.state_turbine_table.StateTurbineTable>`:
   Create tables of state and turbine data.
 
-For plotting and animation outputs, see the
-:download:`outputs example notebook <notebooks/outputs.ipynb>`.
+For a visual tour of efficiency layouts, wind roses, wake slices, turbine
+curves and embedded flow/turbine animations, see the
+:download:`outputs example notebook <notebooks/outputs.ipynb>`. It uses
+synthetic wind cases and packaged turbine data, without external downloads.
 
 These outputs use the same selection mechanism as result datasets. Configure
 file names, plot variables and other options in the output constructor.

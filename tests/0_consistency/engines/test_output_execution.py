@@ -216,6 +216,28 @@ def test_farm_and_point_output_backend_parity(backend):
     xr.testing.assert_allclose(point_results, point_reference)
 
 
+@pytest.mark.parametrize("backend", ["numpy", "single", "threads", "process"])
+def test_output_processing_does_not_replace_later_point_inputs(backend):
+    # Reusing full farm results must not override a later selected point run.
+    algo = _algorithm()
+    points = np.array([[300.0, 0.0, 90.0], [900.0, 0.0, 90.0]])
+    with foxes.Engine.new(
+        backend,
+        n_procs=2,
+        chunk_size_states=2,
+        chunk_size_points=1,
+        verbosity=0,
+    ):
+        farm = algo.calc_farm(outputs="farm_results_all")
+        expected = algo.calc_points(farm, points, states_sel=[9, 1])
+        algo.calc_outputs(
+            outputs=FarmResultsOutput(variables=[FV.P], aggregate_states=True),
+            farm_results=farm,
+        )
+        actual = algo.calc_points(farm, points, states_sel=[9, 1])
+    xr.testing.assert_allclose(actual, expected)
+
+
 class _SeededOutput(Output):
     def __init__(self, failure=None, **kwargs):
         # Constructor data must survive execution without travelling on the model.

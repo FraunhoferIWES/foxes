@@ -343,6 +343,10 @@ only when `Output.requires_chunk_calculation` is true (the default). Input
 selection precedes initial results in these calls and is not repeated by the
 backend. `OutputList` requires chunks if any child does, skipping parent-only
 children on output-only workers; scientific runs still calculate every child.
+For output-only processing, the engine shallow-copies the `extra_data` mapping,
+borrowing its payloads without copying arrays or datasets. Previous farm results
+added by that processing remain run-local and cannot override inputs in
+subsequent point calculations. Scientific iteration history remains unchanged.
 Plain `StateTurbineTable` instances borrow the selected farm dataset through an
 explicit private initial-result key and format it directly during finalization.
 They preserve input arrays and metadata while applying existing power-unit
@@ -1079,7 +1083,7 @@ subprocess.
 	calculation contract. See
 	[ADR-0005](adr/0005-static-output-grid-coordinates.md).
 - Ruff formatting/linting and mypy run through pre-commit. Pytest is the test
-	runner; Sphinx with AutoAPI, numpydoc, and MyST-NB builds the documentation.
+	runner; Sphinx with AutoAPI, Napoleon, and MyST-NB builds the documentation.
 - FOXES uses free design for plots, animations, notebooks, documentation and
 	visual assets. Corporate guidance, tokens and the Sphinx token adapter are
 	removed; Sphinx-Immaterial supplies its ordinary theme. Project conventions

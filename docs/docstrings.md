@@ -7,7 +7,7 @@ It expands the repository policy in [AGENTS.md](../AGENTS.md) and uses the terms
 and types from [naming conventions](naming-conventions.md). Architecture and
 runtime ownership remain defined in [architecture](architecture.md).
 
-FOXES uses NumPy-style docstrings rendered by numpydoc and Sphinx AutoAPI. Type
+FOXES uses NumPy-style docstrings rendered by Sphinx AutoAPI and Napoleon. Type
 information belongs in annotations and is not repeated in docstring section
 labels. Docstrings describe the current contract only. Under the forward-only
 policy, do not document removed behavior, deprecated aliases, or a legacy path

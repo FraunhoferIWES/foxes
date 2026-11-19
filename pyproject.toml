@@ -77,7 +77,6 @@ doc = [
     "setuptools>=84.0.0",
     "sphinx>=5.0",
     "sphinx-autoapi>=3.0",
-    "numpydoc>=1.0",
     "sphinx-immaterial>=0.10",
     "myst-nb>=1.0",
     "tomli>=2.0; python_version < '3.11'",

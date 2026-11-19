@@ -1239,16 +1239,19 @@ This major version introduces the concept of `Engines` which handle the chunking
     post-processing selectors, consistent verbosity, and optional figure-less
     execution. The aggregate runner executes examples in isolated temporary
     copies.
-  - Add a complete output tutorial with 2,400 hourly states, 12 turbines,
-    high-resolution flow examples, every public output class, and a full
-    preset/factory catalogue. Explain all three algorithm entry points and the
-    output, aggregation and visualization contracts.
+  - Add a freshly authored output gallery with 12 turbines, synthetic weighted
+    wind cases, efficiency dashboards, wind roses, wake slices, turbine/rotor
+    diagnostics and embedded flow/turbine GIFs. Keep API and preset details in
+    the Outputs reference rather than duplicating its catalogue.
   - Add an Outputs documentation page and overview links, with guidance on
     farm calculations, point calculations and output processing. Catalogue every
     registered output class, list farm and point variable sets, explain point
     selection, and recommend point-dimension chunking where applicable.
   - Refresh the Python-script examples guide with a link to the main-branch
     examples folder, shared command-line options and isolated quick-run guidance.
+  - Use Sphinx's built-in Napoleon extension for NumPy-style API documentation,
+    removing the incompatible numpydoc integration and dependency.
+  - Fail documentation builds when notebook execution fails.
 - Bug fixes:
   - Correct zero-power efficiency and preserve turbine ordering, mixed-unit
     values and final Iterative powers when deriving turbine metrics; correct
@@ -1275,5 +1278,7 @@ This major version introduces the concept of `Engines` which handle the chunking
     failures; do not report animation completion after a write error.
   - Correct model-book factory precedence and coefficient parsing, remove
     duplicate registrations, and preserve loaded model data during execution.
+  - Keep output-only farm reuse local to each engine run, preventing stale farm
+    inputs from changing subsequent selected-state flow plots and animations.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.0](https://github.com/FraunhoferIWES/foxes/commits/v1.10.0)
