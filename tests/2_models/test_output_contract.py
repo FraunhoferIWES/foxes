@@ -1,5 +1,6 @@
 """Unified output execution with constructor-defined, run-local scientific data."""
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
@@ -14,8 +15,10 @@ from foxes.models.outputs import (
     FlowAnimation,
     FlowPlots2D,
     PointResultsOutput,
+    RotorPointPlot,
     SliceData,
     SlicesData,
+    StateTurbineMap,
     StatesRosePlotOutput,
     _point_calculation,
 )
@@ -41,6 +44,70 @@ def algorithm():
     return foxes.algorithms.Downwind(
         farm, states, wake_models=[], rotor_model="centre", verbosity=0
     )
+
+
+@pytest.mark.parametrize("variables", [[FV.REWS], None])
+@pytest.mark.parametrize("states_sel", [None, [30, 10]])
+@pytest.mark.parametrize("ret_dict", [False, True])
+@pytest.mark.parametrize(
+    "finalize,clear_mem", [(True, False), (False, False), (False, True)]
+)
+def test_outputs_calculate_missing_farm_results(
+    algorithm, variables, states_sel, ret_dict, finalize, clear_mem
+):
+    output = FarmResultsOutput(
+        variables=variables,
+        add_turbine_names=False,
+        add_farm_names=False,
+        add_cluster_names=False,
+    )
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        returned = algorithm.calc_outputs(
+            outputs=output,
+            states_sel=states_sel,
+            ret_dict=ret_dict,
+            finalize=finalize,
+            clear_mem=clear_mem,
+        )
+    if ret_dict:
+        assert set(returned) == {FC.FARM_RESULTS}
+        returned = returned[FC.FARM_RESULTS]
+    assert isinstance(returned, xr.Dataset)
+    if variables is None:
+        assert {FV.REWS, FV.WD, FV.D} <= set(returned.data_vars)
+    else:
+        assert set(returned.data_vars) == {FV.REWS}
+    np.testing.assert_array_equal(
+        returned[FC.STATE], [10, 20, 30] if states_sel is None else states_sel
+    )
+    np.testing.assert_allclose(
+        returned[FV.REWS].values[:, 0],
+        [6.0, 8.0, 10.0] if states_sel is None else [10.0, 6.0],
+    )
+    assert algorithm.initialized == (not finalize and not clear_mem)
+    assert not algorithm.running
+    if algorithm.initialized:
+        algorithm.finalize()
+
+
+@pytest.mark.parametrize("ret_dict", [False, True])
+def test_farm_output_plot_survives_delegation(algorithm, ret_dict):
+    figure, axes = plt.subplots()
+    try:
+        output = StateTurbineMap(
+            variable=FV.REWS, result_name="speed", plot_pars={"ax": axes}
+        )
+        with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+            returned = algorithm.calc_outputs(outputs=output, ret_dict=ret_dict)
+        if ret_dict:
+            assert set(returned) == {"speed"}
+            returned = returned["speed"]
+        assert returned is axes
+        np.testing.assert_allclose(
+            np.asarray(axes.collections[0].get_array()).ravel(), [6.0, 8.0, 10.0]
+        )
+    finally:
+        plt.close(figure)
 
 
 @pytest.mark.parametrize("plane", ["xy", "xz", "yz"])
@@ -85,7 +152,71 @@ def test_slice_execution_contract(algorithm, plane, entry, monkeypatch):
     assert result.sizes[plane[1]] == 3
 
 
-def test_precomputed_points_skip_science_and_requested_grids(algorithm, monkeypatch):
+@pytest.mark.parametrize("farm_variables", [None, [], [FV.P]])
+@pytest.mark.parametrize("states_sel", [None, [30, 10], [30, 10, 20]])
+@pytest.mark.parametrize("dynamic_points", [False, True])
+def test_requested_points_keep_scientific_farm_inputs(
+    algorithm, monkeypatch, farm_variables, states_sel, dynamic_points
+):
+    points = np.array([[1200.0, 0.0, 90.0]])
+    if dynamic_points:
+        points = np.array(
+            [[[800.0, 0.0, 90.0]], [[1000.0, 0.0, 90.0]], [[1200.0, 0.0, 90.0]]]
+        )
+
+    class RequestedPoints(FarmResultsOutput):
+        def get_calc_points(self, algo):
+            return points
+
+    algorithm.farm.turbines[0].models = ["NREL5MW"]
+    algo = foxes.algorithms.Downwind(
+        algorithm.farm,
+        algorithm.states,
+        rotor_model="centre",
+        wake_models=["Jensen_linear_k007"],
+        verbosity=0,
+    )
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=1, verbosity=0
+    ):
+        farm = algo.calc_farm(outputs="farm_results_all", finalize=False)
+        expected = algo.calc_points(
+            farm, points=points, outputs=PointResultsOutput(variables=[FV.WS])
+        )
+        farm_states = []
+        original_calc_farm = algo.calc_farm
+
+        def calc_farm(*args, **kwargs):
+            returned = original_calc_farm(*args, **kwargs)
+            farm_states.extend(returned[FC.STATE].values)
+            return returned
+
+        monkeypatch.setattr(algo, "calc_farm", calc_farm)
+        result = algo.calc_outputs(
+            outputs=[
+                RequestedPoints(variables=farm_variables),
+                PointResultsOutput(variables=[FV.WS]),
+            ],
+            states_sel=states_sel,
+        )
+    if states_sel is not None:
+        expected = expected.sel({FC.STATE: states_sel})
+        farm = farm.sel({FC.STATE: states_sel})
+    np.testing.assert_array_equal(farm_states, farm[FC.STATE])
+    xr.testing.assert_allclose(result[FC.POINT_RESULTS], expected)
+    if farm_variables is None or FV.P in farm_variables:
+        xr.testing.assert_allclose(result[FC.FARM_RESULTS][FV.P], farm[FV.P])
+    else:
+        assert FV.P not in result[FC.FARM_RESULTS]
+    np.testing.assert_array_less(
+        result[FC.POINT_RESULTS][FV.WS].values[:, 0], farm[FV.AMB_REWS].values[:, 0]
+    )
+
+
+@pytest.mark.parametrize("with_farm", [False, True])
+def test_precomputed_points_skip_science_and_requested_grids(
+    algorithm, monkeypatch, with_farm
+):
     output = SliceData(
         variables=[FV.WS], reduction="mean", grid_pars={"n_img_points": (2, 3)}
     )
@@ -106,9 +237,118 @@ def test_precomputed_points_skip_science_and_requested_grids(algorithm, monkeypa
         monkeypatch.setattr(output, "get_calc_points", forbidden)
         monkeypatch.setattr(algorithm.states, "calculate", forbidden)
         returned = algorithm.calc_outputs(
-            outputs=output, farm_results=farm, point_results=results
+            outputs=output,
+            farm_results=farm if with_farm else None,
+            point_results=results,
         )
     np.testing.assert_allclose(returned[FV.WS], 17.0)
+
+
+@pytest.mark.parametrize("farm_variables", [None, [], [FV.REWS]])
+@pytest.mark.parametrize("states_sel", [None, [30, 10]])
+def test_precomputed_points_calculate_only_explicit_farm_fields(
+    algorithm, monkeypatch, farm_variables, states_sel
+):
+    with foxes.Engine.new(
+        "numpy", chunk_size_states=2, chunk_size_points=1, verbosity=0
+    ):
+        points = algorithm.calc_points(
+            None,
+            points=np.array([[1200.0, 0.0, 90.0]]),
+            ambient=True,
+            outputs=PointResultsOutput(variables=[FV.WS]),
+            finalize=False,
+        )
+        points[FV.WS] = xr.full_like(points[FV.WS], 17.0)
+        farm_selections = []
+        original_calc_farm = algorithm.calc_farm
+
+        def calc_farm(*args, **kwargs):
+            farm_selections.append(kwargs["outputs"].fdata_variables)
+            return original_calc_farm(*args, **kwargs)
+
+        def forbidden(*args, **kwargs):
+            pytest.fail("Precomputed points must not trigger farm science")
+
+        monkeypatch.setattr(algorithm, "calc_farm", calc_farm)
+        if not farm_variables:
+            monkeypatch.setattr(algorithm.states, "calculate", forbidden)
+        result = algorithm.calc_outputs(
+            outputs=[
+                FarmResultsOutput(variables=farm_variables),
+                PointResultsOutput(variables=[FV.WS]),
+            ],
+            point_results=points,
+            states_sel=states_sel,
+        )
+    if states_sel is not None:
+        points = points.sel({FC.STATE: states_sel})
+    xr.testing.assert_identical(result[FC.POINT_RESULTS], points)
+    if farm_variables:
+        assert farm_selections == [farm_variables]
+        np.testing.assert_allclose(
+            result[FC.FARM_RESULTS][FV.REWS].values[:, 0],
+            [6.0, 8.0, 10.0] if states_sel is None else [10.0, 6.0],
+        )
+        np.testing.assert_array_equal(
+            result[FC.FARM_RESULTS][FC.STATE], points[FC.STATE]
+        )
+    else:
+        assert farm_selections == []
+        assert FV.REWS not in result[FC.FARM_RESULTS]
+
+
+@pytest.mark.parametrize("with_farm", [False, True])
+@pytest.mark.parametrize("collector", [False, True])
+def test_empty_farm_requirements_ignore_supplied_results(
+    algorithm, monkeypatch, with_farm, collector
+):
+    output = (
+        FarmResultsOutput(variables=[]) if collector else RotorPointPlot(plot=False)
+    )
+    farm = (
+        xr.Dataset(
+            {FV.P: ((FC.STATE, FC.TURBINE), [[123.0]])},
+            coords={FC.STATE: [999], FC.TURBINE: [999]},
+        )
+        if with_farm
+        else None
+    )
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0) as engine:
+
+        def forbidden(*args, **kwargs):
+            pytest.fail("Metadata-only outputs must not dispatch worker chunks")
+
+        monkeypatch.setattr(engine, "_run_calculation", forbidden)
+        returned = algorithm.calc_outputs(
+            outputs=output, farm_results=farm, states_sel=[30, 10]
+        )
+    assert isinstance(returned, xr.Dataset)
+    if collector:
+        xr.testing.assert_identical(returned, xr.Dataset())
+    else:
+        np.testing.assert_allclose(returned["weights"].sum(), 1.0)
+
+
+def test_precomputed_points_ignore_unused_farm_results(algorithm):
+    with foxes.Engine.new("numpy", chunk_size_states=2, verbosity=0):
+        points = algorithm.calc_points(
+            None,
+            points=np.array([[1200.0, 0.0, 90.0]]),
+            ambient=True,
+            outputs=PointResultsOutput(variables=[FV.WS]),
+        )
+        unrelated_farm = xr.Dataset(
+            {FV.P: ((FC.STATE, FC.TURBINE), [[123.0]])},
+            coords={FC.STATE: [999], FC.TURBINE: [999]},
+        )
+        returned = algorithm.calc_outputs(
+            outputs=PointResultsOutput(variables=[FV.WS]),
+            point_results=points,
+            farm_results=unrelated_farm,
+            states_sel=[30, 10],
+        )
+    xr.testing.assert_identical(returned, points.sel({FC.STATE: [30, 10]}))
 
 
 @pytest.mark.parametrize("entry", ["calc_farm", "calc_outputs"])

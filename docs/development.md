@@ -709,11 +709,18 @@ runs. See [ADR-0023](adr/0023-in-process-example-runs.md).
 
 Execute the user-oriented output notebook with
 `uv run pytest --nbmake notebooks/outputs.ipynb --nbmake-timeout=300 -q`.
-It uses six synthetic states, six public-curve turbines, a bounded NumPy engine
-and temporary writer/animation directories. It covers composed result keys,
-automatic metrics, physical aggregation, selected-state counts, point results,
-layout/rose/flow plots, count/calendar files and GIF output.
-It also demonstrates `ret_dict=True` and image suppression before point requests.
+It uses 2,400 synthetic hourly timestamps, 12 public-curve turbines, a bounded
+NumPy engine and temporary writer/animation directories. Every public
+output-module class has a runnable example, including the `Animator` helper and
+all six writer classes. Flow maps and animations retain 240-by-160 grids;
+expensive examples explicitly select timestamp subsets.
+It explains all three algorithm entry points, composed result keys, automatic
+metrics, physical aggregation, selected-state counts, point results,
+`ret_dict=True` and image suppression before point requests.
+The complete preset/factory catalogue is Markdown, so it remains visible without
+execution. Validate its rows against a fresh `ModelBook`, and keep every public
+class represented in executed examples. Run validation in an isolated copy and
+save the source notebook with all cell outputs and execution counts cleared.
 Use natural terms such as results, farm results and results classes in this
 user-facing tutorial, rather than collectors. Dynamic-wake and timelines
 notebooks calculate keyed farm results before creating animations through

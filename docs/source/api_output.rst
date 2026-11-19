@@ -2,13 +2,51 @@ Output models
 =============
 For a runnable introduction, see :doc:`the practical output guide <notebooks/outputs>`.
 It demonstrates farm and point results, automatic turbine evaluation, aggregation,
-point probes, plots, writers and animation with small synthetic inputs.
+point probes, plots, all six writer classes and animation with 2,400 synthetic
+hourly timestamps and 12 turbines. Every public output-module class has an
+example, including the ``Animator`` helper. A complete Markdown catalogue lists
+every registered preset and factory template even when cell outputs are cleared.
+Flow examples keep 240 by 160 spatial grids while explicitly selecting fewer
+timestamps for bounded execution.
 
 Adopted outputs derive from ``foxes.core.Output`` and are exported from
 ``foxes.models.outputs``. Engine workers calculate chunk-local NumPy payloads;
 the output's ``update_results()`` and ``finalize_results()`` hooks unify them.
 ``OutputList`` composes models in declaration order and merges their required
 input variables.
+
+Choose the algorithm entry point
+-------------------------------
+All three entry points accept ``outputs=`` as a model-book name, an output
+instance, or a list of either. Choose the scientific work separately from the
+requested result:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 40 40
+
+   * - Entry point
+     - Scientific inputs and work
+     - Output behavior
+   * - ``calc_farm``
+     - Calculate turbine/farm physics from the configured states and turbines.
+     - Execute outputs on new farm chunks; output-requested points are evaluated
+       in bounded point blocks within each state chunk.
+   * - ``calc_points``
+     - Calculate at caller-supplied ``points`` using sufficient farm inputs,
+       or reuse ``point_results`` without point science.
+     - Ignore output-requested grids. The supplied locations/results determine
+       where compatible point outputs run.
+   * - ``calc_outputs``
+     - Reuse supplied results and calculate missing farm/point inputs when needed.
+     - Honor output-requested points unless precomputed point results are
+       supplied; metadata-only outputs require no scientific chunks.
+
+``calc_outputs`` means "run these outputs", not "never run science".
+The ``farm_results_calc`` selection retains standard scientific inputs for later
+waked point calculations; the finite ``farm_results`` default has a different
+user-facing purpose. ``farm_results_all`` retains every available field.
+Declare additional model-specific farm inputs explicitly.
 
 Processing supplied results
 ---------------------------
@@ -17,6 +55,28 @@ this read-only property with ``False`` when their initial-result and
 parent-side finalization hooks can process supplied data directly.
 ``calc_outputs`` never calls ``calc_farm`` for supplied farm fields without
 requested point calculations; the engine runs only the required output work.
+
+Without supplied results, ``calc_outputs`` delegates to ``calc_farm`` when outputs
+require farm fields, including an unrestricted ``fdata_variables=None``
+requirement. State labels selected by ``states_sel`` apply during calculation.
+The delegated result keeps the same return type and ``ret_dict`` behavior as
+``calc_farm``. Outputs requiring neither farm fields nor points run only their
+initial-result and parent-side finalization hooks, without scientific chunks.
+An empty farm-field list skips supplied farm results entirely unless newly
+requested point science needs them. Without point requests or supplied point
+results, execution stays metadata-only and dispatches no worker chunks.
+An empty-field ``FarmResultsOutput`` then returns an empty dataset without
+borrowing input coordinates.
+
+Precomputed ``point_results`` bypass point science and requested grids.
+Missing farm results are calculated only for explicit nonempty farm-field
+requirements; ``None`` retains available fields without triggering farm
+calculation. Newly requested waked points still need scientific farm inputs
+even when the output's own farm-field list is empty. The ``farm_results_calc``
+baseline is merged with explicit requirements only for those new calculations.
+Intermediate farm calculations honor ``states_sel``. State-dependent requested
+points are selected from the algorithm's full state index in the same label
+order before point execution.
 
 ``StateTurbineTable`` without aggregation formats supplied farm results directly
 on the parent, including field selection, power-unit normalization, renaming,

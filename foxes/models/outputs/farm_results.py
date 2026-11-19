@@ -72,6 +72,8 @@ class FarmResultsOutput(Output):
         variables
             Farm variables to collect, or ``None`` for all available fields.
             Physical fields must have dimensions ``(FC.STATE, FC.TURBINE)``.
+            An empty list selects no fields. Metadata-only execution without
+            chunks returns an empty dataset without input coordinates.
         ambient_vars
             Include requested ambient fields such as ``FV.AMB_P``.
         waked_vars
@@ -399,6 +401,8 @@ class FarmResultsOutput(Output):
             Known scientific fields have ``units`` attributes; power, ambient
             power, capacity and maximum power share the smallest turbine-type
             power unit, also recorded in dataset attribute ``power_unit``.
+            Without chunks, an empty field requirement returns an empty dataset
+            without borrowing any input coordinates.
 
         Raises
         ------
@@ -406,6 +410,17 @@ class FarmResultsOutput(Output):
             If the result key is already in use, or target chunks or farm
             payload schemas are incompatible.
         """
+        # An empty selection needs no chunks or supplied farm data.
+        if n_chunks_states == 0 and self.fdata_variables == []:
+            if self._public_key in output_results:
+                raise ValueError(
+                    f"{self.name}: Duplicate result key {self._public_key!r}"
+                )
+            output_results[self._public_key] = _create_dataset(
+                dict(coords={}, data_vars={}, attrs={}), *self._metadata(algo)
+            )
+            return
+
         # Assemble chunks in global state order rather than completion order.
         chunks = output_results.pop(self._collection_key)
         if self._public_key in output_results:

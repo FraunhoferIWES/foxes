@@ -425,8 +425,26 @@ choosing a child's grid.
 
 `calc_farm` evaluates requested grids in bounded point slices within each state
 chunk. `calc_outputs` uses the ordinary point engine to chunk requested locations,
-or collects supplied farm results without rerunning farm physics. When points
-are requested without farm results it first calculates the required farm inputs.
+or collects supplied farm results without rerunning farm physics. Without supplied
+results or requested points, outputs requiring farm fields delegate to
+`calc_farm`, including unrestricted field requirements. State selections and
+return conventions are preserved; the delegated call owns finalization.
+Outputs requiring neither farm fields nor points use the metadata-only lifecycle.
+Outputs with empty farm-field requirements ignore supplied farm results unless
+new point science needs them. Without point inputs or requests, they run only
+the metadata lifecycle; empty-field farm collectors return an empty dataset
+without borrowing input coordinates. When points are requested without farm
+results it first calculates the required farm inputs, even with an empty output
+field list. Intermediate farm calculations honor the same state selection as
+point execution; state-dependent requested points are selected from the full
+algorithm state index in matching label order.
+Explicit output farm-field selections are merged with the
+`farm_results_calc` preset for standard point-calculation inputs, without
+mutating either selection. An unrestricted output requirement retains all
+available farm fields.
+With precomputed point results, only explicit nonempty farm-field requirements
+trigger missing farm calculations; unrestricted requirements consume available
+fields. No point-calculation baseline is added when point science is skipped.
 `calc_points` uses only supplied points or precomputed point results and never
 calls `get_calc_points`. Precomputed public point datasets include `FV.X`,
 `FV.Y` and `FV.H` coordinates and bypass scientific point calculations.

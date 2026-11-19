@@ -128,6 +128,12 @@ can span chunks or split a single chunk.
 dataset. Public point results rename `FC.TARGET` to `FC.POINT`. The model-book
 `"default"` field selection is not an implicit list of every wake input; request
 `"farm_results_all"` explicitly when all farm variables are required.
+`"farm_results_calc"` selects turbine position, diameter, wind/yaw direction,
+thrust coefficient, ambient/waked rotor-equivalent wind speed and turbulence
+intensity, and state weights. Point calculations requested through
+`calc_outputs` merge this baseline with explicit output farm-field requirements;
+an unrestricted requirement retains all fields. Model-specific extra inputs
+belong in the output's farm-field requirements.
 
 Count/chunk filenames use six-digit zero-padded indices. Calendar files use
 `YYYY-MM-DD`, `YYYY-Www`, `YYYY-MM` or `YYYY` suffixes. Weekly `YYYY` is the ISO

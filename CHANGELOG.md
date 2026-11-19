@@ -1239,8 +1239,10 @@ This major version introduces the concept of `Engines` which handle the chunking
     post-processing selectors, consistent verbosity, and optional figure-less
     execution. The aggregate runner executes examples in isolated temporary
     copies.
-  - Add a runnable output tutorial and document the new output, aggregation and
-    visualization contracts.
+  - Add a complete output tutorial with 2,400 hourly states, 12 turbines,
+    high-resolution flow examples, every public output class, and a full
+    preset/factory catalogue. Explain all three algorithm entry points and the
+    output, aggregation and visualization contracts.
 - Bug fixes:
   - Correct zero-power efficiency and preserve turbine ordering, mixed-unit
     values and final Iterative powers when deriving turbine metrics; correct
@@ -1255,6 +1257,13 @@ This major version introduces the concept of `Engines` which handle the chunking
     writer handling, including exact intervals and ISO weeks.
   - Correct weighted state reductions and precomputed flow-plot ordering; fix
     state-dependent point coordinates and timeline wake history across chunks.
+    Retain minimal scientific farm inputs alongside selected fields for
+    output-requested point calculations.
+  - Correct automatic farm calculations in `calc_outputs` for explicit and
+    unrestricted field requirements, preserving selected states and dataset or
+    plotting return types. Preserve point-only reuse of precomputed results,
+    skip unused supplied farm data, and align state-selected intermediate farm
+    results with state-dependent calculation points.
   - Keep dynamic-wake GIF/MP4 selections and filenames correct in headless and
     writer-only runs. Fix Slurm cluster startup and plotting cleanup after
     failures; do not report animation completion after a write error.
