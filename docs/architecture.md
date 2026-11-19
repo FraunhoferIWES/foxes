@@ -218,6 +218,12 @@ shape validation.
 
 ### Model Lifecycle
 
+Dataset-backed states preprocess in-memory inputs before applying positional
+and label selections. Farm-derived spatial slices, including interpolation
+neighbours, therefore restrict prepared model arrays before engines split them
+by state. Selection uses local dataset views; a caller-owned full-grid source
+can be reused by fresh states for another farm without being cropped in place.
+
 `SectorManagement` rules identify turbines by their original farm index or
 name. Chunk-local evaluation maps those identities through `FV.ORDER` and
 honors the controller's state-turbine selection, including iterative passes.

@@ -85,6 +85,18 @@ The full list of currently implemented ambient states can be found in the
 * :class:`WeibullSectors<foxes.input.states.weibull_sectors.WeibullSectors>`: Spatially homogeneous Weibull wind speed distributions organized in wind direction sectors.
 * :class:`WRGStates<foxes.input.states.wrg_states.WRGStates>`: Wind resource data, i.e., a regular grid of wind roses expressed via Weibull parameters
 
+In-memory field inputs
+^^^^^^^^^^^^^^^^^^^^^^
+
+Dataset-backed states such as ``FieldData`` and ``ICONStates`` also accept an
+``xarray.Dataset`` as ``data_source``. During initialization, preprocessing
+derives spatial selections from the farm bounds, retaining neighbouring grid
+points for interpolation. Explicit ``isel`` and ``sel`` selections and the
+derived bounds are applied before preparing model arrays and state chunks.
+The source dataset is not cropped in place, so fresh states for another farm
+can reuse the same full-grid input. Retaining that input across calculations
+remains the caller's responsibility.
+
 State support-point plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

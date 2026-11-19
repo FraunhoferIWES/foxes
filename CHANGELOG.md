@@ -1247,6 +1247,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ### Bug fixes
 
+- Apply farm-bound spatial selections to in-memory `DatasetStates` inputs
+  before preparing model arrays and worker chunks, preserving interpolation
+  neighbours, explicit selections and the original source dataset.
 - Correct zero-power efficiency and preserve turbine ordering, mixed-unit
   values and final Iterative powers when deriving turbine metrics; correct
   `TurbineEvaluation` model-name handling.

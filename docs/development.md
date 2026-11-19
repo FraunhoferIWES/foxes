@@ -423,6 +423,12 @@ tests contradict it.
 
 ## Focused Validation
 
+For in-memory dataset selection, run
+`uv run pytest tests/2_models/test_dataset_states.py -q`. Regressions check
+prepared spatial footprints and actual NumPy/process state chunks, numerical
+parity with file-backed loading, explicit selection ordering and reuse of an
+unchanged read-only source across farms.
+
 Run the narrowest applicable command first:
 
 ```console

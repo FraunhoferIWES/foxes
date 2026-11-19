@@ -153,6 +153,13 @@ class DatasetStates(States):
     """
     Abstract base class for heterogeneous ambient states that
     are based on data from NetCDF files or an xarray Dataset.
+
+    Notes
+    -----
+    In-memory inputs are preprocessed before applying explicit and farm-bound
+    selections. Selected views retain interpolation support points without
+    modifying the source dataset; only selected fields enter model preparation
+    and subsequent state chunks.
     """
 
     def __init__(
@@ -809,14 +816,6 @@ class DatasetStates(States):
             data = self.data_source
             if self.preprocess_nc is not None:
                 data = self.preprocess_nc(data)
-            if self.isel is not None and len(self.isel):
-                hisel = {c: s for c, s in self.isel.items() if c in data.sizes}
-                if len(hisel):
-                    data = data.isel(indexers=hisel)
-            if self.sel is not None and len(self.sel):
-                hsel = {c: s for c, s in self.sel.items() if c in data.sizes}
-                if len(hsel):
-                    data = data.sel(indexers=hsel)
             self.preproc_first(
                 algo,
                 data=data,
@@ -825,6 +824,14 @@ class DatasetStates(States):
                 loaded_data=loaded_data,
                 verbosity=verbosity,
             )
+            if self.isel is not None and len(self.isel):
+                hisel = {c: s for c, s in self.isel.items() if c in data.sizes}
+                if len(hisel):
+                    data = data.isel(indexers=hisel)
+            if self.sel is not None and len(self.sel):
+                hsel = {c: s for c, s in self.sel.items() if c in data.sizes}
+                if len(hsel):
+                    data = data.sel(indexers=hsel)
             if self._inds is None or len(self._inds) != data.sizes[states_coord]:
                 self._inds = (
                     np.arange(self._N)
