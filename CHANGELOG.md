@@ -1243,6 +1243,12 @@ This major version introduces the concept of `Engines` which handle the chunking
     high-resolution flow examples, every public output class, and a full
     preset/factory catalogue. Explain all three algorithm entry points and the
     output, aggregation and visualization contracts.
+  - Add an Outputs documentation page and overview links, with guidance on
+    farm calculations, point calculations and output processing. Catalogue every
+    registered output class, list farm and point variable sets, explain point
+    selection, and recommend point-dimension chunking where applicable.
+  - Refresh the Python-script examples guide with a link to the main-branch
+    examples folder, shared command-line options and isolated quick-run guidance.
 - Bug fixes:
   - Correct zero-power efficiency and preserve turbine ordering, mixed-unit
     values and final Iterative powers when deriving turbine metrics; correct
