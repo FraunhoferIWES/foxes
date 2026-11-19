@@ -26,7 +26,7 @@ from foxes.models.outputs import (
 from foxes.utils import Dict
 
 
-def _algorithm(algorithm="Downwind"):
+def _algorithm(algorithm="Downwind", n_turbines=2, **kwargs):
     # Reverse inflow direction and retain non-consecutive state labels.
     table = pd.DataFrame(
         {FV.WS: [7.0, 8.0, 9.0, 10.0], FV.WD: [90.0, 270.0, 90.0, 270.0]},
@@ -38,14 +38,18 @@ def _algorithm(algorithm="Downwind"):
         fixed_vars={FV.TI: 0.08, FV.RHO: 1.225},
     )
     farm = foxes.WindFarm()
-    for xy in ([0.0, 0.0], [600.0, 0.0]):
-        farm.add_turbine(foxes.Turbine(xy=xy, turbine_models=["NREL5MW"]), verbosity=0)
+    for ti in range(n_turbines):
+        farm.add_turbine(
+            foxes.Turbine(xy=[600.0 * ti, 0.0], turbine_models=["NREL5MW"]),
+            verbosity=0,
+        )
     return getattr(foxes.algorithms, algorithm)(
         farm,
         states,
         rotor_model="centre",
         wake_models=["Jensen_linear_k007"],
         verbosity=0,
+        **kwargs,
     )
 
 
@@ -236,6 +240,55 @@ def test_output_processing_does_not_replace_later_point_inputs(backend):
         )
         actual = algo.calc_points(farm, points, states_sel=[9, 1])
     xr.testing.assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("backend", ["numpy", "single", "threads", "process"])
+@pytest.mark.parametrize("states_sel", [None, [9, 1]])
+def test_iterative_history_does_not_replace_point_inputs(backend, states_sel):
+    algo = _algorithm("Iterative")
+    reference = _algorithm()
+    points = np.array([[300.0, 0.0, 90.0], [900.0, 0.0, 90.0]])
+    with foxes.Engine.new(
+        backend,
+        n_procs=2,
+        chunk_size_states=2,
+        chunk_size_points=1,
+        verbosity=0,
+    ):
+        farm = algo.calc_farm(outputs="farm_results_all")
+        expected = reference.calc_points(farm, points, states_sel=states_sel)
+        actual = algo.calc_points(farm, points, states_sel=states_sel)
+        xr.testing.assert_allclose(actual, expected)
+
+        # Explicit source changes must take precedence over convergence history.
+        farm[FV.CT] = xr.zeros_like(farm[FV.CT])
+        expected = reference.calc_points(farm, points, states_sel=states_sel)
+        actual = algo.calc_points(farm, points, states_sel=states_sel)
+        xr.testing.assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("backend", ["numpy", "single", "threads", "process"])
+@pytest.mark.parametrize("algorithm", ["Downwind", "Iterative"])
+def test_streamline_cache_preserves_source_turbines(backend, algorithm):
+    algo = _algorithm(
+        algorithm, n_turbines=3, wake_frame="streamlines_100", max_wake_length_km=1.0
+    )
+    reference = _algorithm(algorithm, n_turbines=3, max_wake_length_km=1.0)
+    points = np.array([[-300.0, 0.0, 90.0], [300.0, 0.0, 90.0], [900.0, 0.0, 90.0]])
+    with foxes.Engine.new(
+        backend,
+        n_procs=2,
+        chunk_size_states=2,
+        chunk_size_points=1,
+        verbosity=0,
+    ):
+        # Uniform directions give straight streamlines and a geometric reference.
+        expected_farm = reference.calc_farm(outputs="farm_results_all")
+        farm = algo.calc_farm(outputs="farm_results_all")
+        xr.testing.assert_allclose(farm, expected_farm)
+        expected = reference.calc_points(expected_farm, points, states_sel=[9, 1])
+        actual = algo.calc_points(farm, points, states_sel=[9, 1])
+        xr.testing.assert_allclose(actual, expected)
 
 
 class _SeededOutput(Output):

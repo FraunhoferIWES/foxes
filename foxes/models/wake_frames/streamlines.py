@@ -65,7 +65,7 @@ class Streamlines2D(WakeFrame):
 
     def calc_order(self, algo: Algorithm, mdata: MData, fdata: FData) -> np.ndarray:
         """
-        Calculates the order of turbine evaluation.
+        Calculate turbine evaluation order from forward streamline distances.
 
         This function is executed on a single chunk of data,
         all computations should be based on numpy arrays.
@@ -82,7 +82,13 @@ class Streamlines2D(WakeFrame):
         Returns
         -------
         order
-            The turbine order, shape: (n_states, n_turbines)
+            Original turbine indices in evaluation order, shape
+            ``(n_states, n_turbines)``.
+
+        Notes
+        -----
+        Extend the sampled streamlines' end segments when projecting turbines
+        for ordering, including turbines upstream or beyond the sampled length.
 
         """
         # prepare:
@@ -107,12 +113,27 @@ class Streamlines2D(WakeFrame):
         return order
 
     def _get_streamlines(
-        self, algo: Algorithm, mdata: MData, fdata: FData
+        self,
+        algo: Algorithm,
+        mdata: MData,
+        fdata: FData,
+        downwind_index: int | None = None,
     ) -> np.ndarray:
-        """Helper function for streamline calculation"""
+        """Return cached streamlines aligned with the supplied farm chunk.
+
+        Cache sources in coordinate order so original-order point inputs and
+        downwind-order farm inputs share the geometry without changing source
+        identities. Return shape ``(state, turbine, step, xy)`` in ``fdata`` order,
+        retaining only the requested source column when ``downwind_index`` is set.
+        """
 
         cpoints = mdata.chunki_points
         assert cpoints is not None, "Missing points chunk index in mdata"
+
+        # Canonical source order is independent of farm/downwind permutations.
+        centres = fdata[FV.TXYH]
+        order = np.lexsort((centres[..., 2], centres[..., 1], centres[..., 0]))
+        ssel = np.arange(len(centres))[:, None]
 
         # check if already computed:
         wpoints = algo.get_from_chunk_store(
@@ -143,8 +164,8 @@ class Streamlines2D(WakeFrame):
             wpoints = np.full(
                 (n_states, n_turbines, n_steps, 3), np.nan, dtype=config.dtype_double
             )
-            wpoints[:, :, 0, :2] = fdata[FV.TXYH][:, :, :2]
-            wpoints[:, :, :, 2] = fdata[FV.TXYH][:, :, None, 2]
+            wpoints[:, :, 0, :2] = centres[ssel, order, :2]
+            wpoints[:, :, :, 2] = centres[ssel, order, None, 2]
             for i_step in range(1, n_steps):
                 # get local wind vector directions:
                 tdata = TData.from_points(
@@ -208,7 +229,11 @@ class Streamlines2D(WakeFrame):
                 copy=False,
             )
 
-        return wpoints
+        # Select sources without permuting the full cache for every wake.
+        source_order = np.argsort(order, axis=1)
+        if downwind_index is not None:
+            source_order = source_order[:, downwind_index, None]
+        return wpoints[ssel, source_order]
 
     def get_wake_coos(
         self,
@@ -243,6 +268,12 @@ class Streamlines2D(WakeFrame):
             if downwind_index is not None, else shape:
             (n_states, n_turbines * n_targets, n_tpoints, 3)
 
+        Notes
+        -----
+        With ``downwind_index=None``, end-segment projections are unbounded
+        for turbine ordering. Individual-source wake evaluation uses only
+        the sampled forward streamline.
+
         """
         # prepare:
         n_states, n_targets, n_tpoints = tdata[FC.TARGETS].shape[:3]
@@ -256,9 +287,7 @@ class Streamlines2D(WakeFrame):
         )
 
         # compute streamlines if not already done:
-        wpoints = self._get_streamlines(algo, mdata, fdata)
-        if downwind_index is not None:
-            wpoints = wpoints[:, downwind_index, None, :, :]
+        wpoints = self._get_streamlines(algo, mdata, fdata, downwind_index)
         n_steps = wpoints.shape[2]
 
         # compute coordinates:
@@ -309,6 +338,12 @@ class Streamlines2D(WakeFrame):
             """
 
             selx = (x > -self.step) & (x < self.step)
+            if downwind_index is None:
+                # Ordering also needs projections outside the sampled path.
+                if steps_0 == 0:
+                    selx[..., 0] |= x[..., 0] <= -self.step
+                if steps_1 == n_steps:
+                    selx[..., -1] |= x[..., -1] >= self.step
             if np.any(selx):
                 pdel = pdel[selx]
                 w = np.where(selx)
@@ -374,7 +409,7 @@ class Streamlines2D(WakeFrame):
         """
         # get streamline points:
         n_states, n_points = x.shape
-        wpoints = self._get_streamlines(algo, mdata, fdata)[:, downwind_index, :, :]
+        wpoints = self._get_streamlines(algo, mdata, fdata, downwind_index)[:, 0]
         n_steps = wpoints.shape[1]
         xs = self.step * np.arange(n_steps)
 

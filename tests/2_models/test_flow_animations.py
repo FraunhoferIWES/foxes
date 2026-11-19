@@ -649,7 +649,11 @@ def test_streamline_cache_reuse_matches_collected_farm(tmp_path, monkeypatch):
         farm = algo.calc_farm(outputs=[FarmResultsOutput(), output])[FC.FARM_RESULTS]
         payload = payloads[0]
         expected = algo.calc_points(farm, payload["points"][0])
+        independent = _algorithm(
+            wake_frame="streamlines_100", max_wake_length_km=1.0
+        ).calc_points(farm, payload["points"][0])
     np.testing.assert_allclose(payload["values"][FV.WS], expected[FV.WS])
+    np.testing.assert_allclose(payload["values"][FV.WS], independent[FV.WS])
 
 
 @pytest.mark.parametrize("backend", ["numpy", "threads", "process"])

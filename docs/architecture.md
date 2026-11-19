@@ -343,10 +343,11 @@ only when `Output.requires_chunk_calculation` is true (the default). Input
 selection precedes initial results in these calls and is not repeated by the
 backend. `OutputList` requires chunks if any child does, skipping parent-only
 children on output-only workers; scientific runs still calculate every child.
-For output-only processing, the engine shallow-copies the `extra_data` mapping,
+For every calculation, the engine shallow-copies the `extra_data` mapping,
 borrowing its payloads without copying arrays or datasets. Previous farm results
-added by that processing remain run-local and cannot override inputs in
-subsequent point calculations. Scientific iteration history remains unchanged.
+added during output processing or scientific iteration remain run-local and
+cannot override supplied inputs in subsequent point calculations. Iterative
+passes explicitly supply their convergence history to each engine call.
 Plain `StateTurbineTable` instances borrow the selected farm dataset through an
 explicit private initial-result key and format it directly during finalization.
 They preserve input arrays and metadata while applying existing power-unit
@@ -385,7 +386,13 @@ Iterative and Sequential use explicit intermediate collectors. Iterative keeps
 all convergence fields in downwind order and restores farm order only for final
 outputs. Requested output models are initialized and executed only in its final
 evaluation pass; a separate internal collector serves the convergence loop.
-Streamline cases use the Iterative algorithm.
+Streamline geometry is cached in canonical source-coordinate order and selected
+back into each caller's turbine order. Forward-streamline ordering extends
+end-segment projections to rank turbines outside the sampled path; individual
+wake evaluation retains its bounded geometry. Both Downwind and Iterative
+therefore preserve source identities across farm calculations and independent
+point evaluation. Cache lookups across target chunks retain current-state label
+selection; only lookbacks to historical state chunks bypass that alignment.
 The `"default"` field set is unchanged; point callers needing all wake
 inputs select `"farm_results_all"` explicitly.
 

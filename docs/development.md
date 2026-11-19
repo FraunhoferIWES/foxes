@@ -203,7 +203,15 @@ covered; point runs also exercise NumPy/threads/process collection. MP4 encoding
 is tested when external ffmpeg is available.
 Iterative cases verify requested-output initialization, calculation, buffering
 and finalization occur only in the final evaluation pass. Streamline tests
-use Iterative and compare animation fields against separate point results.
+compare animation fields against point results from both the same algorithm
+and an independently initialized algorithm, avoiding shared-cache false parity.
+Engine regressions in `tests/0_consistency/engines/test_output_execution.py`
+also compare Downwind and Iterative streamline farm/point fields with straight
+rotor-direction wakes in uniform wind. They exercise opposite directions,
+selected/reordered state labels and multiple target chunks on NumPy, single,
+threads and process engines. Iterative-to-point reuse must respect supplied
+farm fields, including explicitly changed thrust coefficients, without
+requiring an intervening output-only calculation.
 Memory checks verify that loaded grids and state-sized boolean selection masks
 stay out of running model instances, raw configuration is restored from the
 lifecycle stash, and worker calculations leave model serialization unchanged.

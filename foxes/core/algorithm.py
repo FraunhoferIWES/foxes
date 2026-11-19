@@ -545,9 +545,11 @@ class Algorithm(Model):
         mdata
             Model data identifying the chunk and requested state labels.
         prev_s
-            Number of state chunks to look backward.
+            Number of state chunks to look backward. Historical state chunks
+            retain their own state labels.
         prev_t
-            Number of target chunks to look backward.
+            Number of target chunks to look backward. Within the current state
+            chunk, cached fields remain aligned with the requested state labels.
         ret_inds
             Also return the cached chunk's index metadata.
         error
@@ -592,7 +594,6 @@ class Algorithm(Model):
         n_states = len(chunk_states)
         if (
             prev_s != 0
-            or prev_t != 0
             or name not in chunk_data["dims"]
             or FC.STATE not in chunk_data["dims"][name]
             or (n_states == mdata.n_states and np.all(chunk_states == mdata[FC.STATE]))

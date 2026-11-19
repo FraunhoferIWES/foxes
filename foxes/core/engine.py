@@ -802,9 +802,9 @@ class Engine(ABC):
         point_data
             The initial point data.
         extra_data
-            Non-array model inputs forwarded to the backend. Output-only
-            processing uses a run-local shallow copy so backend-added entries
-            do not modify the caller's mapping; payload objects remain borrowed.
+            Non-array model inputs forwarded through a run-local shallow copy.
+            Backend-added entries do not modify the caller's mapping; payload
+            objects remain borrowed.
         output
             Initialized, non-running output model, or ``None`` to omit output
             collection. Remains running through parent-side result finalization.
@@ -832,8 +832,8 @@ class Engine(ABC):
         rollback: in-place mutations to shared caches can survive failures.
         Backend cleanup precedes output restoration and cache reattachment.
         """
-        # Keep output-only history out of reusable scientific inputs.
-        if model is None and extra_data is not None:
+        # Keep per-calculation history out of reusable scientific inputs.
+        if extra_data is not None:
             extra_data = dict(extra_data)
 
         # Select borrowed output-only inputs before their initial-result hooks.

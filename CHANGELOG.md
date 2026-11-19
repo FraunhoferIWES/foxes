@@ -1278,7 +1278,11 @@ This major version introduces the concept of `Engines` which handle the chunking
     failures; do not report animation completion after a write error.
   - Correct model-book factory precedence and coefficient parsing, remove
     duplicate registrations, and preserve loaded model data during execution.
-  - Keep output-only farm reuse local to each engine run, preventing stale farm
-    inputs from changing subsequent selected-state flow plots and animations.
+  - Keep previous-farm history local to every engine run, including scientific
+    Iterative passes, so stale history cannot replace supplied inputs in later
+    selected-state point calculations, flow plots or animations.
+  - Preserve streamline source identities across farm/downwind turbine ordering,
+    handle unreached forward projections correctly when ordering turbines, and
+    retain selected state labels when reusing geometry across point chunks.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.0](https://github.com/FraunhoferIWES/foxes/commits/v1.10.0)
