@@ -1252,6 +1252,11 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Use Sphinx's built-in Napoleon extension for NumPy-style API documentation,
     removing the incompatible numpydoc integration and dependency.
   - Fail documentation builds when notebook execution fails.
+- Tests:
+  - Bound the NetCDF one-point-flow smoke input while retaining uneven state
+    chunks, and reuse prepared quick inputs across example contract cases.
+    Keep each execution isolated and retain all scientific consistency and
+    verification inputs and tolerances.
 - Bug fixes:
   - Correct zero-power efficiency and preserve turbine ordering, mixed-unit
     values and final Iterative powers when deriving turbine metrics; correct

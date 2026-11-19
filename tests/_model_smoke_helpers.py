@@ -494,9 +494,11 @@ def _other_states(cls, tmp_path):
             tl_heights=[90.0],
         )
     if cls.__name__ == "OnePointFlowMultiHeightNCTimeseries":
+        # Keep three uneven test chunks without tracing all 3000 WRF samples.
         return cls(
             ref_xy=[0.0, 0.0],
             data_source=str(WRF_TIMESERIES),
+            states_sel=slice(0, 129),
             time_coord="Time",
             h_coord="height",
             output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],

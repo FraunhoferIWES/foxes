@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+from shutil import copytree
 
 import matplotlib.pyplot as plt
 import pytest
@@ -48,6 +49,18 @@ DEFAULT_OUTPUTS = {
 
 class ParserCaptured(Exception):
     """Stop after the actual parser and before any model or file operations."""
+
+
+@pytest.fixture(scope="module")
+def quick_examples(tmp_path_factory):
+    """Prepare inputs once per script; each test still executes an isolated copy."""
+    prepared = tmp_path_factory.mktemp("quick-examples")
+    inputs = RUNNER._load(EXAMPLES / "_quick_inputs.py")
+    for script in SCRIPTS:
+        with RUNNER.isolated_example(script.parent, nofig=True) as work:
+            inputs.prepare_inputs(work, script.parent.name)
+            copytree(work, prepared / script.parent.name)
+    return prepared
 
 
 def parse_example(monkeypatch, script, options):
@@ -325,7 +338,7 @@ def test_isolation_preserves_existing_figures(tmp_path):
 @pytest.mark.parametrize("verbosity", [0, 1, 2, 3])
 @pytest.mark.parametrize("delivery", ["farm", "grouped", "absent", "nonfarm"])
 def test_result_reporting_and_postprocessing_are_independent(
-    monkeypatch, capsys, script, verbosity, delivery
+    monkeypatch, capsys, script, verbosity, delivery, quick_examples
 ):
     # Execute every script's real CLI and both stages without repeating science.
     data = xr.Dataset({"P": (("state", "turbine"), [[100.0]])})
@@ -368,10 +381,9 @@ def test_result_reporting_and_postprocessing_are_independent(
         monkeypatch.setattr(
             foxes.algorithms.Sequential, "farm_results", property(lambda self: data)
         )
-    with RUNNER.isolated_example(script.parent, nofig=True) as work:
-        RUNNER._load(EXAMPLES / "_quick_inputs.py").prepare_inputs(
-            work, script.parent.name
-        )
+    with RUNNER.isolated_example(
+        quick_examples / script.parent.name, nofig=True
+    ) as work:
         options = RUNNER.command(script.parent, quick=True)[2:]
         RUNNER._load(work / "run.py").main(
             [
@@ -444,7 +456,9 @@ def test_optional_benchmark_reports_each_collected_farm(monkeypatch, capsys, ver
     [path for path in SCRIPTS if not path.parent.name.startswith("sequential")],
     ids=lambda path: path.parent.name,
 )
-def test_nofig_is_forwarded_without_filtering_either_selection(monkeypatch, script):
+def test_nofig_is_forwarded_without_filtering_either_selection(
+    monkeypatch, script, quick_examples
+):
     calls = []
     selected_results = ["farm_results", "create_gif", "flow_plot_xy_states"]
     selected_outputs = ["create_gif", "flow_plot_xy_states"]
@@ -466,10 +480,9 @@ def test_nofig_is_forwarded_without_filtering_either_selection(monkeypatch, scri
     monkeypatch.setattr(foxes.algorithms.Downwind, "calc_farm", calculate)
     monkeypatch.setattr(foxes.algorithms.Iterative, "calc_farm", calculate)
     monkeypatch.setattr(foxes.algorithms.Downwind, "calc_outputs", process)
-    with RUNNER.isolated_example(script.parent, nofig=True) as work:
-        RUNNER._load(EXAMPLES / "_quick_inputs.py").prepare_inputs(
-            work, script.parent.name
-        )
+    with RUNNER.isolated_example(
+        quick_examples / script.parent.name, nofig=True
+    ) as work:
         options = RUNNER.command(script.parent, quick=True)[2:]
         RUNNER._load(work / "run.py").main(
             [

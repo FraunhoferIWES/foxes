@@ -275,6 +275,9 @@ reduction retain their point evaluation.
 Mocked reporting tests cover every Python script at levels `0` through `3`,
 collected/grouped results, missing collectors and non-farm outputs
 without repeating their numerical example calculations.
+These contract tests prepare quick-input files once per script at module scope,
+then copy them into a fresh isolated directory for each case. Do not share
+mutable model books, algorithms, configuration or test outputs between cases.
 
 Engine `progress_bar=True` automatically uses tqdm for terminals/notebooks and
 newline-only snapshots for logs. Unicode terminal bars are selected when the
@@ -591,6 +594,20 @@ The numbered test directories encode intent:
 | `tests/2_models/` | Model-family behavior and integration smoke coverage |
 | `tests/3_examples/` | Execution of commands represented by example READMEs |
 | `tests/4_utils/` | Utility contracts |
+
+Measure test costs with `uv run pytest tests --durations=25
+--junitxml=/tmp/foxes-test-timings.xml`. Include fixture setup in comparisons,
+not only individual test calls. Compare unchanged cases separately from added
+coverage. Run branch measurements sequentially with the same interpreter,
+dependencies, backend and worker limits. When measuring another worktree, set
+`PYTHONPATH` to that worktree so subprocesses cannot import the editable install
+from the development checkout.
+
+Smoke inputs should exercise integration rather than benchmark full datasets.
+The NetCDF one-point-flow smoke uses 129 WRF states, retaining multiple heights,
+timeline history and three uneven chunks at the shared 64-state test limit.
+Keep the full scientific inputs and tolerances in consistency and verification
+comparisons.
 
 Run `uv run pytest tests/3_examples -q` for every example, once each, with
 bounded local inputs and no figure display. Scripts expose `main(argv=None)`;
