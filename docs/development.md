@@ -817,6 +817,11 @@ version, currently 3.10 through 3.14. GitLab CI runs pre-commit, tests, and
 notebooks in its configured uv/Python image. A local change that passes only on
 the newest interpreter is not sufficient.
 
+All GitHub workflows use the published `astral-sh/setup-uv@v10.3.3` tag.
+The `v10` major-version tag does not exist. Before updating action references,
+verify that the exact tag or branch exists upstream and that configured inputs
+remain supported; a release's major version does not guarantee a matching tag.
+
 The normal CI commands are:
 
 ```console
