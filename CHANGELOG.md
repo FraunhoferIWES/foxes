@@ -1252,6 +1252,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Use Sphinx's built-in Napoleon extension for NumPy-style API documentation,
     removing the incompatible numpydoc integration and dependency.
   - Fail documentation builds when notebook execution fails.
+- Development:
+  - Updated GitHub Actions dependencies for checkout, Python and uv setup,
+    caching, artifacts, Pages deployment, and Sigstore signing.
 - Tests:
   - Bound the NetCDF one-point-flow smoke input while retaining uneven state
     chunks, and reuse prepared quick inputs across example contract cases.

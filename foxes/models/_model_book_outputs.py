@@ -174,6 +174,7 @@ def _farm_variable_sets() -> dict[str, list[str] | None]:
             FV.REWS,
             FV.AMB_TI,
             FV.TI,
+            FV.CT,
             FV.AMB_P,
             FV.P,
             FV.WEIGHT,
