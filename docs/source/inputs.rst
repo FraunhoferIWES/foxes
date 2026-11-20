@@ -97,6 +97,14 @@ The source dataset is not cropped in place, so fresh states for another farm
 can reuse the same full-grid input. Retaining that input across calculations
 remains the caller's responsibility.
 
+Set ``crop_to_farm=False`` on ``DatasetStates``-derived inputs when point or
+output grids extend beyond the farm horizontally or vertically. This disables
+automatic farm-derived spatial selections, while explicit ``sel``, ``isel`` and
+``height_bounds`` remain effective. The default keeps farm cropping enabled.
+Retaining more support increases loaded model data; it does not enable
+extrapolation or change interpolation settings. WindIO disables this switch for
+all dataset-backed resources.
+
 State support-point plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

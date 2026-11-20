@@ -446,6 +446,11 @@ For in-memory dataset selection, run
 prepared spatial footprints and actual NumPy/process state chunks, numerical
 parity with file-backed loading, explicit selection ordering and reuse of an
 unchanged read-only source across farms.
+The same suite checks `crop_to_farm=False` with in-memory, preloaded NetCDF and
+on-the-fly sources, NumPy/process chunks, output grids and points beyond the
+farm horizontally and vertically, and preserved explicit selections/bounds.
+WindIO tests verify uncropped resource support and strict regular-grid
+out-of-source errors.
 
 Run the narrowest applicable command first:
 
@@ -748,7 +753,8 @@ vertical maps use 240-by-100 grids. Flow examples select individual cases, and
 the movies select 24 independent steady states rather than a time history.
 GIFs are embedded before their temporary files are removed. Keep the gallery
 focused on pictures and interpretation; the
-[Outputs reference](source/outputs.rst) owns the API and preset catalogue.
+[Outputs guide](source/outputs.rst) describes result selection and model-book
+choices; the [models API](source/api_models.rst) lists the output classes.
 Validate actual rendered figures and GIF frame counts in an isolated copy, and
 save the source notebook with all cell outputs and execution counts cleared.
 Use natural terms such as results, farm results and results classes in this
@@ -763,6 +769,10 @@ for Markdown/notebook content.
 Napoleon renders attribute descriptions as fields so AutoAPI owns their API
 entries. A post-processing hook separates constructor docstrings before AutoAPI
 combines them with class documentation, preserving NumPy section boundaries.
+AutoAPI includes public re-exports so references resolve at their documented
+import paths. Intersphinx supplies links to the Python and scientific-library
+APIs. Source-code links stay on the documented module instead of following
+imported or inherited members into unrelated modules.
 
 When an explicit Sphinx rendering check is useful, use the same command as CI:
 
@@ -774,9 +784,21 @@ uv run sphinx-build -E -b html docs/source docs/build/html
 Notebook execution failures stop the documentation build
 (`nb_execution_raise_on_error = True`).
 
+For link and rendering checks without executing notebooks:
+
+```console
+uv run sphinx-build -E -n -b html -D nb_execution_mode=off docs/source docs/build/html
+uv run sphinx-build -b linkcheck -D nb_execution_mode=off docs/source docs/build/linkcheck
+```
+
+Notebook pages are still parsed so their references can be checked. Distinguish
+broken links from external sites that refuse automated requests; report blocked
+checks rather than silently ignoring them.
+
 Open `docs/build/html/index.html` for local inspection. `docs/build/` and
-generated AutoAPI pages under `docs/source/_*` are build output; do not edit or
-commit them as source.
+generated AutoAPI pages under `docs/source/_autoapi/` are build output; do not
+edit or commit them as source. Authored templates and static assets under
+`docs/source/_templates/` and `docs/source/_static/` are maintained source files.
 
 Update the relevant `docs/source/` page when public behavior, setup, an input
 format, or an example changes. Keep examples executable. The root

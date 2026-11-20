@@ -53,8 +53,11 @@ extensions = [
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
-    "numpy": ("https://docs.scipy.org/doc/numpy/", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "xarray": ("https://docs.xarray.dev/en/stable/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 
 # Source file types handled by Sphinx and MyST-NB.
@@ -66,6 +69,7 @@ source_suffix = {
 }
 
 master_doc = "index"
+templates_path = ["_templates"]
 
 language = "en"
 # Exclude generated files and notebooks deferred from documentation execution.
@@ -87,10 +91,12 @@ autosectionlabel_prefix_document = True
 # -- Options for autodoc ----------------------------------------------------
 autodoc_typehints = "signature"
 autodoc_class_signature = "separated"
+viewcode_follow_imported_members = False
 
 # -- HTML output -------------------------------------------------------------
 
 html_theme = "sphinx_immaterial"
+html_static_path = ["_static"]
 html_theme_options = {
     "site_url": "https://fraunhoferiwes.github.io/foxes/",
     "repo_url": "https://github.com/FraunhoferIWES/foxes",
@@ -130,6 +136,7 @@ autoapi_options = [
     "show-inheritance",
     "show-module-summary",
     "inherited-members",
+    "imported-members",
 ]
 autoapi_python_class_content = "both"
 autoapi_member_order = "groupwise"

@@ -115,7 +115,8 @@ post-calculation evaluation output is needed. Fields keep their state/turbine
 dimensions unless aggregation is selected. Farm, cluster and all-turbine
 grouping, point aggregation and weighted state means are available through
 collector options and model-book presets.
-See the [output API](api_output.rst) for collector selections and plotting.
+See [Outputs](outputs.rst) for result selection and plotting, and the
+[models API](api_models.rst) for the output classes.
 
 ### Plot creation and variables
 
@@ -174,6 +175,12 @@ constructor-defined output lifecycle:
 
 `--nofig` suppresses figures without disabling these numerical reports.
 `--verbosity 0` silences adapter progress and NetCDF-writing messages.
+
+WindIO disables `crop_to_farm` for every `DatasetStates`-derived resource, retaining
+horizontal and vertical support beyond the turbine area for flow-field grids.
+Explicit data selections and interpolation settings are unchanged. Regular-grid
+points outside the resource support still raise an interpolation error instead
+of being extrapolated.
 
 Enabled WindIO blockage models automatically select the iterative algorithm and
 `ground_mirror` for their induction wakes. This applies to `RankineHalfBody`,

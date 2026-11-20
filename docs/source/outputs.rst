@@ -3,34 +3,59 @@
 Outputs
 =======
 
-The outputs of *foxes* runs are selected by the user through the ``outputs``
-parameter of ``algo.calc_farm()``, ``algo.calc_points()`` or
-``algo.calc_outputs()``. They can include result datasets, files, tables and
-figures. See the :doc:`Overview <overview>` for the calculation functions.
+The outputs of *foxes* runs depend on the choices by the user:
+
+* :ref:`Farm results <farm-result-outputs>`: Data for each state and turbine,
+  optionally combined over turbines or states.
+* :ref:`Point results <point-result-outputs>`: Flow quantities at evaluation
+  points.
+* :ref:`Files and figures <output-files-and-figures>`: Result files, tables,
+  wind farm layouts, wind roses, flow slices and animations.
 
 All concrete output models are implemented in the
 :doc:`foxes.models.outputs <_autoapi/foxes/models/outputs/index>` sub-package.
-See also the :download:`outputs example notebook <notebooks/outputs.ipynb>`.
+For a visual introduction, see the :doc:`outputs example <notebooks/outputs>`.
 
 .. _output-selection:
 
 Selecting outputs
 -----------------
 
-Output models are stored in the :class:`ModelBook <foxes.models.model_book.ModelBook>`
-object under a name string, in the same way as the :doc:`Models <models>`.
-The ``outputs`` parameter accepts a model-book output name, an output model
-object, or a list of names and objects.
+Output models are stored in the so-called
+:class:`ModelBook <foxes.models.model_book.ModelBook>` object under a name
+string, in the same way as the :doc:`Models <models>`. Select them through the
+``outputs`` parameter of the calculation functions:
 
-For example, the default ``farm_results`` output returns farm results as an
-``xarray.Dataset``:
+.. list-table::
+    :header-rows: 1
+    :widths: 20 40 40
+
+    * - Entry point
+      - Inputs and work
+      - Output behavior
+    * - ``calc_farm``
+      - Calculate turbine/farm physics from the configured states and turbines.
+      - Execute outputs on new farm chunks; output-requested points are evaluated
+        in a loop over bounded point blocks within each state chunk.
+    * - ``calc_points``
+      - Calculate at caller-supplied ``points`` using provided ``farm_results``,
+        or reuse optionally supplied ``point_results``.
+      - Ignore output-requested grids. The supplied locations/results determine
+        where compatible point outputs run.
+    * - ``calc_outputs``
+      - Reuse supplied results and calculate missing farm/point inputs when needed.
+      - Honor output-requested points unless precomputed point results are
+        supplied; metadata-only outputs require no scientific chunks.
+
+The parameter accepts a model-book name, an output model object, or a list of
+either. For example, the default farm output returns an ``xarray.Dataset``:
 
     .. code-block:: python
 
         farm_results = algo.calc_farm(outputs="farm_results")
 
-To configure an output directly, pass an object from the output sub-package.
-For example, the following selects turbine power with and without wake effects:
+To choose individual variables, pass a configured output object. For example,
+power with and without wake effects can be selected as
 
     .. code-block:: python
 
@@ -41,14 +66,85 @@ For example, the following selects turbine power with and without wake effects:
             outputs=FarmResultsOutput(variables=[FV.P, FV.AMB_P]),
         )
 
-Note that ``outputs`` selects output models, not physical variable names.
-Variable selections belong to the constructor of the selected output model.
+Note that ``outputs`` selects models, not physical variable names. A single
+model returning one result returns that value directly. Multiple outputs return
+a dictionary keyed by result names; ``ret_dict=True`` retains this dictionary
+also for a single output. Writers alone return an empty dictionary.
 
-A single output model returning one result returns that value directly.
-Multiple output models return a dictionary whose keys are result names, not
-necessarily the selected model-book names. Use ``ret_dict=True`` to retain
-this dictionary also for a single output. Writer-only outputs return an empty
-dictionary. Setting ``outputs=None`` or ``outputs=[]`` disables collection.
+For outputs that evaluate flow at points, prefer ``algo.calc_outputs()`` with
+existing farm results. This allows the engine to distribute both state and
+point chunks. See the :doc:`Overview <overview>` for the calculation workflow.
+
+Variable sets
+-------------
+
+Farm variable sets
+^^^^^^^^^^^^^^^^^^
+
+The model book provides the following named farm-variable selections.
+``AMB_`` denotes the ambient value without wake effects, and ``weight`` stores
+the statistical state weights.
+
+.. list-table::
+    :header-rows: 1
+    :widths: 15 50 35
+
+    * - Name
+      - Variables
+      - Usage
+    * - ``default``
+      - ``X``, ``Y``, ``H``, ``D``, ``WD``, ``YAW``, ``AMB_RHO``,
+        ``AMB_REWS``, ``REWS``, ``AMB_TI``, ``TI``, ``CT``, ``AMB_P``, ``P``, ``weight``
+      - Common diagnostics and standard inputs for subsequent point calculations;
+        selected by ``farm_results``.
+    * - ``all``
+      - Every available farm field; the list depends on the configured models.
+      - Retain full datasets or additional model-specific fields.
+    * - ``P``
+      - ``AMB_P``, ``P``, ``weight``
+      - Compare ambient and waked turbine power.
+    * - ``wsP``
+      - ``AMB_REWS``, ``REWS``, ``AMB_P``, ``P``, ``weight``
+      - Relate rotor-equivalent wind speeds to turbine power.
+    * - ``wstiP``
+      - ``AMB_REWS``, ``REWS``, ``AMB_TI``, ``TI``, ``AMB_P``, ``P``, ``weight``
+      - Include turbulence intensity in wind-speed and power analysis.
+    * - ``rhowstiP``
+      - ``AMB_RHO``, ``AMB_REWS``, ``REWS``, ``AMB_TI``, ``TI``,
+        ``AMB_P``, ``P``, ``weight``
+      - Include ambient air density as well as wind, turbulence and power.
+    * - ``analysis``
+      - ``CAP``, ``AMB_CAPF``, ``CAPF``, ``EFF``, ``weight``
+      - Evaluate nominal capacity, ambient/waked capacity factors and wake efficiency.
+
+Point variable sets
+^^^^^^^^^^^^^^^^^^^
+
+Point-variable selections are independent of the farm-variable sets:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 15 50 35
+
+    * - Name
+      - Variables
+      - Usage
+    * - ``default``
+      - ``WD``, ``WS``, ``TI``, ``RHO``, ``AMB_WD``, ``AMB_WS``,
+        ``AMB_TI``, ``AMB_RHO``, ``weight``
+      - Collect standard wind fields, their ambient counterparts and state weights.
+    * - ``all``
+      - Every available point field; the list depends on the configured models.
+      - Retain additional fields produced by point models.
+
+Append the set name to the result model name, preserving its case, e.g.
+``farm_results_wsP`` or ``point_results_all``. Results models select ``default``
+if the set name is omitted. Use ``_amb`` or ``_waked`` before the set name to
+filter ambient or waked variables, for example ``farm_results_amb_wsP``.
+
+Named sets are model-book choices. When constructing a results model directly,
+pass a list of physical variable names to ``variables``, or ``None`` for all
+available fields.
 
 .. _model-book-outputs:
 
@@ -151,195 +247,167 @@ flow data at evaluation points, rather than only turbine data or model metadata.
       - Write a GIF combining a flow animation with turbine-variable traces.
       - ``True``
 
-For outputs marked ``True``, prefer ``algo.calc_outputs()`` over
-``algo.calc_farm()`` when calculating their point data. This lets the engine
-chunk in both the state and point dimensions, instead of evaluating point
-blocks inside each farm-state chunk. Independent point chunks can improve
-parallel utilization, so this is expected to be faster, particularly for large
-point grids. The actual benefit depends on the engine and calculation size.
-
-For example, reuse existing farm results while calculating a flow slice:
-
-    .. code-block:: python
-
-        slice_results = algo.calc_outputs(
-            outputs="slice_data_xy_states",
-            farm_results=farm_results,
-        )
-
 Point-result outputs and their writers do not define evaluation coordinates.
-Supply ``point_results`` to reuse existing data, or combine them with an output
-that requests points. The ``point_calculator`` preset likewise needs configured
-``points`` or supplied point data. When passing coordinates directly to the
-algorithm, use ``algo.calc_points(farm_results, points, outputs=...)``, which
-also chunks in both dimensions.
+Supply existing ``point_results``, combine them with an output that requests
+points, or pass coordinates to ``algo.calc_points()``. The ``point_calculator``
+preset likewise needs configured points or supplied point data.
 
 .. _farm-result-outputs:
 
 Farm results
 ------------
 
-The :class:`FarmResultsOutput <foxes.models.outputs.farm_results.FarmResultsOutput>` model
-collects farm data into an ``xarray.Dataset``. Without aggregation, physical
-fields have dimensions ``(state, turbine)``, preserving the input state order
-and the original turbine order in the wind farm.
+The :class:`FarmResultsOutput <foxes.models.outputs.farm_results.FarmResultsOutput>`
+model returns data for each state and turbine as an ``xarray.Dataset``.
+Without aggregation, physical fields have dimensions ``(state, turbine)``,
+in the original turbine order. Known variables carry their units.
 
-The constructor parameters ``aggregate_turbines`` and ``aggregate_states``
-control spatial grouping and weighted state reduction. Extensive quantities
-such as power are summed over turbines, while intensive quantities are
-averaged. See the class API for variable selection and aggregation details.
+The model-book name ``farm_results_analysis`` requests turbine performance
+metrics, calculated automatically. Note that ``farm_results_all`` retains
+available fields; it does not request additional metrics.
 
-Farm variable sets
-^^^^^^^^^^^^^^^^^^
+Results can also be combined over turbines. The model book provides the
+following families, each accepting the farm variable sets listed above:
 
-The model book provides the following named farm-variable selections.
-``AMB_`` denotes the ambient value without wake effects, and ``weight`` stores
-the statistical state weights.
+* ``farm_results``: Keep individual turbines.
+* ``farms_results``: Combine turbines belonging to the same wind farm.
+* ``cluster_results``: Combine turbines belonging to the same cluster.
+* ``total_results``: Combine all turbines.
 
-.. list-table::
-    :header-rows: 1
-    :widths: 15 50 35
-
-    * - Name
-      - Variables
-      - Usage
-    * - ``default``
-      - ``X``, ``Y``, ``H``, ``D``, ``WD``, ``YAW``, ``AMB_RHO``,
-        ``AMB_REWS``, ``REWS``, ``AMB_TI``, ``TI``, ``AMB_P``, ``P``, ``weight``
-      - Common layout, wind and power diagnostics; selected by ``farm_results``.
-    * - ``all``
-      - Every available farm field; the list depends on the configured models.
-      - Retain full datasets or additional model-specific fields.
-    * - ``calc``
-      - ``X``, ``Y``, ``H``, ``D``, ``WD``, ``YAW``, ``CT``,
-        ``AMB_REWS``, ``REWS``, ``AMB_TI``, ``TI``, ``weight``
-      - Retain the standard farm inputs for subsequent point calculations.
-    * - ``P``
-      - ``AMB_P``, ``P``, ``weight``
-      - Compare ambient and waked turbine power.
-    * - ``wsP``
-      - ``AMB_REWS``, ``REWS``, ``AMB_P``, ``P``, ``weight``
-      - Relate rotor-equivalent wind speeds to turbine power.
-    * - ``wstiP``
-      - ``AMB_REWS``, ``REWS``, ``AMB_TI``, ``TI``, ``AMB_P``, ``P``, ``weight``
-      - Include turbulence intensity in wind-speed and power analysis.
-    * - ``rhowstiP``
-      - ``AMB_RHO``, ``AMB_REWS``, ``REWS``, ``AMB_TI``, ``TI``,
-        ``AMB_P``, ``P``, ``weight``
-      - Include ambient air density as well as wind, turbulence and power.
-    * - ``analysis``
-      - ``CAP``, ``AMB_CAPF``, ``CAPF``, ``EFF``, ``weight``
-      - Evaluate nominal capacity, ambient/waked capacity factors and wake efficiency.
-
-Append the set name to the result family, preserving its case. For example,
-``farm_results_wsP`` selects wind-speed and power fields, while
-``cluster_results_analysis_mean`` combines the analysis fields with cluster
-aggregation and weighted state means. The same selections apply to writers,
-for example ``farm_results_P_write_month`` for monthly power-result files.
-``farm_results_default`` is equivalent to ``farm_results``.
-
-The ``calc`` set includes thrust coefficients, which are not part of
-``default``. Point calculations with additional model-specific farm inputs may
-need an explicit variable list or the ``all`` set instead. The ``analysis``
-selection requests the derived turbine metrics automatically.
-
-For example:
-
-    .. code-block:: python
-
-        farm_results = algo.calc_farm(outputs="farm_results_calc")
-        power_results = algo.calc_farm(outputs="farm_results_P")
+Append ``_mean`` for weighted means over states, for example
+``cluster_results_analysis_mean``. Power and capacity are summed over turbines,
+while wind speeds are averaged. Efficiency and capacity factors are calculated
+from the combined power values. These choices can also be configured through
+``aggregate_turbines`` and ``aggregate_states`` on a results model.
 
 .. _point-result-outputs:
 
 Point results
 -------------
 
-The :class:`PointResultsOutput <foxes.models.outputs.point_results.PointResultsOutput>` model
-collects flow quantities at evaluation points. The default ``point_results``
-model-book entry selects wind speed, wind direction, turbulence intensity,
-air density, their ambient counterparts and state weights.
-``point_results_all`` collects all available point fields.
+The :class:`PointResultsOutput <foxes.models.outputs.point_results.PointResultsOutput>`
+model returns flow quantities at evaluation points. The default dataset from
+``algo.calc_points()`` has physical fields on ``(state, point)`` and retains
+the supplied point order.
 
-The default dataset returned by ``algo.calc_points()`` has physical fields on
-``(state, point)`` and retains the supplied point order. The constructor
-parameters ``aggregate_points`` and ``aggregate_states`` select spatial
-averaging and weighted state reduction.
-
-With ``algo.calc_points(..., outputs=...)``, the supplied ``points`` or
-``point_results`` determine the evaluation locations; points defined by the
-selected outputs are ignored. In contrast, ``algo.calc_outputs(outputs=...)``
-uses the points defined by the outputs, unless ``point_results`` is supplied.
-In that case, the existing point data and their coordinates take precedence
-and are reused without scientific point recalculation.
-
-Point variable sets
-^^^^^^^^^^^^^^^^^^^
-
-Point-variable selections are independent of the farm-variable sets:
-
-.. list-table::
-    :header-rows: 1
-    :widths: 15 50 35
-
-    * - Name
-      - Variables
-      - Usage
-    * - ``default``
-      - ``WD``, ``WS``, ``TI``, ``RHO``, ``AMB_WD``, ``AMB_WS``,
-        ``AMB_TI``, ``AMB_RHO``, ``weight``
-      - Collect standard wind fields, their ambient counterparts and state weights.
-    * - ``all``
-      - Every available point field; the list depends on the configured models.
-      - Retain additional fields produced by point models.
-
-``point_results`` and ``point_results_default`` select the same fields.
-Use ``point_results_all`` to retain all available point fields, or combine a set
-with reductions and writer policies, for example
-``point_results_all_mean`` or ``point_results_all_write_month``.
-
-For example, using farm results and evaluation coordinates:
+For example, wind speed and other standard flow quantities at two points can
+be calculated as
 
     .. code-block:: python
 
+        import numpy as np
+
+        farm_results = algo.calc_farm(outputs="farm_results_all")
         point_results = algo.calc_points(
             farm_results,
-            points,
-            outputs="point_results_all",
+            np.array([[400.0, 0.0, 90.0], [600.0, 0.0, 90.0]]),
+            outputs="point_results",
         )
 
-Named variable sets are model-book choices, not values for the ``variables``
-constructor parameter. When constructing
-:class:`FarmResultsOutput <foxes.models.outputs.farm_results.FarmResultsOutput>`
-or :class:`PointResultsOutput <foxes.models.outputs.point_results.PointResultsOutput>`
-directly, pass a list of physical variable names, or ``None`` for all available
-fields.
+Here ``farm_results_all`` retains farm fields needed by the wake calculation.
+With ``calc_points()``, the supplied points determine the evaluation locations.
+With ``calc_outputs()``, outputs can request their own points instead.
+Supplied ``point_results`` take precedence and are reused without recalculation.
+
+Append ``_aggregate_all`` to average over points, and ``_mean`` for weighted
+means over states, e.g. ``point_results_all_aggregate_all_mean``. Note that
+``_all`` selects variables, whereas ``_aggregate_all`` combines points.
+These choices correspond to ``aggregate_points`` and ``aggregate_states``
+on a results model.
 
 .. _output-files-and-figures:
 
 Files and figures
 -----------------
 
-Output models can also write results to files or create figures. Typical file
-and table outputs are:
+Writing results
+^^^^^^^^^^^^^^^
 
-* :class:`FarmResultsCountWriter <foxes.models.outputs.farm_results_writers.FarmResultsCountWriter>`,
-  :class:`FarmResultsChunkWriter <foxes.models.outputs.farm_results_writers.FarmResultsChunkWriter>` and
-  :class:`FarmResultsPeriodWriter <foxes.models.outputs.farm_results_writers.FarmResultsPeriodWriter>`:
-  Write farm results to NetCDF files by state count, engine chunk or calendar period.
-* :class:`PointResultsCountWriter <foxes.models.outputs.point_results_writers.PointResultsCountWriter>`,
-  :class:`PointResultsChunkWriter <foxes.models.outputs.point_results_writers.PointResultsChunkWriter>` and
-  :class:`PointResultsPeriodWriter <foxes.models.outputs.point_results_writers.PointResultsPeriodWriter>`:
-  Write point results to NetCDF files.
-* :class:`StateTurbineTable <foxes.models.outputs.state_turbine_table.StateTurbineTable>`:
-  Create tables of state and turbine data.
+Farm and point results can be written to NetCDF files by appending a writer
+suffix to a model-book name:
 
-For a visual tour of efficiency layouts, wind roses, wake slices, turbine
-curves and embedded flow/turbine animations, see the
-:download:`outputs example notebook <notebooks/outputs.ipynb>`. It uses
-synthetic wind cases and packaged turbine data, without external downloads.
+* ``_write_n<count>``: Write a file for every ``count`` states, e.g.
+  ``farm_results_P_write_n100``.
+* ``_write_chunks``: Write one file for each calculation chunk.
+* ``_write_day``, ``_write_week``, ``_write_month`` or ``_write_year``:
+  Write calendar-period files, requiring chronological datetime states.
 
-These outputs use the same selection mechanism as result datasets. Configure
-file names, plot variables and other options in the output constructor.
-For headless scripts, set ``show=False`` on plotting outputs to avoid opening
-interactive windows.
+Variable sets, filters and aggregation can be combined with writing, e.g.
+``cluster_results_amb_analysis_mean_write_month`` for monthly cluster summaries.
+Count writers without a variable-set name write all available fields; chunk
+and calendar writers use ``default``.
+
+Select a results model alongside the writer to keep a dataset in memory:
+
+    .. code-block:: python
+
+        results = algo.calc_farm(
+            outputs=["farm_results", "farm_results_P_write_n100"],
+        )
+
+For custom filenames, directories or NetCDF options, use a writer object with
+``base_name``, ``out_dir`` and ``write_nc_pars``. The writer classes are listed
+in the :doc:`output models API <_autoapi/foxes/models/outputs/index>`.
+
+Plots and flow slices
+^^^^^^^^^^^^^^^^^^^^^
+
+Typical model-book choices for figures, tables and flow data are:
+
+* ``farm_layout``: Plot turbine positions.
+* ``rose_plot``: Plot a wind rose at a turbine.
+* ``states_rose_plot``: Plot an ambient wind rose at a chosen location.
+* ``support_rose_plot``: Plot the native wind distributions of binned states.
+* ``wind_rose_bin_plot``: Plot a turbine variable, such as power, in wind bins.
+* ``state_turbine_map`` and ``state_turbine_table``: Show farm variables
+  as a heat map or table.
+* ``point_calculator``: Return data at configured points, optionally averaged
+  over states.
+* ``rotor_point_plot``: Show the rotor model's evaluation points.
+* ``turbine_type_curves``: Plot power and thrust curves from a configured
+  wind-speed scan.
+* ``slice_data`` and ``slices_data``: Return flow data on one or more planes.
+* ``flow_plot``: Plot a flow-field slice.
+
+The slice families provide the name templates
+``slice_data_<plane>_<reduction>``, ``slices_data_<plane>_<reduction>`` and
+``flow_plot_<plane>_<reduction>``. Here ``plane`` is ``xy``, ``xz`` or ``yz``,
+and ``reduction`` is ``states`` or ``mean``.
+
+Configure a model-book output before calculation, or pass a configured output
+object. For example, a mean wind-speed plot on a vertical plane is obtained as
+
+    .. code-block:: python
+
+        output = algo.mbook.outputs["flow_plot_xz_mean"]
+        output.grid_pars = {"n_img_points": (30, 20)}
+        output.show = False
+        figure = algo.calc_outputs(outputs=output, farm_results=farm_results)
+
+Static plotting presets display their figures. Set ``show=False`` for scripts
+without an interactive display; this is already the default when constructing
+plotting classes directly. For flow plots and roses, ``plot=False`` returns
+numerical data instead. ``nofig=True`` skips image outputs while retaining
+explicit numerical outputs and writers.
+
+Animations
+^^^^^^^^^^
+
+The model book provides ``create_gif`` and ``create_mp4`` for flow animations.
+The variants ``create_turbine_gif`` and ``create_turbine_mp4`` add synchronized
+turbine traces below the flow field. ``chunk_gif_<chunk>`` and
+``chunk_mp4_<chunk>`` select a single state chunk.
+
+For example, continuing with the farm results above:
+
+    .. code-block:: python
+
+        animation = algo.mbook.outputs["create_gif"]
+        animation.base_name = "flow.gif"
+        animation.grid_pars = {"n_img_points": (30, 20)}
+        animation.fps = 5
+        algo.calc_outputs(outputs=animation, farm_results=farm_results)
+
+This writes ``flow_WS.gif`` for wind speed. MP4 output requires an installed
+ffmpeg encoder. Animation presets save files without opening a display window;
+set ``show=True`` to display them as well.

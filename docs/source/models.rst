@@ -19,6 +19,7 @@ The results of *foxes* runs depend on a number of model choices by the user:
 * :ref:`Ground models <ground-models>`: Add ground effects to the wake calculation, for example the reflection from horizontal planes.
 * :ref:`Point models <point-models>`: Calculate point-based data during ``algo.calc_points()`` or modify ambient-state results.
 * :ref:`Vertical profiles <vertical-profiles>`: Analytical vertical profiles transform uniform ambient states into height dependent inflow.
+* :doc:`Output models <outputs>`: Return result datasets, write files and create figures from farm or point calculations.
 
 All concrete models are stored in the so-called :code:`ModelBook` object under
 a name string (or a name string template that is provided by a so-called model factory),
@@ -83,7 +84,7 @@ Wake models
 Wake models compute wake deltas for flow quantities in the wake. Wind speed deficits and turbulence
 intensity deltas are often computed by two separate wake models, but could also stem from a single model.
 
-The wake model classes can be found in the :doc:`wake models API <api_wake_models>`.
+The wake model classes can be found in the :doc:`wake models API <_autoapi/foxes/models/wake_models/index>`.
 They are organized into three sub-packages, according to their purpose and target variables:
 
 * :doc:`wind <_autoapi/foxes/models/wake_models/wind/index>`: Wind deficit models, computing negative deltas for the wind speed variable `WS`,
@@ -136,7 +137,7 @@ but that is mainly due to variations of various constructor argument choices. Ty
 * `Bastankhah2016_<superposition>_[wake_k]`: The wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_,
 * `TurbOPark_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Pedersen et al. from 2022 <https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf>`_,
 * `CrespoHernandez_<superposition>_[wake_k]`: The top-hat TI addition wake model by `Crespo and Hernandez from 1996 <https://doi.org/10.1016/0167-6105(95)00033-X>`_,
-* `IECTI2019_<superposition>`: The top-hat TI addition wake model by `Frandsen from 2019 <http://orbit.dtu.dk/files/3750291/2009_31.pdf>`_.
+* `IECTI2019_<superposition>`: The top-hat TI addition wake model by `Frandsen from 2019 <https://backend.orbit.dtu.dk/ws/files/3750291/2009_31.pdf>`_.
 
 Note that in all above cases, the `superposition` parameter is
 any of the available :doc:`wake superposition models <_autoapi/foxes/models/wake_superpositions/index>` for wind speed or TI, depending on the model.

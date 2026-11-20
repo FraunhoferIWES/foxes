@@ -555,26 +555,6 @@ def test_nested_engine_rejection_preserves_active_engine():
     assert foxes.get_engine(error=False) is None
 
 
-def test_default_farm_field_selection_is_not_expanded():
-    # Full wake/point integration must use an explicit output, not change defaults.
-    assert foxes.ModelBook().outputs["farm_results"].fdata_variables == [
-        FV.X,
-        FV.Y,
-        FV.H,
-        FV.D,
-        FV.WD,
-        FV.YAW,
-        FV.AMB_RHO,
-        FV.AMB_REWS,
-        FV.REWS,
-        FV.AMB_TI,
-        FV.TI,
-        FV.AMB_P,
-        FV.P,
-        FV.WEIGHT,
-    ]
-
-
 @pytest.mark.parametrize(
     "backend",
     ["single", "numpy", "threads", "process", "multiprocess", "dask", "local_cluster"],

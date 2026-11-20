@@ -216,7 +216,8 @@ class FieldData(DatasetStates):
             unrestricted; diagnostic plot bounds use ``self.bounds_extra_space``.
         height_bounds
             Vertical loading bounds ``(h_min, h_max)`` in metres. ``None`` uses
-            the farm's rotor-height range.
+            the farm's rotor-height range when ``crop_to_farm`` is enabled,
+            otherwise all input heights.
         loaded_data
             Shared ``LoadedData`` mapping that base preprocessing may extend.
             ``None`` leaves shared-data collection to the loading caller.

@@ -223,6 +223,12 @@ and label selections. Farm-derived spatial slices, including interpolation
 neighbours, therefore restrict prepared model arrays before engines split them
 by state. Selection uses local dataset views; a caller-owned full-grid source
 can be reused by fresh states for another farm without being cropped in place.
+`DatasetStates.crop_to_farm` defaults to enabled. Disabling it retains horizontal
+and vertical input support beyond the farm, while explicit `sel`, `isel` and
+`height_bounds` remain effective. WindIO disables it for every dataset-backed
+resource before initialization. Interpolation policy is unchanged; the larger
+support remains subject to normal loading and engine chunking. See
+[ADR-0044](adr/0044-explicit-farm-cropping.md).
 
 `SectorManagement` rules identify turbines by their original farm index or
 name. Chunk-local evaluation maps those identities through `FV.ORDER` and
@@ -393,8 +399,10 @@ wake evaluation retains its bounded geometry. Both Downwind and Iterative
 therefore preserve source identities across farm calculations and independent
 point evaluation. Cache lookups across target chunks retain current-state label
 selection; only lookbacks to historical state chunks bypass that alignment.
-The `"default"` field set is unchanged; point callers needing all wake
-inputs select `"farm_results_all"` explicitly.
+The `"default"` farm-field set includes thrust coefficients alongside standard
+layout, wind and power diagnostics, retaining standard point-calculation inputs.
+Point callers needing additional model-specific wake inputs select an explicit
+variable list or `"farm_results_all"`.
 
 Use `Engine` as a context manager for an explicit backend. `Engine.new()` maps
 established names to implementations. If no engine is active, FOXES creates a
@@ -456,7 +464,7 @@ field list. Intermediate farm calculations honor the same state selection as
 point execution; state-dependent requested points are selected from the full
 algorithm state index in matching label order.
 Explicit output farm-field selections are merged with the
-`farm_results_calc` preset for standard point-calculation inputs, without
+`farm_results_default` preset for standard point-calculation inputs, without
 mutating either selection. An unrestricted output requirement retains all
 available farm fields.
 With precomputed point results, only explicit nonempty farm-field requirements
@@ -493,6 +501,9 @@ Stored Matplotlib artists support `object` method calls for shared axes and
 figure composition; figure-less runs skip all such calls.
 WindIO generates constructor-defined tables and slices, validates positional
 state selections, and retains WindIO field/dimension names in numerical files.
+Its dataset-backed states disable automatic farm cropping for flow reports and
+point calculations beyond the farm horizontally and vertically, retaining
+explicit selections and interpolation policy.
 Figure suppression propagates through its Python entry point without suppressing
 numerical output.
 See [ADR-0024](adr/0024-complete-output-adoption.md).
@@ -937,6 +948,12 @@ subprocess.
 
 ## Cross-Cutting Decisions
 
+- The farm `"default"` variable set covers standard diagnostics and scientific
+  point inputs, including `FV.CT`; the separate `"calc"` set is removed.
+  Output-requested point calculations merge this default with explicit farm-field
+  requirements and retain unrestricted selections. See
+  [ADR-0043](adr/0043-default-farm-variable-set.md).
+
 - Wake growth uses dimensionless `FV.K_0 = "k0"` and `FV.K_1 = "k1"` for
   `k = k_0 + k_1 * TI`. `WakeK` owns direct wake configuration; the `kTI`
   turbine model computes the same relation from uniform values or farm fields.
@@ -1091,6 +1108,10 @@ subprocess.
 	[ADR-0005](adr/0005-static-output-grid-coordinates.md).
 - Ruff formatting/linting and mypy run through pre-commit. Pytest is the test
 	runner; Sphinx with AutoAPI, Napoleon, and MyST-NB builds the documentation.
+- Dataset-backed states expose `crop_to_farm` for automatic spatial cropping.
+	WindIO disables it to retain source support for requested flow grids; explicit
+	selections and interpolation policy remain unchanged. See
+	[ADR-0044](adr/0044-explicit-farm-cropping.md).
 - FOXES uses free design for plots, animations, notebooks, documentation and
 	visual assets. Corporate guidance, tokens and the Sphinx token adapter are
 	removed; Sphinx-Immaterial supplies its ordinary theme. Project conventions

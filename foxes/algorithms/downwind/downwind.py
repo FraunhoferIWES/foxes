@@ -1018,6 +1018,9 @@ class Downwind(Algorithm):
             Farm fields on ``(FC.STATE, FC.TURBINE)`` in original turbine
             order. Required for waked scientific calculations; ``None`` is
             accepted for ambient calculations or precomputed point results.
+            The ``farm_results_default`` preset retains standard wake inputs;
+            additional model-specific fields require an explicit selection
+            or ``farm_results_all``.
         points
             Static points with shape ``(n_points, 3)`` or state-dependent
             points with shape ``(n_states, n_points, 3)``. Static coordinates
@@ -1489,9 +1492,11 @@ class Downwind(Algorithm):
         else:
             if farm_results is None and need_farm_results:
                 if points is not None and fdata_vars is not None:
-                    calc_vars = self.mbook.outputs["farm_results_calc"].fdata_variables
-                    assert calc_vars is not None
-                    fdata_vars = list(dict.fromkeys(calc_vars + fdata_vars))
+                    default_vars = self.mbook.outputs[
+                        "farm_results_default"
+                    ].fdata_variables
+                    assert default_vars is not None
+                    fdata_vars = list(dict.fromkeys(default_vars + fdata_vars))
                 farm_results = self.calc_farm(
                     outputs=fm.outputs.FarmResultsOutput(variables=fdata_vars),
                     calc_parameters=calc_parameters,

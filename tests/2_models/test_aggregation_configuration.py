@@ -158,6 +158,10 @@ def test_named_farm_analysis_combines_filter_group_and_writer(book, policy):
         "total_results_all_aggregate_all_mean_write_n2",
         "farms_results_aggregate_all",
         "cluster_results_aggregate_all",
+        "farm_results_calc",
+        "farms_results_amb_calc_mean",
+        "cluster_results_calc_write_n2",
+        "total_results_waked_calc_mean_write_month",
     ],
 )
 def test_grouped_presets_do_not_keep_redundant_or_previous_names(book, name):

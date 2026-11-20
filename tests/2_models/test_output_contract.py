@@ -152,7 +152,7 @@ def test_slice_execution_contract(algorithm, plane, entry, monkeypatch):
     assert result.sizes[plane[1]] == 3
 
 
-@pytest.mark.parametrize("farm_variables", [None, [], [FV.P]])
+@pytest.mark.parametrize("farm_variables", [None, [], [FV.P], [FV.AMB_WD]])
 @pytest.mark.parametrize("states_sel", [None, [30, 10], [30, 10, 20]])
 @pytest.mark.parametrize("dynamic_points", [False, True])
 def test_requested_points_keep_scientific_farm_inputs(
@@ -176,6 +176,8 @@ def test_requested_points_keep_scientific_farm_inputs(
         wake_models=["Jensen_linear_k007"],
         verbosity=0,
     )
+    output = RequestedPoints(variables=farm_variables)
+    default_fields = algo.mbook.outputs["farm_results_default"].fdata_variables.copy()
     with foxes.Engine.new(
         "numpy", chunk_size_states=2, chunk_size_points=1, verbosity=0
     ):
@@ -184,9 +186,11 @@ def test_requested_points_keep_scientific_farm_inputs(
             farm, points=points, outputs=PointResultsOutput(variables=[FV.WS])
         )
         farm_states = []
+        farm_selections = []
         original_calc_farm = algo.calc_farm
 
         def calc_farm(*args, **kwargs):
+            farm_selections.append(kwargs["outputs"].fdata_variables)
             returned = original_calc_farm(*args, **kwargs)
             farm_states.extend(returned[FC.STATE].values)
             return returned
@@ -194,7 +198,7 @@ def test_requested_points_keep_scientific_farm_inputs(
         monkeypatch.setattr(algo, "calc_farm", calc_farm)
         result = algo.calc_outputs(
             outputs=[
-                RequestedPoints(variables=farm_variables),
+                output,
                 PointResultsOutput(variables=[FV.WS]),
             ],
             states_sel=states_sel,
@@ -203,6 +207,19 @@ def test_requested_points_keep_scientific_farm_inputs(
         expected = expected.sel({FC.STATE: states_sel})
         farm = farm.sel({FC.STATE: states_sel})
     np.testing.assert_array_equal(farm_states, farm[FC.STATE])
+    if farm_variables is None:
+        assert farm_selections == [None]
+    else:
+        assert len(farm_selections) == 1
+        assert farm_selections[0] == list(
+            dict.fromkeys(default_fields + farm_variables)
+        )
+        for variable in farm_variables:
+            xr.testing.assert_allclose(
+                result[FC.FARM_RESULTS][variable], farm[variable]
+            )
+    assert output.fdata_variables == farm_variables
+    assert algo.mbook.outputs["farm_results_default"].fdata_variables == default_fields
     xr.testing.assert_allclose(result[FC.POINT_RESULTS], expected)
     if farm_variables is None or FV.P in farm_variables:
         xr.testing.assert_allclose(result[FC.FARM_RESULTS][FV.P], farm[FV.P])

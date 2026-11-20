@@ -85,4 +85,4 @@ calculations across chunk sizes and changing wind directions.
 
 - [Architecture](../architecture.md#chunk-based-farm-outputs)
 - [Naming conventions](../naming-conventions.md#output-names-and-result-keys)
-- [Output API](../source/api_output.rst)
+- [Models API](../source/api_models.rst)

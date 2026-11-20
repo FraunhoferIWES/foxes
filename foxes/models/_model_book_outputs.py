@@ -143,25 +143,11 @@ def _farm_variable_sets() -> dict[str, list[str] | None]:
     Returns
     -------
     selections
-        Variable lists for output factories. ``calc`` retains standard
-        point-calculation inputs; ``all`` selects every field.
+        Variable lists for output factories. ``default`` retains standard
+        diagnostics and point-calculation inputs; ``all`` selects every field.
     """
     return {
         "all": None,
-        "calc": [
-            FV.X,
-            FV.Y,
-            FV.H,
-            FV.D,
-            FV.WD,
-            FV.YAW,
-            FV.CT,
-            FV.AMB_REWS,
-            FV.REWS,
-            FV.AMB_TI,
-            FV.TI,
-            FV.WEIGHT,
-        ],
         "default": [
             FV.X,
             FV.Y,

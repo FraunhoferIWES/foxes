@@ -14,6 +14,7 @@ import foxes.variables as FV
 from foxes.config import config
 from foxes.input.yaml.dict import run_outputs
 from foxes.input.yaml.windio.read_outputs import read_outputs
+from foxes.input.yaml.windio.read_site import get_states
 from foxes.utils import Dict
 
 
@@ -67,6 +68,93 @@ def _request(family, fields, subset=(2, 0), **sampling):
             },
         }
     return Dict(outputs)
+
+
+@pytest.fixture
+def weibull_algorithm(algorithm):
+    coords = {
+        FV.WD: [90.0, 270.0],
+        FV.WS: [6.0, 8.0, 10.0],
+        FV.X: [-2000.0, 0.0, 2000.0, 4000.0, 6000.0],
+        FV.Y: [-2000.0, 0.0, 2000.0],
+        FV.H: [0.0, 30.0, 90.0, 200.0, 400.0],
+    }
+    field_dims = (FV.WD, FV.X, FV.Y, FV.H)
+    fields = {
+        FV.WEIBULL_A: np.full((2, 5, 3, 5), 8.0),
+        FV.WEIBULL_k: np.full((2, 5, 3, 5), 2.0),
+        "sector_probability": np.array([0.4, 0.6]),
+        FV.TI: np.array([0.05, 0.06, 0.09, 0.14, 0.21]),
+    }
+    dims = {
+        FV.WEIBULL_A: field_dims,
+        FV.WEIBULL_k: field_dims,
+        "sector_probability": (FV.WD,),
+        FV.TI: (FV.X,),
+    }
+    algorithm.states = get_states(coords, fields, dims, verbosity=0)
+    return algorithm
+
+
+@pytest.mark.parametrize("engine_type", ["numpy", "process"])
+def test_weibull_flow_retains_support_outside_farm(
+    weibull_algorithm, tmp_path, monkeypatch, engine_type
+):
+    monkeypatch.setitem(config, FC.OUTPUT_DIR, tmp_path)
+    request = _request(
+        "flow",
+        ["wind_speed", "wind_direction"],
+        subset=None,
+        x_bounds=[-1000.0, 5000.0],
+        y_bounds=[-1000.0, 1000.0],
+        z_list=[350.0, 90.0],
+    )
+    definition = Dict()
+    read_outputs(request, definition, weibull_algorithm, verbosity=0)
+    source = weibull_algorithm.states.data_source.copy(deep=True)
+    with foxes.Engine.new(
+        engine_type,
+        n_procs=2,
+        chunk_size_states=4,
+        chunk_size_points=5,
+        verbosity=0,
+    ):
+        farm = weibull_algorithm.calc_farm()
+        results, _ = run_outputs(
+            definition, weibull_algorithm, farm, with_engine=True, verbosity=0
+        )
+        points = weibull_algorithm.calc_points(
+            farm,
+            np.array([[-2000.0, 0.0, 90.0], [5000.0, 0.0, 90.0], [6000.0, 0.0, 90.0]]),
+        )
+    data = results[0][1][0]
+    assert set(data.dims) == {"z", "time", "y", "x"}
+    assert data.wind_speed.dims == ("z", "time", "y", "x")
+    np.testing.assert_allclose(data.x, [-1000.0, 2000.0, 5000.0])
+    np.testing.assert_allclose(data.y, [-1000.0, 1000.0])
+    np.testing.assert_allclose(data.z, [350.0, 90.0])
+    np.testing.assert_allclose(
+        data.wind_speed.isel(z=0, y=0, x=-1),
+        farm[FV.AMB_REWS].isel({FC.TURBINE: 0}),
+    )
+    np.testing.assert_allclose(
+        data.wind_direction.isel(z=0, y=0, x=-1),
+        farm[FV.WD].isel({FC.TURBINE: 0}),
+    )
+    np.testing.assert_allclose(
+        points[FV.TI], np.tile([0.05, 0.175, 0.21], (farm.sizes[FC.STATE], 1))
+    )
+    with xr.open_dataset(tmp_path / "selected-flow.nc") as written:
+        xr.testing.assert_allclose(data, written)
+    xr.testing.assert_identical(weibull_algorithm.states.data_source, source)
+
+
+@pytest.mark.parametrize("point", [[6001.0, 0.0, 90.0], [0.0, 0.0, 401.0]])
+def test_weibull_points_outside_source_still_raise(weibull_algorithm, point):
+    with foxes.Engine.new("numpy", verbosity=0):
+        farm = weibull_algorithm.calc_farm()
+        with pytest.raises(ValueError, match="out of bounds"):
+            weibull_algorithm.calc_points(farm, np.array([point]))
 
 
 @pytest.mark.parametrize("aggregate", [None, "wind_farm", "cluster", "all"])

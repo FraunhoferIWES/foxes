@@ -5,6 +5,7 @@ from xarray import Dataset
 from numbers import Number
 
 from foxes.core import States
+from foxes.input.states import DatasetStates
 from foxes.utils import Dict
 import foxes.variables as FV
 import foxes.constants as FC
@@ -405,7 +406,7 @@ def get_states(
     verbosity: int = 1,
 ) -> States:
     """
-    Reads states parameters from windio input
+    Create ambient states from WindIO coordinates and fields.
 
     Parameters
     ----------
@@ -423,6 +424,11 @@ def get_states(
     states
         The states object
 
+    Notes
+    -----
+    Dataset-backed states disable ``crop_to_farm`` so flow-field reporting and
+    point calculations retain resource support beyond the farm horizontally
+    and vertically. Interpolation and explicit selections remain unchanged.
 
     """
     if verbosity > 2:
@@ -456,7 +462,10 @@ def get_states(
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
     ):
-        return States.new(**states_dict)
+        states = States.new(**states_dict)
+        if isinstance(states, DatasetStates):
+            states.crop_to_farm = False
+        return states
     else:
         raise ValueError(
             f"Failed to create states for coords {list(coords.keys())} and fields {list(fields.keys())} with dims {dims}"

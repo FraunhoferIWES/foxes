@@ -1,0 +1,4 @@
+{% extends "!domainindex.html" %}
+{% block body %}
+{{ super() | replace('_static/minus.png', '_static/minus.svg') | safe }}
+{% endblock %}

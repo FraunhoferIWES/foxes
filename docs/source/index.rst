@@ -3,12 +3,13 @@
     :align: center
 
 .. versionchanged:: 1.10.0
-    Farm, point and plotting outputs use constructor-defined models selected
-    through the algorithm output API.
+    Major change in the handling of output generation, now chunking is
+    supported and the full `farm_results` object is no longer a requirement.
+    New `calc_outputs` function introduced in the algorithms.
 
-.. versionadded:: 1.10.0
-    Farm and point result collectors support spatial grouping and weighted
-    state reductions, including matching model-book presets.
+.. versionchanged:: 1.10.0
+    Reformulation of TI dependent wake growth modeling, now via
+    `k = k0 + k1 * TI` throughout _foxes_.
 
 .. versionadded:: 1.10.0
     Output datasets and NetCDF files include units for known variables;

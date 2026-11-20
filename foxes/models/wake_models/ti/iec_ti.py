@@ -30,12 +30,12 @@ class IECTIWake(TopHatWakeModel):
     Notes
     -----
     Reference:
-    http://orbit.dtu.dk/files/3750291/2009_31.pdf
+    https://backend.orbit.dtu.dk/ws/files/3750291/2009_31.pdf
     v2: VolLuk: corrected implementation following: IEC-64100-1-2005-8
     (Appearently an error in the document by DTU)
 
     and the Frandsen wake TI model, from IEC-64100 (2019):
-    http://orbit.dtu.dk/files/3750291/2009_31.pdf
+    https://backend.orbit.dtu.dk/ws/files/3750291/2009_31.pdf
     """
 
     def __init__(

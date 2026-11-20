@@ -22,7 +22,7 @@ all of them.
 | [0008](0008-documentation-independent-tests.md) | Accepted; corporate-design retention superseded by [0030](0030-free-design.md) | Keep pytest independent of documentation files and review documentation separately. |
 | [0009](0009-test-file-dependency-boundary.md) | Accepted; supersedes the test-input boundary in 0008 | Limit pytest repository-file inputs to package code, examples, notebooks, and tests. |
 | [0010](0010-chunk-based-farm-outputs.md) | Accepted | Adopt outputs through the core chunk lifecycle; isolate farm writer payloads and split files by exact counts or calendar periods, including ISO weeks. |
-| [0011](0011-engine-output-execution-and-progress.md) | Accepted; supersedes the engine/algorithm scope restriction in 0010 | Unify engine output execution, ordered batches, point collection and parent-owned adaptive progress without changing default farm fields. |
+| [0011](0011-engine-output-execution-and-progress.md) | Accepted; supersedes the engine/algorithm scope restriction in 0010; unchanged default farm fields superseded by [0043](0043-default-farm-variable-set.md) | Unify engine output execution, ordered batches, point collection and parent-owned adaptive progress. |
 | [0012](0012-chunk-animation-output.md) | Accepted | Adopt optional flow animations with shared point grids, target-data reuse, bounded scientific blocks and finalization-only assembly/writing. |
 | [0013](0013-full-shaped-broadcast-data.md) | Accepted; supersedes [0003](0003-compact-static-target-coordinates.md) | Represent repeated dimensioned data as full-shaped read-only broadcast views and broadcast mismatched `Model.get_data()` results automatically. |
 | [0014](0014-sequential-animation-outputs.md) | Accepted | Adapt flow-animation outputs to Sequential with step-local point evaluation and completion-only shared rendering. |
@@ -54,6 +54,8 @@ all of them.
 | [0040](0040-explicit-output-data-lifecycle.md) | Accepted | Let each output explicitly manage named initial results and stash fields, without a generic attribute registry or ownership bundle; use the normal lifecycle for metadata and native support roses. |
 | [0041](0041-parent-only-supplied-results.md) | Accepted | Let outputs declare whether supplied datasets require chunks; plain tables finalize directly, while aggregations and fresh scientific collection retain chunks. |
 | [0042](0042-wake-growth-coefficients.md) | Accepted | Use k0/k1 fields and intercept/multiplier configuration consistently, preserving WindIO schema and rejecting removed FOXES inputs. |
+| [0043](0043-default-farm-variable-set.md) | Accepted | Use the default farm-variable set for standard diagnostics and point-calculation inputs; remove the redundant calc set across all result families and writers. |
+| [0044](0044-explicit-farm-cropping.md) | Accepted | Expose automatic farm cropping as a dataset-states switch and disable it for WindIO resources while retaining explicit selections and interpolation policy. |
 
 ## When To Add An ADR
 

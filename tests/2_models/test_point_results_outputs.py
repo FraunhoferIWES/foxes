@@ -524,7 +524,7 @@ def test_model_book_has_analogous_point_selectors_and_independent_selections():
     assert "custom" not in foxes.ModelBook().outputs["point_results"].variables
 
 
-def _algorithm():
+def _algorithm(algorithm_type="Downwind"):
     """Create a small real wake calculation with timestamped synthetic inflow."""
     table = pd.DataFrame(
         {FV.WS: [7.0, 8.0, 9.0, 10.0, 11.0], FV.WD: [90.0, 270.0, 90.0, 270.0, 90.0]},
@@ -537,13 +537,35 @@ def _algorithm():
     )
     farm = foxes.WindFarm()
     farm.add_turbine(foxes.Turbine([0.0, 0.0], turbine_models=["NREL5MW"]), verbosity=0)
-    return foxes.algorithms.Downwind(
+    return getattr(foxes.algorithms, algorithm_type)(
         farm,
         states,
         rotor_model="centre",
         wake_models=["Jensen_linear_k007"],
         verbosity=0,
     )
+
+
+@pytest.mark.parametrize("algorithm_type", ["Downwind", "Iterative"])
+@pytest.mark.parametrize("backend", ["numpy", "threads", "process"])
+def test_default_farm_results_retain_waked_point_inputs(algorithm_type, backend):
+    algo = _algorithm(algorithm_type)
+    points = np.array([[400.0, 0.0, 90.0], [600.0, 20.0, 90.0], [800.0, 0.0, 90.0]])
+    with foxes.Engine.new(
+        backend,
+        n_procs=2,
+        chunk_size_states=2,
+        chunk_size_points=2,
+        verbosity=0,
+    ):
+        full_farm = algo.calc_farm(outputs="farm_results_all")
+        expected = algo.calc_points(full_farm, points)
+        default_farm = algo.calc_farm(outputs="farm_results_default")
+        actual = algo.calc_points(default_farm, points)
+    assert FV.CT in default_farm
+    xr.testing.assert_allclose(default_farm, full_farm[list(default_farm.data_vars)])
+    xr.testing.assert_allclose(actual, expected)
+    assert (actual[FV.WS] < actual[FV.AMB_WS]).any()
 
 
 @pytest.mark.parametrize("backend", ["numpy", "threads", "process"])

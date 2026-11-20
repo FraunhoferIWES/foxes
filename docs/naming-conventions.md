@@ -126,11 +126,12 @@ can span chunks or split a single chunk.
 
 `FC.POINT_RESULTS` names point-output buffers and the unified internal target
 dataset. Public point results rename `FC.TARGET` to `FC.POINT`. The model-book
-`"default"` field selection is not an implicit list of every wake input; request
-`"farm_results_all"` explicitly when all farm variables are required.
-`"farm_results_calc"` selects turbine position, diameter, wind/yaw direction,
-thrust coefficient, ambient/waked rotor-equivalent wind speed and turbulence
-intensity, and state weights. Point calculations requested through
+`"default"` farm-field selection, used by `"farm_results"` and
+`"farm_results_default"`, selects turbine position, diameter, wind/yaw direction,
+ambient density, thrust coefficient, ambient/waked rotor-equivalent wind speed,
+turbulence intensity and power, and state weights. It is not an implicit list of
+every wake input; request `"farm_results_all"` explicitly when all farm variables
+are required. Point calculations requested through
 `calc_outputs` merge this baseline with explicit output farm-field requirements;
 an unrestricted requirement retains all fields. Model-specific extra inputs
 belong in the output's farm-field requirements.
@@ -464,6 +465,9 @@ available alternatives.
 
 - Constructor and YAML keys use the owning Python parameter name unless an
 	external schema requires an adapter.
+- `crop_to_farm` names automatic farm-derived horizontal and rotor-height
+	selections on dataset-backed states. Disabling it preserves explicit data
+	selections and interpolation policy; it does not mean extrapolation.
 - Configuration values belong to `foxes.config`; environment variables use an
 	uppercase `FOXES_` prefix when a process-wide override is genuinely needed.
 - Console-script names declared in `pyproject.toml` are public. Keep reusable

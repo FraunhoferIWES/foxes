@@ -81,4 +81,4 @@ No new dependency, compatibility shim or legacy option is introduced.
 
 - [Architecture](../architecture.md#chunk-based-farm-outputs)
 - [Naming conventions](../naming-conventions.md#physical-variables)
-- [Output API](../source/api_output.rst)
+- [Models API](../source/api_models.rst)

@@ -27,7 +27,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.1.3-alpha
 
-- Adding docu: [https://fraunhoferiwes.github.io/foxes.docs/index.html](https://fraunhoferiwes.github.io/foxes.docs/index.html)
+- Adding docu: [https://fraunhoferiwes.github.io/foxes/](https://fraunhoferiwes.github.io/foxes/)
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.1.3](https://github.com/FraunhoferIWES/foxes/commits/v0.1.3)
 
@@ -1191,109 +1191,51 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.10.0
 
+- Major changes:
+  - This version introduces a major change to the output generation. Now outputs are calculated through the algorithm (via functions `calc_farm`, `calc_points` or the new `calc_outputs`) and therefore make use of chunking whenever possible. As a consequence, it is no longer required to have the full `farm_results` object available when generating an output. However, it remains possible to compute this first and then generate the outputs based on this in a separate post-processing step.
+  - This version replaces the previous `kTI` formulation (based on `FV.KTI` and  `FV.KB`) by `k = k0 + k1 * TI`, with new variables `FV.K_0` and `FV.K_1`.
+- Inputs:
+  - `DatasetStates`: Added `crop_to_farm` to disable automatic horizontal and
+    vertical farm cropping while preserving explicit data selections.
 - Core:
-  - Dimensioned data containers and `Model.get_data()` now preserve named
-    dimensions and use full-shaped read-only broadcast views. Corrected target
-    lookup and shape validation for named dimensions and selections, including
-    partially NaN results. Removed the superseded `upcast` and `broadcast`
-    options.
+  - Data containers and `Model.get_data()` now align named dimensions and
+    broadcast to full shapes using read-only views; removed the `upcast` option.
 - Algorithms:
-  - `Downwind`, `Iterative` and `Sequential` support constructor-defined outputs
-    through farm, point and supplied-result workflows. `ret_dict=True` opts into
-    keyed result mappings without changing default returns.
+  - `Downwind`, `Iterative` and `Sequential`: Added constructor-defined output
+    selection for farm and point calculations, `calc_outputs` for post-processing
+    supplied results, and `ret_dict=True` for keyed result dictionaries.
 - Models:
-  - Wake growth now consistently uses `k = k_0 + k_1 * TI` with
-    `FV.K_0 = "k0"` and `FV.K_1 = "k1"`, replacing `FV.KB` and `FV.KTI`.
-    `WakeK`, the `kTI` turbine model and wake presets use the new coefficients;
-    model-book suffixes use `k0_<value>`/`k1_<value>` or their ambient forms.
-    Removed coefficient keywords and parameterized names raise migration errors.
-    Correct WindIO translation to follow WIFA's `k = k_a * TI + k_b`:
-    `k_a` maps to `k_1`, and `k_b` maps to `k_0`, without changing schema keys.
-  - `TurbineEvaluation` supplies state-turbine capacity, efficiency, capacity
-    factor and annualized/probability yields through output selection, respecting
-    turbine identity, power units and explicit uncertainty.
-  - `ModelBook` adds grouped farm, cluster, all-turbine and point result presets
-    with consistent field, filter, reduction and writer options.
-- Outputs:
-  - Farm and point collectors, writers, plots, tables, maps and animations use
-    constructor-defined models in `foxes.models.outputs`; the old dataset-bound
-    output package and generic results writer are removed.
-  - Plain tables format supplied farm results without chunk dispatch; aggregation
-    and fresh scientific calculations remain chunk-based. Farm and point results
-    support spatial grouping and weighted state means, including exact
-    count/calendar files and explicit result keys.
-  - Output datasets and NetCDF files include units for known fields; mixed power
-    units are normalized before aggregation.
-  - Add native support-point wind roses and reusable flow/turbine animations.
-    Figure suppression skips image-only calculations while retaining numerical
-    outputs and input reductions.
-  - WindIO turbine and flow outputs use the shared output lifecycle, with
-    validated state selection and WindIO field/dimension names.
+  - Wake growth: Standardized coefficients as `k = k0 + k1 * TI`, with
+    `FV.K_0`/`FV.K_1` replacing `FV.KB`/`FV.KTI`; updated constructor keywords
+    and model-book suffixes to `k0_<value>`/`k1_<value>`.
+  - `TurbineEvaluation`: Moved capacity, efficiency, capacity-factor and yield
+    calculations from dataset-bound evaluation into selectable turbine outputs.
 - Engines:
-  - Engines own selected-output lifecycle, ordered chunk collection, cache updates
-    and parent-side finalization; progress reports distinguish worker pools from
-    synchronous chunk loops.
-  - Add the `engines` extra for installing all optional execution backends.
+  - Added the `engines` extra for installing all optional execution backends.
+  - Improved chunk progress reporting and parent-side output finalization.
+- Outputs:
+  - Replaced `foxes.output` with constructor-defined collectors, writers and
+    plotting models in `foxes.models.outputs`; Sequential plugins moved to
+    `foxes.models.seq_plugins`. Updated Python, YAML and WindIO workflows.
+  - Added model-book result presets, turbine/point grouping, weighted state
+    aggregation, and count- or calendar-based output files.
+  - Added unit metadata to datasets and NetCDF files, with mixed power units
+    normalized before aggregation.
+  - Added synchronized flow/turbine animations and `nofig=True` execution that
+    retains numerical outputs while skipping figures.
 - Examples and documentation:
-  - Python examples use callable `main()` workflows, separate result and
-    post-processing selectors, consistent verbosity, and optional figure-less
-    execution. The aggregate runner executes examples in isolated temporary
-    copies.
-  - Add a freshly authored output gallery with 12 turbines, synthetic weighted
-    wind cases, efficiency dashboards, wind roses, wake slices, turbine/rotor
-    diagnostics and embedded flow/turbine GIFs. Keep API and preset details in
-    the Outputs reference rather than duplicating its catalogue.
-  - Add an Outputs documentation page and overview links, with guidance on
-    farm calculations, point calculations and output processing. Catalogue every
-    registered output class, list farm and point variable sets, explain point
-    selection, and recommend point-dimension chunking where applicable.
-  - Refresh the Python-script examples guide with a link to the main-branch
-    examples folder, shared command-line options and isolated quick-run guidance.
-  - Use Sphinx's built-in Napoleon extension for NumPy-style API documentation,
-    removing the incompatible numpydoc integration and dependency.
-  - Fail documentation builds when notebook execution fails.
-- Development:
-  - Updated GitHub Actions dependencies for checkout, Python and uv setup,
-    caching, artifacts, Pages deployment, and Sigstore signing.
-- Tests:
-  - Bound the NetCDF one-point-flow smoke input while retaining uneven state
-    chunks, and reuse prepared quick inputs across example contract cases.
-    Keep each execution isolated and retain all scientific consistency and
-    verification inputs and tolerances.
+  - Updated examples with shared command-line options and figure-less execution;
+    refreshed the Outputs guide and output gallery.
+  - Replaced numpydoc with Sphinx's built-in Napoleon for API documentation.
+  - Repaired documentation and DTU links, public re-export references,
+    scientific-library API links, and module-index assets and source navigation.
 - Bug fixes:
-  - Correct zero-power efficiency and preserve turbine ordering, mixed-unit
-    values and final Iterative powers when deriving turbine metrics; correct
-    `TurbineEvaluation` model-name handling.
-  - Correct wind-rose compass orientation and combine weighted bins without
-    chunk-local normalization.
-  - Preserve farm and cluster membership, state labels and field values when
-    reusing collected results, including missing labels normalized to `None`
-    when importing xarray datasets. Correct multiple-output selection and dataset
-    normalization, reject duplicate result keys, avoid shared output-list
-    defaults and keep writer buffers independent. Fix final-chunk and NetCDF
-    writer handling, including exact intervals and ISO weeks.
-  - Correct weighted state reductions and precomputed flow-plot ordering; fix
-    state-dependent point coordinates and timeline wake history across chunks.
-    Retain minimal scientific farm inputs alongside selected fields for
-    output-requested point calculations.
-  - Correct automatic farm calculations in `calc_outputs` for explicit and
-    unrestricted field requirements, preserving selected states and dataset or
-    plotting return types. Preserve point-only reuse of precomputed results,
-    skip unused supplied farm data, and align state-selected intermediate farm
-    results with state-dependent calculation points.
-  - Keep dynamic-wake GIF/MP4 selections and filenames correct in headless and
-    writer-only runs. Fix Slurm cluster startup and plotting cleanup after
-    failures; do not report animation completion after a write error.
-  - Correct model-book factory precedence and coefficient parsing, remove
-    duplicate registrations, and preserve loaded model data during execution.
-  - Keep previous-farm history local to every engine run, including scientific
-    Iterative passes, so stale history cannot replace supplied inputs in later
-    selected-state point calculations, flow plots or animations.
-  - Preserve streamline source identities across farm/downwind turbine ordering,
-    handle unreached forward projections correctly when ordering turbines, and
-    retain selected state labels when reusing geometry across point chunks.
-  - Retain thrust coefficients and other wake inputs in both blockage notebooks
-    for subsequent point calculations and flow plots, including all induction
-    and ground-mirror comparisons.
+  - WindIO: Corrected wake-growth translation to `k = k_a * TI + k_b`,
+    mapping `k_a` to `k1` and `k_b` to `k0`.
+  - WindIO: Disabled automatic farm cropping for all dataset-backed resources,
+    fixing spurious bounds errors for flow grids extending beyond the farm.
+  - Streamline wakes: Corrected turbine ordering and cached wake-source identity.
+  - Point calculations: Fixed state-dependent coordinates and timeline wake
+    history across chunks.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.0](https://github.com/FraunhoferIWES/foxes/commits/v1.10.0)

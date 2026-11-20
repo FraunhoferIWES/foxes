@@ -8,7 +8,7 @@ import foxes
 import foxes.constants as FC
 import foxes.variables as FV
 from foxes.algorithms.downwind.models.prepare_for_output import PrepareForOutput
-from foxes.models.outputs import FarmResultsOutput
+from foxes.models.outputs import FarmResultsOutput, SliceData
 from foxes.core import FData, MData
 from foxes.input.states import DatasetStates, FieldData
 
@@ -42,7 +42,7 @@ def _field_algorithm(source, xy, **selection):
         var2ncvar={FV.WS: "ws"},
         fixed_vars={FV.WD: 270.0, FV.TI: 0.08, FV.RHO: 1.225},
         bounds_extra_space=0.0,
-        height_bounds=(80.0, 120.0),
+        height_bounds=selection.pop("height_bounds", (80.0, 120.0)),
         **selection,
     )
     farm = foxes.WindFarm()
@@ -120,6 +120,81 @@ def test_dataset_field_applies_explicit_selections_once():
         assert actual.shape == (2, 2, 2, 3, 1)
         result = algo.calc_farm()
     assert result.sizes[FC.STATE] == 2
+
+
+@pytest.mark.parametrize("engine_type", ["numpy", "process"])
+@pytest.mark.parametrize("source_kind", ["dataset", "preload", "fly"])
+def test_dataset_field_disables_automatic_farm_cropping(
+    engine_type, source_kind, tmp_path
+):
+    source = _field_dataset()
+    original = source.copy(deep=True)
+    if source_kind == "dataset":
+        data_source = source
+        load_mode = "preload"
+    else:
+        data_source = tmp_path / "field.nc"
+        source.to_netcdf(data_source)
+        load_mode = source_kind
+    algo = _field_algorithm(
+        data_source,
+        [1250.0, 1250.0],
+        crop_to_farm=False,
+        height_bounds=None,
+        load_mode=load_mode,
+    )
+    output = SliceData(
+        variables=[FV.WS],
+        grid_pars=dict(
+            xmin=6000.0,
+            xmax=7000.0,
+            ymin=4000.0,
+            ymax=5000.0,
+            z=350.0,
+            n_img_points=(2, 2),
+        ),
+    )
+    with foxes.Engine.new(
+        engine_type, n_procs=2, chunk_size_states=2, chunk_size_points=3, verbosity=0
+    ):
+        farm = algo.calc_farm()
+        result = algo.calc_outputs(output, farm_results=farm)
+        points = algo.calc_points(farm, np.array([[7000.0, 5000.0, 400.0]]))
+    expected = source.ws.sel(x=[6000.0, 7000.0], y=[4000.0, 5000.0], height=350.0)
+    np.testing.assert_allclose(result[FV.WS], expected.values)
+    np.testing.assert_allclose(
+        points[FV.WS][:, 0], source.ws.sel(x=7000.0, y=5000.0, height=400.0)
+    )
+    xr.testing.assert_identical(source, original)
+
+
+def test_disabled_farm_cropping_preserves_explicit_spatial_selections():
+    source = _field_dataset()
+    algo = _field_algorithm(
+        source,
+        [3250.0, 2250.0],
+        crop_to_farm=False,
+        isel={"time": [1, 3], "x": slice(3, 7)},
+        sel={"y": slice(2000.0, 4000.0)},
+    )
+    with foxes.Engine.new("numpy", verbosity=0):
+        algo.initialize()
+        model_data, _ = algo.get_model_data()
+        expected = (
+            source.isel(time=[1, 3], x=slice(3, 7))
+            .sel(y=slice(2000.0, 4000.0), height=slice(50.0, 150.0))
+            .ws.transpose("time", "x", "y", "height")
+        )
+        np.testing.assert_array_equal(
+            model_data[algo.states.var("data0")].values[..., 0], expected.values
+        )
+        algo.finalize()
+
+
+@pytest.mark.parametrize("crop_to_farm", ["false", 0, None])
+def test_dataset_states_rejects_nonboolean_cropping(crop_to_farm):
+    with pytest.raises(ValueError, match="crop_to_farm must be a boolean"):
+        DatasetStates(xr.Dataset(), output_vars=[], crop_to_farm=crop_to_farm)
 
 
 @pytest.mark.parametrize("reorder", [False, True])

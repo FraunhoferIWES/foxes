@@ -154,12 +154,20 @@ class DatasetStates(States):
     Abstract base class for heterogeneous ambient states that
     are based on data from NetCDF files or an xarray Dataset.
 
+    Raises
+    ------
+    ValueError
+        If ``crop_to_farm`` is not a boolean.
+
     Notes
     -----
     In-memory inputs are preprocessed before applying explicit and farm-bound
     selections. Selected views retain interpolation support points without
     modifying the source dataset; only selected fields enter model preparation
     and subsequent state chunks.
+    Set ``crop_to_farm=False`` to retain support beyond the farm horizontally
+    and vertically. Explicit ``sel``, ``isel`` and ``height_bounds`` still apply.
+
     """
 
     def __init__(
@@ -181,6 +189,7 @@ class DatasetStates(States):
         preprocess_nc: Callable[[xr.Dataset], xr.Dataset] | None = None,
         force_keep_vars: list[str] | None = None,
         interp_pars: dict[str, bool | float | str | None] | None = None,
+        crop_to_farm: bool = True,
         **kwargs: object,
     ) -> None:
         """
@@ -209,9 +218,12 @@ class DatasetStates(States):
         bounds_extra_space
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'. If None,
-            all points from the input data are used
+            all horizontal points from the input data are used. Ignored when
+            ``crop_to_farm`` is disabled.
         height_bounds
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+            Explicit ``(h_min, h_max)`` loading bounds in metres. ``None``
+            derives rotor-height bounds when ``crop_to_farm`` is enabled,
+            otherwise retains all input heights.
         sel
             Subset selection via xr.Dataset.sel()
         isel
@@ -230,11 +242,19 @@ class DatasetStates(States):
             Variables to remove from the drop_vars list when reading the nc files
         interp_pars
             Additional parameters the interpolation
+        crop_to_farm
+            Restrict support to the farm's horizontal and rotor-height bounds
+            during initialization. Disable for point/output grids beyond the
+            farm. Explicit ``sel``, ``isel`` and ``height_bounds`` still apply;
+            interpolation outside retained support follows ``interp_pars``.
         kwargs
             Additional arguments for the base class
         """
         super().__init__(load_mode=load_mode, **kwargs)
 
+        if not isinstance(crop_to_farm, bool):
+            raise ValueError(f"States '{self.name}': crop_to_farm must be a boolean")
+        self.crop_to_farm = crop_to_farm
         self.ovars = list(output_vars)
         self.fixed_vars = {} if fixed_vars is None else dict(fixed_vars)
         self.var2ncvar = {} if var2ncvar is None else dict(var2ncvar)
@@ -475,7 +495,7 @@ class DatasetStates(States):
         verbosity: int = 0,
     ) -> None:
         """
-        Preprocesses the first file.
+        Prepare spatial selections from the first input dataset.
 
         Parameters
         ----------
@@ -484,15 +504,22 @@ class DatasetStates(States):
         data
             The dataset to preprocess
         bounds_extra_space
-            The extra space, either float in m,
-            or str for units of D, e.g. '2.5D'
+            Extra horizontal farm margin in metres or rotor-diameter units,
+            such as ``"2.5D"``. ``None`` or disabled ``crop_to_farm`` retains
+            all horizontal support.
         height_bounds
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-            loaded_data
+            Explicit ``(h_min, h_max)`` bounds in metres. ``None`` uses rotor
+            heights when ``crop_to_farm`` is enabled, otherwise all input heights.
+        loaded_data
             If given, optionally add to this loaded data dict with entries
             {"coords": {}, "data_vars": {}, "extra_data": {}}
         verbosity
             The verbosity level, 0 = silent
+
+        Raises
+        ------
+        ValueError
+            If the selected vertical bounds do not overlap input heights.
 
         """
 
@@ -512,11 +539,15 @@ class DatasetStates(States):
         # find vertical bounds:
         if FV.H in self._cmap:
             if height_bounds is None:
-                H = algo.farm.get_hub_heights(algo)
-                D = algo.farm.get_rotor_diameters(algo)
-                H = np.stack((H - 0.5 * D, H + 0.5 * D), axis=-1)
-                height_bounds = (np.min(H), np.max(H))
-                del H, D
+                if self.crop_to_farm:
+                    H = algo.farm.get_hub_heights(algo)
+                    D = algo.farm.get_rotor_diameters(algo)
+                    H = np.stack((H - 0.5 * D, H + 0.5 * D), axis=-1)
+                    height_bounds = (np.min(H), np.max(H))
+                    del H, D
+                else:
+                    heights = data[self._cmap[FV.H]].to_numpy()
+                    height_bounds = (float(np.min(heights)), float(np.max(heights)))
             if verbosity > 0:
                 print(
                     f"States '{self.name}': Restricting heights to {height_bounds[0]} - {height_bounds[1]} m"
@@ -557,7 +588,7 @@ class DatasetStates(States):
                 )
 
         # find horizontal bounds:
-        if bounds_extra_space is not None:
+        if self.crop_to_farm and bounds_extra_space is not None:
             assert FV.X in self._cmap, (
                 f"States '{self.name}': x coordinate '{FV.X}' not in cmap {self._cmap}"
             )
@@ -887,9 +918,7 @@ class DatasetStates(States):
         verbosity: int = 0,
     ) -> None:
         """
-        Load and/or create all data required for model calculations.
-
-        The function adds to loaded_data.
+        Load and prepare model data using the configured spatial selection policy.
 
         Parameters
         ----------
@@ -901,9 +930,11 @@ class DatasetStates(States):
         force
             Overwrite existing data
         bounds_extra_space
-            The extra space in meters to add to the horizontal wind farm bounds
+            Extra horizontal farm margin in metres; ignored when
+            ``crop_to_farm`` is disabled.
         height_bounds
-            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+            Explicit ``(h_min, h_max)`` bounds in metres. ``None`` uses the
+            constructor bounds or the ``crop_to_farm`` height policy.
         verbosity
             The verbosity level, 0 = silent
 
@@ -924,6 +955,8 @@ class DatasetStates(States):
             if bounds_extra_space is not None
             else self.bounds_extra_space
         )
+        if not self.crop_to_farm:
+            bounds_extra_space = None
         height_bounds = (
             height_bounds if height_bounds is not None else self.height_bounds
         )

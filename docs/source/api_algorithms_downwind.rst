@@ -22,8 +22,8 @@ returns a dataset. Writer-only outputs and disabled collection (``None`` or an
 empty list) return an empty mapping. Selected outputs run through the same
 algorithm and engine lifecycle for farm, point and supplied-result processing.
 
-See :doc:`api_output` for dataset and NetCDF output models, composition and a
-runnable synthetic example.
+See :doc:`Outputs <outputs>` for result selection, NetCDF files and examples,
+and :doc:`api_models` for the output classes.
 
 Ambient-only calculations
 -------------------------
