@@ -177,7 +177,7 @@ geopandas==1.2.0 ; python_full_version >= '3.11'
     # via foxes
 graphemeu==0.7.2
     # via alive-progress
-greenlet==3.5.6 ; (python_full_version < '3.11' and platform_machine == 'AMD64') or (python_full_version < '3.11' and platform_machine == 'WIN32') or (python_full_version < '3.11' and platform_machine == 'aarch64') or (python_full_version < '3.11' and platform_machine == 'amd64') or (python_full_version < '3.11' and platform_machine == 'ppc64le') or (python_full_version < '3.11' and platform_machine == 'win32') or (python_full_version < '3.11' and platform_machine == 'x86_64')
+greenlet==3.5.6 ; python_full_version < '3.11' and (platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64')
     # via sqlalchemy
 h11==0.16.0
     # via httpcore
@@ -506,8 +506,6 @@ numpy==2.5.4 ; python_full_version >= '3.12'
     #   scipy
     #   shapely
     #   xarray
-numpydoc==1.11.0
-    # via foxes
 objsize==0.8.0
     # via foxes
 overrides==7.7.0 ; python_full_version < '3.12'
@@ -779,7 +777,6 @@ sphinx==8.1.3 ; python_full_version < '3.11'
     #   foxes
     #   myst-nb
     #   myst-parser
-    #   numpydoc
     #   sphinx-autoapi
     #   sphinx-immaterial
 sphinx==9.0.4 ; python_full_version == '3.11.*'
@@ -787,7 +784,6 @@ sphinx==9.0.4 ; python_full_version == '3.11.*'
     #   foxes
     #   myst-nb
     #   myst-parser
-    #   numpydoc
     #   sphinx-autoapi
     #   sphinx-immaterial
 sphinx==9.1.1 ; python_full_version == '3.12.*'
@@ -795,7 +791,6 @@ sphinx==9.1.1 ; python_full_version == '3.12.*'
     #   foxes
     #   myst-nb
     #   myst-parser
-    #   numpydoc
     #   sphinx-autoapi
     #   sphinx-immaterial
 sphinx==9.2.0 ; python_full_version >= '3.13'
@@ -803,7 +798,6 @@ sphinx==9.2.0 ; python_full_version >= '3.13'
     #   foxes
     #   myst-nb
     #   myst-parser
-    #   numpydoc
     #   sphinx-autoapi
     #   sphinx-immaterial
 sphinx-autoapi==3.9.0
@@ -844,7 +838,6 @@ tomli==2.5.0 ; python_full_version < '3.11'
     #   jupyter-builder
     #   jupyterlab
     #   mypy
-    #   numpydoc
     #   pytest
     #   sphinx
 toolz==1.2.0
