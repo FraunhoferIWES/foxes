@@ -79,6 +79,9 @@ precedence over smaller sizes in the type scale. Keep the theme's existing 25px
 second-level headings instead of reducing them to 24px. Body text stays at 16px,
 navigation increases from 14px to 16px, and code has a 14px minimum. Source token
 values and their review status remain unchanged.
+These are minimum sizes, not fixed limits: retain the theme's responsive root
+font size and use the larger of its relative size and the corporate token.
+Wide-screen typography must not shrink when the corporate theme is applied.
 
 ## Layout and Responsiveness
 

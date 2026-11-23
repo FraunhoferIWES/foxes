@@ -25,8 +25,14 @@ focus indicators and reduced-motion behavior.
 
 Preserve or increase existing font sizes. In particular, keep the theme's 25px
 second-level headings rather than applying the smaller 24px token. Body text
-remains 16px, navigation becomes 16px, and code has a 14px minimum. Token values
-and existing `needs-review` flags are not changed or implicitly approved.
+has a 16px minimum, navigation becomes at least 16px, and code has a 14px
+minimum. Preserve the theme's responsive root font size and relative type
+scale on wide screens rather than capping typography at those minima. Token
+values and existing `needs-review` flags are not changed or implicitly approved.
+
+Select a custom `iwes` primary and accent palette backed by the token adapter,
+not the theme's built-in white or teal palettes. Sphinx builds disable notebook
+execution by default; notebook validation is a separate `nbmake` workflow.
 
 Scientific plots, animations, notebooks and embedded scientific figures retain
 free design. This decision does not restore project-wide corporate styling.
@@ -52,7 +58,8 @@ or an optional legacy styling mode.
 - Validate CSS loading with a bounded Sphinx theme build, without AutoAPI
   generation or notebook execution.
 - Compare computed font sizes before and after styling and check the header,
-  focus contrast and viewport overflow at 320, 768 and 1280 CSS pixels.
+  focus contrast and viewport overflow at 320, 768 and 1280 CSS pixels, plus
+  wide-screen typography at 2048 CSS pixels.
 - Run repository pre-commit and check the restored source files explicitly.
 
 ## Alternatives Considered

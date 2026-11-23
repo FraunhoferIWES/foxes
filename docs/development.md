@@ -781,10 +781,12 @@ uv sync --extra doc
 uv run sphinx-build -E -b html docs/source docs/build/html
 ```
 
-Notebook execution failures stop the documentation build
-(`nb_execution_raise_on_error = True`).
+Sphinx does not execute notebooks (`nb_execution_mode = "off"`), including in
+CI. Notebook pages are parsed with their saved outputs; build checks must not
+rewrite notebook sources or regenerate images and animations. Run notebook
+validation separately with `nbmake` when notebook changes require it.
 
-For link and rendering checks without executing notebooks:
+For strict reference and link checks, keeping notebook execution disabled:
 
 ```console
 uv run sphinx-build -E -n -b html -D nb_execution_mode=off docs/source docs/build/html

@@ -18,8 +18,8 @@ For a visual introduction, see the :doc:`outputs example <notebooks/outputs>`.
 
 .. _output-selection:
 
-Selecting outputs
------------------
+Calculation functions
+---------------------
 
 Output models are stored in the so-called
 :class:`ModelBook <foxes.models.model_book.ModelBook>` object under a name

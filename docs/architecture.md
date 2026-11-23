@@ -1116,8 +1116,11 @@ subprocess.
 	free design under [ADR-0030](adr/0030-free-design.md). Sphinx documentation
 	follows the [Fraunhofer IWES UI guide](fraunhofer-design/ui-guidelines.md),
 	with authoritative design tokens adapted by `docs/source/_static/iwes-tokens.css`
-	and theme overrides in `docs/source/_static/iwes.css`. Existing font sizes
-	must not decrease; second-level headings retain the theme's 25px size.
+	and theme overrides in `docs/source/_static/iwes.css`. The custom `iwes`
+	palette gives the header its primary green with black text and controls.
+	Existing font sizes must not decrease, including the theme's responsive
+	enlargement on wide screens; second-level headings retain at least 25px.
+	Sphinx does not execute notebooks; their validation remains separate.
 	Embedded scientific figures retain free design. See
 	[ADR-0045](adr/0045-corporate-documentation-design.md) and the
 	[visualization instructions](../.github/instructions/visualization.instructions.md).

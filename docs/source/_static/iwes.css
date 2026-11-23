@@ -1,5 +1,6 @@
 :root,
-[data-md-color-scheme="default"] {
+[data-md-color-scheme="default"],
+[data-md-color-primary="iwes"] {
   --md-default-fg-color: var(--iwes-semantic-color-text);
   --md-default-fg-color--light: var(--iwes-semantic-color-text-muted);
   --md-default-bg-color: var(--iwes-semantic-color-background);
@@ -9,10 +10,6 @@
   --md-typeset-a-color: var(--iwes-color-steel-blue);
   --md-code-fg-color: var(--iwes-semantic-color-text-muted);
   --md-code-bg-color: var(--iwes-semantic-color-background-alternative);
-}
-
-html {
-  font-size: var(--iwes-typography-font-size-xl);
 }
 
 body,
@@ -39,8 +36,8 @@ input {
 }
 
 .md-header__title {
-  font-size: var(--iwes-typography-font-size-xl);
-  line-height: var(--iwes-typography-line-height-xl);
+  font-size: max(0.9rem, var(--iwes-typography-font-size-xl));
+  line-height: max(1.4em, var(--iwes-typography-line-height-xl));
 }
 
 .md-header__title,
@@ -95,9 +92,9 @@ input {
 
 .md-typeset {
   color: var(--iwes-semantic-color-text);
-  font-size: var(--iwes-typography-font-size-base);
+  font-size: max(0.8rem, var(--iwes-typography-font-size-base));
   font-weight: var(--iwes-typography-font-weight-light);
-  line-height: var(--iwes-typography-line-height-base);
+  line-height: max(1.5em, var(--iwes-typography-line-height-base));
 }
 
 .md-typeset h1,
@@ -110,32 +107,34 @@ input {
 
 .md-typeset h1 {
   margin-block: var(--iwes-spacing-12) var(--iwes-spacing-6);
-  font-size: var(--iwes-typography-font-size-3xl);
+  font-size: max(2em, var(--iwes-typography-font-size-3xl));
   font-weight: var(--iwes-typography-font-weight-light);
-  line-height: var(--iwes-typography-line-height-3xl);
+  line-height: max(1.25em, var(--iwes-typography-line-height-3xl));
 }
 
 .md-typeset h2 {
   margin-block: var(--iwes-spacing-12) var(--iwes-spacing-4);
   font-weight: var(--iwes-typography-font-weight-bold);
-  line-height: var(--iwes-typography-line-height-2xl);
+  line-height: max(1.3em, var(--iwes-typography-line-height-2xl));
 }
 
 .md-typeset h3 {
   margin-block: var(--iwes-spacing-8) var(--iwes-spacing-3);
-  font-size: var(--iwes-typography-font-size-xl);
+  font-size: max(1.25em, var(--iwes-typography-font-size-xl));
   font-weight: var(--iwes-typography-font-weight-bold);
-  line-height: var(--iwes-typography-line-height-xl);
+  line-height: max(1.4em, var(--iwes-typography-line-height-xl));
 }
 
 .md-typeset h4 {
-  font-size: var(--iwes-typography-font-size-lg);
+  font-size: max(1em, var(--iwes-typography-font-size-lg));
   font-weight: var(--iwes-typography-font-weight-bold);
-  line-height: var(--iwes-typography-line-height-lg);
+  line-height: max(1.5em, var(--iwes-typography-line-height-lg));
 }
 
 .md-typeset em,
-.md-typeset i {
+.md-typeset i,
+.md-typeset .versionmodified,
+.md-search-result__terms {
   font-style: normal;
   font-weight: var(--iwes-typography-font-weight-bold);
 }
@@ -153,7 +152,7 @@ input {
 }
 
 .md-nav {
-  font-size: var(--iwes-typography-font-size-base);
+  font-size: max(0.7rem, var(--iwes-typography-font-size-base));
   line-height: var(--iwes-typography-line-height-base);
 }
 
@@ -209,7 +208,7 @@ input {
 
 .md-typeset table,
 .md-typeset table.data:not(.plain) {
-  font-size: var(--iwes-typography-font-size-base);
+  font-size: max(1em, var(--iwes-typography-font-size-base));
   border: 0;
   border-radius: var(--iwes-radius-none);
   box-shadow: none;
