@@ -41,7 +41,7 @@ all of them.
 | [0027](0027-domain-result-aggregation.md) | Accepted; grouped model-book naming superseded by [0029](0029-grouped-output-preset-families.md), native-unit output policy by [0032](0032-output-dataset-units.md), collector keys by [0034](0034-aggregation-output-keys.md) | Separate domain collectors from all domain writers; aggregate physical fields using worker/file-interval statistics and independently normalized entity weights. |
 | [0028](0028-aggregation-presets-and-provenance.md) | Accepted; grouped selector grammar superseded by [0029](0029-grouped-output-preset-families.md) | Register every aggregation/filter/field/writer combination, retain scalar pre-reduction counts, and share reductions with YAML/WindIO while keeping flow files gridded. |
 | [0029](0029-grouped-output-preset-families.md) | Accepted; all-turbine naming superseded by [0031](0031-total-output-preset-family.md), dataset keys by [0034](0034-aggregation-output-keys.md) | Imply named turbine aggregation through farms_results/cluster_results preset families without changing constructor options or dataset keys. |
-| [0030](0030-free-design.md) | Accepted | Use free design, remove corporate guidance and Sphinx token adapters, and require separate design/accessibility review before external publication. |
+| [0030](0030-free-design.md) | Accepted; documentation styling superseded by [0045](0045-corporate-documentation-design.md) | Use free design for scientific plots, animations, notebooks and visual assets; require separate design/accessibility review before external publication. |
 | [0031](0031-total-output-preset-family.md) | Accepted; dataset keys superseded by [0034](0034-aggregation-output-keys.md) | Use total_results for all-turbine aggregation presets, including every filter/field/mean/writer variant, without changing constructor options or dataset keys. |
 | [0032](0032-output-dataset-units.md) | Accepted | Attach scientific units to output variables and convert power to the smallest turbine-type unit before reduction, preserving native internal solver history. |
 | [0033](0033-coding-style-closure-review.md) | Accepted | Require an explicit coding-style review of changed code as a standard closure task, separate from linting and formatting, and report its result. |
@@ -56,6 +56,7 @@ all of them.
 | [0042](0042-wake-growth-coefficients.md) | Accepted | Use k0/k1 fields and intercept/multiplier configuration consistently, preserving WindIO schema and rejecting removed FOXES inputs. |
 | [0043](0043-default-farm-variable-set.md) | Accepted | Use the default farm-variable set for standard diagnostics and point-calculation inputs; remove the redundant calc set across all result families and writers. |
 | [0044](0044-explicit-farm-cropping.md) | Accepted | Expose automatic farm cropping as a dataset-states switch and disable it for WindIO resources while retaining explicit selections and interpolation policy. |
+| [0045](0045-corporate-documentation-design.md) | Accepted | Restore Fraunhofer corporate styling for Sphinx documentation without reducing existing font sizes; scientific plots and notebooks retain free design. |
 
 ## When To Add An ADR
 

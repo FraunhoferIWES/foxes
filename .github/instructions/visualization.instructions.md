@@ -5,9 +5,15 @@ applyTo: "notebooks/**/*.ipynb,foxes/models/outputs/**/*.py,docs/source/**/*.css
 
 # FOXES Visualization Conventions
 
-FOXES uses free design under [ADR-0030](../../docs/adr/0030-free-design.md).
-No corporate palette, typography, design-token system, or corporate
-accessibility rules apply.
+FOXES scientific plots, animations, notebooks and other visual assets use free
+design under [ADR-0030](../../docs/adr/0030-free-design.md). No corporate palette,
+typography, design-token system or corporate accessibility rules apply to them.
+
+Sphinx documentation follows the
+[Fraunhofer IWES UI guide](../../docs/fraunhofer-design/ui-guidelines.md) under
+[ADR-0045](../../docs/adr/0045-corporate-documentation-design.md). Use the
+documentation token adapter and theme without reducing existing font sizes.
+Embedded scientific figures retain their free-design conventions.
 
 - Use ordinary scientific plotting defaults unless a particular example needs
   another style. There is no required project-wide palette or font.

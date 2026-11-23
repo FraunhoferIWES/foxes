@@ -1112,12 +1112,17 @@ subprocess.
 	WindIO disables it to retain source support for requested flow grids; explicit
 	selections and interpolation policy remain unchanged. See
 	[ADR-0044](adr/0044-explicit-farm-cropping.md).
-- FOXES uses free design for plots, animations, notebooks, documentation and
-	visual assets. Corporate guidance, tokens and the Sphinx token adapter are
-	removed; Sphinx-Immaterial supplies its ordinary theme. Project conventions
-	live in the [visualization instructions](../.github/instructions/visualization.instructions.md).
-	External publication requires a design and accessibility review and may
-	require extensive restyling. See [ADR-0030](adr/0030-free-design.md).
+- FOXES scientific plots, animations, notebooks and other visual assets use
+	free design under [ADR-0030](adr/0030-free-design.md). Sphinx documentation
+	follows the [Fraunhofer IWES UI guide](fraunhofer-design/ui-guidelines.md),
+	with authoritative design tokens adapted by `docs/source/_static/iwes-tokens.css`
+	and theme overrides in `docs/source/_static/iwes.css`. Existing font sizes
+	must not decrease; second-level headings retain the theme's 25px size.
+	Embedded scientific figures retain free design. See
+	[ADR-0045](adr/0045-corporate-documentation-design.md) and the
+	[visualization instructions](../.github/instructions/visualization.instructions.md).
+	External publication of free-design assets still requires a design and
+	accessibility review and may require extensive restyling.
 
 ## ADR Triggers
 
