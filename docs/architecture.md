@@ -1120,7 +1120,9 @@ subprocess.
 	palette gives the header its primary green with black text and controls.
 	Existing font sizes must not decrease, including the theme's responsive
 	enlargement on wide screens; second-level headings retain at least 25px.
-	Sphinx does not execute notebooks; their validation remains separate.
+	Local Sphinx previews do not execute notebooks. GitHub Pages builds
+	explicitly enable automatic notebook execution to publish their outputs
+	without committing generated results to the source notebooks.
 	Embedded scientific figures retain free design. See
 	[ADR-0045](adr/0045-corporate-documentation-design.md) and the
 	[visualization instructions](../.github/instructions/visualization.instructions.md).

@@ -31,8 +31,11 @@ scale on wide screens rather than capping typography at those minima. Token
 values and existing `needs-review` flags are not changed or implicitly approved.
 
 Select a custom `iwes` primary and accent palette backed by the token adapter,
-not the theme's built-in white or teal palettes. Sphinx builds disable notebook
-execution by default; notebook validation is a separate `nbmake` workflow.
+not the theme's built-in white or teal palettes. Local Sphinx builds disable
+notebook execution by default. GitHub Pages builds explicitly select
+`nb_execution_mode=auto` to render outputs from the cleared source notebooks;
+execution failures stop publication. Notebook validation remains available
+separately through `nbmake`.
 
 Scientific plots, animations, notebooks and embedded scientific figures retain
 free design. This decision does not restore project-wide corporate styling.

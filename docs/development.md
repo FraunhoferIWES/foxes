@@ -774,17 +774,20 @@ import paths. Intersphinx supplies links to the Python and scientific-library
 APIs. Source-code links stay on the documented module instead of following
 imported or inherited members into unrelated modules.
 
-When an explicit Sphinx rendering check is useful, use the same command as CI:
+For a publishing-equivalent Sphinx build, use the same command as CI:
 
 ```console
 uv sync --extra doc
-uv run sphinx-build -E -b html docs/source docs/build/html
+uv run sphinx-build -E -b html -D nb_execution_mode=auto docs/source docs/build/html
 ```
 
-Sphinx does not execute notebooks (`nb_execution_mode = "off"`), including in
-CI. Notebook pages are parsed with their saved outputs; build checks must not
-rewrite notebook sources or regenerate images and animations. Run notebook
-validation separately with `nbmake` when notebook changes require it.
+Local Sphinx builds default to `nb_execution_mode = "off"` for previews without
+notebook execution. GitHub Pages builds explicitly select `auto` so notebooks
+with cleared outputs execute and publish their figures, tables and animations.
+Execution failures stop publishing (`nb_execution_raise_on_error = True`).
+Generated outputs belong in the build directory, not in committed notebook
+sources. Run notebook validation separately with `nbmake` when notebook changes
+require it.
 
 For strict reference and link checks, keeping notebook execution disabled:
 
