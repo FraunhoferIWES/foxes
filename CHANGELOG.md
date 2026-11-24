@@ -1248,3 +1248,8 @@ This major version introduces the concept of `Engines` which handle the chunking
     history across chunks.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.0](https://github.com/FraunhoferIWES/foxes/commits/v1.10.0)
+
+# v1.10.1
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.1](https://github.com/FraunhoferIWES/foxes/commits/v1.10.1)
