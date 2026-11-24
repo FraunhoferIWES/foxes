@@ -1118,6 +1118,8 @@ subprocess.
 	with authoritative design tokens adapted by `docs/source/_static/iwes-tokens.css`
 	and theme overrides in `docs/source/_static/iwes.css`. The custom `iwes`
 	palette gives the header its primary green with black text and controls.
+	The title line height matches the theme's title slot, keeping the site and
+	scrolled page titles vertically centered.
 	Its complete light/dark and accent mappings also cover the mobile repository
 	panel, search states, API badges, code highlighting and typed notices;
 	approved steel blue is reserved for informational text and controls.
@@ -1126,9 +1128,11 @@ subprocess.
 	with matching icons and explicit text labels.
 	Existing font sizes must not decrease, including the theme's responsive
 	enlargement on wide screens; second-level headings retain at least 25px.
-	Local Sphinx previews do not execute notebooks. GitHub Pages builds
-	explicitly enable automatic notebook execution to publish their outputs
-	without committing generated results to the source notebooks.
+	Sphinx defaults to automatic notebook execution for production; local
+	previews and documentation-only tests override it with
+	`nb_execution_mode=off`. GitHub Pages builds explicitly enable automatic
+	notebook execution to publish outputs without committing generated results
+	to source notebooks.
 	Embedded scientific figures retain free design. See
 	[ADR-0045](adr/0045-corporate-documentation-design.md) and the
 	[visualization instructions](../.github/instructions/visualization.instructions.md).

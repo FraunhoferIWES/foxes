@@ -781,9 +781,11 @@ uv sync --extra doc
 uv run sphinx-build -E -b html -D nb_execution_mode=auto docs/source docs/build/html
 ```
 
-Local Sphinx builds default to `nb_execution_mode = "off"` for previews without
-notebook execution. GitHub Pages builds explicitly select `auto` so notebooks
-with cleared outputs execute and publish their figures, tables and animations.
+Sphinx defaults to `nb_execution_mode = "auto"` for production. For local
+previews and documentation-only testing, pass `-D nb_execution_mode=off`
+without changing the production configuration. GitHub Pages builds also
+explicitly select `auto` so notebooks with cleared outputs execute and publish
+their figures, tables and animations.
 Execution failures stop publishing (`nb_execution_raise_on_error = True`).
 Generated outputs belong in the build directory, not in committed notebook
 sources. Run notebook validation separately with `nbmake` when notebook changes

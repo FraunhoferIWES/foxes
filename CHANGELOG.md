@@ -1237,6 +1237,8 @@ This major version introduces the concept of `Engines` which handle the chunking
     reStructuredText emphasis on the home page.
   - Documentation: Distinguished added and changed version notices with green
     and steel-blue title backgrounds, borders and icons.
+  - Documentation: Vertically centered the header's site and page titles
+    without reducing font sizes.
   - WindIO: Corrected wake-growth translation to `k = k_a * TI + k_b`,
     mapping `k_a` to `k1` and `k_b` to `k0`.
   - WindIO: Disabled automatic farm cropping for all dataset-backed resources,

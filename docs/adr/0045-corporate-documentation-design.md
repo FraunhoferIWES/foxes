@@ -21,7 +21,9 @@ responsive behavior.
 
 Use the approved primary green (`#179c7d`) for the header with black controls
 and text. Keep white-dominant, flat surfaces and the corporate typography,
-focus indicators and reduced-motion behavior.
+focus indicators and reduced-motion behavior. Match the header title's line
+height to the theme's title slot so both the site and scrolled page titles
+remain vertically centered without reducing font sizes.
 
 Map the complete primary/accent palette, including light/dark variants and
 highlight surfaces, rather than only the header color. The mobile repository
@@ -49,8 +51,9 @@ values and existing `needs-review` flags are not changed or implicitly approved.
 
 Select a custom `iwes` primary and accent palette backed by the token adapter,
 not the theme's built-in white or teal palettes. Local Sphinx builds disable
-notebook execution by default. GitHub Pages builds explicitly select
-`nb_execution_mode=auto` to render outputs from the cleared source notebooks;
+notebook execution for previews and testing with `-D nb_execution_mode=off`;
+the production configuration defaults to `auto`. GitHub Pages builds explicitly
+select `nb_execution_mode=auto` to render outputs from the cleared source notebooks;
 execution failures stop publication. Notebook validation remains available
 separately through `nbmake`.
 

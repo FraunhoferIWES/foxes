@@ -91,7 +91,7 @@ input {
 
 .md-header__title {
   font-size: max(0.9rem, var(--iwes-typography-font-size-xl));
-  line-height: max(1.4em, var(--iwes-typography-line-height-xl));
+  line-height: max(2.4rem, var(--iwes-typography-line-height-xl));
 }
 
 .md-header__title,
