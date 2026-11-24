@@ -160,7 +160,7 @@ myst_enable_extensions = [
     "html_image",
 ]
 
-nb_execution_mode = "off"
+nb_execution_mode = "auto"
 nb_execution_timeout = 300
 nb_execution_raise_on_error = True
 nb_ipywidgets_js = {
