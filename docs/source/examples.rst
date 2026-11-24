@@ -112,11 +112,11 @@ before point-grid requests, using results-oriented terminology.
     .. toctree::
         :titlesonly:
 
-        notebooks/outputs
         notebooks/model_book
         notebooks/rotor_models
         notebooks/single_row
         notebooks/timeseries
+        notebooks/outputs
         notebooks/multi_height
         notebooks/wind_rose
         notebooks/sector_man
