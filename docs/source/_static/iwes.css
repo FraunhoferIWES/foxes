@@ -3,13 +3,67 @@
 [data-md-color-primary="iwes"] {
   --md-default-fg-color: var(--iwes-semantic-color-text);
   --md-default-fg-color--light: var(--iwes-semantic-color-text-muted);
+  --md-default-fg-color--lighter: var(--iwes-semantic-color-text-muted);
+  --md-default-fg-color--lightest: var(--iwes-semantic-color-border-subtle);
   --md-default-bg-color: var(--iwes-semantic-color-background);
+  --md-default-bg-color--light: var(--iwes-semantic-color-background);
+  --md-default-bg-color--lighter: var(--iwes-semantic-color-background);
+  --md-default-bg-color--lightest: var(--iwes-semantic-color-background);
   --md-primary-fg-color: var(--iwes-semantic-color-primary);
+  --md-primary-fg-color--light: var(--iwes-semantic-color-primary-subtle);
+  --md-primary-fg-color--dark: var(--iwes-semantic-color-primary);
   --md-primary-bg-color: var(--iwes-semantic-color-text);
-  --md-accent-fg-color: var(--iwes-color-steel-blue);
-  --md-typeset-a-color: var(--iwes-color-steel-blue);
+  --md-primary-bg-color--light: var(--iwes-semantic-color-text-muted);
+  --md-accent-fg-color: var(--iwes-semantic-color-info);
+  --md-accent-fg-color--transparent: var(--iwes-semantic-color-info-subtle);
+  --md-accent-bg-color: var(--iwes-semantic-color-text-inverse);
+  --md-accent-bg-color--light: var(--iwes-semantic-color-text-inverse);
+  --md-typeset-a-color: var(--iwes-semantic-color-info);
+  --md-typeset-del-color: var(--iwes-semantic-color-error-subtle);
+  --md-typeset-ins-color: var(--iwes-semantic-color-primary-subtle);
+  --md-typeset-kbd-color: var(--iwes-semantic-color-background-alternative);
+  --md-typeset-kbd-accent-color: var(--iwes-semantic-color-background);
+  --md-typeset-kbd-border-color: var(--iwes-semantic-color-border);
+  --md-typeset-mark-color: var(--iwes-semantic-color-warning-subtle);
+  --md-typeset-table-color: var(--iwes-semantic-color-border-subtle);
+  --md-typeset-table-color--light: var(--iwes-semantic-color-background-alternative);
+  --md-admonition-fg-color: var(--iwes-semantic-color-text);
+  --md-admonition-bg-color: var(--iwes-semantic-color-surface);
+  --md-warning-fg-color: var(--iwes-semantic-color-text);
+  --md-warning-bg-color: var(--iwes-semantic-color-warning-subtle);
+  --md-footer-fg-color: var(--iwes-semantic-color-text-muted);
+  --md-footer-fg-color--light: var(--iwes-semantic-color-text-muted);
+  --md-footer-fg-color--lighter: var(--iwes-semantic-color-text-muted);
+  --md-footer-bg-color: var(--iwes-semantic-color-background-alternative);
+  --md-footer-bg-color--dark: var(--iwes-semantic-color-background-alternative);
   --md-code-fg-color: var(--iwes-semantic-color-text-muted);
   --md-code-bg-color: var(--iwes-semantic-color-background-alternative);
+  --md-code-hl-color: var(--iwes-semantic-color-info);
+  --md-code-hl-color--light: var(--iwes-semantic-color-info-subtle);
+  --md-code-hl-number-color: var(--iwes-semantic-color-error);
+  --md-code-hl-special-color: var(--iwes-semantic-color-error);
+  --md-code-hl-function-color: var(--iwes-semantic-color-text-muted);
+  --md-code-hl-constant-color: var(--iwes-semantic-color-primary-active);
+  --md-code-hl-keyword-color: var(--iwes-semantic-color-info);
+  --md-code-hl-string-color: var(--iwes-semantic-color-primary-active);
+  --objinfo-icon-fg-alias: var(--iwes-semantic-color-info);
+  --objinfo-icon-fg-default: var(--iwes-semantic-color-text-muted);
+  --objinfo-icon-fg-data: var(--iwes-semantic-color-info);
+  --objinfo-icon-fg-procedure: var(--iwes-semantic-color-primary-active);
+  --objinfo-icon-fg-sub-data: var(--iwes-semantic-color-text-muted);
+  --mystnb-source-bg-color: var(--iwes-semantic-color-background-alternative);
+  --mystnb-stdout-bg-color: var(--iwes-semantic-color-surface);
+  --mystnb-stderr-bg-color: var(--iwes-semantic-color-error-subtle);
+  --mystnb-traceback-bg-color: var(--iwes-semantic-color-error-subtle);
+  --mystnb-source-border-color: var(--iwes-semantic-color-border-subtle);
+  --mystnb-source-margin-color: var(--iwes-semantic-color-primary);
+  --mystnb-stdout-border-color: var(--iwes-semantic-color-border-subtle);
+  --mystnb-stderr-border-color: var(--iwes-semantic-color-error);
+  --mystnb-traceback-border-color: var(--iwes-semantic-color-error);
+  --mystnb-scrollbar-thumb-color: var(--iwes-semantic-color-border);
+  --mystnb-scrollbar-thumb-hover-color: var(--iwes-semantic-color-border-strong);
+  --iwes-notice-accent: var(--iwes-semantic-color-info);
+  --iwes-notice-background: var(--iwes-semantic-color-info-subtle);
 }
 
 body,
@@ -140,7 +194,7 @@ input {
 }
 
 .md-typeset a {
-  color: var(--iwes-color-steel-blue);
+  color: var(--iwes-semantic-color-info);
   text-decoration: underline;
   text-decoration-thickness: var(--iwes-border-width);
   text-underline-offset: var(--iwes-spacing-1);
@@ -165,7 +219,7 @@ input {
 
 .md-nav__link:hover,
 .md-nav__link:focus {
-  color: var(--iwes-color-steel-blue);
+  color: var(--iwes-semantic-color-info);
 }
 
 .md-nav__link--active {
@@ -206,6 +260,40 @@ input {
   border-left: var(--iwes-border-accent-width) solid var(--iwes-semantic-color-border);
 }
 
+.md-clipboard {
+  color: var(--iwes-semantic-color-text-muted);
+}
+
+.md-draft {
+  color: var(--iwes-semantic-color-text-inverse);
+  background: var(--iwes-semantic-color-error);
+}
+
+.md-typeset [type="checkbox"]:checked + .task-list-indicator::before {
+  background-color: var(--iwes-semantic-color-primary-active);
+}
+
+.md-typeset .cell_output .progress {
+  background-color: var(--iwes-semantic-color-background-alternative);
+}
+
+.md-typeset .cell_output .progress-bar {
+  color: var(--iwes-semantic-color-text-inverse);
+  background-color: var(--iwes-semantic-color-info);
+}
+
+.md-typeset .cell_output .progress-bar-success {
+  background-color: var(--iwes-semantic-color-primary-active);
+}
+
+.md-typeset .cell_output .progress-bar-warning {
+  background-color: var(--iwes-semantic-color-warning);
+}
+
+.md-typeset .cell_output .progress-bar-danger {
+  background-color: var(--iwes-semantic-color-error);
+}
+
 .md-typeset table,
 .md-typeset table.data:not(.plain) {
   font-size: max(1em, var(--iwes-typography-font-size-base));
@@ -226,34 +314,72 @@ input {
   border-bottom: var(--iwes-border-width) solid var(--iwes-semantic-color-border-subtle);
 }
 
-.md-typeset .admonition,
+.md-typeset :is(.tip, .hint, .important, .success, .check, .done) {
+  --iwes-notice-accent: var(--iwes-semantic-color-success);
+  --iwes-notice-background: var(--iwes-semantic-color-success-subtle);
+}
+
+.md-typeset :is(.warning, .caution, .attention) {
+  --iwes-notice-accent: var(--iwes-semantic-color-warning);
+  --iwes-notice-background: var(--iwes-semantic-color-warning-subtle);
+}
+
+.md-typeset :is(.error, .danger, .failure, .fail, .missing, .bug, .deprecated, .versionremoved) {
+  --iwes-notice-accent: var(--iwes-semantic-color-error);
+  --iwes-notice-background: var(--iwes-semantic-color-error-subtle);
+}
+
+.md-typeset :is(.quote, .cite) {
+  --iwes-notice-accent: var(--iwes-semantic-color-text-muted);
+  --iwes-notice-background: var(--iwes-semantic-color-background-alternative);
+}
+
+.md-typeset .versionadded {
+  --iwes-notice-accent: var(--iwes-semantic-color-primary-active);
+  --iwes-notice-background: var(--iwes-semantic-color-primary-subtle);
+}
+
+.md-typeset .versionchanged {
+  --iwes-notice-accent: var(--iwes-semantic-color-info);
+  --iwes-notice-background: var(--iwes-semantic-color-info-subtle);
+}
+
+/* Match typed notices so theme-specific colors cannot override these tokens. */
+.md-typeset :is(.admonition, details)[class],
 .md-typeset details {
   background: var(--iwes-semantic-color-surface);
   border: var(--iwes-border-width) solid var(--iwes-semantic-color-border-subtle);
-  border-left: var(--iwes-border-accent-width) solid var(--iwes-semantic-color-primary);
+  border-left: var(--iwes-border-accent-width) solid var(--iwes-notice-accent);
   border-radius: var(--iwes-radius-none);
   box-shadow: none;
 }
 
-.md-typeset .admonition-title,
-.md-typeset summary {
-  background: var(--iwes-semantic-color-background-alternative);
+.md-typeset :is(.admonition, details)[class]:focus-within,
+.md-typeset details:focus-within {
+  box-shadow: none;
+}
+
+.md-typeset :is(.admonition, details) > :is(.admonition-title, summary) {
+  color: var(--iwes-semantic-color-text);
+  background: var(--iwes-notice-background);
+  border-color: var(--iwes-notice-accent);
   border-radius: var(--iwes-radius-none);
 }
 
-.md-typeset .versionadded,
-.md-typeset .versionchanged {
-  padding: var(--iwes-spacing-3) var(--iwes-spacing-4);
-  background: var(--iwes-semantic-color-primary-subtle);
-  border-left: var(--iwes-border-accent-width) solid var(--iwes-semantic-color-primary);
+.md-typeset :is(.admonition, details) > :is(.admonition-title, summary)::before {
+  background-color: var(--iwes-notice-accent);
+}
+
+.md-typeset :is(.admonition, details) > :is(.admonition-title, summary)::after {
+  color: var(--iwes-notice-accent);
 }
 
 .md-typeset .md-button {
   min-height: var(--iwes-layout-touch-target-min);
   color: var(--iwes-semantic-color-text-inverse);
   font-weight: var(--iwes-typography-font-weight-bold);
-  background: var(--iwes-color-steel-blue);
-  border: var(--iwes-border-width) solid var(--iwes-color-steel-blue);
+  background: var(--iwes-semantic-color-info);
+  border: var(--iwes-border-width) solid var(--iwes-semantic-color-info);
 }
 
 .md-typeset .md-button:hover {
@@ -276,12 +402,26 @@ input {
 
 .md-footer a,
 .md-footer-meta a {
-  color: var(--iwes-color-steel-blue);
+  color: var(--iwes-semantic-color-info);
+}
+
+html .md-footer-meta.md-typeset a {
+  color: var(--iwes-semantic-color-info);
+}
+
+html .md-footer-meta.md-typeset a:hover,
+html .md-footer-meta.md-typeset a:focus {
+  color: var(--iwes-semantic-color-primary-active);
 }
 
 :focus-visible {
-  outline: var(--iwes-border-focus-width) solid var(--iwes-color-steel-blue);
+  outline: var(--iwes-border-focus-width) solid var(--iwes-semantic-color-info);
   outline-offset: var(--iwes-spacing-1);
+}
+
+::selection {
+  color: var(--iwes-semantic-color-text);
+  background: var(--iwes-semantic-color-primary-subtle);
 }
 
 @media (max-width: 640px) {

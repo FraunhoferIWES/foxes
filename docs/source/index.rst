@@ -9,7 +9,7 @@
 
 .. versionchanged:: 1.10.0
     Reformulation of TI dependent wake growth modeling, now via
-    `k = k0 + k1 * TI` throughout _foxes_.
+    `k = k0 + k1 * TI` throughout *foxes*.
 
 .. versionadded:: 1.10.0
     Output datasets and NetCDF files include units for known variables;

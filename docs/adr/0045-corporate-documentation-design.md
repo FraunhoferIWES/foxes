@@ -23,6 +23,23 @@ Use the approved primary green (`#179c7d`) for the header with black controls
 and text. Keep white-dominant, flat surfaces and the corporate typography,
 focus indicators and reduced-motion behavior.
 
+Map the complete primary/accent palette, including light/dark variants and
+highlight surfaces, rather than only the header color. The mobile repository
+panel shares the green header. Search, API badges, syntax highlighting,
+keyboard hints, footer links and every notice variant use the existing semantic
+tokens. Information uses the approved steel blue, warnings and errors retain
+their labelled feedback colors, and no default indigo or theme-specific notice
+colors remain. Existing token review flags still apply.
+Version notices reuse the standard notice layout: a single opaque tinted
+title and a white body, without a second tinted container or extra outer
+padding. Added versions use light-green title backgrounds and dark-green
+icons; changed versions use light steel-blue title backgrounds and steel-blue
+icons. Both retain explicit text labels.
+MyST-NB's documentation text-cell frames, standard/error output surfaces,
+scrollbars and progress indicators use these same tokens rather than changing
+independently with the device's dark-mode preference. Notebook sources and
+scientific figures are unchanged.
+
 Preserve or increase existing font sizes. In particular, keep the theme's 25px
 second-level headings rather than applying the smaller 24px token. Body text
 has a 16px minimum, navigation becomes at least 16px, and code has a 14px
@@ -63,6 +80,9 @@ or an optional legacy styling mode.
 - Compare computed font sizes before and after styling and check the header,
   focus contrast and viewport overflow at 320, 768 and 1280 CSS pixels, plus
   wide-screen typography at 2048 CSS pixels.
+- Audit computed colors, including pseudo-elements, with the mobile drawer
+  open and search, hover, focus, selected navigation, all notice types and code
+  highlighting exercised. Check text contrast against each painted surface.
 - Run repository pre-commit and check the restored source files explicitly.
 
 ## Alternatives Considered

@@ -1118,6 +1118,12 @@ subprocess.
 	with authoritative design tokens adapted by `docs/source/_static/iwes-tokens.css`
 	and theme overrides in `docs/source/_static/iwes.css`. The custom `iwes`
 	palette gives the header its primary green with black text and controls.
+	Its complete light/dark and accent mappings also cover the mobile repository
+	panel, search states, API badges, code highlighting and typed notices;
+	approved steel blue is reserved for informational text and controls.
+	Version notices use a single tinted title without a second colored container.
+	Added versions use green; changed versions use informational steel blue,
+	with matching icons and explicit text labels.
 	Existing font sizes must not decrease, including the theme's responsive
 	enlargement on wide screens; second-level headings retain at least 25px.
 	Local Sphinx previews do not execute notebooks. GitHub Pages builds

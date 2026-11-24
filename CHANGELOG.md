@@ -1230,6 +1230,13 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Repaired documentation and DTU links, public re-export references,
     scientific-library API links, and module-index assets and source navigation.
 - Bug fixes:
+  - Documentation: Replaced the mobile navigation's default indigo and
+    remaining theme colors with Fraunhofer tokens, including search, notices
+    and code highlighting.
+  - Documentation: Removed duplicate version-notice backgrounds and corrected
+    reStructuredText emphasis on the home page.
+  - Documentation: Distinguished added and changed version notices with green
+    and steel-blue title backgrounds, borders and icons.
   - WindIO: Corrected wake-growth translation to `k = k_a * TI + k_b`,
     mapping `k_a` to `k1` and `k_b` to `k0`.
   - WindIO: Disabled automatic farm cropping for all dataset-backed resources,
