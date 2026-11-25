@@ -1910,7 +1910,7 @@ class DatasetStates(States):
             assert np.all(ws > 0.0), (
                 f"States '{self.name}': Cannot calculate {FV.TI} from {FV.TKE}, found zeros or negative values in {FV.WS}"
             )
-            results[FV.TI] = np.sqrt(2.0/3.0 * tke) / ws
+            results[FV.TI] = np.sqrt(2.0 / 3.0 * tke) / ws
 
         # compute air density if needed:
         if FV.RHO in self.ovars and FV.RHO not in results:

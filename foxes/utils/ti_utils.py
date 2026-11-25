@@ -25,7 +25,7 @@ def tke2ti(tke: np.ndarray, ws: np.ndarray, max_ti: float | None = None) -> np.n
 
 
     """
-    ti = np.sqrt(2.0/3.0 * tke) / ws
+    ti = np.sqrt(2.0 / 3.0 * tke) / ws
     if max_ti is not None:
         ti = np.minimum(ti, max_ti)
 
