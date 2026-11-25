@@ -1249,7 +1249,10 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.0](https://github.com/FraunhoferIWES/foxes/commits/v1.10.0)
 
-# v1.10.1
+## v1.10.1
 
+- Bug fixes:
+  - `DatasetStates` and `TKE2TI`: Corrected the isotropic TKE-to-TI
+    conversion, which overestimated turbulence intensity by 50% before clipping.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.10.1](https://github.com/FraunhoferIWES/foxes/commits/v1.10.1)
